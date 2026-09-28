@@ -1,5 +1,5 @@
 {
-  "_comment": "PROPOSED ZCode hooks config. NOT installed — apply to the USER-level ~/.zcode/cli/config.json only after user approval. Never place this in a project-level file: ZCode ignores <workspace>/.zcode/config.json, <workspace>/zcode.json and legacy .claude/settings.json for hooks (logged as config_project_hooks_ignored). See AGENTS.md gate rhythm.",
+  "_comment": "INSTALLED into user-level ~/.zcode/cli/config.json on 2026-09-28 with user approval (backup: config.json.bak-hooks-20260928). This file remains the reference copy of what was installed.",
   "_verified_facts": [
     "Location per https://zcode.z.ai/en/docs/hooks: executed hooks live in ~/.zcode/cli/config.json (or an installed plugin's hooks/hooks.json); the file must set hooks.enabled=true, and event arrays nest under hooks.events.",
     "PostToolUse input is one line of JSON on the hook's stdin carrying tool_input, tool_name, tool_use_id and tool_response; the edited file arrives as tool_input.file_path. ZCode injects no environment variable with edited-file paths (only ZCODE_PLUGIN_ROOT/_DATA/_ID/_NAME), so the command must read stdin.",
