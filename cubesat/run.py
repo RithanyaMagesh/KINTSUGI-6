@@ -1,7 +1,10 @@
-"""CLI: run a scenario and write a JSONL log.
+"""CLI: run a scenario and write the versioned JSONL log (gate G3).
 
-G0 skeleton: validates the scenario and writes the log header line.
-The simulation loop lands in G3.
+I/O edge only: the simulation is cubesat.sim.run_scenario (pure; no wall clock,
+no RNG -- AGENTS.md invariant 2), so the log bytes depend only on the scenario
+and seed. Two runs of the same scenario are byte-identical; the short nominal
+run is pinned to a golden SHA-256 by tests/test_cli.py::test_run_is_byte_deterministic.
+The log is NOT committed (data/logs/ is gitignored); commit the hash, not the log.
 """
 
 from __future__ import annotations
@@ -14,6 +17,7 @@ from pathlib import Path
 from pydantic import ValidationError
 
 from cubesat.scenario import load_scenario
+from cubesat.sim import run_scenario
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -33,18 +37,13 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     if args.seed is not None:
         scenario = scenario.model_copy(update={"seed": args.seed})
+    lines = run_scenario(scenario)
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    header = {
-        "v": 1,
-        "t": 0.0,
-        "state": "INIT",
-        "scenario": scenario.name,
-        "seed": scenario.seed,
-        "n_sats": scenario.n_sats,
-    }
     with args.out.open("w", encoding="utf-8", newline="\n") as f:
-        f.write(json.dumps(header, sort_keys=True) + "\n")
+        for line in lines:
+            f.write(json.dumps(line, sort_keys=True) + "\n")
     print(f"wrote {args.out}")
+    print(f"coverage_mean_last_orbit = {lines[-1]['coverage_mean_last_orbit']:.6f}")
     return 0
 
 

@@ -296,3 +296,196 @@ uv run pytest tests/test_pd.py -s -q   # all four measured number sets above
 uv run pytest -q                       # full suite: 16 passed
 uv run ruff check .                    # All checks passed!
 ```
+
+## G3 — Coverage metric + 6-sat nominal run + deterministic JSONL logger (2026-09-28, PASS)
+
+### What was built
+
+`cubesat/coverage.py` (new, 58 lines) — the coverage metric, fixed exactly as
+docs/MASTER_PROMPT.md section 3.4 defines it (never retuned; research patch #2:
+tune slot spacing / FOV instead):
+
+- `footprint_radius(altitude_m, fov_half_angle_rad)` (`cubesat/coverage.py:24`):
+  `r_f = h·tan(FOV/2)`. The scenario stores FOV/2 directly
+  (`Sensor.fov_half_angle_deg`), so the argument is the half angle. Test-pinned
+  against whole-angle bugs with hardcoded literals (tan(1°)·500 km =
+  8727.532464108792 m, tan(2°)·500 km = 17460.384745873864 m).
+- `target_grid(step_m, extent_m)` (`cubesat/coverage.py:30`): square (y, z) grid,
+  −extent..+extent both axes, fixed construction order. Nominal: 2 km step,
+  30 km half-extent → 31×31 = 961 points.
+- `coverage_fraction(centers_yz, grid, radius_m)` (`cubesat/coverage.py:40`):
+  fraction of grid points within `r_f` of ANY center = union of footprint discs,
+  computed as a boolean OR of per-center masks. Removing a center can only shrink
+  the covered set → `test_coverage_monotonic_in_sats` holds EXACTLY (no epsilon).
+- Model approximations (stated, deliberate): nadir-pointing imager onto a flat
+  ground plane h below the chief; footprint center = satellite (y, z); |x| ≤
+  formation amplitude (11 km) << h (500 km), so `r_f` uses the chief altitude per
+  the master prompt formula.
+
+`cubesat/sim.py` (new, 187 lines) — pure sim core + the versioned log-line model:
+
+- `slot_initial_state(radial_amp_m, cross_amp_m, phase_rad, n)`
+  (`cubesat/sim.py:41`): `[A·cosφ, −2A·sinφ, B·cosφ, −A·n·sinφ, −2A·n·cosφ,
+  −B·n·sinφ]`. This is the phase-shifted point of ONE common passive relative
+  orbit: x = A·cos(nt+φ), y = −2A·sin(nt+φ), z = B·cos(nt+φ). Drift-free because
+  vy0 = −2n·x0 (the vx0 = −A·n·sinφ term only shifts phase — the secular-y
+  cancellation is independent of vx0, derived from the G1 STM rows). Do NOT use
+  `hcw.drift_free_state` for phase-spaced slots: it forces vx0 = 0, which gives
+  every slot a different ellipse amplitude (slots bunch instead of spreading
+  along one orbit). Test-pinned: slots 0 and 3 close after one period (1e-8 rel).
+- `build_slots(scenario, n)` (`cubesat/sim.py:63`): sat i on slot i, phase =
+  phase_offset_deg + 360·j/n_slots. Cross-track amplitude B is not a schema
+  field → B = A (planar relative orbit, z in phase with x). Consequence that
+  matters for coverage: with B = 0 the slots at φ and 180°−φ would share the
+  same (y, z) ground position (y = −2A·sinφ is symmetric about 90°) and their
+  footprints would coincide exactly; B = A spreads the 6 ground centers around
+  a ring instead.
+- `run_scenario(scenario)` (`cubesat/sim.py:79`): per tick k (t = k·dt, no float
+  accumulation), records the tick line, then steps each satellite with
+  `PDController.step` against its own slot's current state (`hcw.propagate`).
+  Guards `n_sats == n_slots` (G3 mapping; G4 relaxes). Guards nothing else —
+  no failures until G4.
+
+`cubesat/run.py` (rewritten, 59 lines) — I/O edge only: parse args, load
+scenario, `run_scenario`, write JSONL with `sort_keys=True` and `newline="\n"`
+(keeps log bytes platform-stable). Prints `coverage_mean_last_orbit` to stdout.
+The G0 INIT header line is kept (tests/test_cli.py pins it; replay metadata).
+
+### Log schema (MASTER_PROMPT section 5, v = 1)
+
+One line per tick: `{v, t, state, sats: [{id, role, status, r, v, dv_used}],
+coverage, min_sep}`; `event` key is present only when there is an event.
+Event contract designed NOW, emitted by G4 (docstring in `cubesat/sim.py`):
+
+- `FAILURE_DETECTED`: payload `{sat_id, mode, t_fail, t_detect}`
+- `ASSIGNMENT`: payload `{assignments: [{sat_id, slot_index, role}], method, cost_total}`
+
+Two non-tick lines bracket the run: the INIT header (v, t=0, state INIT,
+scenario, seed, n_sats — G0 metadata) and one SUMMARY line
+(`coverage_mean_last_orbit` = time-averaged coverage over the last orbit,
+window [t_end − 2π/n, t_end], MASTER_PROMPT 3.4). G3 ticks carry state NOMINAL
+and status NOMINAL; the state machine arrives in G4.
+
+### Determinism (AGENTS.md invariant 2)
+
+No wall clock, no RNG anywhere on the log path (the seed is logged, unused by
+the G3 sim). Satellites iterate in id order, grid in fixed construction order,
+pairs i<j; `json.dumps(..., sort_keys=True)`; numpy float64 only, `.tolist()`
+converts before JSON (np.float64 would raise TypeError in json — loud, not
+silent). `t = k·dt` (multiplication, not accumulation). Evidence: the full
+nominal run twice → identical sha256; short run pinned to a golden hash.
+
+### Tuning the metric to be meaningful (research patch #2)
+
+The pre-G3 nominal.json (radial_amp_km 1.0, FOV 1.2°) would have been
+meaningless: slot ground spacing ≤ 2 km vs r_f = 10.5 km → footprints fully
+overlap, coverage ~independent of imager count. Sweep (60 samples over one
+orbit, production functions, scratch run — not committed; mean coverage with 4
+imagers / worst-pair 2-imager no-recovery drop):
+
+| A km | FOV° | r_f km | cov4 | drop_min | drop_max |
+|---|---|---|---|---|---|
+| 8 | 1.2 | 10.47 | 0.272 | 0.095 | 0.120 |
+| 9 | 1.5 | 13.09 | 0.398 | 0.125 | 0.170 |
+| 10 | 1.5 | 13.09 | 0.425 | 0.148 | 0.188 |
+| 10 | 1.6 | 13.97 | 0.456 | 0.150 | 0.197 |
+| 11 | 1.5 | 13.09 | 0.438 | 0.166 | 0.199 |
+| 11 | 2.0 | 17.46 | 0.613 | 0.164 | 0.248 |
+
+Chosen: **radial_amp_km 11.0, fov_half_angle_deg 1.5** (r_f 13.09 km, in the
+patch-#2 band) — smallest-formation candidate whose worst-pair drop clears 15
+points with margin (A = 10/1.5 misses at 0.148; A = 10/1.6 sits exactly on
+0.150). Grid stays 30 km half-extent / 2 km step: a larger extent dilutes the
+drop below 15 points (the metric couples grid extent to formation size — the
+target box is where the formation images; footprints spill ~5 km past it in y).
+
+### Measured numbers and the commands behind them
+
+Recorded 2026-09-28 on Windows.
+
+1. Coverage (nominal, no failures): mean over one orbit **0.4387**, tick range
+   0.4266–0.4547; min_sep 15.56–17.39 km; per-sat dv_used ≤ 1.6e-11 m/s.
+
+   ```
+   uv run python -m cubesat.run --scenario data/scenarios/nominal.json --seed 42 --out data/logs/nominal.jsonl
+   wrote data\logs\nominal.jsonl
+   coverage_mean_last_orbit = 0.438700
+   ```
+
+   (2841 lines = INIT + 2839 ticks + SUMMARY; log gitignored, NOT committed.)
+
+2. Metric-level no-recovery drop (research patch #2 design target): killing 2 of
+   the 4 imagers drops time-averaged coverage by **16.65 points** (worst imager
+   pair) to **19.99 points** (best) — ≥ 15 required. Monotonicity exact under
+   every single removal at 12 times across the orbit; union of 4 imagers (0.439)
+   strictly exceeds the best single imager (0.137) → footprints do not fully
+   overlap.
+
+   ```
+   uv run pytest tests/test_coverage.py -s -q
+   test_coverage_monotonic_in_sats: mean coverage over one orbit (4 imagers) = 0.4390; 2-imagery-death no-recovery drop min = 0.1665, max = 0.1999 (target >= 0.15, research patch #2)
+   ```
+
+3. Byte determinism: the command in (1) run twice → identical sha256
+   `6169c266d31191f7065a890f107e98c976a4e4122e2c6ebe656db7d08025a242`. The
+   short-run regression (nominal.json trimmed to 600 s, generated inside the
+   test) is pinned to golden sha256
+   `c95f31b872b9134db57c43763d3bc67bb1e42c056beb7378c5177172758696f6`
+   (tests/test_cli.py). Any change to the sim, log schema, or nominal.json
+   changes the golden and must be acknowledged consciously.
+
+   ```
+   uv run pytest tests/test_cli.py::test_run_is_byte_deterministic -q   # passed
+   ```
+
+4. CW-vs-Kepler nonlinear error at the NEW formation scale (radial 11 km /
+   cross-track 11 km, slot at phase π/2 → 22 km along-track from the chief),
+   3 orbits, G1's method (chief + chaser integrated with two-body solve_ivp
+   rtol 1e-12, relative state rotated into chief LVLH, vs analytic CW):
+   **2984.5 m** (vs 3.101 m at the G1 1 km ellipse). Recorded in the GATES.md
+   open-risks row. Measured via a scratch `uv run python` heredoc on 2026-09-28
+   reproducing tests/test_hcw.py::test_cw_vs_kepler_error_report with the slot
+   state above — the honest cost of the patch-#2 formation scale; carry it into
+   G4 Δv/reconfig claims and the G7 README honesty section.
+
+5. Full suite green, lint clean:
+
+   ```
+   uv run pytest -q  →  ....................  [100%]   (20 passed: 16 pre-existing + 4 new)
+   uv run ruff check .  →  All checks passed!
+   ```
+
+### File map
+
+| File | Role |
+|---|---|
+| `cubesat/coverage.py` | footprint_radius, target_grid, coverage_fraction (union of discs) |
+| `cubesat/sim.py` | slot_initial_state, build_slots, run_scenario + log-line/event contract |
+| `cubesat/run.py` | CLI I/O edge: scenario → JSONL lines, INIT header + SUMMARY |
+| `tests/test_coverage.py` | test_coverage_monotonic_in_sats (+ footprint/grid contract pins) |
+| `tests/test_cli.py` | test_run_is_byte_deterministic (golden sha256) + short-scenario helper |
+| `data/scenarios/nominal.json` | radial_amp_km 11.0, FOV 1.5° (tuned per patch #2); 1 leader / 4 imagers / 1 downlink |
+| `docs/MASTER_PROMPT.md` §3.4, §3.5, §5, §3.8 + patch #2 | formula/behavior source for everything above |
+
+### Scope notes / caveats for G4+
+
+- G3 has no failure injection: status/state are NOMINAL everywhere, `event` is
+  never emitted, seed is unused by the sim. G4 fills the designed event contract.
+- The no-recovery drop in (2) is METRIC-level (remaining imagers keep their
+  slots, positions from the CW slots) — the true no-recovery baseline curve with
+  failure detection and coasting dead sats is G4's `two_failure` scenario; its
+  numbers may differ slightly.
+- test_two_failures_reduce_coverage_visibly (research patch #2) is deliberately
+  NOT written here: it needs G4's failure injection and the two_failure scenario.
+- CW linearization error at formation scale is 2984.5 m over 3 orbits (see (4));
+  positions in the log are CW-consistent, not Kepler-true.
+
+### Reproduce
+
+```
+uv sync --locked
+uv run pytest tests/test_coverage.py -s -q    # monotonicity + patch-#2 drop evidence
+uv run pytest -q                              # full suite: 20 passed
+uv run ruff check .                           # All checks passed!
+uv run python -m cubesat.run --scenario data/scenarios/nominal.json --seed 42 --out data/logs/nominal.jsonl
+```
