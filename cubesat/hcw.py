@@ -80,3 +80,37 @@ def drift_free_state(x0: float, z0: float = 0.0, *, n: float) -> np.ndarray:
     Python (non-default after default) and the order was kept as requested.
     """
     return np.array([x0, 0.0, z0, 0.0, -2.0 * n * x0, 0.0])
+
+
+def forcing_matrix(t: float, n: float) -> np.ndarray:
+    """G(t) = integral_0^t of the STM's velocity columns: maps a constant acceleration
+    held in LVLH over [0, t] to the state it produces on top of the unforced motion.
+
+    Terms are the analytic integrals of the MASTER_PROMPT 3.1 rows (G = int Phi ds @ B,
+    B = [0; I]). Double-integrator limit at small t: G ~ [[t^2/2 I3], [t I3]].
+    Verified against RK45 of the forced CW ODEs by tests/test_pd.py.
+    """
+    nt = n * t
+    c = math.cos(nt)
+    s = math.sin(nt)
+    n2 = n * n
+    return np.array(
+        [
+            [(1.0 - c) / n2, 2.0 * (nt - s) / n2, 0.0],
+            [-2.0 * (nt - s) / n2, (4.0 * (1.0 - c) - 1.5 * nt * nt) / n2, 0.0],
+            [0.0, 0.0, (1.0 - c) / n2],
+            [s / n, 2.0 * (1.0 - c) / n, 0.0],
+            [-2.0 * (1.0 - c) / n, 4.0 * s / n - 3.0 * t, 0.0],
+            [0.0, 0.0, s / n],
+        ]
+    )
+
+
+def propagate_controlled(state0, accel, t, n) -> np.ndarray:
+    """Propagate state0 for t [s] under CW dynamics with `accel` [m/s^2] held constant
+    in LVLH over [0, t]: Phi(t) @ x0 + G(t) @ a. Exact for the zero-order-hold step the
+    PD controller uses (cubesat/pd.py); scalar t only. SI, LVLH throughout.
+    """
+    state = np.asarray(state0, dtype=float)
+    a = np.asarray(accel, dtype=float)
+    return stm(float(t), n) @ state + forcing_matrix(float(t), n) @ a

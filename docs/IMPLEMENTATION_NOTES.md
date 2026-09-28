@@ -138,8 +138,8 @@ Recorded 2026-09-28 on Windows, repo at the `gate-1-pass` tag
   implementation. The only test-file change after verification was adding the
   measured-error print to `test_hcw_stm_vs_ode` (no assertion changes) so the
   gate ledger can cite the number with its command.
-- `stm` is the unforced STM; thrusting dynamics (STM step + control) are G2
-  scope and not verified yet.
+- `stm` is the unforced STM; thrusting dynamics (STM step + control) were G2
+  scope — implemented and verified in G2, see below.
 
 ### Reproduce
 
@@ -147,4 +147,152 @@ Recorded 2026-09-28 on Windows, repo at the `gate-1-pass` tag
 uv sync --locked
 uv run pytest tests/test_hcw.py -s -q   # the two measured numbers above
 uv run pytest -q                        # full suite, includes the slow Kepler test
+```
+
+## G2 — PD controller with saturation + per-satellite delta-v (2026-09-28, PASS)
+
+### What was built
+
+`cubesat/hcw.py` additions (dynamics, ~48 lines):
+
+- `forcing_matrix(t, n)` (`cubesat/hcw.py:85`): `G(t) = ∫₀ᵗ Φ(s) ds · B` (B = [0; I]),
+  the analytic integrals of the MASTER_PROMPT 3.1 rows. Maps a constant LVLH
+  acceleration held over `[0, t]` to the state it produces. Double-integrator limit
+  at small t: `G ≈ [[t²/2·I₃], [t·I₃]]`.
+- `propagate_controlled(state0, accel, t, n)` (`cubesat/hcw.py:109`):
+  `Φ(t)·x₀ + G(t)·a` — the exact zero-order-hold step for constant thrust over the
+  step. Verified against RK45 of the forced CW ODEs (below), same
+  verify-don't-trust discipline as G1.
+
+`cubesat/pd.py` (new, 77 lines):
+
+- `A_MAX_DEFAULT = 1e-2` m/s² (research patch #1, overrides the master prompt's
+  1e-4; cold-gas class, **ASSUMED** ~8 kg CubeSat / ~150 mN thruster — the mass and
+  thrust figures are an unverified assumption, labelled as such). Scenario
+  parameter; `data/scenarios/nominal.json` already carries 0.01.
+- `bang_bang_time_lower_bound(d_m, a_max)` = `2·sqrt(d/a_max)`: the rest-to-rest
+  reconfiguration lower bound, logged per reconfiguration distance (research
+  patch #1). Informational, not asserted against the closed loop: CW natural
+  dynamics can assist or oppose, so a PD trajectory is not bound by it in general.
+- `PDController(wn, zeta=1.0, a_max=A_MAX_DEFAULT)` — one instance per satellite:
+  - `command(r, v, r_ref, v_ref)`: `u = -Kp(r - r_ref) - Kd(v - v_ref)`,
+    `Kp = wn²`, `Kd = 2ζwn`. Saturation clamps the **vector magnitude**
+    (`‖u‖ ≤ a_max`) — a per-axis clamp would allow √3·a_max, which no single
+    thruster delivers. `v_ref` is the moving slot's own ellipse velocity (the
+    static-target form fights the 2:1 motion — see test_passive_slot_low_dv).
+  - `step(state, r_ref, v_ref, dt, n) -> (state_next, u)`: command from the error
+    at the current instant, hold over `[t, t+dt)`, advance with
+    `propagate_controlled`. Accumulates `dv_used += ‖u‖·dt` (m/s) — per-satellite
+    delta-v, feeds the MASTER_PROMPT section 5 log field `dv_used` from G4 on.
+  - No wall clock, no RNG: fixed dt, pure float ops on hardcoded states
+    (AGENTS.md invariant 2).
+
+`tests/test_pd.py` — the three names mandated by MASTER_PROMPT 3.8 plus one extra:
+
+- `test_pd_step_response`: chaser at the chief at rest, slot = passive ellipse with
+  radial amplitude = step d = 1000 m (moving reference via `hcw.propagate`).
+  Settle criterion: first time after which the error norm never leaves the 5% band.
+  Overshoot criterion for a rotating reference: worst error after first entering
+  the 5% band, relative to the initial error (classic %-overshoot along a fixed
+  direction is ill-posed here; a ringing response exits the band and fails this
+  check — the monotone critically-damped approach reads ≈ the band-entry value,
+  4.99%, which is the definition's floor, not a fly-by distance). Settle target is
+  computed, not tuned: `2 × bang-bang bound = 4·sqrt(d/a_max)` = 1265 s.
+- `test_saturation_respected`: asserts `‖u‖ ≤ a_max` every step AND that
+  saturation actually engaged (`max ‖u‖ ≥ 0.999·a_max`, so the test is not
+  vacuous), plus the research-patch default `A_MAX_DEFAULT == 1e-2`. Geometry:
+  chaser and slot on the SAME 1 km passive ellipse a quarter period apart in phase
+  (both endpoints drift-free — the slot-to-slot reassignment case G4 faces);
+  initial command ≈ 27× a_max.
+- `test_passive_slot_low_dv`: chaser starts exactly on its slot; over one full
+  ellipse period the error stays ~float noise and delta-v is ~0. This
+  discriminates the moving-reference form: a static-target controller would burn
+  ~a_max every step (≈ tens of m/s per orbit) and drift off the slot.
+- `test_forced_propagator_matches_ode` (extra, beyond the mandated three): RK45
+  cross-check of `propagate_controlled` — the G2 analogue of G1's STM-vs-ODE.
+
+### Design constraint discovered (matters for G4)
+
+A rest-at-origin chase of a LARGE-amplitude slot diverges under a_max = 1e-2: the
+slot's along-track speed is 2·n·A (≈ 11 m/s for A = 5 km) and a saturated PD can
+never match it — measured during development: position error grew to ~5×10⁵ m over
+8000 s (`uv run pytest tests/test_pd.py -s -q` with the pre-fix 5 km geometry).
+G4's role reassignment must therefore reassign slots **on the same ellipse**
+(phase repositioning — catchable, measured below); forming a different-sized
+ellipse from rest needs a phased/multi-rev transfer or more thrust.
+
+### Measured numbers and the commands behind them
+
+Recorded 2026-09-28 on Windows.
+
+1. Step response (d = 1000 m, wn = 0.01, ζ = 1, a_max = 1e-2, dt = 2 s):
+   overshoot **4.99%** (limit 5%), t_settle **746 s** (target 1265 s), max |u| =
+   **0.0100 m/s²** (= a_max), dv_used **6.411 m/s** — within 1.5% of the
+   bang-bang-optimal Δv 2·√(d·a_max) = 6.32 m/s.
+
+   ```
+   uv run pytest tests/test_pd.py -s -q
+   test_pd_step_response: overshoot = 4.99% (limit 5%), t_settle = 746 s (target 1265 s = 2x bang-bang bound 632 s), max |u| = 0.0100 m/s^2 (a_max = 0.01), dv_used = 6.411 m/s
+   ```
+
+2. Saturation (quarter-phase same-ellipse transfer, d = 2236.1 m): max |u| =
+   **0.010000 m/s²** (≤ a_max, and saturation engaged), bang-bang lower bound
+   **945.7 s**, t_settle **1966 s**, dv_used **20.176 m/s**.
+
+   ```
+   test_saturation_respected: max |u| = 0.010000 m/s^2 (a_max = 0.01), bang-bang lower bound for d = 2236.1 m: t >= 945.7 s, t_settle = 1966 s, dv_used = 20.176 m/s
+   ```
+
+3. Occupied passive slot (1 km radial + 500 m cross-track, one orbit): max
+   position error **2.198e-11 m**, dv_used **1.410e-12 m/s**, max |u|
+   **1.4e-15 m/s²**.
+
+   ```
+   test_passive_slot_low_dv: max position error over one orbit = 2.198e-11 m, dv_used = 1.410e-12 m/s, max |u| = 1.411e-15 m/s^2
+   ```
+
+4. Forced propagator vs RK45 (constant accel, 300 s): position rel err
+   **2.283e-13**, velocity rel err **2.323e-13** (asserted ≤ 1e-8).
+
+   ```
+   test_forced_propagator_matches_ode: position relative error = 2.283e-13, velocity relative error = 2.323e-13
+   ```
+
+5. Full suite green, lint clean:
+
+   ```
+   uv run pytest  →  16 passed in 1.97s          (12 pre-existing + 4 new)
+   uv run ruff check .  →  All checks passed!
+   ```
+
+6. Dockerfile build re-verified first-hand (stale "unverified" risk row retired):
+   `docker build -t cubesat-g2-verify .` → exit 0, image
+   `sha256:391d099d53ea092fa5b5c04d57e4b54c51441a315988068c46fb3fec090b948e`,
+   816 MB, `uv sync --locked --no-dev` inside. Container RUN + healthcheck not yet
+   exercised — that stays with G6.
+
+### File map
+
+| File | Role |
+|---|---|
+| `cubesat/hcw.py` | + forcing_matrix, propagate_controlled (exact constant-thrust CW step) |
+| `cubesat/pd.py` | A_MAX_DEFAULT, bang_bang_time_lower_bound, PDController (command / step / dv_used) |
+| `tests/test_pd.py` | 3 mandated G2 tests + forced-propagator ODE cross-check |
+| `docs/MASTER_PROMPT.md` section 3.2 | Control law, saturation, bang-bang bound, must-verify list |
+| `docs/MASTER_PROMPT.md` research patch #1 | a_max 1e-2 override + per-reconfig bound logging |
+| `GATES.md` | G2 ledger row, Docker risk row retired, README-allowed numbers |
+
+### Units policy
+
+Unchanged from G1: SI everywhere, state `[x, y, z, vx, vy, vz]` in chief LVLH;
+`dv_used` is m/s (Δv = ∫‖u‖dt); `a_max` and commands are m/s². No conversion
+anywhere in this code path.
+
+### Reproduce
+
+```
+uv sync --locked
+uv run pytest tests/test_pd.py -s -q   # all four measured number sets above
+uv run pytest -q                       # full suite: 16 passed
+uv run ruff check .                    # All checks passed!
 ```
