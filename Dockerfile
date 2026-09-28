@@ -1,4 +1,4 @@
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+FROM ghcr.io/astral-sh/uv:0.12.18-python3.12-bookworm-slim
 
 ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy
@@ -7,11 +7,11 @@ WORKDIR /app
 
 # Dependency layer: manifests only, so Docker caches the wheels.
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-dev --no-install-project
+RUN uv sync --locked --no-dev --no-install-project
 
 # Application layer.
 COPY cubesat ./cubesat
-RUN uv sync --frozen --no-dev
+RUN uv sync --locked --no-dev
 
 ENV PORT=8000
 EXPOSE 8000

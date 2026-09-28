@@ -22,3 +22,9 @@ Simulation-only. Linearized HCW equations with a circular chief; no J2, drag, or
 dynamics; ideal comms and sensing; centralized replanner. Coverage is defined as the
 fraction of a ground-target grid inside the union of healthy imagers' footprints
 (definition finalized at G3). Results are not flight predictions.
+
+- A dead satellite stays on a bounded relative orbit only in linear, unperturbed HCW;
+  J2 and drag would make it drift. Nonlinear CW-vs-Kepler cross-check error: *unmeasured*
+  (recorded at G1).
+- The default `a_max` of 1e-2 m/s^2 assumes an ~8 kg CubeSat with ~150 mN of cold-gas
+  thrust — an assumption, not a verified thruster specification.

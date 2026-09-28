@@ -36,3 +36,6 @@ select = ["E", "F", "I", "W", "B", "UP"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q --basetemp=.pytest_tmp"
+markers = [
+    "slow: long-running checks (Kepler cross-check, byte-determinism hash); excluded from the fast loop",
+]

@@ -1,0 +1,30 @@
+{
+  "_comment": "PROPOSED ZCode hooks config. NOT installed — apply to the ZCode settings only after user approval. See AGENTS.md gate rhythm.",
+  "_assumptions": [
+    "Settings file location and hook schema need confirmation against current ZCode docs (see scaffold install report).",
+    "PostToolUse env var exposing edited file paths is a guess; confirm before installing."
+  ],
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run ruff check $ZCODE_EDITED_FILES"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run pytest -m \"not slow\" -x -q"
+          }
+        ]
+      }
+    ]
+  }
+}
