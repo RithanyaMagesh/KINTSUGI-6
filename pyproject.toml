@@ -33,6 +33,11 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["E", "F", "I", "W", "B", "UP"]
 
+[tool.ruff.lint.isort]
+# cubesat.hcw does not exist until G1, so ruff's resolution-based first-party
+# detection misses it; pin the package so import order is stable.
+known-first-party = ["cubesat"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q --basetemp=.pytest_tmp"
