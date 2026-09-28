@@ -25,7 +25,8 @@ baseline). Events (type + payload, FIFO, at most one per tick line):
     FAILURE_DETECTED: {sat_id, mode, t_fail, t_detect}
     STATE:            {from, to}                    (plain transitions)
     ASSIGNMENT:       {assignments: [{sat_id, slot_index, role}], method,
-                       cost_total, formation: {radial_amp_m, phase_offset_rad}}
+                       cost_total, formation: {radial_amp_m, phase_offset_rad},
+                       transfer_lower_bound_s}
 The replanner (cubesat.allocate.replan) runs BETWEEN sim steps -- one control
 cycle per machine transition -- never inside the step loop below it. Every sat
 emits a heartbeat each tick; a sat that stops reporting is declared DEAD after
@@ -42,7 +43,7 @@ import numpy as np
 from cubesat.allocate import replan
 from cubesat.coverage import coverage_fraction, footprint_radius, target_grid
 from cubesat.hcw import mean_motion, propagate, slot_initial_state
-from cubesat.pd import PDController
+from cubesat.pd import PDController, bang_bang_time_lower_bound
 from cubesat.scenario import FailureMode, Scenario
 
 LOG_SCHEMA_VERSION = 1
@@ -92,7 +93,6 @@ def run_scenario(scenario: Scenario) -> list[dict]:
     grid = target_grid(
         scenario.sensor.grid_step_km * 1000.0, scenario.sensor.grid_extent_km * 1000.0
     )
-    imager_ids = [i for i, role in enumerate(scenario.roles) if role == "imager"]
 
     # Mission bookkeeping. With no failures every default keeps this path
     # byte-identical to the G3 nominal log (golden-hash regression guard).
@@ -164,8 +164,16 @@ def run_scenario(scenario: Scenario) -> list[dict]:
                     }
                 )
 
+        # Coverage follows the CURRENT role assignment: re-election after a replan
+        # reassigns roles[] (imagers can move to other sats), so the imager set is
+        # evaluated per tick. With no replanning roles == scenario.roles, which
+        # keeps the no-failure path byte-identical to the G3 nominal log.
         centers = np.array(
-            [states[i][1:3] for i in imager_ids if status[i] != STATUS_DEAD]
+            [
+                states[i][1:3]
+                for i in range(n_sats)
+                if roles[i] == "imager" and status[i] != STATUS_DEAD
+            ]
         )
         coverage = coverage_fraction(centers, grid, r_f)
         positions = np.array([state[:3] for state in states])
@@ -200,8 +208,10 @@ def run_scenario(scenario: Scenario) -> list[dict]:
             break
 
         # Between-step orchestration (MASTER_PROMPT 3.5): the replanner runs here,
-        # between sim steps, one control cycle per machine transition. Each state
-        # therefore lasts exactly one tick in the log.
+        # between sim steps, one control cycle per machine transition. The decision
+        # states FAILURE_DETECTED and REPLANNING therefore each last exactly one
+        # tick in the log; RECONFIGURING spans the physical transfers until every
+        # survivor settles within tolerance, and RECOVERED holds to the end.
         if (
             mission == STATE_FAILURE_DETECTED
             and scenario.recovery_enabled
@@ -262,6 +272,11 @@ def run_scenario(scenario: Scenario) -> list[dict]:
                             "radial_amp_m": plan.radial_amp_m,
                             "phase_offset_rad": plan.phase0_rad,
                         },
+                        # Research patch #1: log the bang-bang lower bound per
+                        # reconfig, t >= 2*sqrt(d/a_max) for the largest transfer.
+                        "transfer_lower_bound_s": bang_bang_time_lower_bound(
+                            max_transfer, scenario.a_max_mps2
+                        ),
                     },
                 }
             )

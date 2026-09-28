@@ -55,7 +55,7 @@ def _events(lines, event_type):
     ]
 
 
-def test_failure_detection_latency():
+def test_failure_detection_latency(tmp_path):
     """Each sat emits a heartbeat every tick; a DEAD sat is declared after K missed
     ticks (MASTER_PROMPT 3.5). The event carries {sat_id, mode, t_fail, t_detect}
     and detection latency = t_detect - t_fail; the declaring tick's line shows the
@@ -64,9 +64,11 @@ def test_failure_detection_latency():
     payload["name"] = "detect_latency"
     payload["duration_s"] = 200.0
     payload["failures"] = [{"t": 100.0, "sat_id": 4, "mode": "DEAD"}]
-    # Build the scenario through the real schema from a temp file (never committed).
-    tmp = ROOT / ".pytest_tmp" / "g4_detect.json"
-    tmp.parent.mkdir(exist_ok=True)
+    # Build the scenario through the real schema from a pytest-owned temp file.
+    # (Explicit mkdir: this setup's relative --basetemp does not reliably
+    # pre-create the per-test tmp_path directory.)
+    tmp = tmp_path / "g4_detect.json"
+    tmp.parent.mkdir(parents=True, exist_ok=True)
     tmp.write_text(json.dumps(payload), encoding="utf-8")
     lines = run_scenario(load_scenario(tmp))
 
@@ -88,8 +90,9 @@ def test_failure_detection_latency():
 
 def test_state_machine_sequence(scenario, recovery_lines):
     """NOMINAL -> FAILURE_DETECTED -> REPLANNING -> RECONFIGURING -> RECOVERED, with
-    every transition visible at sim time; two failures drive two full cycles; dead
-    sats coast (AGENTS.md invariant 5)."""
+    every transition visible at sim time; two failures drive two detection ->
+    replanning cycles, and because the 2nd is detected mid-reconfiguration the
+    machine ends in a single RECOVERED; dead sats coast (AGENTS.md invariant 5)."""
     ticks = _tick_lines(recovery_lines)
     first_seen = {}
     for line in ticks:
