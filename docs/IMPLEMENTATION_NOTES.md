@@ -489,3 +489,196 @@ uv run pytest -q                              # full suite: 20 passed
 uv run ruff check .                           # All checks passed!
 uv run python -m cubesat.run --scenario data/scenarios/nominal.json --seed 42 --out data/logs/nominal.jsonl
 ```
+
+## G4 — Failure injection, detection, two-step allocation, state machine, baseline (2026-09-28, PASS)
+
+### What was built
+
+`cubesat/allocate.py` (new, ~250 lines) — the two-step allocation (MASTER_PROMPT 3.3):
+
+- `seat_roles_for(survivor_roles, original_roles)` (`cubesat/allocate.py:60`): the new
+  role multiset for k seats. Critical roles (count == 1 in the original formation:
+  leader, downlink) whose holder died are RE-ELECTED first, each taking a seat from
+  the majority role (deterministic: first-occurrence iteration, `dict.fromkeys` — no
+  sets); the multiset is then laid out with imager seats on EVEN indices so the
+  coverage-bearing seats are as spread as the k evenly-spaced slots allow (k=4 →
+  imagers 180° apart).
+- `select_formation(...)` (`cubesat/allocate.py:158`): step 1. Candidates = k
+  phase-spaced slots on ONE passive ellipse swept over `allocation.amp_sweep`
+  (radial-amplitude multipliers) x `allocation.phase_sweep_deg` (phase offsets),
+  both scenario grids. A candidate is feasible iff (a) pairwise separation over 72
+  orbit samples stays >= `min_sep_km`, with coasting dead/THRUSTER_OUT satellites
+  propagated as obstacles (they never freeze, AGENTS.md 5), and (b) a perfect
+  survivor→seat matching exists whose per-transfer bang-bang Δv estimate
+  2·sqrt(d·a_max) fits `dv_budget_mps` (checked with `linear_sum_assignment` on a
+  0/1 matrix). Among feasible candidates: max measured coverage (union of imager
+  seats' footprints over the 72 samples); exact ties keep the FIRST in sweep order.
+  Raises `RuntimeError` if nothing is feasible (loud, not silent).
+- `build_cost_matrix(...)` (`cubesat/allocate.py:186`): C[i,j] = w1·dist_norm +
+  w2·dist_norm/fuel_i + w3·role_mismatch; the first two terms normalized to [0,1]
+  across the matrix (fuel_i = remaining Δv budget); plus `_TIE_EPS = 1e-9` times the
+  row-major cell index (the master prompt's "tiny index-based epsilon"). Rows =
+  survivors, cols = seats, rectangular.
+- `solve_assignment(cost, method)` (`cubesat/allocate.py:212`): "hungarian" →
+  `linear_sum_assignment` (research patch: scipy docs are silent on ties — the
+  100-run determinism test is the guard); "greedy" → survivors in row order take
+  their nearest available seat (min cost, tie → lowest column). A deterministic
+  SIZE cap (`_MAX_COST_CELLS = 4096`) forces the fallback on pathological inputs —
+  a wall-clock timeout would break reproducibility (AGENTS.md 2). The scenario
+  toggle `allocation.method` forces greedy for the demo's graceful degradation.
+- `replan(...)` (`cubesat/allocate.py:240`): orchestrates step 1 + step 2, returns
+  (plan, pairs, cost_total, method, max_transfer_m, cost_matrix).
+
+`cubesat/sim.py` (rewritten, ~300 lines) — G3 sim + the G4 mission layer:
+
+- Failure schedule: `failures` sorted by (t, sat_id), fired at the first tick with
+  t >= failure.t, BEFORE that tick's heartbeat. DEAD → status DEAD (silent);
+  THRUSTER_OUT → status THRUSTER_OUT (keeps reporting, cannot maneuver — optional
+  mode, minimal handling: coasts, excluded from reassignment, still counted as an
+  imager for coverage if it was one).
+- Heartbeat/detection: every non-DEAD sat reports each tick; a DEAD sat's missed
+  counter increments (the firing tick's heartbeat already counts as missed), and at
+  `detection.missed_ticks_k` consecutive misses the failure is declared: event
+  FAILURE_DETECTED {sat_id, mode, t_fail, t_detect}; detection latency =
+  t_detect − t_fail = (K−1)·dt for a tick-aligned failure (4 s for K=3, dt=2).
+- Swarm state machine, logged per tick in the `state` field: NOMINAL →
+  FAILURE_DETECTED → REPLANNING → RECONFIGURING → RECOVERED; a new detection
+  re-enters FAILURE_DETECTED from any state. Each transition lasts exactly one
+  tick: detection at tick k logs FAILURE_DETECTED (with the FAILURE_DETECTED
+  event); the between-step phase then advances to REPLANNING (event STATE
+  {from, to} on the next line); the next between-step RUNS THE REPLANNER (between
+  sim steps, MASTER_PROMPT 3.5) and advances to RECONFIGURING (event ASSIGNMENT on
+  the next line); the RECOVERED check (all assigned sats within tolerance of their
+  seats) runs each between-phase and advances to RECOVERED (event STATE). Tolerance
+  = max(0.05 · max transfer distance at assignment, 1 m).
+- With `recovery_enabled = false`: detection still fires (and is logged), the
+  machine stops at FAILURE_DETECTED, no replanning, survivors hold their original
+  slots — the no-recovery baseline.
+- Dead and THRUSTER_OUT sats coast: `propagate(state, dt, n)` — never frozen, and
+  ALWAYS inside the min_sep pairwise loop (AGENTS.md 5). A sat that dies
+  mid-maneuver has a non-drift-free state and drifts secularly through the
+  formation — a real collision hazard the demo shows (two_failure's sat 2 dies
+  mid-burn; see measured numbers).
+- Events are a FIFO with at most one popped per tick line: transitions queued in
+  the between-phase pop on the NEXT tick (whose state is the new one — coherent);
+  a second detection in the same tick as a queued transition delays that
+  transition's event by one tick (the payload times remain exact). Log schema
+  extension vs G3: ASSIGNMENT payload = {assignments: [{sat_id, slot_index,
+  role}], method, cost_total, formation: {radial_amp_m, phase_offset_rad}} (the
+  formation field is new — G5 needs it for slot ghosts); event type STATE added.
+
+`cubesat/hcw.py` — `slot_initial_state` moved here from sim.py (identical math;
+the G4 allocator builds candidate formations from it and must not import the sim
+loop — circular import). sim.py imports it back; `build_slots` stays in sim.py.
+
+`cubesat/scenario.py` — new fields, all defaulted so nominal.json (unchanged file)
+still loads and the G3 golden-hash short run stays byte-identical:
+`recovery_enabled: bool = True`, `detection: Detection` (missed_ticks_k = 3),
+`allocation: Allocation` (w1=1.0, w2=0.5, w3=2.0, min_sep_km=2.0, dv_budget_mps=100,
+amp_sweep=[1.0], phase_sweep_deg=[0,60,...,300], method="hungarian").
+
+`data/scenarios/two_failure.json` — the primary demo: 6 sats (1 leader, 4 imagers,
+1 downlink), A=11 km slots, failures kill IMAGERS sat 1 (t=1200) and sat 2
+(t=1500, DEAD); duration 17028 s (3 orbits); a_max_mps2 = **0.1** (see the finding
+below); allocation grids as above. Keeping leader+downlink alive and killing two
+imagers is deliberate: the no-recovery baseline keeps 2 imagers (drop ~20 pts per
+patch #2) while recovery re-spaces the two surviving imagers 180° apart — the
+baseline comparison then shows a real gain.
+
+### The a_max finding (why two_failure carries 0.1, and what it costs)
+
+The task assumed G2's PD reuses directly for reconfiguration. MEASURED (scratch
+`uv run python` experiments, 2026-09-28): at the patch-#2 formation scale
+(A = 11 km) the G2 PD (wn=0.01, a_max=1e-2) DIVERGES on every same-ellipse
+slot-to-slot transfer — even a 10° gap (2.7 km initial error) runs away to
+2841 km in 3 orbits; the gain ladder wn ∈ {2e-4 … 0.01} all fail (mid/low wn sit
+in the linear-unstable region of the CW PD loop; wn=0.01 saturates and its
+burn-induced Coriolis radial oscillations — amplitude ~2·a·t_burn/n — exceed the
+damping authority a_max/Kd = 0.5 m/s). One-imulse/two-impulse feedforward
+transfers were prototyped and also rejected (arc-execution errors 27–83 km; the
+exact-arc 6×6 solve needs 120–570× a_max; receding-horizon MPC converges but
+costs 74–149 m/s and fragile handovers). At a_max = 0.1 the UNCHANGED G2 PD
+converges every transfer in 0.2–0.31 orbits. Research patch #1 explicitly keeps
+a_max a scenario parameter ("Keep it a scenario param"), so two_failure uses
+0.1 m/s² — a higher-thrust variant of the assumed cold-gas class (0.1 m/s² on the
+ASSUMED 8 kg ≈ 0.8 N; label as an assumption). The 1e-2 default is untouched in
+pd.py and nominal.json. Recorded in the GATES.md decisions log; flag for user
+ratification. The Δv bill is heavy (below) — the honest alternative is MPC
+impulse maneuver machinery (~2–5× less Δv), out of G4 scope.
+
+### Measured numbers and the commands behind them
+
+Recorded 2026-09-28 on Windows.
+
+1. Headline baseline (MASTER_PROMPT 3.4 / gate G4): last-orbit mean coverage on
+   two_failure — WITH recovery **0.2723** vs NO recovery **0.2390** (+3.33 pts);
+   the no-recovery drop from the pre-failure window is 0.4387 → 0.2390 =
+   **19.97 pts** (>= 15, research patch #2).
+
+   ```
+   uv run pytest tests/test_fault.py -s -q
+   test_min_separation_never_below_threshold: worst min_sep = 5262.4 m at t = 1690 s (threshold 2000 m, 8515 ticks incl. reconfiguration transfers)
+   test_two_failures_reduce_coverage_visibly: no-recovery mean coverage pre-failure = 0.4387, last orbit = 0.2390, drop = 19.97 pts (target >= 15, research patch #2)
+   test_recovery_beats_no_recovery: last-orbit mean coverage with recovery = 0.2723, without = 0.2390, gain = 3.33 pts
+   ```
+
+2. CLI + byte determinism: 8517 lines (INIT + 8515 ticks + SUMMARY), run twice →
+   identical sha256 `fba21cec52365bffbcd7f663f62c7d025313a6f276f86ac4d3a0d31905c1bb09`.
+
+   ```
+   uv run python -m cubesat.run --scenario data/scenarios/two_failure.json --seed 42 --out data/logs/two_failure.jsonl
+   wrote data\logs\two_failure.jsonl
+   coverage_mean_last_orbit = 0.272276
+   ```
+
+3. Mission timeline (from the committed-command log): FAILURE_DETECTED sat 1 at
+   t=1204 (latency 4 s), REPLANNING 1206, ASSIGNMENT (hungarian, k=5) 1208;
+   FAILURE_DETECTED sat 2 at t=1504 (latency 4 s, MID-RECONFIGURATION), REPLANNING
+   1506, ASSIGNMENT (hungarian, k=4, cost 2.2699, formation φ0=0, A=11 km — imager
+   seats 180° apart at phases 0/180) 1508; RECOVERED t=3928 s. Sat 2 dies
+   mid-maneuver (29.40 m/s burned) and drifts secularly through the formation
+   thereafter — the dead-sat collision hazard of AGENTS.md 5, visible in the log.
+
+4. Worst min_sep over the whole recovery run: **5262.4 m at t=1690 s** (during
+   transfers) vs the 2000 m scenario threshold — the formation feasibility check
+   (seat/obstacle separation) does NOT model transfer paths, but the measured
+   transfers hold the threshold everywhere (command in (1)).
+
+5. Per-satellite Δv at run end (log, last tick): sat 0 (leader, 90° reassignment)
+   205.92; sat 1 (dead on slot) 0.00; sat 2 (dead mid-burn) 29.40; sat 3 (kept its
+   seat) 113.19; sat 4 (120° reassignment) 280.25; sat 5 (30°) 82.26 m/s. Heavy —
+   the a_max=0.1 saturated PD is ~2.4× the bang-bang Δv and reacts to failure 1
+   before failure 2 lands; recorded honestly, see the finding above.
+
+6. Full suite green, lint clean: `uv run pytest -q` → 30 passed (20 pre-existing +
+   10 new); `uv run ruff check .` → All checks passed! The G3 golden-hash
+   short-run test still passes — the no-failure path is byte-identical to G3.
+
+### File map
+
+| File | Role |
+|---|---|
+| `cubesat/allocate.py` | seat_roles_for, select_formation (step 1), build_cost_matrix + solve_assignment (step 2), replan |
+| `cubesat/sim.py` | G3 sim + failure schedule, heartbeat detection, state machine, coasting, replan-between-steps, event FIFO |
+| `cubesat/scenario.py` | + recovery_enabled, Detection, Allocation (all defaulted) |
+| `cubesat/hcw.py` | + slot_initial_state (moved from sim.py for import acyclicity) |
+| `data/scenarios/two_failure.json` | primary demo: two DEAD imagers, a_max 0.1, allocation grids |
+| `tests/test_allocation.py` | 4 mandated 3.3 names + seat-role re-election unit test |
+| `tests/test_fault.py` | 2 mandated names + detection latency, state machine, baseline headline |
+| `docs/MASTER_PROMPT.md` §3.3, §3.5, §4, §5, §3.8 | behavior/contract source |
+
+### Scope notes / caveats for G5+
+
+- The formation sweep's coverage estimate is ~φ0-invariant over a full-orbit
+  average (differences ±0.002 = sampling noise): the winner is deterministic per
+  scenario but effectively chosen at noise level among equal-coverage candidates.
+  Scenario authors should treat phase_sweep_deg order as part of the tuning.
+- THRUSTER_OUT handling (coast, report, no reassignment) is implemented but not
+  exercised by any test (optional per MASTER_PROMPT 3.5).
+- The reachability gate uses the bang-bang ESTIMATE 2·sqrt(d·a_max); actual PD
+  transfers cost ~2.4× that — dv_budget_mps filters estimates, the log records
+  actuals.
+- Detection latency for tick-aligned failures is exactly (K−1)·dt because the
+  firing tick's heartbeat already counts as missed.
+- G5 consumes: state field (machine timeline), FAILURE_DETECTED / STATE /
+  ASSIGNMENT events, per-sat dv_used/status, coverage + min_sep per tick.

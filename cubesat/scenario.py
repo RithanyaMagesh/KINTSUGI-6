@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from enum import StrEnum
 from pathlib import Path
+from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -50,6 +51,46 @@ class Failure(BaseModel):
     mode: FailureMode
 
 
+class Detection(BaseModel):
+    """Heartbeat monitoring: every non-DEAD sat reports once per tick; a sat that
+    stops reporting is declared failed after missed_ticks_k consecutive misses."""
+
+    missed_ticks_k: int = Field(
+        ge=1, default=3, description="Missed heartbeat ticks before declaring failure"
+    )
+
+
+class Allocation(BaseModel):
+    """Two-step allocation parameters (MASTER_PROMPT 3.3). Weights apply to the
+    normalized cost terms; the sweep grids are the survivor-formation candidates."""
+
+    w1: float = Field(gt=0, default=1.0, description="Weight of normalized distance")
+    w2: float = Field(gt=0, default=0.5, description="Weight of normalized distance/fuel")
+    w3: float = Field(ge=0, default=2.0, description="Weight of role mismatch (0/1)")
+    min_sep_km: float = Field(
+        gt=0, default=2.0,
+        description="Min pairwise separation constraint, km (dead sats included)",
+    )
+    dv_budget_mps: float = Field(
+        gt=0, default=100.0,
+        description="Per-transfer delta-v budget for seat reachability, m/s",
+    )
+    amp_sweep: list[float] = Field(
+        default_factory=lambda: [1.0],
+        min_length=1,
+        description="Radial-amplitude multipliers swept for the survivor formation",
+    )
+    phase_sweep_deg: list[float] = Field(
+        default_factory=lambda: [0.0, 60.0, 120.0, 180.0, 240.0, 300.0],
+        min_length=1,
+        description="Formation phase offsets swept, deg",
+    )
+    method: Literal["hungarian", "greedy"] = Field(
+        default="hungarian",
+        description="Assignment method; 'greedy' forces the fallback (demo toggle)",
+    )
+
+
 class Scenario(BaseModel):
     name: str = Field(min_length=1)
     seed: int = Field(ge=0)
@@ -62,6 +103,12 @@ class Scenario(BaseModel):
     sensor: Sensor
     roles: list[str] = Field(min_length=2, description="One role per satellite, index = sat id")
     failures: list[Failure] = Field(default_factory=list)
+    recovery_enabled: bool = Field(
+        default=True,
+        description="False = detect failures but never replan (no-recovery baseline)",
+    )
+    detection: Detection = Field(default_factory=Detection)
+    allocation: Allocation = Field(default_factory=Allocation)
 
     @property
     def n_sats(self) -> int:

@@ -114,3 +114,29 @@ def propagate_controlled(state0, accel, t, n) -> np.ndarray:
     state = np.asarray(state0, dtype=float)
     a = np.asarray(accel, dtype=float)
     return stm(float(t), n) @ state + forcing_matrix(float(t), n) @ a
+
+
+def slot_initial_state(
+    radial_amp_m: float, cross_amp_m: float, phase_rad: float, n: float
+) -> np.ndarray:
+    """Slot at ellipse phase `phase_rad` on the COMMON passive relative orbit
+    (radial amplitude radial_amp_m, cross-track amplitude cross_amp_m):
+    x = A cos(nt+p), y = -2A sin(nt+p), z = B cos(nt+p) at t = 0.
+    Drift-free (vy0 = -2 n x0; vx0 = -A n sin p only shifts the phase), so all
+    slots are points of ONE drift-free 2:1 ellipse -- the locked "phase-spaced
+    slots on passive relative orbits" formation (MASTER_PROMPT section 2).
+
+    Lives here (not in cubesat.sim) because the G4 allocator builds candidate
+    formations from it and must not import the sim loop (circular import)."""
+    c = math.cos(phase_rad)
+    s = math.sin(phase_rad)
+    return np.array(
+        [
+            radial_amp_m * c,
+            -2.0 * radial_amp_m * s,
+            cross_amp_m * c,
+            -radial_amp_m * n * s,
+            -2.0 * radial_amp_m * n * c,
+            -cross_amp_m * n * s,
+        ]
+    )
