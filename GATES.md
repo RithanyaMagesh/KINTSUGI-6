@@ -15,6 +15,7 @@
 (2026-09-28 | a_max default 1e-4 → 1e-2 m/s^2 (cold-gas class, ~8 kg / ~150 mN assumption) | user research patch #1, overrides master prompt | approved: user)
 (2026-09-28 | Docker uses `uv sync --locked` + pinned uv image tag; CI aligned to `--locked` | user research patch #4 | approved: user)
 (2026-09-28 | footprint half-angle 1–2 deg (r_f ~9–17 km at 500 km); coverage must drop ≥15 points with 2 dead and no recovery, else change spacing/FOV never the metric | user research patch #2 | approved: user)
+(2026-09-28 | frontend locked decision changed: React 18 + Vite + TS + Zustand + plain-Three.js-in-React + Recharts + CSS Modules per docs/FRONTEND_SPEC.md v2.0 — supersedes MASTER_PROMPT §2 "Frontend: Plain Three.js, single page" and §8 "no React" for the frontend only; FRONTEND_SPEC §13 design law (anti-AI-slop tokens/checklist/scanner) is mandatory for all UI work | user supplied + approved spec | approved: user)
 
 ## Open risks
 (Mimosa full security audit pending — hook flagged incomplete scan at commit time | commit 460f73c hook output | run full audit before submission)

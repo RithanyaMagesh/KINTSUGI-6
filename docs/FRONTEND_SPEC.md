@@ -1424,19 +1424,19 @@ The client must send a ping every 30 s during live mode (§16.5).
 
 ## 18. Replay File Format
 
-Use JSON Lines for simplicity.
-
-Example:
+Replay files ARE the sim's own JSONL run logs — the exact files `cubesat.run` writes to `data/logs/`, per the master prompt §5 schema. One line per tick:
 
 ```json
-{"sim_time":0.0,"mission_state":"NOMINAL","satellites":[],"metrics":{}}
-{"sim_time":0.1,"mission_state":"NOMINAL","satellites":[],"metrics":{}}
-{"sim_time":120.0,"mission_state":"FAILURE_DETECTED","satellites":[],"metrics":{}}
-{"sim_time":121.0,"mission_state":"REALLOCATING","satellites":[],"metrics":{}}
-{"sim_time":125.0,"mission_state":"RECOVERED","satellites":[],"metrics":{}}
+{"v":1,"t":0.0,"state":"NOMINAL","sats":[{"id":"SAT-1","role":"leader","status":"healthy","r":[10.0,2.0,-1.0],"v":[0.0,0.0,0.0],"dv_used":0.0}],"coverage":0.95,"min_sep":142.0}
+{"v":1,"t":120.0,"state":"FAILURE_DETECTED","sats":[],"coverage":0.61,"min_sep":88.0,"event":{"type":"FAILURE_DETECTED","sat_id":"SAT-3"}}
 ```
 
-The frontend should also support CSV if that is easier for the backend.
+Rules:
+
+- The frontend parses THIS schema; it must not define a second, simplified format.
+- CSV support is dropped — JSONL is the repo's primary data format (locked decision).
+- Validate frames before playing: per-line defensive parse with error reporting; skip-and-log bad lines, never crash.
+- Same TypeScript types as the live WS path (§15.1) — one shared deserializer. This kills adversarial risk §21.9 (schema drift between live and replay) at the root.
 
 ---
 
@@ -1468,6 +1468,8 @@ The frontend must remain smooth during the demo.
 - Use simple geometry.
 - Use throttling for telemetry panels.
 - Pause unnecessary effects when tab is hidden.
+- Sim time comes only from the data (`t` / `sim_time`); the UI never advances simulation state on wall-clock. Wall-clock is used only for the 30 s ping, reconnection backoff, and FPS measurement.
+- The WebSocket ping (§16.5) keeps running while the tab is hidden.
 
 ---
 
@@ -1682,7 +1684,7 @@ The demo will likely be shown on a projector.
 
 ### Required Rules
 
-- Minimum body font size: 14px.
+- Minimum body font size: 16px (§13.2); event log rows may be 14px mono, axis ticks 12–13px.
 - Critical metrics: at least 28px.
 - High contrast between text and background.
 - Avoid red/green as the only signal; also use text labels.
@@ -1788,7 +1790,6 @@ frontend/
 ├── package.json
 ├── vite.config.ts
 ├── tsconfig.json
-├── tailwind.config.ts
 ├── public/
 │   └── favicon.svg
 └── src/
@@ -1821,9 +1822,9 @@ frontend/
     │   │   ├── GroundCoverageChart.tsx
     │   │   ├── FormationDeviationChart.tsx
     │   │   ├── InterSatDistanceChart.tsx
-    │   │   ├── FuelChart.tsx
+    │   │   ├── DvChart.tsx
     │   │   ├── MissionHealthScore.tsx
-    │   │   └── MetricCard.tsx
+    │   │   └── ReadoutRow.tsx
     │   ├── satellites/
     │   │   ├── SatelliteList.tsx
     │   │   ├── SatelliteCard.tsx
@@ -1852,13 +1853,28 @@ frontend/
     │   ├── format.ts
     │   ├── geometry.ts
     │   └── thresholds.ts
+    ├── dev/
+    │   └── mockFrame.ts        # clearly-marked mock data for development only (§13.6)
+    ├── assets/
+    │   └── fonts/              # IBM Plex Sans + Mono woff2, vendored (§13.2)
     └── styles/
-        └── globals.css
+        ├── tokens.css          # THE only file with raw hex values (§13.1)
+        └── globals.css         # reset + tokens import; CSS modules live next to components
 ```
 
 ---
 
 ## 26. Implementation Roadmap
+
+**Gate mapping (repo gate protocol — one gate per session, ledger in `GATES.md`):**
+
+| Spec phases | Repo gate | Pass criterion |
+|---|---|---|
+| Phases 1–6 | **G5** — FastAPI + WS + replay endpoint + React UI + dashboard | Runs locally live AND from replay; §13.7 gates clean |
+| — | **G6** — deploy primary + static mirror | Both URLs work from a phone on mobile data; offline check passes (all assets vendored) |
+| Phase 7 + README numbers | **G7** | Every README/pitch number traceable to a committed log |
+
+Cut order if time-boxes slip (master prompt: cut UI polish, never the baseline comparison or the tests): presentation mode polish → §8 should-haves → §9 nice-to-haves. The §31 MVP plus the §13 design law is an acceptable demo; a sloppy clone of every feature is not.
 
 ### Phase 1 — Foundation
 
@@ -2021,6 +2037,10 @@ The frontend is considered complete when all of the following are true.
 - [ ] UI does not look cluttered.
 - [ ] Colors are consistent.
 - [ ] FPS remains above 30.
+- [ ] §13.7 scanner exits 0 (no P0/P1 tells) on `frontend/src`.
+- [ ] §13.7 review checklist verdict is PASS.
+- [ ] All colors and type come from `tokens.css` + vendored IBM Plex (grep gate in Appendix B is clean; no CDN fonts).
+- [ ] Works with the network cable pulled.
 
 ### Reliability Acceptance
 
@@ -2136,3 +2156,41 @@ The most important success metric is not visual complexity.
 It is this:
 
 > A judge should be able to watch the demo for 30 seconds and understand that the swarm detected a failure and autonomously recovered.
+
+---
+
+## Appendix A — v1.0 → v2.0 changelog
+
+Why this revision exists: the spec was reconciled against the repo's locked decisions and master prompt, and hardened so an implementing agent **without** the design skills still produces UI that passes the two anti-slop rule sets the user adopted on 2026-09-28 ([no-slop-ui](https://github.com/LeoStehlik/no-slop-ui), [avoid-ai-design](https://github.com/funboy322/avoid-ai-design)).
+
+1. **Stack locked (§5):** plain Three.js inside React (no React Three Fiber), CSS Modules + `tokens.css` (no Tailwind), Recharts, vendored IBM Plex fonts. React supersedes the master prompt's "Frontend: Plain Three.js" locked decision and the "no React" anti-goal — frontend only, user-approved 2026-09-28, logged in `GATES.md`.
+2. **Design law added (§13):** v1's slate+cyan+Inter palette was itself on the banned lists (Tailwind slate = the stock AI dark; cyan-on-dark-blue explicitly banned by no-slop-ui; Inter = tell T1 and Space Grotesk = tell T2 in avoid-ai-design). New direction: industrial ops console — neutral graphite chrome, color-as-state-only, IBM Plex Sans/Mono, readout rows instead of metric-card grids, plus the full banned-pattern list, review checklist, and scanner gate embedded so no design skills are needed to comply.
+3. **Schema alignment (§15, §16, §18):** field names mirror the master prompt §5 JSONL log schema (`sats[{id, role, status, r, v, dv_used}]`, `coverage`, `min_sep`, `state`); failure modes are `DEAD`/`THRUSTER_OUT`; replay reads the sim's own logs — v1's invented format and the CSV option are dropped, which fixes adversarial risk §21.9 at the root.
+4. **Metrics aligned (§7.5):** Δv per satellite and detection latency added (master-prompt-required); the coverage chart is explicitly the 3-curve chart (nominal reference / no-recovery / recovery); "fuel proxy" became Δv used.
+5. **Repo reality (§6.2, §7.1):** scenario list matches `data/scenarios/` (dropdown reads the directory); replay path is `data/logs/*.jsonl` from the repo's own run command.
+6. **Ops requirements (§16.5, §19):** mandatory 30 s client ping (Render spin-down, research patch #3); sim time only from data, never wall-clock.
+7. **Accessibility raised (§22):** body floor 16px for projection; state always rendered as text alongside color.
+8. **Mock-data rule (§4, §13.6):** all illustrative numbers in this spec are design-only; the UI renders `unmeasured` until a committed log supplies values (repo invariant #1).
+9. **Roadmap mapped to gates (§26)** with an explicit cut order; visual acceptance extended with the §13.7 gates (§27).
+
+## Appendix B — implementing-agent quick reference
+
+```bash
+# repo quality gates (AGENTS.md protocol)
+uv sync --locked
+uv run ruff check .
+uv run pytest -m "not slow" -x -q
+
+# frontend (once frontend/ exists)
+cd frontend && npm ci && npm run dev     # Vite dev server
+npm run build                            # static build -> served by FastAPI, reused for the mirror
+
+# design-law gate (§13.7) — before every UI PR and at the G5 review
+git clone --depth 1 https://github.com/funboy322/avoid-ai-design /tmp/avoid-ai-design
+node /tmp/avoid-ai-design/scripts/detect.mjs frontend/src frontend/index.html   # must exit 0
+
+# drift gate: raw hex may appear only in tokens.css (must print nothing)
+grep -rn --include="*.css" --include="*.tsx" -E "#[0-9a-fA-F]{3,8}\b" frontend/src | grep -v "styles/tokens.css"
+```
+
+If two rules in this spec ever conflict, precedence is: repo invariants (AGENTS.md) > §7 must-haves + §13 design law > §8 should-haves > §9 nice-to-haves. Report the conflict; never resolve it silently.
