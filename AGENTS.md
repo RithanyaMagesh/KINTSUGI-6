@@ -7,7 +7,7 @@ Full spec: docs/MASTER_PROMPT.md — read the relevant sections at gate start. S
 - `uv run ruff check .`
 - `uv run pytest -q`                    (full suite)
 - `uv run pytest -m "not slow" -x -q`   (fast loop)
-- run:   `uv run python -m cubesat.run --scenario data/scenarios/two_failure.json --seed 42 --out data/logs/two_failure.jsonl`
+- run:   `uv run python -m cubesat.run --scenario data/scenarios/two_failure.json --seed 42 --out data/logs/two_failure.jsonl`   (two_failure.json lands at G4; only nominal.json exists today)
 - serve: `uv run uvicorn cubesat.api:app --port 8000`
 
 ## Invariants (never violate)
@@ -24,6 +24,7 @@ Full spec: docs/MASTER_PROMPT.md — read the relevant sections at gate start. S
 - One gate per session. Start with the gate skill (/gate N). Tests first. Stop at the end of the gate.
 - Update GATES.md every gate. Tag `gate-N-pass` only when everything is green.
 - Time-box exceeded or a test cannot pass: stop, report failure + 2 options with tradeoffs.
+- The gate/verify/redteam skills live in `.zcode/skills/`; ZCode docs only guarantee user-level discovery (`~/.zcode/skills/`), so copy them there if they are not picked up.
 
 ## Style
 Small diffs. No new dependencies without asking. Test names as in docs/MASTER_PROMPT.md 3.8. Files under ~300 lines.

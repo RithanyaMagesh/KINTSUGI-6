@@ -3,6 +3,15 @@ name: physics-reviewer
 description: Adversarial read-only reviewer for physics, control, allocation, determinism, and test quality in the CubeSat sim. Use after each gate.
 tools: Read, Grep, Glob, Bash
 ---
+
+> ZCode placement note (per https://zcode.z.ai/en/docs/subagents): subagent definition
+> files are supported only at USER level (`~/.zcode/agents/physics-reviewer.md`,
+> frontmatter `name` + `description` required); project-level subagent files are not a
+> supported location. This file therefore stays a prompt source: the redteam skill feeds
+> it verbatim to the built-in general-purpose subagent rather than installing it as a
+> named subagent type. To use it as a named type, copy it (with this frontmatter) to
+> `~/.zcode/agents/physics-reviewer.md`.
+
 You are a skeptical reviewer. You do not edit files. Find problems; do not praise.
 
 Check, in order:

@@ -1,30 +1,44 @@
 {
-  "_comment": "PROPOSED ZCode hooks config. NOT installed — apply to the ZCode settings only after user approval. See AGENTS.md gate rhythm.",
-  "_assumptions": [
-    "Settings file location and hook schema need confirmation against current ZCode docs (see scaffold install report).",
-    "PostToolUse env var exposing edited file paths is a guess; confirm before installing."
+  "_comment": "PROPOSED ZCode hooks config. NOT installed — apply to the USER-level ~/.zcode/cli/config.json only after user approval. Never place this in a project-level file: ZCode ignores <workspace>/.zcode/config.json, <workspace>/zcode.json and legacy .claude/settings.json for hooks (logged as config_project_hooks_ignored). See AGENTS.md gate rhythm.",
+  "_verified_facts": [
+    "Location per https://zcode.z.ai/en/docs/hooks: executed hooks live in ~/.zcode/cli/config.json (or an installed plugin's hooks/hooks.json); the file must set hooks.enabled=true, and event arrays nest under hooks.events.",
+    "PostToolUse input is one line of JSON on the hook's stdin carrying tool_input, tool_name, tool_use_id and tool_response; the edited file arrives as tool_input.file_path. ZCode injects no environment variable with edited-file paths (only ZCODE_PLUGIN_ROOT/_DATA/_ID/_NAME), so the command must read stdin.",
+    "timeoutMs is milliseconds and overrides the legacy seconds-based timeout."
   ],
   "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "uv run ruff check $ZCODE_EDITED_FILES"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "uv run pytest -m \"not slow\" -x -q"
-          }
-        ]
-      }
-    ]
+    "enabled": true,
+    "timeoutMs": 60000,
+    "maxOutputBytes": 32768,
+    "events": {
+      "PostToolUse": [
+        {
+          "matcher": "Write|Edit",
+          "hooks": [
+            {
+              "type": "command",
+              "command": "uv run python -c \"import json,sys,subprocess; d=json.load(sys.stdin); p=(d.get('tool_input') or {}).get('file_path',''); sys.exit(subprocess.run(['uv','run','ruff','check',p]).returncode) if p.endswith('.py') else None\"",
+              "enabled": true,
+              "timeoutMs": 10000,
+              "async": false,
+              "statusMessage": "ruff check on edited file"
+            }
+          ]
+        }
+      ],
+      "Stop": [
+        {
+          "hooks": [
+            {
+              "type": "command",
+              "command": "uv run pytest -m \"not slow\" -x -q",
+              "enabled": true,
+              "timeoutMs": 120000,
+              "async": false,
+              "statusMessage": "fast test loop"
+            }
+          ]
+        }
+      ]
+    }
   }
 }
