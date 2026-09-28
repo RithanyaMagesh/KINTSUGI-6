@@ -2,6 +2,7 @@
 Submit Oct 1. Feature freeze Sep 30, 18:00 IST.
 Full spec: docs/MASTER_PROMPT.md — read the relevant sections at gate start. State ledger: GATES.md
 Frontend: docs/FRONTEND_SPEC.md (v2.0, React — supersedes the master prompt's frontend locked decision, user-approved; §13 design law is mandatory for all UI work and replaces the design skills if you don't have them).
+Backend (G5): docs/BACKEND_SPEC.md (v1.0 — FastAPI + WS + replay architecture, wire contract, test plan, build order; the sim core G1–G4 is done and must not be modified by G5).
 
 ## Commands
 - `uv sync --locked`
