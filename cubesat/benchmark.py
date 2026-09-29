@@ -229,9 +229,49 @@ def _policies_summary(rows: list[dict], policies: list[str]) -> dict[str, dict]:
     return summary
 
 
+def _run_keepout_report(args) -> int:
+    """P2 dispatch (ENDGAME_PLAN 5): post-hoc analysis of written log bytes --
+    no sim core involvement. Reads the logs named on the command line, writes
+    the keepout section into --report (machine-written, invariant 1)."""
+    import json
+
+    from cubesat.hcw import mean_motion
+    from cubesat.keepout import keepout_report
+
+    base = Scenario.model_validate_json(args.base.read_text(encoding="utf-8"))
+    log_paths: dict[str, list[Path]] = {}
+    for spec in args.keepout_logs.split(","):
+        policy, pattern = spec.split("=")
+        log_paths[policy] = sorted(args.out.glob(pattern))  # glob -> sorted: index order
+    if not log_paths:
+        raise SystemExit("--keepout-logs matched no logs")
+    report = keepout_report(
+        log_paths=log_paths,
+        n=mean_motion(base.chief.altitude_km * 1000.0),
+        tick_dt=base.dt_s,
+        keepout_radius_m=base.allocation.min_sep_km * 1000.0,
+        command="uv run python -m cubesat.benchmark " + " ".join(sys.argv[1:]),
+    )
+    if args.report.exists():
+        merged = json.loads(args.report.read_text(encoding="utf-8"))
+    else:
+        merged = {}
+    merged["keepout"] = report
+    args.report.write_text(json.dumps(merged, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    n_entries = sum(len(v) for v in report["per_policy"].values())
+    print(f"wrote keepout section into {args.report} ({n_entries} dead-sat entries)")
+    comp = report["keepout_binding_comparison"]
+    print(f"decision: {comp['decision']} -- {comp['decision_text']}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="cubesat.benchmark", description="P0 exhaustive recovery benchmark"
+    )
+    parser.add_argument(
+        "--mode", choices=("benchmark", "keepout-report"), default="benchmark",
+        help="benchmark: run the P0 sweep; keepout-report: P2 post-hoc log analysis",
     )
     parser.add_argument("--base", required=True, type=Path, help="base scenario JSON")
     parser.add_argument("--out", required=True, type=Path, help="directory for per-run JSONL logs")
@@ -247,7 +287,15 @@ def main(argv: list[str] | None = None) -> int:
         default=",".join(POLICY_ORDER),
         help="comma-separated subset of " + ",".join(POLICY_ORDER),
     )
+    parser.add_argument(
+        "--keepout-logs",
+        default="do_nothing=pair_*__do_nothing.jsonl,hungarian=pair_*__hungarian.jsonl,"
+        "hungarian_keepout=pair_*__hungarian_keepout.jsonl",
+        help="keepout-report mode: comma-separated policy=glob log specs under --out",
+    )
     args = parser.parse_args(argv)
+    if args.mode == "keepout-report":
+        return _run_keepout_report(args)
     policies = [p for p in args.policies.split(",") if p]
     unknown = [p for p in policies if p not in POLICY_ORDER]
     if unknown:

@@ -1,5 +1,5 @@
 {
-  "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark --report data/eval/benchmark_results.json --policies do_nothing,even_split,greedy,hungarian,hungarian_keepout",
+  "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark --report data/eval/benchmark_results.json --policies do_nothing,even_split,greedy,hungarian",
   "logs": {
     "pair_0-1__do_nothing.jsonl": {
       "pair": [
@@ -33,14 +33,6 @@
       "policy": "hungarian",
       "sha256": "e67ef7207ea7d112d4a051ac5e652ca57dc2d1f8160419768359caaf30f05262"
     },
-    "pair_0-1__hungarian_keepout.jsonl": {
-      "pair": [
-        0,
-        1
-      ],
-      "policy": "hungarian_keepout",
-      "sha256": "5c7ee2076c2ff6e74728889c3f2c10c4a0d682d132d756b9b5b3680e0d500544"
-    },
     "pair_0-2__do_nothing.jsonl": {
       "pair": [
         0,
@@ -72,14 +64,6 @@
       ],
       "policy": "hungarian",
       "sha256": "b60786ea97e32893301266e343ae2571df0774dfb563620d88e4e1ac5f3e4d21"
-    },
-    "pair_0-2__hungarian_keepout.jsonl": {
-      "pair": [
-        0,
-        2
-      ],
-      "policy": "hungarian_keepout",
-      "sha256": "fa78efee0b9ddd8963867b55440ca131bee2475f9bbf95399a7ee54d0ee78426"
     },
     "pair_0-3__do_nothing.jsonl": {
       "pair": [
@@ -113,14 +97,6 @@
       "policy": "hungarian",
       "sha256": "11742e1f6df4529c9fd1201b9a5594664649f28952a03526e06f4b535abda4d3"
     },
-    "pair_0-3__hungarian_keepout.jsonl": {
-      "pair": [
-        0,
-        3
-      ],
-      "policy": "hungarian_keepout",
-      "sha256": "ca66b409eee6c608155092cc36ae080d837a51d66c6b78a21d23e0f17521810e"
-    },
     "pair_0-4__do_nothing.jsonl": {
       "pair": [
         0,
@@ -152,14 +128,6 @@
       ],
       "policy": "hungarian",
       "sha256": "b03f378647168d5571d794fb7cac65ac3b6240e392c1cc364ea5bc329d450778"
-    },
-    "pair_0-4__hungarian_keepout.jsonl": {
-      "pair": [
-        0,
-        4
-      ],
-      "policy": "hungarian_keepout",
-      "sha256": "db63df136be2bd0a64cb91b52fd6aa18cd99cadeab64eb0b636ad9f68c8a3c15"
     },
     "pair_0-5__do_nothing.jsonl": {
       "pair": [
@@ -193,14 +161,6 @@
       "policy": "hungarian",
       "sha256": "e57f9dd00bca6f9ecd01580b462d7cb05fa712ddadf937084c4dc07d2bf660f9"
     },
-    "pair_0-5__hungarian_keepout.jsonl": {
-      "pair": [
-        0,
-        5
-      ],
-      "policy": "hungarian_keepout",
-      "sha256": "6824f7fb35f6323d4112a9216d19dbd3da355c6bd887ad648c9091faf37a8bea"
-    },
     "pair_1-2__do_nothing.jsonl": {
       "pair": [
         1,
@@ -232,14 +192,6 @@
       ],
       "policy": "hungarian",
       "sha256": "978367398c087d80f1cd98168ff58e105eaf8013943bddff0be707ed47d05092"
-    },
-    "pair_1-2__hungarian_keepout.jsonl": {
-      "pair": [
-        1,
-        2
-      ],
-      "policy": "hungarian_keepout",
-      "sha256": "cbc496a48c68372c6a2826ce1cc7e7e9372c0bf0cdc6ab784273dadd5df68ec0"
     },
     "pair_1-3__do_nothing.jsonl": {
       "pair": [
@@ -273,14 +225,6 @@
       "policy": "hungarian",
       "sha256": "d46e8154e84490bc7cf31b76743540af1b035100b487d3d1fd28d42cf0921cf3"
     },
-    "pair_1-3__hungarian_keepout.jsonl": {
-      "pair": [
-        1,
-        3
-      ],
-      "policy": "hungarian_keepout",
-      "sha256": "73cfc31ef3e71578d462826f713c85e95d6a1c74c66ddf9a041124b65adf6d4c"
-    },
     "pair_1-4__do_nothing.jsonl": {
       "pair": [
         1,
@@ -312,14 +256,6 @@
       ],
       "policy": "hungarian",
       "sha256": "3d191acec28b8f8a3d8f04770825bd6c9910716a48f318b573e24a1b12b7f509"
-    },
-    "pair_1-4__hungarian_keepout.jsonl": {
-      "pair": [
-        1,
-        4
-      ],
-      "policy": "hungarian_keepout",
-      "sha256": "17acf9b6273cd406af0494210d5155eded948e9fcf6adca6c6bbe2302d96a797"
     },
     "pair_1-5__do_nothing.jsonl": {
       "pair": [
@@ -353,14 +289,6 @@
       "policy": "hungarian",
       "sha256": "5494b968629fd9b66be9eec46dd3ea2b0091e4a4f13f3c6e1dca4bb67e318301"
     },
-    "pair_1-5__hungarian_keepout.jsonl": {
-      "pair": [
-        1,
-        5
-      ],
-      "policy": "hungarian_keepout",
-      "sha256": "3deec86524877036e050fd298de9044121fa778946e06558f76c79b9c7f2d924"
-    },
     "pair_2-3__do_nothing.jsonl": {
       "pair": [
         2,
@@ -392,14 +320,6 @@
       ],
       "policy": "hungarian",
       "sha256": "a42ed0cc7346571e720b60c57216b83189b86f9875935c8443a670bf970edcb7"
-    },
-    "pair_2-3__hungarian_keepout.jsonl": {
-      "pair": [
-        2,
-        3
-      ],
-      "policy": "hungarian_keepout",
-      "sha256": "4d200f42fe84aae12852ae67921559917c7012307e2371f28b398581a4c488d1"
     },
     "pair_2-4__do_nothing.jsonl": {
       "pair": [
@@ -433,14 +353,6 @@
       "policy": "hungarian",
       "sha256": "17874adb1291d2bf0f80a9dfe0658f69ecc850860185b854d497c89c0214934e"
     },
-    "pair_2-4__hungarian_keepout.jsonl": {
-      "pair": [
-        2,
-        4
-      ],
-      "policy": "hungarian_keepout",
-      "sha256": "0cc634653a99e0ff148db907f9b8ecd17ab3ab1bc844dcf8b02e77d106bb2e44"
-    },
     "pair_2-5__do_nothing.jsonl": {
       "pair": [
         2,
@@ -472,14 +384,6 @@
       ],
       "policy": "hungarian",
       "sha256": "40626c6a310940e9d4a597e4a54130d3896468eebe2d4dc1b2f7cd74dedb78b6"
-    },
-    "pair_2-5__hungarian_keepout.jsonl": {
-      "pair": [
-        2,
-        5
-      ],
-      "policy": "hungarian_keepout",
-      "sha256": "0be77d73f3a56b0ecee02d30cdb86bf90c71dcc2d58f1c9d995c464dda6188e5"
     },
     "pair_3-4__do_nothing.jsonl": {
       "pair": [
@@ -513,14 +417,6 @@
       "policy": "hungarian",
       "sha256": "4ecdc69e90c42cc833941e006aaec21f61a8f97047b889a637cd5789a3866bb5"
     },
-    "pair_3-4__hungarian_keepout.jsonl": {
-      "pair": [
-        3,
-        4
-      ],
-      "policy": "hungarian_keepout",
-      "sha256": "34f31371e7bb2066d9a63d4010c438c81c1d502c558f556ddd52db290b877973"
-    },
     "pair_3-5__do_nothing.jsonl": {
       "pair": [
         3,
@@ -553,14 +449,6 @@
       "policy": "hungarian",
       "sha256": "0e46ae40e3dc83b621c8e449f213caf4e14bc0611c9ac4379156a3cf9913f135"
     },
-    "pair_3-5__hungarian_keepout.jsonl": {
-      "pair": [
-        3,
-        5
-      ],
-      "policy": "hungarian_keepout",
-      "sha256": "48f6eb47544e005312e59704b25b64ee4988bf589543d474b60b65350bd73e06"
-    },
     "pair_4-5__do_nothing.jsonl": {
       "pair": [
         4,
@@ -592,14 +480,6 @@
       ],
       "policy": "hungarian",
       "sha256": "9917c5e1d9d2782345a3b61952b68a34e3e66ccafbb933e400e0e3ac4e38cdc3"
-    },
-    "pair_4-5__hungarian_keepout.jsonl": {
-      "pair": [
-        4,
-        5
-      ],
-      "policy": "hungarian_keepout",
-      "sha256": "2d75fd7e96a0cae585f6ebd80ef5c09d1772839122bd9d4ed7fa264565f0d568"
     }
   }
 }
