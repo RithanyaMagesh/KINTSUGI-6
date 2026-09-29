@@ -4,6 +4,12 @@ Full spec: docs/MASTER_PROMPT.md — read the relevant sections at gate start. S
 Frontend: docs/FRONTEND_SPEC.md (v2.0, React — supersedes the master prompt's frontend locked decision, user-approved; §13 design law is mandatory for all UI work and replaces the design skills if you don't have them).
 Backend (G5): docs/BACKEND_SPEC.md (v1.0 — FastAPI + WS + replay architecture, wire contract, test plan, build order; the sim core G1–G4 is done and must not be modified by G5).
 
+## AI onboarding (mandatory, before writing any code)
+Any AI agent MUST understand the project before building. Do both, in order:
+1. Read `graphify-out/GRAPH_REPORT.md` (committed knowledge graph: 12 labeled communities, god nodes, module map, gate history).
+2. For any structural question ("what calls X?", "where does Y live?"), query `graphify-out/graph.json` before grepping the tree — it is the GraphRAG-ready map of the code and docs.
+Then read the spec sections relevant to your task. If the graph and the tree disagree, the tree wins — and re-run graphify (`/graphify .`) to fix the graph.
+
 ## Commands
 - `uv sync --locked`
 - `uv run ruff check .`
