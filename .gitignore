@@ -11,3 +11,5 @@ __pycache__/
 dist/
 data/logs/*
 !data/logs/.gitkeep
+!data/logs/nominal.jsonl
+!data/logs/two_failure.jsonl
