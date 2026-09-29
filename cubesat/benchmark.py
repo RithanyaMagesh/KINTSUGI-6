@@ -294,17 +294,51 @@ def _run_pareto(args) -> int:
     return 0
 
 
+def _run_cw_curve(args) -> int:
+    """P3 dispatch (ENDGAME_PLAN 6): the factored CW-vs-Kepler cross-check over
+    the 1 km / G3-era / current formation scales; machine-writes the report
+    JSON, cw_error_curve.csv and the SVG curves (no matplotlib)."""
+    from cubesat.cw_curve import cw_curve_report, write_csv, write_report_json, write_svg
+
+    base = Scenario.model_validate_json(args.base.read_text(encoding="utf-8"))
+    command = "uv run python -m cubesat.benchmark " + " ".join(sys.argv[1:])
+    report = cw_curve_report(
+        command=command, radial_amp_m=base.formation.radial_amp_km * 1000.0
+    )
+    write_report_json(report, args.report)
+    csv_path = args.csv or args.report.with_name("cw_error_curve.csv")
+    svg_path = args.svg or args.report.with_name("cw_error_curve.svg")
+    write_csv(report, csv_path)
+    write_svg(report, svg_path)
+    maxes = report["max_err_m"]
+    print(f"wrote {args.report}, {csv_path}, {svg_path}")
+    print(
+        "max CW-vs-Kepler position error over 3 orbits: "
+        f"1 km = {maxes['err_1km']:.3f} m, "
+        f"G3-era 11/22 km = {maxes['err_g3era_11km']:.1f} m, "
+        f"current {base.formation.radial_amp_km:g} km radial / "
+        f"{2 * base.formation.radial_amp_km:g} km along-track = "
+        f"{maxes['err_current_8km']:.3f} m"
+    )
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="cubesat.benchmark", description="P0 exhaustive recovery benchmark"
     )
     parser.add_argument(
-        "--mode", choices=("benchmark", "keepout-report", "pareto"), default="benchmark",
+        "--mode", choices=("benchmark", "keepout-report", "pareto", "cw-curve"),
+        default="benchmark",
         help="benchmark: run the P0 sweep; keepout-report: P2 post-hoc log analysis; "
-        "pareto: P1 w2 x dv_budget sweep",
+        "pareto: P1 w2 x dv_budget sweep; cw-curve: P3 CW-vs-Kepler error curves",
     )
     parser.add_argument("--base", required=True, type=Path, help="base scenario JSON")
-    parser.add_argument("--out", required=True, type=Path, help="directory for per-run JSONL logs")
+    parser.add_argument(
+        "--out", type=Path, default=None,
+        help="directory for per-run JSONL logs (required for benchmark mode; "
+        "unused by cw-curve)",
+    )
     parser.add_argument(
         "--report", required=True, type=Path, help="path for benchmark_results.json"
     )
@@ -333,21 +367,25 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--csv", type=Path, default=None,
-        help="pareto mode: pareto_points.csv path (default: alongside --report)",
+        help="pareto/cw-curve mode: CSV path (default: alongside --report)",
     )
     parser.add_argument(
         "--svg", type=Path, default=None,
-        help="pareto mode: SVG curve path (default: alongside --report)",
+        help="pareto/cw-curve mode: SVG curve path (default: alongside --report)",
     )
     args = parser.parse_args(argv)
     if args.mode == "keepout-report":
         return _run_keepout_report(args)
+    if args.mode == "cw-curve":
+        return _run_cw_curve(args)
     if args.mode == "pareto":
         if args.csv is None:
             args.csv = args.report.with_name("pareto_points.csv")
         if args.svg is None:
             args.svg = args.report.with_name("pareto_curve.svg")
         return _run_pareto(args)
+    if args.mode == "benchmark" and args.out is None:
+        parser.error("--out is required for benchmark mode")
     policies = [p for p in args.policies.split(",") if p]
     unknown = [p for p in policies if p not in POLICY_ORDER]
     if unknown:

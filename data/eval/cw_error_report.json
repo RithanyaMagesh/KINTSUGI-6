@@ -1,0 +1,55 @@
+{
+  "atol": 1e-09,
+  "command": "uv run python -m cubesat.benchmark --mode cw-curve --base data/scenarios/two_failure.json --report data/eval/cw_error_report.json --csv data/eval/cw_error_curve.csv --svg data/eval/cw_error_curve.svg",
+  "max_err_m": {
+    "err_1km": 3.100885919298328,
+    "err_current_8km": 1578.54339490933,
+    "err_g3era_11km": 2984.456380982965
+  },
+  "n_samples": 601,
+  "orbits": 3.0,
+  "period_s": 5676.978028525859,
+  "radial_amp_current_m": 8000.0,
+  "recorded_constants_m": {
+    "err_1km": 3.101,
+    "err_current_8km": 1578.543395,
+    "err_g3era_11km": 2984.5
+  },
+  "rtol": 1e-12,
+  "states": {
+    "err_1km": {
+      "initial_state_m_mps": [
+        1000.0,
+        0.0,
+        500.0,
+        0.0,
+        -2.213566892669881,
+        0.0
+      ],
+      "label": "1 km passive ellipse (G1 evidence state, tests/test_hcw.py:112-113)"
+    },
+    "err_current_8km": {
+      "initial_state_m_mps": [
+        4.898587196589413e-13,
+        -16000.0,
+        4.898587196589413e-13,
+        -8.854267570679523,
+        -1.0843350439226888e-15,
+        -8.854267570679523
+      ],
+      "label": "current two_failure scale 8 km radial / 16 km along-track (two_failure.json:7)"
+    },
+    "err_g3era_11km": {
+      "initial_state_m_mps": [
+        6.735557395310442e-13,
+        -22000.0,
+        6.735557395310442e-13,
+        -12.174617909684345,
+        -1.4909606853936974e-15,
+        -12.174617909684345
+      ],
+      "label": "G3-era nominal slot 11/22 km, re-tuned away at G4 (GATES.md:26)"
+    }
+  },
+  "t_end_s": 17030.934085577577
+}
