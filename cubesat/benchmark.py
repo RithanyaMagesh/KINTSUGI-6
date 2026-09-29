@@ -265,13 +265,43 @@ def _run_keepout_report(args) -> int:
     return 0
 
 
+def _run_pareto(args) -> int:
+    """P1 dispatch (ENDGAME_PLAN 4): the 12-point w2 x dv_budget grid through
+    the P0 driver, hungarian, all 15 pairs. Machine-writes the report JSON,
+    pareto_points.csv and the SVG curve (no matplotlib)."""
+    from cubesat.pareto import run_pareto, write_csv, write_svg
+
+    base = Scenario.model_validate_json(args.base.read_text(encoding="utf-8"))
+    p0_dir = args.p0_dir
+    p0_manifest = args.p0_manifest or p0_dir.with_name("benchmark_manifest.json")
+    command = "uv run python -m cubesat.benchmark " + " ".join(sys.argv[1:])
+    report = run_pareto(
+        base=base,
+        out_dir=args.out,
+        p0_dir=p0_dir,
+        p0_manifest_path=p0_manifest,
+        command=command,
+    )
+    args.report.parent.mkdir(parents=True, exist_ok=True)
+    args.report.write_text(json.dumps(report, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    write_csv(report, args.csv)
+    write_svg(report, args.svg)
+    dec = report["degenerate_front"]
+    print(f"wrote {args.report} ({len(report['rows'])} grid points x {report['n_pairs']} pairs)")
+    print(f"wrote {args.csv} and {args.svg}")
+    print(f"pareto front: {len(report['pareto_front'])} points")
+    print(f"decision: {dec['decision']} -- {dec['decision_text']}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="cubesat.benchmark", description="P0 exhaustive recovery benchmark"
     )
     parser.add_argument(
-        "--mode", choices=("benchmark", "keepout-report"), default="benchmark",
-        help="benchmark: run the P0 sweep; keepout-report: P2 post-hoc log analysis",
+        "--mode", choices=("benchmark", "keepout-report", "pareto"), default="benchmark",
+        help="benchmark: run the P0 sweep; keepout-report: P2 post-hoc log analysis; "
+        "pareto: P1 w2 x dv_budget sweep",
     )
     parser.add_argument("--base", required=True, type=Path, help="base scenario JSON")
     parser.add_argument("--out", required=True, type=Path, help="directory for per-run JSONL logs")
@@ -293,9 +323,31 @@ def main(argv: list[str] | None = None) -> int:
         "hungarian_keepout=pair_*__hungarian_keepout.jsonl",
         help="keepout-report mode: comma-separated policy=glob log specs under --out",
     )
+    parser.add_argument(
+        "--p0-dir", type=Path, default=Path("data/eval/benchmark"),
+        help="pareto mode: P0 log dir for the coinciding-point log reuse",
+    )
+    parser.add_argument(
+        "--p0-manifest", type=Path, default=None,
+        help="pareto mode: P0 manifest path (default: alongside --p0-dir)",
+    )
+    parser.add_argument(
+        "--csv", type=Path, default=None,
+        help="pareto mode: pareto_points.csv path (default: alongside --report)",
+    )
+    parser.add_argument(
+        "--svg", type=Path, default=None,
+        help="pareto mode: SVG curve path (default: alongside --report)",
+    )
     args = parser.parse_args(argv)
     if args.mode == "keepout-report":
         return _run_keepout_report(args)
+    if args.mode == "pareto":
+        if args.csv is None:
+            args.csv = args.report.with_name("pareto_points.csv")
+        if args.svg is None:
+            args.svg = args.report.with_name("pareto_curve.svg")
+        return _run_pareto(args)
     policies = [p for p in args.policies.split(",") if p]
     unknown = [p for p in policies if p not in POLICY_ORDER]
     if unknown:

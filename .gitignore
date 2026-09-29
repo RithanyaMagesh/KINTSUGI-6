@@ -16,3 +16,6 @@ data/logs/*
 
 # P0 benchmark per-run JSONL logs (ENDGAME_PLAN 3.5) -- only data/eval/*.json reports are committed
 data/eval/benchmark/
+
+# P1 Pareto sweep per-run JSONL logs (ENDGAME_PLAN 4) -- same rule as P0
+data/eval/pareto/
