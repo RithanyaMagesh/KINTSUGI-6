@@ -2,7 +2,7 @@
 
 **Project:** CubeSat Swarm Self-Healing Formation Control After Partial Failure  
 **Document Type:** Backend Requirements, Architecture Blueprint, and Acceptance Criteria  
-**Version:** 1.0  
+**Version:** 1.1 (2026-09-29 — adds Appendix B, the optional AI-layer wire addendum; corrects the stale "no Dockerfile" claims in §3/§8.2; nothing else in §1–§15 changes)  
 **Status:** Approved — build against this  
 **Primary Audience:** The G5 implementer (backend + integration)  
 **Primary Goal:** Ship the FastAPI backend that streams the sim live and from replay, serves the built React frontend, and passes gate G5: **runs locally live AND from replay**.
@@ -65,7 +65,7 @@ Out of G5 scope (later gates): real deployment (G6), README/pitch numbers (G7). 
 - `data/scenarios/nominal.json` (5676 s, dt 2 s, 6 sats, 11 km slots, FOV 1.5°) and `two_failure.jsonl`-producing `two_failure.json` (failures: SAT-1 DEAD @1200 s, SAT-2 DEAD @1500 s).
 - `data/logs/*.jsonl` exist locally (e.g. `two_failure.jsonl`, 8517 lines) but **`data/logs` is gitignored**.
 
-**Missing (this is G5):** every REST route beyond `/health`; all WebSocket code; replay loading/seek; the session/driver; static mounting; a Dockerfile (only `.dockerignore` exists — G0's Dockerfile was never committed); `frontend/dist` (the frontend build arrives separately — everything must work without it).
+**Missing (this is G5):** every REST route beyond `/health`; all WebSocket code; replay loading/seek; the session/driver; static mounting; a Dockerfile update (**v1.1 correction:** a Dockerfile DOES exist in the tree — v1.0 wrongly listed it as missing; amend it per §8.2 and verify its COPY list covers `data/scenarios/`, the committed canonical logs, and `frontend/dist`); `frontend/dist` (the frontend build arrives separately — everything must work without it).
 
 **Pre-flight chores (first 15 min):**
 1. `uv sync --locked`, `uv run pytest -q` — confirm 30 green before touching anything.
@@ -248,7 +248,7 @@ The log schema and the frontend contract differ in three places. The mapping bel
 
 ### 6.2 Message set (see FRONTEND_SPEC §16 for exact shapes)
 
-`hello` (server→client, on connect: mode, scenario, seed, sim_time, skipped) · `sim_state` · `event` · `role_reassignment` · `ping` (client→server) · `pong` (server→client). `cost_matrix`: defined in the frontend spec, disabled in G5.
+`hello` (server→client, on connect: mode, scenario, seed, sim_time, skipped) · `sim_state` · `event` · `role_reassignment` · `ping` (client→server) · `pong` (server→client). `cost_matrix`: defined in the frontend spec, disabled in G5. **v1.1:** Appendix B adds OPTIONAL additive fields (per-sat `risk` on `sim_state`, a `SUSPECT_ALERT` event type riding `event`) — no new WS message types, and no G5 action is needed for the benchmark phases (see `docs/ENDGAME_PLAN.md`).
 
 ### 6.3 WS lifecycle (`/ws/state`)
 
@@ -299,7 +299,7 @@ The client-side 30 s ping (FRONTEND_SPEC §16.5) keeps Render's free tier alive 
 - If it doesn't: `/` returns the JSON placeholder; everything else works. The backend must never require the frontend to be present.
 - `tests/test_smoke.py::test_health_endpoint` asserts `== {"status": "ok"}`. You are enriching `/health` (§5.4), so **update that assertion in the same commit** (assert `status == "ok"` plus the new keys). Say so in the PR — it's an intentional contract change, not a regression.
 
-### 8.2 Dockerfile (new — it does not exist yet despite G0's deliverable)
+### 8.2 Dockerfile (exists in the tree — amend it; corrected in v1.1, v1.0 wrongly said it was never committed)
 
 Multi-stage, in the G5 series (G6 verifies the actual deploy):
 
@@ -435,3 +435,17 @@ curl localhost:8000/scenarios                       # directory listing
 ```
 
 Wire contract source of truth: `docs/FRONTEND_SPEC.md` §15–§18 + §6 of this document. If they disagree: stop, fix both, note it in the PR.
+
+---
+
+## Appendix B — AI-layer wire addendum (2026-09-29, v1.0 → v1.1)
+
+Context: `docs/ENDGAME_PLAN.md` is the working plan to the freeze. Its headline: the judge-facing deliverable is now MEASUREMENT — a 15-pair × 5-policy recovery benchmark, a Pareto sweep, a dead-sat keep-out report, and a CW-validity plot, **none of which touch G5** — and the AI system (a per-satellite failure-risk predictor feeding role placement) is **cut-first**. Everything below is therefore **[optional] and additive**: none of it changes any §1–§15 requirement, and there is **no G5 action for the benchmark phases**. If the predictor is cut at the 2026-09-30 12:00 decision gate (the default on the clock), this appendix is simply never exercised.
+
+1. **[optional] Per-sat `risk` passthrough.** Predictor-family log tick lines may carry `sats[].risk` (float 0–1). In `wire.py`'s `to_sim_state`, pass `risk` through when present, omit when absent — never synthesize a default value. No new WS message type; old logs (no `risk` key) stream exactly as today.
+2. **[optional] `SUSPECT_ALERT` rides the existing `event` message.** New log event type `{"type": "SUSPECT_ALERT", "sat_id": ..., "risk": ..., "t": ..., "horizon_s": ...}` inside the existing `event` field; wire maps it through the generic `event` message the frontend already renders. The sim pops at most one event per tick (FIFO) — a same-tick second event still delays one tick; do not special-case it.
+3. **[optional] Scenario `predictor` block — G5 must NOT add parsing for it.** A defaulted nested block may land in `cubesat/scenario.py` (the benchmark/AI side's diff, only if P4 is approved); pydantic v2 `extra='ignore'` keeps every committed scenario JSON parsing unchanged. The backend stays schema-agnostic: it never reads the block.
+4. **[optional] Old committed logs replay unchanged.** Predictor events exist only on predictor-family logs. If a predictor-family fixture lands, extend `test_live_equals_replay_frames` to it and add `test_wire_predictor_event_additive` in `tests/test_wire.py`. We supply the committed fixture.
+5. **`replanning_latency_ms` stays `null`** (§6.1) unless the P4 hook exposes it out-of-band without touching the byte stream; the frontend renders "unmeasured" as specced.
+
+Process (§0 rule: never fork silently): this addendum and the FRONTEND_SPEC v2.1 note land BEFORE any predictor code exists, so this in-flight build can absorb them without rework. G5 still must not modify the sim core (§0) — the predictor's in-loop hook, if approved at all, is the benchmark/AI side's diff, gated on user approval and a GATES.md decisions entry.

@@ -870,3 +870,58 @@ uv run python -m cubesat.cluster_import --omm data/celestrak/firefly_omm.json --
 uv run python -m cubesat.run --scenario data/scenarios/firefly_swarm.json --seed 42 --out data/logs/firefly_swarm.jsonl
 uv run pytest -q    # 42 passed: incl. test_cluster_import (8), test_scenario_zoo (3), test_scenario_schema (6)
 ```
+
+## Endgame re-plan — measurement first, AI target pinned (2026-09-29, docs only)
+
+No code changed in this commit. Suite verified green at HEAD `67189ab` this session:
+full `uv run pytest -q` passed; the golden pin held (`uv run pytest tests/test_cli.py::test_run_is_byte_deterministic -q`
+→ 1 passed); `uv run pytest --collect-only -q` → 43 tests collected.
+
+A researched workflow (codebase recon + ML recipe + risk mapping + independent
+adversarial review; every file:line verified against the tree) produced two plan docs
+the same day:
+
+- `docs/AI_LAYER_PLAN.md` — the morning's predictor-first plan. **Superseded in
+  priority order** (banner on its status line); kept as the predictor-design detail
+  reference.
+- `docs/ENDGAME_PLAN.md` — **ACTIVE**, measurement-first P0–P4 after the user's
+  prior-art review. That doc is the plan of record; this section records the decisions.
+
+**Decisions (full detail + 14-item risk register in ENDGAME_PLAN):**
+
+1. Judge-facing deliverable is MEASUREMENT: P0 = all C(6,2)=15 two-failure pairs × 5
+   policies (do-nothing, even-split [the RL-retasking literature's naive rule], greedy
+   nearest-seat, Hungarian, Hungarian+keep-out), reporting mean AND worst-case coverage
+   retained / total Δv / min survivor-to-dead separation; P1 = fuel-vs-coverage Pareto
+   (w2 × dv_budget grid); P2 = dead-satellite drift keep-out report; P3 = CW-validity
+   plot (extends tests/test_hcw.py::test_cw_vs_kepler_error_report — reuse, not rebuild).
+   P0–P3 need ZERO sim-core diffs (benchmark-side override of the `cubesat.sim.replan`
+   seam with try/finally restore + `test_benchmark_replanning_rebinding_restored`).
+2. AI target PINNED: per-satellite failure-risk prediction feeding ROLE PLACEMENT —
+   critical roles (leader, downlink) go to the lowest-risk eligible survivors via a
+   deterministic post-Hungarian swap (margin list {0.0, 0.1, 0.2}; equal risk breaks to
+   the lowest sat id). The model NEVER predicts assignments (Hungarian is already
+   optimal; 15 cases make an ML-assignment claim indefensible). Early-warning
+   suspect alerts are secondary; the reactive heartbeat+Hungarian path stays
+   authoritative; sudden death is unpredictable by construction (recall ≈ 0, stated
+   openly). The LLM copilot is cut unconditionally.
+3. Claims policy: never claim novelty — cite the Princeton 2025 thesis (CW + convex +
+   fault-aware reassignment), failure-triggered Hungarian retargeting, the RL
+   retasking paper (whose even-split rule we reimplement as a baseline), passive-safety
+   design (GRACE/TanDEM-X/PRISMA), and Starling accurately (ROMEO flew maneuver
+   planning; failure recovery was NOT flight-demonstrated). Stats phrasing: "failures
+   are common"; the repo's 2-of-6 is a scenario choice, not a statistic.
+4. Teammate coordination (landed BEFORE any predictor code): BACKEND_SPEC v1.1
+   Appendix B — wire deltas all [optional]/additive, no new WS message types, G5 must
+   NOT parse the predictor scenario block, old logs replay unchanged; FRONTEND_SPEC
+   v2.1 Appendix D — optional `risk` field + SUSPECT text label under §13 law. Also
+   corrected the stale "no Dockerfile" claims in BACKEND_SPEC §3/§8.2 (a Dockerfile
+   exists in the tree; G5 amends it and verifies its COPY list).
+
+**Top open items (ENDGAME_PLAN §12; decide at the 12:00 gate on 2026-09-30):**
+lightgbm approval (else the dependency-free EWMA/CUSUM baseline ships); P4 in-loop
+hook approval (the plan's only contemplated core diff); the second-delta scope ack
+(measured on predictor-family scenarios — on the existing scenarios it is zero/negative
+by construction); before the demo: Dockerfile content fix + `docker run` healthcheck
+(risk #8) and the canonical-log whitelist commit so replay-from-fresh-clone works
+(risk #10, `git ls-files data/logs` lists only `.gitkeep` today).

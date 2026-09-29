@@ -2,7 +2,7 @@
 
 **Project:** CubeSat Swarm Self-Healing Formation Control After Partial Failure  
 **Document Type:** Frontend Requirements, Feature Specification, and Adversarial Review  
-**Version:** 2.0 (repo-aligned, design law added — changelog in Appendix A)  
+**Version:** 2.1 (2026-09-29 — adds Appendix D, the optional AI-layer risk display; §1–§32 unchanged; v1.0→v2.0 changelog in Appendix A)  
 **Status:** Approved — build against this  
 **Primary Audience:** Frontend developers, backend developers, demo presenter, judges  
 **Primary Goal:** Build a professional, reliable, visually clear React frontend that proves the swarm can detect failure, reallocate roles, and recover mission performance.
@@ -1219,6 +1219,7 @@ interface Satellite {
   dv_used: number;               // Δv consumed [m/s]
   targetSlot?: string;
   failureType?: string;          // "DEAD" | "THRUSTER_OUT"
+  risk?: number;                 // 0-1 failure-risk score — predictor-family frames only (Appendix D); omit when absent
 }
 
 interface Metrics {
@@ -2204,3 +2205,12 @@ No v2.0 content above is modified. This addendum records three scenarios that no
 - `firefly_swarm.json` — a **hypothetical** 6-sat swarm flying formation on the real orbit of FIREFLY-1 (Pixxel), generated from the committed CelesTrak OMM snapshot `data/celestrak/firefly_omm.json` (`cubesat.cluster_import`). Any label, tooltip, or README mention must keep the word "hypothetical": the swarm does not exist — only the chief's orbit is real.
 
 A future "import cluster" UI would ride `POST /api/scenario/from-cluster` — an OPTIONAL G5 route (see the dated note in docs/BACKEND_SPEC.md §5.4); build such UI only if that route exists. Any such UI work must follow §13 design law and the §13.7 scanner gate.
+
+## Appendix D — AI-layer display: risk + suspect (2026-09-29, v2.0 → v2.1)
+
+`docs/ENDGAME_PLAN.md` reordered the endgame: the judge-facing deliverable is now a measurement benchmark (P0–P3 — no UI change at all), and the failure-risk predictor is **cut-first**. Everything here is **optional**: build none of it until a predictor-family replay fixture actually exists in `data/logs/`. No v2.0 content is modified except the one optional `risk` field added to the §15.1 `Satellite` interface.
+
+- **`sats[].risk` (optional, 0–1):** present only on predictor-family frames. When absent, render nothing — not `unmeasured`; the row does not exist for that frame.
+- **Suspect state arrives as a normal `event` message** with `type: "SUSPECT_ALERT"` (payload: `sat_id`, `risk`, `t`, `horizon_s`). The existing EventLog renders it at warning severity; no new WS message type, no new connection handling.
+- **If the predictor ships**, the minimal display is: (a) a `SUSPECT` text label beside the satellite's status label in the satellite list and detail panel — `--status-caution` with the mandatory text label (§22 colorblind rule); (b) a risk readout row in `SelectedSatellitePanel` (mono value, 0–1). Nothing more: no new chart, no new panel, and NO satellite-state color change — suspect is an annotation, not a status; the existing states keep owning the color semantics.
+- §13 design law and the §13.7 scanner gate apply to any of this, exactly as to every other component.
