@@ -13,3 +13,6 @@ data/logs/*
 !data/logs/.gitkeep
 !data/logs/nominal.jsonl
 !data/logs/two_failure.jsonl
+
+# P0 benchmark per-run JSONL logs (ENDGAME_PLAN 3.5) -- only data/eval/*.json reports are committed
+data/eval/benchmark/
