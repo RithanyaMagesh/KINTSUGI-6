@@ -14,6 +14,11 @@ RUN uv sync --locked --no-dev --no-install-project
 COPY cubesat ./cubesat
 RUN uv sync --locked --no-dev
 
+# Demo data (ENDGAME_PLAN risk #8): the scenario zoo plus the two committed
+# canonical logs (4f2d81b). Per-run eval artifacts stay out via .dockerignore.
+COPY data/scenarios ./data/scenarios
+COPY data/logs/nominal.jsonl data/logs/two_failure.jsonl ./data/logs/
+
 ENV PORT=8000
 EXPOSE 8000
 
