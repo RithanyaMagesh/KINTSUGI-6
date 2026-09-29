@@ -66,7 +66,6 @@ def test_pareto_coverage_monotone_in_dv_budget(scenario):
     n = mean_motion(scenario.chief.altitude_km * 1000.0)
     amp = scenario.formation.radial_amp_km * 1000.0
     survivors = [slot_initial_state(amp, amp, 2.0 * math.pi * j / 6.0, n) for j in (2, 3, 4, 5)]
-    [slot_initial_state(amp, amp, 0.0, n)]
     t_replan = 1210.0
     for phi0_deg in scenario.allocation.phase_sweep_deg:
         phi0 = math.radians(phi0_deg)

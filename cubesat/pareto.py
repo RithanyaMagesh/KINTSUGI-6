@@ -390,8 +390,6 @@ def write_svg(report: dict, svg_path: Path, *, width: int = 640, height: int = 4
             " pairs had no feasible formation</text>"
         )
     if len(front) > 1:
-        pts = " ".join(f"{p[2]:.2f},{p[3]:.6f}" for p in front)
-        # front polyline in DATA coordinates needs px/py; recompute in order
         pts = " ".join(
             f"{px(p[2]):.1f},{py(p[3]):.1f}" for p in sorted(front, key=lambda p: p[2])
         )
