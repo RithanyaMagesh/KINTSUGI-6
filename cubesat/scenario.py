@@ -123,6 +123,17 @@ class Scenario(BaseModel):
                 )
         return self
 
+    @model_validator(mode="after")
+    def _slots_match_roles(self) -> Scenario:
+        # States are built from the slots but every loop runs over n_sats; a
+        # mismatch would either pollute the log with phantom sats or IndexError.
+        if self.formation.n_slots != self.n_sats:
+            raise ValueError(
+                f"formation.n_slots={self.formation.n_slots} must equal "
+                f"len(roles)={self.n_sats}"
+            )
+        return self
+
 
 def load_scenario(path: Path) -> Scenario:
     return Scenario.model_validate_json(Path(path).read_text(encoding="utf-8"))

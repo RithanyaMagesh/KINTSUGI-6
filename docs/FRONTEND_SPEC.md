@@ -2194,3 +2194,13 @@ grep -rn --include="*.css" --include="*.tsx" -E "#[0-9a-fA-F]{3,8}\b" frontend/s
 ```
 
 If two rules in this spec ever conflict, precedence is: repo invariants (AGENTS.md) > §7 must-haves + §13 design law > §8 should-haves > §9 nice-to-haves. Report the conflict; never resolve it silently.
+
+## Appendix C — scenario addendum (2026-09-28, cluster-import feature)
+
+No v2.0 content above is modified. This addendum records three scenarios that now exist in `data/scenarios/` beyond the §7.1 list; the scenario dropdown reads the directory (§7.1), so they appear automatically — this section only explains what each is for:
+
+- `single_failure_n4.json` — **leader-death / critical-role demo**: 4 sats (leader, 2 imagers, downlink); the leader (sat 0) goes DEAD at t=1200 s and the survivors re-elect a leader.
+- `cascading_n8.json` — **cascading failure demo**: 8 sats, 2 DEAD + 1 THRUSTER_OUT. The THRUSTER_OUT satellite keeps reporting heartbeats — it is invisible to failure detection by design — so the UI must render it as `failed` + `failure_type` (§16.1) and must not expect a detection event for it.
+- `firefly_swarm.json` — a **hypothetical** 6-sat swarm flying formation on the real orbit of FIREFLY-1 (Pixxel), generated from the committed CelesTrak OMM snapshot `data/celestrak/firefly_omm.json` (`cubesat.cluster_import`). Any label, tooltip, or README mention must keep the word "hypothetical": the swarm does not exist — only the chief's orbit is real.
+
+A future "import cluster" UI would ride `POST /api/scenario/from-cluster` — an OPTIONAL G5 route (see the dated note in docs/BACKEND_SPEC.md §5.4); build such UI only if that route exists. Any such UI work must follow §13 design law and the §13.7 scanner gate.

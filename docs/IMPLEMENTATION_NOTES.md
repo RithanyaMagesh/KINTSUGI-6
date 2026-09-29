@@ -740,3 +740,133 @@ replans, so per-tick role evaluation is identical there):
 - `tests/test_fault.py`: state-machine docstring now matches the relaxed (correct)
   expectation; detection-latency test writes its scenario through pytest `tmp_path`
   (+ explicit mkdir for this setup's relative-basetemp quirk) instead of `.pytest_tmp`.
+
+## Cluster import: hypothetical swarm on a real chief orbit (2026-09-28, cluster-import feature)
+
+Post-G4 feature (not a gate): a CLI + library that turns one CelesTrak OMM record into
+a schema-valid swarm scenario flying formation on that object's real orbit.
+
+### Motivation
+
+No real Indian cluster is tight enough for HCW: the Pixxel Fireflies are phased ~120 deg
+apart at ~589 km, and SpaDeX is only 2 satellites. The honest product is a **hypothetical
+swarm on a real chief's orbit** ("hypothetical-swarm-on-FIREFLY-1", not "recovering X"):
+the chief orbit is measured, the relative motion is the sim's own.
+
+### Design
+
+`cubesat/cluster_import.py` (new, 199 lines; stdlib only — no sgp4, no new dependency;
+no wall clock, no RNG, no order-dependent iteration, AGENTS.md 2):
+
+- OMM parse (`cubesat/cluster_import.py:62-76`): `n = MEAN_MOTION · 2π/86400` (revs per
+  solar day → rad/s, sgp4 convention), `a = (MU/n²)^(1/3)`, `altitude_km = (a −
+  R_EARTH)/1000`. `MU`, `R_EARTH`, `mean_motion` come from `cubesat/hcw.py`.
+- Kozai mean-motion caveat: the OMM mean motion is a Kozai mean element; deriving
+  altitude as (MU/n²)^⅓ ignores the J2 secular term, which biases the derived altitude
+  by ~3 km for sun-synchronous chiefs (i ≈ 97.7° here). A labeling-level bias only: the
+  sim consumes just the mean motion (derived from `chief.altitude_km`), and the
+  formation-scale effect is roughly two orders below the measured ~3 km CW-vs-Kepler
+  linearization error (2984.5 m, G3 section). The ~3 km bias figure is a first-order
+  analytical estimate (unmeasured).
+- e-gate `e > 1e-3` rejects the record (`cubesat/cluster_import.py:83-88`): a labeling
+  convention — the chief's eccentricity never enters the sim (the scenario `chief`
+  field carries only `altitude_km`); the gate exists so the label "hypothetical swarm
+  on a near-circular real orbit" stays true. Measured (exit 2, NO scenario file
+  written):
+
+  ```
+  uv run python -m cubesat.cluster_import --omm data/celestrak/firefly_omm.json --index 0 --n-sats 6 --n-failures 2 --out data/scenarios/_rejected.json
+  record [0] rejected: eccentricity gate failed: e=0.00169518 > 0.001 for FIREFLY ALPHA R/B (NORAD 60210); a hypothetical swarm needs a near-circular chief (see module docstring)
+  ```
+
+  An altitude gate 160–2000 km mirrors `ChiefOrbit` in the scenario schema
+  (`cubesat/cluster_import.py:36,89-94`).
+- The colleague's new `_slots_match_roles` model validator
+  (`cubesat/scenario.py:126-135`): `formation.n_slots` must equal `len(roles)` — the
+  generated scenarios satisfy it by construction; tested, not re-implemented
+  (`tests/test_scenario_schema.py::test_rejects_slot_role_mismatch`).
+- Survivor guard (`cubesat/cluster_import.py:107-113`): `n_sats >= 4` and
+  `1 <= n_failures <= n_sats - 3` — leader + at least one imager + the downlink must
+  survive the `n_failures` DEAD fires.
+- Design-review decisions: **leader-death n4** (`data/scenarios/single_failure_n4.json`:
+  sat 0, the leader, DEAD at t=1200 — critical-role re-election on a minimal 4-sat
+  formation) and **THRUSTER_OUT on the downlink** (`data/scenarios/cascading_n8.json`:
+  sat 7 at t=2400 — the mode keeps reporting heartbeats, so detection stays silent for
+  it by design; it coasts as an obstacle). The gains / sensor / allocation reference
+  blocks are copied verbatim from `data/scenarios/two_failure.json`
+  (`cubesat/cluster_import.py:38-54`), so the generated swarm behaves like the tuned
+  G4 demo.
+- The generated file is self-consistent with the sim: altitude is rounded to 3 decimals
+  and n is recomputed from the ROUNDED altitude via `hcw.mean_motion` — the sim derives
+  n from `chief.altitude_km`, not from the OMM mean motion
+  (`cubesat/cluster_import.py:114-115`).
+
+### Tuning (the only one: cascading_n8 radial_amp_km 8.0 → 8.25)
+
+With 8.0, `tests/test_scenario_zoo.py::test_cascading_n8_two_replan_cycles_one_recovery`
+failed — worst min_sep 1909.3 m < 2000.0 m at t=13718 s. A per-tick diagnostic showed
+the violating pair is sat 0 (leader, NOMINAL) vs sat 7 (THRUSTER_OUT, coasting from its
+mid-transfer state at t=2400 s), drifting along-track until it grazes the formation
+~2.5 orbits in. Deterministic sweep over {8.25, 8.5, 8.75, 9.25, 9.5, 9.75}
+(2026-09-28; configs + outputs are the record): 8.5 fails (1889.2 m); 8.75/9.25/9.75
+never reach RECOVERED — at amp 10.0 a diagnostic showed sat 0's second-transfer PD
+chase saturating (dv growing at exactly a_max=0.1 m/s², r diverging to y=−26,543 km):
+continuous saturated along-track thrust diverges under CW dynamics (the G4 a_max
+finding); 9.5 also passes (worst 2253.0 m, rec=1) but 8.25 is closest to the
+two_failure reference 8.0 with the better margin. Selected **8.25**: worst min_sep
+**2744.7 m at t=3796 s** (threshold 2000 m), detections=2, assignments=2,
+to_RECOVERED=1 (re-verified this session: `uv run pytest tests/test_scenario_zoo.py -s -q`
+prints the same line). Metric and test assertions untouched.
+
+### Provenance
+
+`data/celestrak/firefly_omm.json` — fetched 2026-09-28 from
+`https://celestrak.org/NORAD/elements/gp.php?NAME=FIREFLY&FORMAT=JSON`. 5 records
+(altitude/e from the CLI picker output above and the snapshot itself):
+
+| idx | OBJECT_NAME | NORAD_CAT_ID | altitude_km | eccentricity |
+|---|---|---|---|---|
+| 0 | FIREFLY ALPHA R/B | 60210 | 342.380 | 0.00169518 |
+| 1 | FIREFLY-1 | 62701 | 589.309 | 0.00037208 |
+| 2 | FIREFLY-2 | 62704 | 589.450 | 0.00081895 |
+| 3 | FIREFLY-3 | 62710 | 589.358 | 0.00033692 |
+| 4 | FIREFLY ALPHA R/B | 68128 | 346.608 | 0.00090641 |
+
+### Generated scenario (the flagship)
+
+```
+uv run python -m cubesat.cluster_import --omm data/celestrak/firefly_omm.json --index 1 --n-sats 6 --n-failures 2 --out data/scenarios/firefly_swarm.json
+chief FIREFLY-1 (NORAD 62701): altitude 589.309 km, e 3.7208e-04, n 0.001086 rad/s
+wrote data\scenarios\firefly_swarm.json
+```
+
+Chief: FIREFLY-1, NORAD 62701, altitude **589.309 km**, e **3.7208e-04**, n
+**0.001086 rad/s**; 6 sats (1 leader / 4 imagers / 1 downlink), A = 8.0 km, a_max 0.1,
+2 DEAD imagers (t=1200/1500, the two_failure pattern), duration = 3 orbits =
+17363.71514024976 s. Regeneration is byte-identical to the committed file (verified
+2026-09-28: same command to a scratch path, `cmp` exit 0).
+
+### Demo logs (data/logs is gitignored — commit the hash, not the log; invariant 1)
+
+All six logs produced with
+`uv run python -m cubesat.run --scenario data/scenarios/<name>.json --seed 42 --out data/logs/<name>.jsonl`
+(run twice per scenario, second copy `_run2`; line counts + sha256 re-verified
+2026-09-28 with `wc -l` + `sha256sum`, each pair byte-identical, `cmp` exit 0):
+
+| scenario | lines | sha256 (both runs identical) | coverage_mean_last_orbit |
+|---|---|---|---|
+| firefly_swarm.jsonl | 8685 | `692f066f6f3edb07c5f72ee9b294959f6346b2641650c917f83de79629782742` | 0.362410 |
+| single_failure_n4.jsonl | 8517 | `528f014088d1eb42057c5514df7f80bb45cba17f2d7bafafe3ad3ea65b6bc708` | 0.140240 |
+| cascading_n8.jsonl | 8517 | `5dba765e2e671626a49956c94837a53e72a1ff24806bc4f8543747fc56249a0d` | 0.408800 |
+
+(coverage from each log's SUMMARY line, last-line read; the run command prints the
+same value.)
+
+### Reproduce
+
+```
+uv sync --locked
+uv run python -m cubesat.cluster_import --omm data/celestrak/firefly_omm.json --index 1 --n-sats 6 --n-failures 2 --out data/scenarios/firefly_swarm.json
+uv run python -m cubesat.run --scenario data/scenarios/firefly_swarm.json --seed 42 --out data/logs/firefly_swarm.jsonl
+uv run pytest -q    # 42 passed: incl. test_cluster_import (8), test_scenario_zoo (3), test_scenario_schema (6)
+```

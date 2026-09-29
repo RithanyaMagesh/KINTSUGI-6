@@ -200,6 +200,7 @@ app = FastAPI(lifespan=lifespan)      # lifespan creates Session + Hub (one per 
 
 GET  /health                  -> {"status": "ok", "mode": ..., "sim_time": ..., "scenario": ..., "paused": ...}
 GET  /scenarios               -> {"scenarios": ["nominal.json", "two_failure.json"]}   # directory listing; [] never 500
+POST /api/scenario/from-cluster  # OPTIONAL / bonus — NOT in the G5 cut list; see the dated note below this table
 POST /simulation/start        # StartRequest; default = first sorted scenario, its own seed; 409 if none
 POST /simulation/pause        # 409 when stopped
 POST /simulation/resume       # 409 when stopped
@@ -214,6 +215,8 @@ WS   /ws/state                # §7.4
 # LAST route: if frontend/dist exists -> app.mount("/", StaticFiles(html=True)); else "/" returns
 # a JSON placeholder {"error": "frontend not built"} — API-only mode must never crash
 ```
+
+**`POST /api/scenario/from-cluster` — OPTIONAL / bonus, not in the G5 cut list (2026-09-28, cluster-import feature).** Build it only after every mandatory route above is green. Body: `{"omm": <one OMM JSON record>, "n_sats": ..., "n_failures": ...}` or a chief object `{name, norad_cat_id, mean_motion_rad_s, altitude_km, eccentricity}`; the route wraps `cubesat.cluster_import.build_swarm_scenario` and returns the generated scenario JSON. **No network fetch in-process.** A live CelesTrak fetch stays a separate user-approval decision: python-sgp4 would be a NEW dependency, and the fetch itself must be host-validated and SSRF-guarded (http/https only; reject localhost, loopback, private and reserved hosts) with a cache and the committed snapshot as fallback — `data/celestrak/firefly_omm.json` is that fallback. State plainly: the demo is the CLI (`uv run python -m cubesat.cluster_import ...`) plus the committed `data/scenarios/firefly_swarm.json` — not this route.
 
 Run exactly as AGENTS.md says: `uv run uvicorn cubesat.api:app --port 8000`. **Single worker, always** (`Session` is per-process; never `--workers N`).
 

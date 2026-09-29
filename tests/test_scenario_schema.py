@@ -42,3 +42,10 @@ def test_rejects_nonpositive_dt():
     payload["dt_s"] = 0.0
     with pytest.raises(ValidationError):
         Scenario.model_validate(payload)
+
+
+def test_rejects_slot_role_mismatch():
+    payload = load_scenario(NOMINAL).model_dump()
+    payload["formation"]["n_slots"] = 5  # roles stays 6: would log phantom sats
+    with pytest.raises(ValidationError):
+        Scenario.model_validate(payload)
