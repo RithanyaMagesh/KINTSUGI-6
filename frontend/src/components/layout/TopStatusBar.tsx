@@ -1,7 +1,9 @@
 import { useSimStore } from "../../stores/simStore";
+import { useUiStore } from "../../stores/uiStore";
 import { missionStateColor } from "../../utils/colors";
 import { formatSimTime } from "../../utils/format";
 import { isMissionState } from "../../types/satellite";
+import chrome from "../../styles/chrome.module.css";
 import styles from "./TopStatusBar.module.css";
 
 const CONNECTION_LABEL: Record<string, string> = {
@@ -16,6 +18,8 @@ export default function TopStatusBar() {
   const connection = useSimStore((s) => s.connection);
   const mode = useSimStore((s) => s.mode);
   const scenario = useSimStore((s) => s.scenario);
+  const presentation = useUiStore((s) => s.presentationMode);
+  const setPresentationMode = useUiStore((s) => s.setPresentationMode);
 
   const stateLabel =
     missionState !== null && isMissionState(missionState)
@@ -39,6 +43,14 @@ export default function TopStatusBar() {
         {CONNECTION_LABEL[connection] ?? connection}
       </span>
       {mode === "replay" && <span className={styles.replayBadge}>Replay</span>}
+      {/* §23 primary demo button — switches to the §12.2 presentation layout. */}
+      <button
+        className={chrome.btn}
+        onClick={() => setPresentationMode(!presentation)}
+        aria-pressed={presentation}
+      >
+        {presentation ? "Exit presentation" : "Presentation mode"}
+      </button>
     </header>
   );
 }

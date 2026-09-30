@@ -1,0 +1,43 @@
+/* Selected satellite detail — §7.7. Readout rows, mono values, one accent:
+   the status colour (state meaning only, always with its text label). */
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.id {
+  font-family: var(--font-mono);
+  font-size: var(--text-panel-title);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.status {
+  font-family: var(--font-mono);
+  font-size: var(--text-body);
+  font-weight: 500;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-1) 0;
+  border-top: 1px solid var(--border);
+}
+
+.label {
+  color: var(--ink-muted);
+  font-size: var(--text-body);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-body);
+  color: var(--ink);
+  text-align: right;
+}

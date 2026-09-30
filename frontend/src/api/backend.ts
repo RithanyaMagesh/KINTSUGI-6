@@ -34,6 +34,25 @@ async function get<T>(path: string): Promise<T> {
   return (await res.json()) as T;
 }
 
+/** GET a replay log as text (FileResponse JSONL). Used once per load to read
+ * the log's end time for the seek slider — parsing mirrors cubesat/replay.py's
+ * defensive per-line read; any failure returns null and the slider is hidden,
+ * never guessed. */
+export async function replayFileText(filename: string): Promise<string | null> {
+  let res: Response;
+  try {
+    res = await fetch(`/replay/file/${encodeURIComponent(filename)}`);
+  } catch {
+    return null;
+  }
+  if (!res.ok) return null;
+  try {
+    return await res.text();
+  } catch {
+    return null;
+  }
+}
+
 export interface HealthResponse {
   status: string;
   mode: string;

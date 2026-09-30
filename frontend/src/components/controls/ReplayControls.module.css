@@ -23,3 +23,16 @@
 .input {
   width: 110px;
 }
+
+/* §7.8 seek timeline — native range, ordinary product control (§13.3). */
+.seekRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.seek {
+  width: 100%;
+  accent-color: var(--ink);
+  cursor: pointer;
+}

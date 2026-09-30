@@ -84,9 +84,7 @@ export default function SimulationControls({ scenario }: Props) {
           onChange={(e) => setSeed(e.target.value)}
         />
       </div>
-      {scenario === null && (
-        <p className={chrome.hint}>Select a scenario file to enable start.</p>
-      )}
+      {scenario === null && <p className={chrome.hint}>Select a scenario to begin.</p>}
       {error !== null && <p className={chrome.errorText}>{error}</p>}
     </div>
   );

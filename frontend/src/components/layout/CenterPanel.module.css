@@ -1,11 +1,6 @@
+/* Center panel: the scene fills the panel body (SwarmScene manages its own
+   viewport + overlays). */
 .panel {
   display: flex;
   flex-direction: column;
-}
-
-.canvasSlot {
-  flex: 1;
-  border: 1px dashed var(--border);
-  border-radius: var(--radius-panel);
-  min-height: 120px;
 }

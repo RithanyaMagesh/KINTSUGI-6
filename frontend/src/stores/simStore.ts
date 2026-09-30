@@ -1,20 +1,14 @@
-// Simulation store — FRONTEND_SPEC §15.1. One deserializer serves live WS,
-// replay, and logs. Every field starts unmeasured; the UI renders the string
-// "unmeasured" for null values (repo invariant 1) until real frames arrive.
+// Simulation store — FRONTEND_SPEC §15.1. Parsing itself lives in the ONE
+// shared deserializer (src/api/deserializer.ts, §18) that also serves replay:
+// the backend drives replay through the same /ws/state socket, so live and
+// replay frames cannot drift apart (§21.9). Every field starts unmeasured;
+// the UI renders the string "unmeasured" for null values (repo invariant 1)
+// until real frames arrive.
 import { create } from "zustand";
-import type {
-  ConnectionState,
-  Metrics,
-  SimMode,
-} from "../types/telemetry";
+import type { ConnectionState, Metrics, SimMode } from "../types/telemetry";
 import type { MissionState, Satellite } from "../types/satellite";
 import type { SimEvent } from "../types/events";
-import type {
-  EventMessage,
-  RoleReassignmentMessage,
-  SimStateMessage,
-  WireMessage,
-} from "../types/events";
+import { deserializeMessage } from "../api/deserializer";
 
 const MAX_EVENTS = 200; // drop-oldest, matching the backend hub's bounding
 
@@ -28,7 +22,22 @@ interface SimStore {
   satellites: Satellite[];
   metrics: Partial<Metrics>;
   events: SimEvent[];
-  lastReassignment: RoleReassignmentMessage | null;
+  /** §8.1 role reallocation table — the latest role_reassignment message with
+   * oldRole derived from the previous frame's roles (a measured diff; the wire
+   * does not carry old_role, cubesat/wire.py _role_reassignment). */
+  lastReassignment: {
+    simTime: number;
+    rows: Array<{
+      satelliteId: string;
+      oldRole: string | null;
+      newRole: string | null;
+      targetSlot: string | null;
+    }>;
+    costTotal: number | null;
+  } | null;
+  /** Roles from the LAST frame, keyed by sat id — lets the next role_reassignment
+   * message show what each satellite did before the replan. */
+  priorRoles: Record<string, string>;
 
   setConnection(connection: ConnectionState): void;
   setMode(mode: SimMode): void;
@@ -47,56 +56,8 @@ const initial = {
   metrics: {} as Partial<Metrics>,
   events: [] as SimEvent[],
   lastReassignment: null,
+  priorRoles: {} as Record<string, string>,
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
-function toSatellite(raw: Record<string, unknown>): Satellite | null {
-  if (
-    typeof raw.id !== "string" ||
-    !Array.isArray(raw.r) ||
-    raw.r.length !== 3 ||
-    !Array.isArray(raw.v) ||
-    raw.v.length !== 3
-  ) {
-    return null;
-  }
-  return {
-    id: raw.id,
-    role: typeof raw.role === "string" ? raw.role : "unknown",
-    status: (typeof raw.status === "string" ? raw.status : "inactive") as Satellite["status"],
-    r: [Number(raw.r[0]), Number(raw.r[1]), Number(raw.r[2])],
-    v: [Number(raw.v[0]), Number(raw.v[1]), Number(raw.v[2])],
-    dv_used: typeof raw.dv_used === "number" ? raw.dv_used : 0,
-    targetSlot: typeof raw.target_slot === "string" ? raw.target_slot : undefined,
-    failureType: typeof raw.failure_type === "string" ? raw.failure_type : undefined,
-    risk: typeof raw.risk === "number" ? raw.risk : undefined,
-  };
-}
-
-function applySimState(msg: SimStateMessage): Partial<SimStore> {
-  const satellites = msg.sats
-    .map((s) => toSatellite(s as unknown as Record<string, unknown>))
-    .filter((s): s is Satellite => s !== null);
-  const metrics: Partial<Metrics> = {};
-  if (typeof msg.coverage === "number") metrics.coverage = msg.coverage;
-  if (typeof msg.min_sep === "number") metrics.minSep = msg.min_sep;
-  const m = isRecord(msg.metrics) ? msg.metrics : {};
-  if (typeof m.detection_latency_s === "number")
-    metrics.detectionLatencyS = m.detection_latency_s;
-  if (typeof m.replanning_latency_ms === "number")
-    metrics.replanningLatencyMs = m.replanning_latency_ms;
-  return {
-    simTime: typeof msg.sim_time === "number" ? msg.sim_time : null,
-    missionState: (typeof msg.state === "string" ? msg.state : null) as MissionState | null,
-    scenario: typeof msg.scenario === "string" ? msg.scenario : null,
-    seed: typeof msg.seed === "number" ? msg.seed : null,
-    satellites,
-    metrics,
-  };
-}
 
 export const useSimStore = create<SimStore>((set) => ({
   ...initial,
@@ -104,51 +65,84 @@ export const useSimStore = create<SimStore>((set) => ({
   setConnection: (connection) => set({ connection }),
   setMode: (mode) => set({ mode }),
 
-  applyMessage: (raw) =>
+  applyMessage: (raw) => {
+    const msg = deserializeMessage(raw);
+    if (msg === null) return; // malformed / unknown: dropped, never fatal (§18)
     set((state) => {
-      if (!isRecord(raw) || typeof raw.type !== "string") return {};
-      const msg = raw as unknown as WireMessage;
-      switch (msg.type) {
-        case "hello": {
+      switch (msg.kind) {
+        case "hello":
           // Session greeting (cubesat/session.py): tells the UI which mode the
           // backend session is already in (live | replay) so the Replay badge
           // is correct even when the console joins mid-session.
-          const mode = typeof raw.mode === "string" ? raw.mode : null;
           return {
-            mode:
-              mode === "live" || mode === "replay" ? mode : state.mode,
-            scenario: typeof raw.scenario === "string" ? raw.scenario : state.scenario,
-            seed: typeof raw.seed === "number" ? raw.seed : state.seed,
+            mode: msg.mode === "stopped" ? state.mode : msg.mode,
+            scenario: msg.scenario ?? state.scenario,
+            seed: msg.seed ?? state.seed,
+          };
+        case "frame": {
+          // INIT-derived empty state (cubesat/wire.py to_sim_state): resets the
+          // console to the §24.3 "no satellites" state instead of faking a
+          // NOMINAL badge with zero satellites on screen.
+          if (msg.frame.satellites.length === 0 && msg.frame.simTime === 0) {
+            return {
+              simTime: 0,
+              scenario: msg.frame.scenario ?? state.scenario,
+              seed: msg.frame.seed ?? state.seed,
+              satellites: [],
+              metrics: {},
+              events: [],
+              lastReassignment: null,
+              priorRoles: {},
+              missionState: null,
+            };
+          }
+          // priorRoles keeps the PRE-tick role for any satellite whose role
+          // changed on this frame (cubesat/sim.py updates roles[] on the same
+          // tick it emits ASSIGNMENT, and wire.py sends sim_state first) —
+          // so the §8.1 table can show old role without the backend
+          // inventing an old_role field it does not have. Unchanged ids keep
+          // their role; index iteration, no map-order dependence.
+          const priorRoles: Record<string, string> = {};
+          for (const sat of msg.frame.satellites) {
+            const prev = state.satellites.find((p) => p.id === sat.id);
+            priorRoles[sat.id] = prev !== undefined ? prev.role : sat.role;
+          }
+          return {
+            simTime: msg.frame.simTime,
+            missionState: msg.frame.missionState as MissionState,
+            scenario: msg.frame.scenario ?? state.scenario,
+            seed: msg.frame.seed ?? state.seed,
+            satellites: msg.frame.satellites,
+            metrics: msg.frame.metrics,
+            priorRoles,
+            mode: state.mode === "stopped" ? "live" : state.mode,
           };
         }
-        case "sim_state": {
-          const patch = applySimState(msg as SimStateMessage);
-          return { ...patch, mode: state.mode === "stopped" ? "live" : state.mode };
-        }
-        case "event": {
-          const e = msg as EventMessage;
-          if (typeof e.message !== "string") return {};
-          const event: SimEvent = {
-            simTime: typeof e.sim_time === "number" ? e.sim_time : 0,
-            level: (["info", "warning", "critical"].includes(e.level)
-              ? e.level
-              : "info") as SimEvent["level"],
-            message: e.message,
-          };
-          return { events: [...state.events, event].slice(-MAX_EVENTS) };
-        }
-        case "role_reassignment": {
-          const r = msg as RoleReassignmentMessage;
+        case "event":
           return {
-            lastReassignment: r,
+            events: [...state.events, msg.event].slice(-MAX_EVENTS),
+          };
+        case "reassignment":
+          return {
+            lastReassignment: {
+              simTime: msg.reassignment.sim_time,
+              rows: msg.reassignment.assignments.map((a) => ({
+                satelliteId: a.satellite_id,
+                oldRole: state.priorRoles[a.satellite_id] ?? null,
+                newRole: a.new_role,
+                targetSlot: a.target_slot,
+              })),
+              costTotal:
+                typeof msg.reassignment.cost_total === "number"
+                  ? msg.reassignment.cost_total
+                  : null,
+            },
             // target_slot per satellite already arrives on the next sim_state;
             // nothing is invented here for rows the log does not carry.
           };
-        }
-        default:
-          return {};
       }
-    }),
+    });
+  },
 
   reset: () => set({ ...initial }),
 }));

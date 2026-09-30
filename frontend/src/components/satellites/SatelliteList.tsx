@@ -14,11 +14,7 @@ export default function SatelliteList() {
   const selectSatellite = useUiStore((s) => s.selectSatellite);
 
   if (satellites.length === 0) {
-    return (
-      <p className={chrome.hint}>
-        No satellites — start a simulation or load a replay to see the swarm.
-      </p>
-    );
+    return <p className={chrome.hint}>No satellite data received.</p>; // §24.3 verbatim
   }
 
   return (
@@ -36,7 +32,15 @@ export default function SatelliteList() {
           <tr
             key={sat.id}
             className={`${styles.row} ${sat.id === selectedSatelliteId ? styles.selected : ""}`}
+            tabIndex={0}
+            aria-selected={sat.id === selectedSatelliteId}
             onClick={() => selectSatellite(sat.id)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                selectSatellite(sat.id);
+              }
+            }}
           >
             <td className={styles.mono}>{sat.id}</td>
             <td className={sat.role === "leader" ? styles.leader : styles.role}>{sat.role}</td>
