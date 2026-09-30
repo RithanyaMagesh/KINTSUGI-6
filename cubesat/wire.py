@@ -14,7 +14,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 def display_sat_id(i: int) -> str:
@@ -36,7 +36,7 @@ class SessionEnrich:
 class StartRequest(BaseModel):
     scenario: str | None = None
     seed: int | None = None
-    speed: float = 100.0
+    speed: float = Field(default=100.0, gt=0)
 
 
 class InjectRequest(BaseModel):
@@ -49,7 +49,12 @@ class SeekRequest(BaseModel):
 
 
 class SpeedRequest(BaseModel):
-    speed: float
+    speed: float = Field(gt=0)
+
+
+class ReplayLoadRequest(BaseModel):
+    filename: str
+    speed: float = Field(default=100.0, gt=0)
 
 
 _STATUS_TO_WIRE = {"NOMINAL": "healthy", "DEAD": "failed", "THRUSTER_OUT": "failed"}
