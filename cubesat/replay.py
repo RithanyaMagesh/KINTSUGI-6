@@ -1,9 +1,11 @@
 """Replay log loading (BACKEND_SPEC v1.1 section 5.2). No sim dependency.
 
 Per-line defensive parse: a bad line is skipped and counted, never a crash
-(section 7.1 "corrupt replay file"). `frames` holds tick lines only -- the INIT
-header and the SUMMARY line are stored separately, mirroring cubesat.sim's
-[INIT, tick..., SUMMARY] layout.
+(section 7.1 "corrupt replay file") -- that includes lines that parse as JSON
+but carry a schema-malformed payload, judged by wire.tick_frame_ok (the
+wire-format authority decides what is renderable). `frames` holds tick lines
+only -- the INIT header and the SUMMARY line are stored separately, mirroring
+cubesat.sim's [INIT, tick..., SUMMARY] layout.
 """
 
 from __future__ import annotations
@@ -12,6 +14,8 @@ import json
 from bisect import bisect_left
 from dataclasses import dataclass, field
 from pathlib import Path
+
+from cubesat.wire import tick_frame_ok
 
 
 @dataclass
@@ -43,9 +47,7 @@ def load_jsonl(path: Path) -> ReplayLog:
                 log.header = parsed
             elif state == "SUMMARY":
                 log.summary = parsed
-            elif isinstance(parsed.get("t"), (int, float)) and isinstance(
-                parsed.get("sats"), list
-            ):
+            elif isinstance(parsed.get("t"), (int, float)) and tick_frame_ok(parsed):
                 log.frames.append(parsed)
                 log.times.append(float(parsed["t"]))
             else:

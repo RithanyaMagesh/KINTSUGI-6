@@ -51,6 +51,42 @@ def test_replay_load_bad_lines_skipped(tmp_path):
     assert log.skipped == 3
 
 
+def test_replay_load_schema_malformed_lines_skipped(tmp_path):
+    """Section 7.1 at the message-content level: a line that parses as JSON but
+    whose sats / ASSIGNMENT rows miss required fields is skipped + counted, not
+    a mid-stream KeyError in the driver."""
+    header = {"v": 1, "t": 0.0, "state": "INIT", "scenario": "s", "seed": 1, "n_sats": 1}
+    tick = {"v": 1, "t": 0.0, "state": "NOMINAL", "coverage": 0.5, "min_sep": 1.0,
+            "sats": [{"id": 0, "role": "leader", "status": "NOMINAL", "r": [0, 0, 0],
+                      "v": [0, 0, 0], "dv_used": 0.0}]}
+    assignment = {"v": 1, "t": 1.0, "state": "REPLANNING",
+                  "event": {"type": "ASSIGNMENT",
+                            "payload": {"assignments": [{"slot_index": 0}]}},
+                  "sats": []}
+    no_state_key = {"v": 1, "t": 2.0, "coverage": 0.5, "min_sep": 1.0, "sats": []}
+    path = tmp_path / "schema_corrupt.jsonl"
+    _write_jsonl(
+        path,
+        [
+            json.dumps(header, sort_keys=True),
+            json.dumps(dict(tick, sats=[{"id": 0, "role": "leader", "r": [0, 0, 0],
+                                         "v": [0, 0, 0], "dv_used": 0.0}])),  # no status
+            json.dumps(dict(tick, sats=[{"id": 0, "role": "leader", "status": "NOMINAL",
+                                         "v": [0, 0, 0], "dv_used": 0.0}])),  # no r
+            json.dumps(dict(tick, sats=["leader"])),  # sat row not an object
+            json.dumps(dict(tick, event=["ASSIGNMENT"])),  # event not an object
+            json.dumps(assignment),  # ASSIGNMENT row missing sat_id
+            json.dumps(no_state_key),  # tick line without a state key
+            json.dumps(tick, sort_keys=True),
+        ],
+    )
+    log = load_jsonl(path)
+    assert log.frames == [tick]
+    assert log.times == [0.0]
+    assert log.header == header
+    assert log.skipped == 6
+
+
 def test_replay_seek_index(tmp_path):
     log = load_jsonl(_times_log(tmp_path))
     assert index_at(log, -5.0) == 0  # before start -> first frame

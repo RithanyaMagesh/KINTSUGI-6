@@ -402,6 +402,19 @@ class Session:
         self._last_frame_t = frame["t"]
 
     async def _drive(self) -> None:
+        """Task body. A dead driver is never silent (section 7.1): any exception
+        escapes as a critical event, and the run is marked finished (terminal --
+        no more frames will ever come; reset/load remain available)."""
+        try:
+            await self._drive_steps()
+        except Exception as exc:  # noqa: BLE001 -- the point is never-silent
+            self.finished = True
+            t = self._last_frame_t if self._last_frame_t is not None else 0.0
+            self.hub.publish(
+                to_event("critical", t, f"stream stopped: {type(exc).__name__}: {exc}")
+            )
+
+    async def _drive_steps(self) -> None:
         loop = asyncio.get_running_loop()
         source = self._source
         if source is None:

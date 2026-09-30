@@ -59,6 +59,52 @@ class ReplayLoadRequest(BaseModel):
 
 _STATUS_TO_WIRE = {"NOMINAL": "healthy", "DEAD": "failed", "THRUSTER_OUT": "failed"}
 
+# Keys _sat_to_wire requires; id must be a 0-based int (display_sat_id does i + 1
+# and assignment_map needs a hashable key), status must be hashable.
+_SAT_REQUIRED_KEYS = ("role", "r", "v", "dv_used")
+
+
+def sat_row_ok(sat: object) -> bool:
+    """True when _sat_to_wire can render this sats entry without KeyError/TypeError."""
+    return (
+        isinstance(sat, dict)
+        and isinstance(sat.get("id"), int)
+        and isinstance(sat.get("status"), str)
+        and all(k in sat for k in _SAT_REQUIRED_KEYS)
+    )
+
+
+def tick_frame_ok(frame: dict) -> bool:
+    """True when to_messages can render this tick line end to end (section 7.1
+    "corrupt replay file -> skip + warn, never crash"): every sats entry carries
+    the required schema, and any event payload renders too. Replay load uses
+    this to skip + count schema-malformed lines instead of killing the driver
+    mid-stream with a KeyError."""
+    if "state" not in frame:
+        return False
+    sats = frame.get("sats")
+    if not isinstance(sats, list) or not all(sat_row_ok(s) for s in sats):
+        return False
+    event = frame.get("event")
+    if event is not None:
+        if not isinstance(event, dict):
+            return False
+        payload = event.get("payload")
+        if payload is not None and not isinstance(payload, dict):
+            return False
+        if event.get("type") == "ASSIGNMENT":
+            assignments = (payload or {}).get("assignments") or []
+            if not isinstance(assignments, list):
+                return False
+            for a in assignments:
+                if (
+                    not isinstance(a, dict)
+                    or not isinstance(a.get("sat_id"), int)
+                    or "slot_index" not in a
+                ):
+                    return False
+    return True
+
 
 def to_event(level: str, sim_time: float, message: str) -> dict:
     """FRONTEND_SPEC section 16.2 event message."""

@@ -249,6 +249,32 @@ def test_session_compute_timeout_504_and_stopped(tmp_path, monkeypatch):
     asyncio.run(main())
 
 
+def test_session_driver_exception_never_silent(tmp_path, monkeypatch):
+    """Section 7.1 belt-and-braces: if the driver task itself dies (any bug in
+    frame building), the exception is surfaced as a critical event and the run
+    is marked finished -- mode stays, but a dead driver never just stops the
+    stream quietly."""
+    lines = tiny_log_lines()
+    write_log(tmp_path / "logs", "tiny.jsonl", lines)
+
+    def boom(frame, enrich):
+        raise KeyError("status")
+
+    async def main():
+        hub, session = _make_session(tmp_path)
+        q = hub.subscribe()
+        monkeypatch.setattr("cubesat.session.to_messages", boom)
+        await session.load_replay("tiny.jsonl", SPEED_MAX)
+        msg = await asyncio.wait_for(q.get(), 10.0)
+        assert msg["type"] == "event"
+        assert msg["level"] == "critical"
+        assert "stream stopped" in msg["message"] and "KeyError" in msg["message"]
+        assert session.mode == "replay"  # session stays addressable for reset/load
+        assert session.finished, "dead driver must be terminal, not half-alive"
+
+    asyncio.run(main())
+
+
 def test_session_source_shapes_match(tmp_path):
     """LiveSource and ReplaySource expose the same frame surface -- the property
     that makes live-vs-replay drift structurally impossible (section 4)."""
