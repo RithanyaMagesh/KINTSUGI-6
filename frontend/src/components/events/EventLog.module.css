@@ -1,0 +1,33 @@
+.log {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.list {
+  list-style: none;
+  font-family: var(--font-mono);
+  font-size: var(--text-event);
+}
+
+.row {
+  display: flex;
+  gap: var(--space-3);
+  padding: 2px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.time {
+  color: var(--ink-muted);
+  flex: 0 0 108px;
+  font-variant-numeric: tabular-nums;
+}
+
+.level {
+  flex: 0 0 64px;
+}
+
+.message {
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}

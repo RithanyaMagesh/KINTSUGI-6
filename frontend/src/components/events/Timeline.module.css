@@ -1,0 +1,77 @@
+.timeline {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.rail {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px solid var(--border-strong);
+  padding-top: var(--space-2);
+}
+
+.nodeWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  background: var(--panel);
+  padding: 0 var(--space-1);
+}
+
+.node {
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 2px;
+  background: var(--panel);
+  transition: border-color var(--motion-duration) var(--motion-ease),
+    background var(--motion-duration) var(--motion-ease);
+}
+
+.reached {
+  background: var(--panel-raised);
+}
+
+.active {
+  background: var(--border-strong);
+}
+
+.nodeLabel {
+  font-family: var(--font-mono);
+  font-size: var(--text-tick);
+  color: var(--ink-faint);
+  transition: color var(--motion-duration) var(--motion-ease);
+}
+
+.labelReached {
+  color: var(--ink);
+}
+
+/* State literals are backend enum data — uppercase is data, not styling. */
+
+.tick {
+  position: absolute;
+  top: -5px;
+  width: 2px;
+  height: 9px;
+}
+
+.stamps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.stamp {
+  font-family: var(--font-mono);
+  font-size: var(--text-tick);
+  color: var(--ink-muted);
+  overflow-wrap: anywhere;
+}

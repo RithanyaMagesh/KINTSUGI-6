@@ -1,0 +1,56 @@
+/*
+ * Design tokens — FRONTEND_SPEC §13.1, verbatim.
+ * This is THE ONLY file in src/ allowed to contain raw hex/rgb values
+ * (§13.1; the grep gate in Appendix B enforces it mechanically).
+ * Every component derives from these tokens, never from a library default.
+ */
+
+:root {
+  /* -- Color: surfaces (neutral graphite, deliberately not Tailwind slate) */
+  --bg: #17191a; /* page ground */
+  --panel: #1e2123; /* panel surfaces */
+  --panel-raised: #24272a; /* hover / selected rows / raised surfaces */
+  --border: #31363a; /* 1px panel borders */
+  --border-strong: #43494e; /* table headers, emphasis borders */
+
+  /* -- Color: text */
+  --ink: #e8eaec; /* primary text (≈13:1 on --bg) */
+  --ink-muted: #9ba3a9; /* secondary text — ≥4.5:1 on its background (AA) */
+  --ink-faint: #6e767c; /* tertiary/disabled only; never body text */
+
+  /* -- Color: state only — saturated color appears ONLY as semantics */
+  --status-nominal: #46c07a; /* healthy / success / nominal curve */
+  --status-caution: #e0a526; /* reconfiguring / warnings */
+  --status-failed: #f25555; /* failure / critical */
+  --status-info: #5b9bf0; /* recovered / informational */
+  --status-leader: #f2cc46; /* leader marker — always paired with a text label */
+
+  --focus-ring: #e8eaec; /* 2px outline on :focus-visible */
+
+  /* -- Typography (§13.2): two faces, vendored woff2, no CDN */
+  --font-sans: "IBM Plex Sans", "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", "Consolas", monospace;
+
+  /* -- Type scale (§13.2 projection floor) */
+  --text-mission-state: 28px; /* mission state: 28-36px / 600 */
+  --text-metric: 28px; /* metric values: 28-40px mono, tabular */
+  --text-panel-title: 17px; /* panel titles: 17-20px / 600 */
+  --text-body: 16px; /* body / labels: 16px minimum */
+  --text-event: 14px; /* event log rows: mono */
+  --text-tick: 12px; /* axis ticks: mono */
+
+  /* -- Spacing scale (§13.3): one 4px-base scale, nothing outside it */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+
+  /* -- Radii: ≤8px panels, 6px controls. Shadows: none (modal only). */
+  --radius-panel: 8px;
+  --radius-control: 6px;
+
+  /* -- Motion (§13.5): 120-180 ms ease-out, color/border/opacity only */
+  --motion-duration: 150ms;
+  --motion-ease: ease-out;
+}

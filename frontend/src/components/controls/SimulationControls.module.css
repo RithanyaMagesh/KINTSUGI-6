@@ -1,0 +1,25 @@
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.subTitle {
+  font-size: var(--text-body);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.seedRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.seedRow .fieldLabel {
+  margin-bottom: 0;
+}
+
+.input {
+  width: 96px;
+}

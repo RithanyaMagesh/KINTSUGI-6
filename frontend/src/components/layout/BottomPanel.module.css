@@ -1,0 +1,28 @@
+.footer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 540px;
+  gap: var(--space-2);
+  min-height: 190px;
+}
+
+.logSection {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  padding: var(--space-4);
+  min-height: 0;
+  overflow: auto;
+}
+
+.rightColumn {
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: var(--space-2);
+  min-height: 0;
+}
+
+@media (max-width: 1023px) {
+  .footer {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

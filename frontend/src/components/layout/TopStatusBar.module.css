@@ -1,0 +1,64 @@
+.bar {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-5);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  padding: var(--space-3) var(--space-4);
+}
+
+.state {
+  font-size: var(--text-mission-state);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.label {
+  color: var(--ink-muted);
+  font-size: var(--text-body);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.connection {
+  margin-left: auto;
+  color: var(--ink-muted);
+  font-size: var(--text-body);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  padding: var(--space-1) var(--space-2);
+  transition: color var(--motion-duration) var(--motion-ease),
+    border-color var(--motion-duration) var(--motion-ease);
+}
+
+.connection[data-connection="connected"] {
+  color: var(--status-nominal);
+}
+
+.connection[data-connection="reconnecting"] {
+  color: var(--status-caution);
+}
+
+.connection[data-connection="disconnected"] {
+  color: var(--status-failed);
+}
+
+/* Rectangular text badge with a border — not a pill (§13.3). */
+.replayBadge {
+  color: var(--status-info);
+  border: 1px solid var(--status-info);
+  border-radius: var(--radius-control);
+  padding: var(--space-1) var(--space-2);
+  font-weight: 500;
+}
