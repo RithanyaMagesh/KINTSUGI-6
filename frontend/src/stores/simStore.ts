@@ -59,7 +59,7 @@ const initial = {
   priorRoles: {} as Record<string, string>,
 };
 
-export const useSimStore = create<SimStore>((set) => ({
+export const useSimStore = create<SimStore>((set, get) => ({
   ...initial,
 
   setConnection: (connection) => set({ connection }),
@@ -144,5 +144,9 @@ export const useSimStore = create<SimStore>((set) => ({
     });
   },
 
-  reset: () => set({ ...initial }),
+  // Reset session data but keep the LIVE connection state: the socket is still
+  // open when a replay/scenario switch lands, and clobbering `connection` here
+  // left the badge and the §20.1 overlay lying while frames streamed
+  // (found in the 2026-09-30 live run).
+  reset: () => set({ ...initial, connection: get().connection }),
 }));

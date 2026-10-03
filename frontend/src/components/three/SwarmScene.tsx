@@ -32,14 +32,19 @@ export default function SwarmScene() {
   useEffect(() => {
     const render = (): void => {
       const { connection, satellites, mode } = useSimStore.getState();
-      if (connection === "reconnecting") {
+      // §20 connection notices are LIVE-mode language: during replay the
+      // top-bar badge carries the state, and an overlay over a playing
+      // replay misleads (found in the 2026-09-30 live run).
+      if (mode === "replay") {
+        setNotice(null);
+      } else if (connection === "reconnecting") {
         setNotice({ title: "Connection lost. Reconnecting…", body: "" });
       } else if (connection === "disconnected") {
         setNotice({
           title: "Backend disconnected.",
           body: "Live simulation unavailable. Switch to Replay Mode.",
         });
-      } else if (satellites.length === 0 && mode !== "replay") {
+      } else if (satellites.length === 0) {
         // §24.2 verbatim when the session is stopped; §6.1 waiting text otherwise.
         if (mode === "stopped") {
           setNotice({ title: "Simulation stopped.", body: "Press Start to begin." });

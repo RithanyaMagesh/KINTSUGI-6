@@ -32,7 +32,20 @@ export function useWebSocket(): void {
 
     function connect(): void {
       setConnection(attempt === 0 ? "connected" : "reconnecting");
-      socket = new WebSocket(stateSocketUrl());
+      try {
+        socket = new WebSocket(stateSocketUrl());
+      } catch {
+        // A synchronous construction failure (bad URL, queue limits) must
+        // retry with the same backoff instead of dead-ending (§6.1).
+        socket = null;
+        attempt += 1;
+        setConnection("reconnecting");
+        reconnectTimer = window.setTimeout(
+          connect,
+          Math.min(1000 * 2 ** (attempt - 1), RECONNECT_MAX_MS),
+        );
+        return;
+      }
 
       socket.onopen = () => {
         attempt = 0;
