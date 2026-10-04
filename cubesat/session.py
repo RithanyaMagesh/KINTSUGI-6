@@ -180,12 +180,21 @@ class Session:
         self._anchor_wall = 0.0
         self._last_emit_wall: float | None = None
         self._seam_original = None  # cubesat.sim.replan before the policy seam rebind
+        # Display-only predictor risk map (see _install_predictor): t_s -> sat_id -> [0,1].
+        self._risk_by_t: dict[float, dict[int, float]] | None = None
+        self._risk_times: list[float] = []  # sorted _risk_by_t keys, for bisect carry-forward
+        self._predictor_note: str | None = None
 
     # ---- read-only view (hello / snapshot / health) -----------------------
 
     @property
     def sim_time(self) -> float | None:
         return self._last_frame_t
+
+    @property
+    def predictor_active(self) -> bool:
+        """True when the display-only predictor risk map is installed."""
+        return self._risk_by_t is not None
 
     def hello(self) -> dict:
         msg = {
@@ -206,6 +215,11 @@ class Session:
         # a hungarian run by construction).
         if self.enrich.policy is not None:
             msg["policy"] = self.enrich.policy
+        # Predictor echo, deviation-only, same pattern as the policy echo: the
+        # key is carried ONLY when the display-only risk map is active and
+        # omitted otherwise, so predictor-off hellos keep their byte shape.
+        if self.predictor_active:
+            msg["predictor"] = True
         return msg
 
     def snapshot(self) -> dict:
@@ -220,6 +234,7 @@ class Session:
         seed: int | None = None,
         speed: float = 100.0,
         policy: str = "hungarian",
+        predictor: bool = False,
     ) -> None:
         # Input validation before any state change: a bad policy never clobbers
         # a running session. The API's pydantic Literal already 422s at the
@@ -259,9 +274,16 @@ class Session:
             self._restore_seam()
             raise
         self._source = LiveSource(scenario, lines)
+        if predictor:
+            # DISPLAY-only scoring against the run's own scenario + seed (the
+            # source holds both); failure -> exactly one warning, run unaffected.
+            self._install_predictor(self._source.scenario, self._source.seed)
+            self._warn_predictor_down()
         await self._spawn_driver()
 
-    async def load_replay(self, filename: str, speed: float = 100.0) -> int:
+    async def load_replay(
+        self, filename: str, speed: float = 100.0, predictor: bool = False
+    ) -> int:
         """Returns the skipped (unparseable) line count (section 7.1)."""
         self._teardown()
         path = self.log_dir / Path(filename).name  # section 7.2 path safety
@@ -285,6 +307,9 @@ class Session:
                 to_event("critical", 0.0, f"replay file {filename} has no usable frames")
             )
         self._source = ReplaySource(log)
+        if predictor:
+            self._install_replay_predictor()
+            self._warn_predictor_down()
         await self._spawn_driver()
         return log.skipped
 
@@ -319,7 +344,11 @@ class Session:
         if self._source is not None:
             self._cursor = index_at(self._source, t)
             if self._cursor < len(self._source.frames):
-                self._snapshot = to_sim_state(self._source.frames[self._cursor], self.enrich)
+                # Same display-only augmentation as _advance, so seeked clients
+                # (and late joiners reading this snapshot) see risk too.
+                self._snapshot = to_sim_state(
+                    self._frame_with_risk(self._source.frames[self._cursor]), self.enrich
+                )
         self.finished = False
         if not self.paused:
             await self._spawn_driver()
@@ -391,6 +420,82 @@ class Session:
             sim_module.replan = self._seam_original
             self._seam_original = None
 
+    def _install_predictor(self, scenario: Scenario, seed: int) -> None:
+        """Score the sealed LightGBM predictor over this scenario and build the
+        display-only risk map t_s -> sat_id -> [0,1] (boundary: see _advance).
+        Rows are STRIDE=10 scored ticks apart; frames between scored ticks carry
+        forward the most recent earlier score at lookup time (_frame_with_risk),
+        never by pre-filling. ood rows (past the pipeline's T_TICKS training
+        range) are excluded. Any failure -- missing model file, lightgbm import,
+        scoring -- leaves the map OFF and records the reason in _predictor_note,
+        so a broken predictor can never break a run."""
+        try:
+            from predictor.runtime import score_run, telemetry_from_schedule
+
+            rows = score_run(telemetry_from_schedule(scenario, seed))
+            risk: dict[float, dict[int, float]] = {}
+            for row in rows:
+                if row.ood:
+                    continue
+                risk.setdefault(row.t_s, {})[row.sat_id] = min(1.0, max(0.0, row.score))
+            self._risk_by_t = risk
+            self._risk_times = sorted(risk)  # explicit order: no dict-order reliance
+            self._predictor_note = None
+        except Exception as exc:  # noqa: BLE001 -- the predictor is strictly optional
+            self._risk_by_t = None
+            self._risk_times = []
+            self._predictor_note = f"{type(exc).__name__}: {exc}"
+
+    def _install_replay_predictor(self) -> None:
+        """Resolve the replay's Scenario from scenarios_dir by the log's INIT
+        scenario name + seed; a missing file (or a header without scenario/seed)
+        leaves the predictor off with the reason recorded."""
+        name = self._source.scenario_name if self._source else None
+        seed = self._source.seed if self._source else None
+        if not name or seed is None:
+            self._predictor_note = "log header lacks scenario/seed"
+            return
+        fname = name if name.endswith(".json") else f"{name}.json"
+        path = self.scenario_dir / Path(fname).name  # basename: traversal-safe
+        if not path.is_file():
+            self._predictor_note = f"scenario file {path.name} not found"
+            return
+        self._install_predictor(load_scenario(path), seed)
+
+    def _warn_predictor_down(self) -> None:
+        """Publish the ONE predictor-unavailable warning when an install failed."""
+        if self._predictor_note is not None:
+            self.hub.publish(
+                to_event("warning", 0.0, "Predictor unavailable: " + self._predictor_note)
+            )
+
+    def _frame_with_risk(self, frame: dict) -> dict:
+        """Display-only predictor overlay for one source frame. Sats scored at
+        the most recent scored t <= frame t (bisect carry-forward) get a 'risk'
+        key in [0,1]; unscored sats keep NO key (wire.py:146 passes risk through
+        only when present, never synthesizes). Returns the frame UNCHANGED when
+        the predictor is off or nothing is scored yet, so predictor-off wire
+        bytes stay byte-identical to the pre-predictor stream."""
+        risk_by_t = self._risk_by_t
+        if not risk_by_t:
+            return frame
+        idx = bisect_right(self._risk_times, frame.get("t", 0.0))
+        if idx == 0:
+            return frame
+        scored = risk_by_t[self._risk_times[idx - 1]]
+        sats = frame.get("sats")
+        if not scored or not isinstance(sats, list) or not sats:
+            return frame
+        return {
+            **frame,
+            "sats": [
+                {**s, "risk": scored[s["id"]]}
+                if isinstance(s, dict) and s.get("id") in scored
+                else s
+                for s in sats
+            ],
+        }
+
     def _prepare(self, enrich: SessionEnrich) -> None:
         self.enrich = enrich
         self.paused = False
@@ -411,6 +516,9 @@ class Session:
         self._cursor = 0
         self._last_frame_t = None
         self._last_emit_wall = None
+        self._risk_by_t = None  # display-only risk map never outlives its run
+        self._risk_times = []
+        self._predictor_note = None
         self.enrich = SessionEnrich()
         self._snapshot = to_sim_state({"state": "INIT", "t": 0.0}, self.enrich)
 
@@ -451,7 +559,14 @@ class Session:
         """Pure/sync frame building for frame i (section 14.3); wall-clock only
         for the emit-cadence decision, never in content (section 9.2)."""
         frame = self._source.frames[i]
-        msgs = to_messages(frame, self.enrich)
+        # DISPLAY-ONLY predictor seam (the one injection site). _frame_with_risk
+        # attaches sats[].risk to a THROWAWAY COPY of the frame so the UI can
+        # render it (RiskPanel / Suspect labels). NOTHING in the sim, allocation
+        # or replan consumes it: the kill-switch verdict cutting the predictor's
+        # CONTROL use (triggering earlier reassignment) stays cut. The source
+        # frames -- and therefore the committed log bytes -- are never touched;
+        # with the predictor off the wire bytes are identical to today's.
+        msgs = to_messages(self._frame_with_risk(frame), self.enrich)
         carries_event = any(m.get("type") in ("event", "role_reassignment") for m in msgs)
         now = loop.time()
         due = (

@@ -1,17 +1,20 @@
-// Scenario builder — the #/live sandbox panel. Customises everything the
-// engine reads (cubesat/scenario.py Scenario) and runs it against the real
-// backend: POST /scenarios/upload then POST /simulation/start (both routes
-// already exist; the backend needs zero changes). Every default is the
+// Scenario builder — the #/live control seat (the live sidebar's first and
+// default tab). Customises everything the engine reads (cubesat/scenario.py
+// Scenario) and runs it against the real backend: POST /scenarios/upload then
+// POST /simulation/start (cubesat/api.py:155, :218). Every default is the
 // committed reference scenario data/scenarios/nominal.json or a documented
 // engine value — no invented numbers (repo invariant 1). Schema ranges stay
 // the server's authority: its 422 detail is surfaced verbatim on the error
-// row. Mount: LivePage passes it to LeftPanel's documented `builder` slot
-// (SideTabs appends the Builder tab); standalone, wrap in chrome.panel.
+// row. The Run group also carries the run lifecycle (pause/resume/reset,
+// spec 7.1) and the "Switch to replay" navigation — playback itself lives on
+// #/replay only. Standalone, wrap in chrome.panel.
 import { useRef, useState } from "react";
-import { uploadScenario } from "../../api/scenarios";
+import { uploadScenario, type ScenarioUploadResult } from "../../api/scenarios";
 import { useSimStore } from "../../stores/simStore";
+import { useReplayStore } from "../../stores/replayStore";
 import { UNMEASURED } from "../../utils/format";
 import chrome from "../../styles/chrome.module.css";
+import { backend } from "../../api/backend";
 import FailureRowView from "./FailureRow";
 import PhysicsSection from "./PhysicsSection";
 import SwarmSection from "./SwarmSection";
@@ -67,14 +70,22 @@ export default function ScenarioBuilder() {
   const [phase, setPhase] = useState<RunPhase>("idle");
   const [error, setError] = useState<string | null>(null);
   const [policyNote, setPolicyNote] = useState<string | null>(null);
+  /** AI-risk overlay for THIS run (cubesat/wire.py StartRequest.predictor,
+   * default false): the backend scores sats[].risk display-only and the AI
+   * early-warning panel below reads it. Off until chosen — no silent cost. */
+  const [predictor, setPredictor] = useState(false);
+  /** A pause/resume/reset command is in flight (separate from `building`). */
+  const [controlling, setControlling] = useState(false);
   const nextFailureKey = useRef(1);
 
   // Wire truth for the mission readout (§13.3 rows; "unmeasured" until frames).
   const wireScenario = useSimStore((s) => s.scenario);
   const wireSeed = useSimStore((s) => s.seed);
   const wirePolicy = useSimStore((s) => (s as SimStoreWithPolicy).policy ?? null);
+  const mode = useSimStore((s) => s.mode);
 
   const building = phase === "building";
+  const live = mode === "live";
 
   function setNumber(key: keyof NumberValues, v: number): void {
     setNums((prev) => ({ ...prev, [key]: v }));
@@ -111,17 +122,34 @@ export default function ScenarioBuilder() {
     setError(null);
     setPolicyNote(null);
     setPhase("building");
-    const name = sanitizeName(runName) || "live_custom";
-    const scenario = buildScenario({ ...nums, name }, roles, failures);
     try {
-      const saved = await uploadScenario(name, scenario);
+      const chosen = sanitizeName(runName);
+      const auto = chosen === "";
+      const base = auto ? "live_custom" : chosen;
+      const scenario = buildScenario({ ...nums, name: base }, roles, failures);
+      // Overwrites are refused: POST /scenarios/upload 409s on an existing
+      // name (cubesat/api.py scenarios_upload). An auto-picked default name
+      // retries suffixed (live_custom_2, …) so a second run never traps on a
+      // name the operator never chose; a typed name is kept and its 409
+      // surfaces verbatim — the operator picked it.
+      let name = base;
+      let saved: ScenarioUploadResult | null = null;
+      for (let attempt = 1; ; attempt++) {
+        try {
+          saved = await uploadScenario(name, scenario);
+          break;
+        } catch (err) {
+          if (!auto || (err as StartError).status !== 409 || attempt >= 8) throw err;
+          name = `${base}_${attempt + 1}`;
+        }
+      }
       // uploadScenario surfaces 404/405 as "upload not available" and 409 as
       // the duplicate-name refusal; filename is candidate.name from
       // cubesat/api.py. The sanitized name is decided here, so the fallback
       // below is the same file the backend would have reported.
       const filename = saved.filename ?? `${name}.json`;
       try {
-        await postStart({ scenario: filename, seed: nums.seed, speed: nums.speed, policy });
+        await postStart({ scenario: filename, seed: nums.seed, speed: nums.speed, policy, predictor });
       } catch (startErr) {
         if ((startErr as StartError).status === 422) {
           // The backend predates the policy field — start without it and say
@@ -132,11 +160,43 @@ export default function ScenarioBuilder() {
           throw startErr;
         }
       }
+      // A live start supersedes any replay selection — the same clear the
+      // console's Start control does — so the replay page never presents this
+      // run as its loaded file.
+      useReplayStore.getState().setActiveFile(null);
       setPhase("running");
     } catch (err) {
       setPhase("error");
       setError(err instanceof Error ? err.message : "Run failed");
     }
+  }
+
+  /** Run lifecycle (spec 7.1): pause/resume/reset against the real G5 routes.
+   * Errors land on the same inline row as the start flow. */
+  async function control(action: () => Promise<unknown>): Promise<void> {
+    setControlling(true);
+    setError(null);
+    try {
+      await action();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Command failed");
+    } finally {
+      setControlling(false);
+    }
+  }
+
+  function resetRun(): void {
+    void control(async () => {
+      await backend.simulationReset();
+      useSimStore.getState().reset(); // same console clear the Start control does
+    });
+  }
+
+  function switchToReplay(): void {
+    // Playback lives on the #/replay page since the round-2 page split —
+    // navigation, never a mode lie: the mode only flips when a replay is
+    // actually loaded there.
+    window.location.hash = "#/replay";
   }
 
   const statusText =
@@ -253,6 +313,21 @@ export default function ScenarioBuilder() {
       <fieldset className={styles.group} disabled={building}>
         <legend className={chrome.panelTitle}>Run</legend>
         <div className={styles.field}>
+          <label className={styles.toggle} htmlFor="builder-predictor">
+            <input
+              id="builder-predictor"
+              type="checkbox"
+              checked={predictor}
+              onChange={(e) => setPredictor(e.target.checked)}
+            />
+            AI risk overlay
+          </label>
+          <p className={chrome.hint}>
+            Scores failure risk for this run (display-only); the AI early-warning panel
+            below reads it.
+          </p>
+        </div>
+        <div className={styles.field}>
           <label className={chrome.fieldLabel} htmlFor="builder-name">
             Run name (optional)
           </label>
@@ -265,7 +340,7 @@ export default function ScenarioBuilder() {
             spellCheck={false}
             onChange={(e) => setRunName(e.target.value)}
           />
-          <p className={chrome.hint}>Letters, digits, - and _ only.</p>
+          <p className={chrome.hint}>Letters, digits, - and _ only. Left empty, a free name is picked.</p>
         </div>
         <button
           type="button"
@@ -275,8 +350,37 @@ export default function ScenarioBuilder() {
         >
           {building ? "Starting simulation…" : "Run simulation"}
         </button>
+        <div className={chrome.btnRow}>
+          <button
+            type="button"
+            className={chrome.btn}
+            disabled={!live || controlling}
+            onClick={() => void control(backend.simulationPause)}
+          >
+            Pause
+          </button>
+          <button
+            type="button"
+            className={chrome.btn}
+            disabled={!live || controlling}
+            onClick={() => void control(backend.simulationResume)}
+          >
+            Resume
+          </button>
+          <button
+            type="button"
+            className={chrome.btn}
+            disabled={mode === "stopped" || controlling}
+            onClick={resetRun}
+          >
+            Reset
+          </button>
+          <button type="button" className={chrome.btn} onClick={switchToReplay}>
+            Switch to replay
+          </button>
+        </div>
         <p className={styles.runStatus} aria-live="polite">
-          {phase === "error" && error !== null ? (
+          {error !== null ? (
             <span className={chrome.errorText} role="alert">
               {error}
             </span>

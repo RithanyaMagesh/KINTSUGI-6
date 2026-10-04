@@ -218,10 +218,12 @@ def _run(coro):  # noqa: ANN001 -- tiny route-helper, keeps error mapping in one
 @app.post("/simulation/start")
 async def simulation_start(req: StartRequest) -> dict:
     session = get_state().session
-    await _run(session.start_live(req.scenario, req.seed, req.speed, req.policy))()
+    await _run(session.start_live(req.scenario, req.seed, req.speed, req.policy, req.predictor))()
+    # "predictor" echoes the RESOLVED state (display-only risk map installed?),
+    # not the requested flag: requested-but-failed -> False + the warning event.
     return {"status": "started", "mode": session.mode, "scenario": session.enrich.scenario,
             "seed": session.enrich.seed, "speed": session.speed,
-            "policy": session.enrich.policy}
+            "policy": session.enrich.policy, "predictor": session.predictor_active}
 
 
 @app.post("/simulation/pause")
@@ -263,9 +265,9 @@ async def failure_inject(req: InjectRequest) -> dict:
 @app.post("/replay/load")
 async def replay_load(req: ReplayLoadRequest) -> dict:
     session = get_state().session
-    skipped = await _run(session.load_replay(req.filename, req.speed))()
+    skipped = await _run(session.load_replay(req.filename, req.speed, req.predictor))()
     return {"status": "loaded", "filename": req.filename, "skipped": skipped,
-            "mode": session.mode}
+            "mode": session.mode, "predictor": session.predictor_active}
 
 
 @app.post("/replay/pause")

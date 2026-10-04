@@ -10,12 +10,15 @@
 // restart stay server-side — the frames arrive over the same /ws/state
 // socket App drives, so this page must render INSIDE App's tree (it mounts
 // neither useWebSocket nor useFrameHistory itself).
+//
+// ONE top bar: App's shell renders TopStatusBar above the Router — this page
+// mounts no bar of its own. ONE transport: ReplayControls below is the only
+// playback chrome; the gallery is the only file selector.
 import { useEffect, useState } from "react";
 import { backend } from "../../api/backend";
 import { useReplayStore } from "../../stores/replayStore";
 import { useRecoveryStore } from "../../stores/recoveryStore";
 import { useSimStore } from "../../stores/simStore";
-import TopStatusBar from "../layout/TopStatusBar";
 import SwarmScene from "../three/SwarmScene.tsx"; // .tsx: keeps tsc from case-matching swarmScene.ts on Windows
 import NarrationStrip from "../narration/NarrationStrip";
 import Timeline from "../events/Timeline";
@@ -118,9 +121,14 @@ export default function ReplayPage() {
 
   return (
     <div className={styles.page}>
-      <TopStatusBar />
       <div className={styles.main}>
-        <aside className={`${chrome.panel} ${styles.gallery}`} aria-label="Replay runs">
+        {/* tabIndex -1: focus target for ReplayControls' "Change recording". */}
+        <aside
+          id="replay-gallery"
+          tabIndex={-1}
+          className={`${chrome.panel} ${styles.gallery}`}
+          aria-label="Replay runs"
+        >
           <h2 className={chrome.panelTitle}>Runs</h2>
           {files === null ? (
             <p className={chrome.hint}>Loading runs…</p>

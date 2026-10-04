@@ -47,6 +47,7 @@ class StartRequest(BaseModel):
     seed: int | None = None
     speed: float = Field(default=100.0, gt=0)
     policy: Policy = "hungarian"
+    predictor: bool = False  # display-only sats[].risk overlay (session.py seam)
 
 
 class InjectRequest(BaseModel):
@@ -65,6 +66,7 @@ class SpeedRequest(BaseModel):
 class ReplayLoadRequest(BaseModel):
     filename: str
     speed: float = Field(default=100.0, gt=0)
+    predictor: bool = False  # same display-only overlay, resolved via the log's scenario
 
 
 _STATUS_TO_WIRE = {"NOMINAL": "healthy", "DEAD": "failed", "THRUSTER_OUT": "failed"}

@@ -4,8 +4,11 @@
 // §7.5/§8.7, no invented numbers), the §7.5 charts behind underline tabs
 // (§13.3: underline indicators, never sliding-pill tabs), the §8.1 role
 // table as a collapsible section, and the §7.7 selected-satellite panel.
-// Every value traces to the stream or a derivation on streamed values;
-// absent values render "unmeasured" (invariant 1).
+// One plain stacked column: every section is in normal flow at its natural
+// height and the panel itself is the single scroll container (round-2
+// verdict — sections must never overlap; one scrollbar). Every value
+// traces to the stream or a derivation on streamed values; absent values
+// render "unmeasured" (invariant 1).
 import { useState } from "react";
 import { useSimStore } from "../../stores/simStore";
 import { useHistoryStore } from "../../stores/historyStore";
@@ -35,6 +38,9 @@ export default function RightPanel() {
   const metrics = useSimStore((s) => s.metrics);
   const satellites = useSimStore((s) => s.satellites);
   const [tab, setTab] = useState<TabId>("coverage");
+  // Mirrors the <details> open state so the summary carries aria-expanded
+  // (the native attribute lives on details, not on the summary button).
+  const [rolesOpen, setRolesOpen] = useState(false);
 
   // Δv used, swarm total: arithmetic on streamed values only — never invented.
   const dvTotal = satellites.reduce((sum, s) => sum + s.dv_used, 0);
@@ -94,8 +100,8 @@ export default function RightPanel() {
         />
         <ReadoutRow
           label="Satellites active / failed"
-          value={hasSats ? `${active} active, ${failed} failed` : null}
-          tip="Live fleet health from sats[].status — how many satellites are flying versus failed; the degradation picture at a glance (spec 7.5)."
+          value={hasSats ? `${active} / ${failed}` : null}
+          tip="Live fleet health from sats[].status — active / failed counts; how many satellites are flying versus failed, the degradation picture at a glance (spec 7.5)."
         />
         <ReadoutRow
           label="Detection latency"
@@ -132,7 +138,6 @@ export default function RightPanel() {
         role="tabpanel"
         id="telemetry-chart-panel"
         aria-labelledby={`telemetry-tab-${tab}`}
-        className={styles.chartPanel}
       >
         {tab === "coverage" && <GroundCoverageChart />}
         {tab === "deviation" && <FormationDeviationChart />}
@@ -143,8 +148,13 @@ export default function RightPanel() {
 
       {/* §8.1 role reallocation — collapsible to keep the panel dense; the
           old-role column is still the simStore frame diff (no invented field). */}
-      <details className={styles.roles}>
-        <summary className={styles.rolesSummary}>Role reassignment</summary>
+      <details
+        className={styles.roles}
+        onToggle={(e) => setRolesOpen(e.currentTarget.open)}
+      >
+        <summary className={styles.rolesSummary} aria-expanded={rolesOpen}>
+          Role reassignment
+        </summary>
         <div className={styles.rolesBody}>
           <RoleTable />
         </div>

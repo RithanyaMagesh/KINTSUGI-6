@@ -21,6 +21,9 @@ export interface StartBody {
    * makes the caller retry without it (cubesat/wire.py StartRequest grows
    * the field separately). */
   policy?: string;
+  /** Display-only sats[].risk overlay for this run (cubesat/wire.py:51,
+   * StartRequest.predictor default false). Absent = the backend default. */
+  predictor?: boolean;
 }
 
 /** FastAPI renders 422 two ways: an HTTPException detail is a string, a

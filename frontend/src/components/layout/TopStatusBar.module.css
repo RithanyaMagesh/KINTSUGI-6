@@ -16,6 +16,68 @@
   font-size: var(--text-body);
   font-weight: 600;
   white-space: nowrap;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+/* Primary nav: quiet muted links, active route underlined (§13.3 underline
+   indicator — never a sliding pill). */
+.nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.navLink {
+  color: var(--ink-muted);
+  font-size: var(--text-body);
+  text-decoration: none;
+  padding: var(--space-1) 0;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+}
+
+.navLink:hover {
+  color: var(--ink);
+  background: none;
+}
+
+.navLink[aria-current="page"] {
+  color: var(--ink);
+  border-bottom-color: var(--border-strong);
+}
+
+/* Icon links (FAQ, Docs): same quiet → ink hover and underline-on-active
+   affordance as the text links. Fixed 30×32 box ≈ a navLink's height
+   (16px × 1.4 line + 2 × 4px pad + 2px rule = 32.4px), so icon centers and
+   underlines line up across the row and dimensions never shift (§13.3). */
+.iconLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 32px;
+  color: var(--ink-muted);
+  border-bottom: 2px solid transparent;
+}
+
+.iconLink:hover {
+  color: var(--ink);
+  background: none;
+}
+
+.iconLink[aria-current="page"] {
+  color: var(--ink);
+  border-bottom-color: var(--border-strong);
+}
+
+/* Status cluster: keeps the chip / sim time / mode / connection from cramming
+   together when the wordmark and nav take their share of the row. */
+.status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
 }
 
 .scenario {
@@ -98,13 +160,4 @@
 
 .connection[data-connection="disconnected"] {
   color: var(--status-failed);
-}
-
-.helpBtn {
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  flex: none;
-  font-weight: 600;
-  line-height: 1;
 }

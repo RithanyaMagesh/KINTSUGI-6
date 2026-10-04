@@ -73,26 +73,27 @@ const PILLARS: ReadonlyArray<{ name: string; body: string }> = [
   {
     name: "Physics with receipts",
     body:
-      "Satellites move on Clohessy-Wiltshire orbital mechanics in the LVLH " +
-      "frame — the same engine that writes the committed run logs. Every " +
-      "number on screen is traceable to a log; anything the wire does not " +
-      "carry renders as the literal word unmeasured.",
+      "The sim runs the same Clohessy-Wiltshire core that writes the " +
+      "committed run logs. Every number on screen is traceable to a " +
+      "committed log; anything the wire does not carry renders as " +
+      "unmeasured.",
   },
   {
     name: "Self-healing",
     body:
-      "A satellite that stops reporting heartbeats is declared failed. A " +
-      "Hungarian assignment reassigns the survivors to formation slots, and " +
-      "PD-controlled burns fly them back into a stable formation. The failed " +
-      "satellite coasts ballistically and stays a collision hazard.",
+      "A satellite that stops reporting heartbeats is declared failed, and " +
+      "a Hungarian assignment reassigns the survivors across formation " +
+      "slots. PD-controlled burns fly the swarm back into a stable " +
+      "formation while the failed satellite coasts ballistically as a " +
+      "collision hazard.",
   },
   {
     name: "AI early warning",
     body:
-      "A LightGBM failure-risk predictor scores each satellite and can " +
-      "trigger earlier reassignment than the reactive heartbeat path alone. " +
-      "It is trained on synthetic degradation — the honest status and " +
-      "caveats are documented in the Docs page.",
+      "A LightGBM predictor scores failure risk and can trigger " +
+      "reassignment earlier than the heartbeat path alone. It is trained " +
+      "on synthetic degradation; the caveats are documented in the Docs " +
+      "page.",
   },
 ];
 
@@ -105,9 +106,9 @@ export function LandingPage() {
           <div>
             <h1 className={styles.headline}>A satellite dies. The swarm heals.</h1>
             <p className={styles.subline}>
-              A hypothetical 6-satellite swarm on the real orbit of FIREFLY-1
-              (Pixxel). Physics: Clohessy-Wiltshire relative dynamics in the
-              LVLH frame — x radial, y along-track, z cross-track.
+              This is a hypothetical 6-satellite swarm flying the real orbit
+              of FIREFLY-1. Motion is Clohessy-Wiltshire relative dynamics in
+              the LVLH frame.
             </p>
             <div className={styles.ctaRow}>
               <a className={`${styles.cta} ${styles.ctaPrimary}`} href="#/live">
@@ -162,7 +163,7 @@ export function LandingPage() {
               <line className={styles.deadX} x1={103} y1={203} x2={117} y2={217} />
               <line className={styles.deadX} x1={103} y1={217} x2={117} y2={203} />
               <text className={styles.svgLabelFail} x={110} y={236} textAnchor="middle">
-                FAILED
+                failed
               </text>
               {/* Survivors on their slots. */}
               {SLOT_XY.map(([x, y], i) =>

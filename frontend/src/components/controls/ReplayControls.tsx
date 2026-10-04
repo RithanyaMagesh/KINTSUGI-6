@@ -8,8 +8,13 @@
 // Home: the replay page mounts this component (the §7.8 transport is the
 // page's core). The live console no longer hosts it — its replay entry
 // points navigate to #/replay. `compact` condenses the same controls into
-// fewer rows for a narrow band; every function (load/play/pause/restart/
-// speed/seek/stop/file picker) survives in both variants. The element keeps
+// fewer rows for a narrow band; every function (play/pause/restart/speed/
+// seek/stop) survives in both variants. While a recording is loaded
+// (replayStore.activeFile set — the page's gallery is the selector), the
+// file dropdown stands down for a quiet "Playing <file>" readout and a
+// "Change recording" button that returns focus to the gallery; the dropdown
+// only shows when nothing is loaded, and its value always follows
+// activeFile so it can never disagree with the session. The element keeps
 // id="replay-controls" so legacy scroll targets still land somewhere sane.
 import { useEffect, useState } from "react";
 import { backend, replayLogDuration } from "../../api/backend";
@@ -86,6 +91,13 @@ export default function ReplayControls({ compact = false }: Props) {
     useUiStore.getState().setReplayModeRequested(false);
   }, [replayModeRequested, files]);
 
+  // The dropdown mirrors the session, never a stale local pick: a run loaded
+  // through the page's gallery (or any other path) updates the selection, so
+  // after Stop the list shows the recording that actually played.
+  useEffect(() => {
+    if (activeFile !== null) setSelected(activeFile);
+  }, [activeFile]);
+
   // Replay loaded from OUTSIDE this bar (mission brief, a page's "Open
   // replay" entry) never runs loadSelected, so the measured log duration
   // would be missing and the scrub slider hidden. Measure it whenever a
@@ -143,6 +155,24 @@ export default function ReplayControls({ compact = false }: Props) {
     const t = sliderT;
     setSliderT(null);
     void run(() => backend.replaySeek(t));
+  }
+
+  function stopReplay(): void {
+    void run(backend.replayStop, () => {
+      resetStore();
+      setActiveFile(null);
+      setIsPlaying(false);
+      setMode("stopped");
+      setDuration(null);
+      setSliderT(null);
+    });
+  }
+
+  // "Change recording" hands focus back to the page's run gallery — the
+  // gallery is the selector, this bar only plays. No-op if this bar is ever
+  // mounted without a gallery.
+  function focusGallery(): void {
+    document.getElementById("replay-gallery")?.focus();
   }
 
   const seekInput = (
@@ -251,47 +281,51 @@ export default function ReplayControls({ compact = false }: Props) {
           />
         </div>
       )}
-      <div className={styles.loadRow}>
-        <select
-          className={chrome.select}
-          value={selected}
-          disabled={files.length === 0 || busy}
-          onChange={(e) => setSelected(e.target.value)}
-          aria-label="Replay log file"
-        >
-          {files.length === 0 && <option value="">No replay logs found</option>}
-          {files.map((f) => (
-            <option key={f} value={f}>
-              {f}
-            </option>
-          ))}
-        </select>
-        <button
-          className={chrome.btn}
-          disabled={selected === "" || busy}
-          onClick={() => void loadSelected()}
-        >
-          Load replay
-        </button>
-        <button
-          className={chrome.btn}
-          disabled={!replay || busy}
-          onClick={() =>
-            run(backend.replayStop, () => {
-              resetStore();
-              setActiveFile(null);
-              setIsPlaying(false);
-              setMode("stopped");
-              setDuration(null);
-              setSliderT(null);
-            })
-          }
-        >
-          Stop replay
-        </button>
-        {compact && seekInput}
-        {activeFile !== null && <span className={styles.fileMono}>{activeFile}</span>}
-      </div>
+      {activeFile !== null ? (
+        // A recording is loaded (via the page's gallery or this bar): one
+        // selector only — the dropdown stands down for a quiet readout.
+        <div className={styles.loadRow}>
+          <span className={styles.playingState}>{isPlaying ? "Playing" : "Paused"}</span>
+          <span className={styles.fileMono}>{activeFile}</span>
+          <button type="button" className={chrome.btn} onClick={focusGallery}>
+            Change recording
+          </button>
+          <button type="button" className={chrome.btn} disabled={!replay || busy} onClick={stopReplay}>
+            Stop replay
+          </button>
+          {compact && seekInput}
+        </div>
+      ) : (
+        // Nothing loaded: the fallback file picker (also this bar's
+        // standalone path). Empty state when the backend lists no logs.
+        <div className={styles.loadRow}>
+          <select
+            className={chrome.select}
+            value={selected}
+            disabled={files.length === 0 || busy}
+            onChange={(e) => setSelected(e.target.value)}
+            aria-label="Replay log file"
+          >
+            {files.length === 0 && <option value="">No replay logs found</option>}
+            {files.map((f) => (
+              <option key={f} value={f}>
+                {f}
+              </option>
+            ))}
+          </select>
+          <button
+            className={chrome.btn}
+            disabled={selected === "" || busy}
+            onClick={() => void loadSelected()}
+          >
+            Load replay
+          </button>
+          <button type="button" className={chrome.btn} disabled={!replay || busy} onClick={stopReplay}>
+            Stop replay
+          </button>
+          {compact && seekInput}
+        </div>
+      )}
       {!compact && (
         <div className={styles.loadRow}>
           {seekInput}
@@ -306,7 +340,7 @@ export default function ReplayControls({ compact = false }: Props) {
         </p>
       )}
       {!replay && activeFile === null && (
-        <p className={chrome.hint}>No replay file loaded. Select a log file to play.</p>
+        <p className={chrome.hint}>No replay file loaded. Pick a run from the gallery, or select a log below.</p>
       )}
       {error !== null && <p className={chrome.errorText}>{error}</p>}
     </section>

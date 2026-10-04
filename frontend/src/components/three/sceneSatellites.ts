@@ -22,6 +22,15 @@ export const MARKER_MIN_PX = 3.5;
 export const MARKER_MAX_PX = 16;
 export const MARKER_WORLD_MAX = 0.08;
 
+/** Outermost marker extent in disc-radius units — status ring 1.8, leader
+ * ring 2.25, failed cross 2.3 (geometry in createSatelliteRecord). The label
+ * layer starts its leader tick just past this so a tick never crosses the
+ * marker (2026-10-04 declutter ask: labels never cover a marker). */
+export const MARKER_EXTENT = 2.3;
+/** Collision clearance factor for the label layer's per-dot occupied square —
+ * just over MARKER_EXTENT so a label never overlaps any marker pixel. */
+export const MARKER_CLEAR = 2.4;
+
 export interface SatRecord {
   id: string;
   status: Satellite["status"]; // last synced (per-frame pulse + label priority)
@@ -135,6 +144,12 @@ export function createSatelliteRecord(
   labelEl.type = "button";
   labelEl.className = styles.satLabel;
   labelEl.style.pointerEvents = "auto";
+  // Tightened box (2026-10-04 declutter ask: eight labels must fit a
+  // formation without the box-ring look; font stays at --text-tick, the
+  // 12px mono floor). Box size is label-anchor geometry — sceneLabels
+  // collision-tests what this measures.
+  labelEl.style.padding = "0 3px";
+  labelEl.style.lineHeight = "1.3";
   labels.root.appendChild(labelEl);
   const text = labelText(sat);
   labelEl.textContent = text;

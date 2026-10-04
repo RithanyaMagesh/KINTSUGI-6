@@ -1,5 +1,6 @@
 /* Replay page (#/replay) — §6.2/§7.8. Runs gallery | scene + story +
-   transport + recovery log. Same densities as the console grid
+   transport + recovery log. The shell's TopStatusBar sits above this grid
+   (App owns the one top bar). Same densities as the console grid
    (App.module.css): --bg ground, 8px gutters, stable gallery width. Tokens
    only (§13.1); radius via tokens; hover = background/border only. */
 
@@ -7,7 +8,7 @@
   height: 100%;
   min-height: 0;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   gap: var(--space-2);
   padding: var(--space-2);
   background: var(--bg);
@@ -26,6 +27,13 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+}
+
+/* Focus target for the transport's "Change recording" button (ReplayControls
+   focuses #replay-gallery): visible ring inside the panel, no layout shift. */
+.gallery:focus {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
 }
 
 .runList {

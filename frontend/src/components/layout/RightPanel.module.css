@@ -1,11 +1,29 @@
 /* Right panel — §13.3: readout column, underline tabs (never sliding pills),
    collapsible section. Tokens only (§13.1); motion is color/border/opacity
-   only at §13.5 duration. */
+   only at §13.5 duration. ONE scroll container: the panel itself (the grid
+   row clamps this aside because chrome.panel carries overflow + min-height
+   0). Every child is flex: 0 0 auto, so no section can ever shrink below
+   its content and paint over a sibling — the round-2 verdict bug: the old
+   min-height floor on the chart box let flexbox crush it ~137px below its
+   content and the caption bled into the next sections, while .detail's own
+   overflow made a second scrollbar. */
 
 .panel {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-1);
+}
+
+/* Nothing in this column is shrinkable: normal flow, natural heights,
+   overflow belongs to the panel alone. */
+.panel > * {
+  flex: 0 0 auto;
+}
+
+/* Section titles sit tight on their content (the shared 12px margin is for
+   standalone panels); keeps the 1080p column as short as it can be. */
+.panel > h2 {
+  margin-bottom: var(--space-1);
 }
 
 .readouts {
@@ -16,13 +34,13 @@
 /* Tabs — underline/border indicator per §13.3. The active underline sits on
    the shared border (-1px margin) like an ordinary product tab strip. One
    row, never wrapping: five labels overflow a 336px panel, so the strip
-   scrolls horizontally instead of stacking to a second row (§13.3 dense). */
+   scrolls horizontally instead of stacking to a second row (§13.3 dense).
+   That strip is the only inner scroll region and it is horizontal-only. */
 .tabs {
   display: flex;
   gap: var(--space-1);
   border-bottom: 1px solid var(--border-strong);
   overflow-x: auto;
-  min-height: 0;
 }
 
 .tab {
@@ -55,29 +73,16 @@
   outline-offset: -2px;
 }
 
-/* Chart area: min-height keeps the panel steady across tabs of slightly
-   different chart heights (§13.3: stable dimensions). 220px — the panel
-   must fit 1080p on the Coverage tab without scrolling (round-2 ask), so
-   the chart cedes height to the readouts. */
-.chartPanel {
-  min-height: 220px;
-}
-
-/* Selected-satellite detail: the only part of the panel that scrolls. It
-   fills what is left of the definite-height panel (grid 1fr row) after the
-   monitoring stack — readouts, tabs, chart, roles — so at 1080p everything
-   above is visible at once and deep satellite history never pushes the
-   charts off screen. */
+/* Selected-satellite detail: plain flow — it grows with its content and the
+   panel scrolls as one column (round-2 verdict: ONE scrollbar). */
 .detail {
-  flex: 1 1 0;
-  min-height: 96px;
   min-width: 0;
-  overflow-y: auto;
 }
 
 /* §8.1 collapsible section — native details/summary (ordinary product
-   pattern, keyboard operable for free), 6px control radius. Collapsed by
-   default: role analysis, not live monitoring (round-2 ask). */
+   pattern, keyboard operable for free), 6px control radius, aria-expanded
+   reflected on the summary. Collapsed by default: role analysis, not live
+   monitoring (round-2 ask). */
 .roles {
   border: 1px solid var(--border);
   border-radius: var(--radius-control);

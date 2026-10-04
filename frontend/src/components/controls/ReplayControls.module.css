@@ -63,6 +63,14 @@
   white-space: nowrap;
 }
 
+/* Loaded-recording readout — stands in for the file dropdown while a run is
+   active (the page gallery owns selection): quiet state label, mono file. */
+.playingState {
+  font-size: var(--text-body);
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
 .loadRow {
   display: flex;
   gap: var(--space-2);

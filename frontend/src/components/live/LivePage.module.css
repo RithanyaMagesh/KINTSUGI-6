@@ -1,9 +1,10 @@
-/* Live page — #/live. Tokens only (§13.1): no raw hex, no gradients, no
-   shadows, radius via --radius-*. .page/.main mirror the §12.1 console grid
-   (App.module.css) minus the top row — App.tsx owns the persistent
-   TopStatusBar above the Router, so the page fills the area below it. The
-   sidebar column is LeftPanel hosting the builder + risk sections in its
-   documented `builder` slot. */
+/* Live page — #/live, the control seat. Tokens only (§13.1): no raw hex, no
+   gradients, no shadows, radius via --radius-*. .page/.main mirror the
+   §12.1 console grid (App.module.css) minus the top row — App.tsx owns the
+   persistent TopStatusBar above the Router, so the page fills the area below
+   it. The sidebar column is composed here (SideTabs, Builder tab first and
+   default) instead of LeftPanel, whose Mission tab duplicated the scenario
+   selector, run controls and mission readout the builder already owns. */
 
 .page {
   height: 100%;
@@ -164,7 +165,7 @@
   padding: var(--space-1) var(--space-2);
 }
 
-/* ---- risk readout (Appendix D) -------------------------------------------- */
+/* ---- toggles (Appendix D risk list + builder AI-risk overlay) ------------- */
 
 .toggle {
   display: inline-flex;
