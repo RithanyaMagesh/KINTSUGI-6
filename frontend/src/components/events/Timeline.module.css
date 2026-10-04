@@ -1,3 +1,6 @@
+/* Timeline — §13.5 signature element. Rail colors via tokens keyed on the
+   backend state literal (data, not styling); hover/focus = color/border only. */
+
 .timeline {
   background: var(--panel);
   border: 1px solid var(--border);
@@ -6,6 +9,8 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  min-height: 0;
+  overflow: hidden;
 }
 
 .rail {
@@ -26,6 +31,7 @@
 }
 
 .node {
+  display: block;
   width: 10px;
   height: 10px;
   border: 1px solid var(--border-strong);
@@ -39,8 +45,37 @@
   background: var(--panel-raised);
 }
 
+/* State literals are backend enum data — uppercase is data, not styling. */
+.reached[data-state="NOMINAL"] {
+  border-color: var(--status-nominal);
+}
+.reached[data-state="FAILURE_DETECTED"] {
+  border-color: var(--status-failed);
+}
+.reached[data-state="REPLANNING"],
+.reached[data-state="RECONFIGURING"] {
+  border-color: var(--status-caution);
+}
+.reached[data-state="RECOVERED"] {
+  border-color: var(--status-info);
+}
+
 .active {
   background: var(--border-strong);
+}
+
+/* Replay seek buttons on the spine (§13.5): same rail, clickable nodes and
+   stamps; hover = color/border only. Live mode renders plain spans. */
+.nodeBtn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.nodeBtn:hover .node,
+.nodeBtn:focus-visible .node {
+  border-color: var(--ink);
 }
 
 .nodeLabel {
@@ -53,8 +88,6 @@
 .labelReached {
   color: var(--ink);
 }
-
-/* State literals are backend enum data — uppercase is data, not styling. */
 
 .tick {
   position: absolute;
@@ -69,9 +102,24 @@
   gap: var(--space-3);
 }
 
-.stamp {
+.stamp,
+.stampBtn {
   font-family: var(--font-mono);
   font-size: var(--text-tick);
   color: var(--ink-muted);
   overflow-wrap: anywhere;
+  text-align: left;
+}
+
+.stampBtn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: color var(--motion-duration) var(--motion-ease);
+}
+
+.stampBtn:hover,
+.stampBtn:focus-visible {
+  color: var(--ink);
 }

@@ -1,7 +1,10 @@
+/* Console grid — §12.1, densified (§13.3): 8px gutters on the 4-base scale,
+   stable side-panel widths, the 3D center takes everything left over. */
+
 .console {
   height: 100%;
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   gap: var(--space-2);
   padding: var(--space-2);
   background: var(--bg);
@@ -9,7 +12,7 @@
 
 .main {
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr) 340px;
+  grid-template-columns: 280px minmax(0, 1fr) 336px;
   gap: var(--space-2);
   min-height: 0;
 }

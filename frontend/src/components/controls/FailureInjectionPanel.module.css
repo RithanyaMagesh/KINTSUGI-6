@@ -15,3 +15,26 @@
   flex-direction: column;
   gap: var(--space-1);
 }
+
+/* One-line plain-language description of the selected mode (§13.3). */
+.modeHint {
+  color: var(--ink-muted);
+  font-size: var(--text-body);
+}
+
+/* Caution semantics (§22: color paired with the "Inject failure" text label):
+   amber border on the destructive-adjacent action, kept on hover, with the
+   shared disabled state still visibly dimmed. */
+.injectBtn {
+  border-color: var(--status-caution);
+}
+
+.injectBtn:hover:not(:disabled) {
+  border-color: var(--status-caution);
+  background: var(--panel-raised);
+}
+
+.injectBtn:disabled {
+  border-color: var(--status-caution);
+  opacity: 0.6;
+}

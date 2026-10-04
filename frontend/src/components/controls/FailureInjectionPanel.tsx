@@ -1,10 +1,19 @@
 // Failure injection — POST /failure/inject {sat_id, mode}. The satellite id
 // is the wire display id ("SAT-3"); the mode is the backend enum, sent as-is.
+// Mode descriptions follow docs/MASTER_PROMPT.md 3.3 (DEAD: no comms, no
+// thrust, coasts ballistically; THRUSTER_OUT: reports, cannot maneuver). The
+// Inject button carries caution (amber) semantics; no confirmation dialog —
+// demo speed — but the label names the action and the object (§13.3).
 import { useState } from "react";
 import { backend } from "../../api/backend";
 import { useSimStore } from "../../stores/simStore";
 import chrome from "../../styles/chrome.module.css";
 import styles from "./FailureInjectionPanel.module.css";
+
+const MODE_DESCRIPTIONS: Record<"DEAD" | "THRUSTER_OUT", string> = {
+  DEAD: "Goes silent and coasts.",
+  THRUSTER_OUT: "Keeps reporting but cannot maneuver.",
+};
 
 export default function FailureInjectionPanel() {
   const mode = useSimStore((s) => s.mode);
@@ -65,12 +74,14 @@ export default function FailureInjectionPanel() {
           <option value="DEAD">DEAD</option>
           <option value="THRUSTER_OUT">THRUSTER_OUT</option>
         </select>
+        <p className={styles.modeHint}>{MODE_DESCRIPTIONS[failureMode]}</p>
       </div>
-      <button className={chrome.btn} disabled={!canInject} onClick={inject}>
+      <button className={`${chrome.btn} ${styles.injectBtn}`} disabled={!canInject} onClick={inject}>
         Inject failure
       </button>
-      {!live && (
-        <p className={chrome.hint}>Start a simulation to enable failure injection.</p>
+      {!live && <p className={chrome.hint}>Start a simulation to enable failure injection.</p>}
+      {live && satellites.length === 0 && (
+        <p className={chrome.hint}>Waiting for the first live frame.</p>
       )}
       {error !== null && <p className={chrome.errorText}>{error}</p>}
     </div>

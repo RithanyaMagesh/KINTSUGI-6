@@ -45,6 +45,7 @@ interface Props {
   endLabelX?: number | null; // last x value — anchors the end-of-line labels
   endLabelY?: (series: SeriesSpec) => number | null;
   height?: number;
+  caption?: string; // one-line honesty note under the chart (invariant 1)
 }
 
 export default function TelemetryChart({
@@ -60,6 +61,7 @@ export default function TelemetryChart({
   endLabelX = null,
   endLabelY,
   height = 160,
+  caption,
 }: Props) {
   const last = data.length > 0 ? data[data.length - 1] : null;
   return (
@@ -152,6 +154,7 @@ export default function TelemetryChart({
         </ResponsiveContainer>
         </div>
       )}
+      {caption !== undefined && <p className={chrome.hint}>{caption}</p>}
     </section>
   );
 }

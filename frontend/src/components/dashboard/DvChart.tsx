@@ -5,6 +5,7 @@
 import { useSimStore } from "../../stores/simStore";
 import { useHistoryStore } from "../../stores/historyStore";
 import TelemetryChart, { type SeriesSpec } from "./TelemetryChart";
+import { EventMarkers } from "./EventMarkers";
 
 // §13.1 token palette in id order; dash patterns add the §13.4 line-style cue.
 const PALETTE = [
@@ -20,6 +21,7 @@ const PALETTE = [
 
 export default function DvChart() {
   const samples = useHistoryStore((s) => s.samples);
+  const markers = useHistoryStore((s) => s.markers);
   const satellites = useSimStore((s) => s.satellites);
   const data = samples.map((s) => ({ t: s.t, ...s.dv }));
   const last = samples.length > 0 ? samples[samples.length - 1] : null;
@@ -49,6 +51,9 @@ export default function DvChart() {
       }}
       series={series}
       height={190}
-    />
+    >
+      {/* Burn steps cluster at the replan ticks — markers time the cost. */}
+      <EventMarkers markers={markers} />
+    </TelemetryChart>
   );
 }

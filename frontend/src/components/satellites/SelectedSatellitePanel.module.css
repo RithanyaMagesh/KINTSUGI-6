@@ -1,12 +1,12 @@
-/* Selected satellite detail — §7.7. Readout rows, mono values, one accent:
-   the status colour (state meaning only, always with its text label). */
+/* Selected satellite detail — §7.7 + per-satellite recovery timeline.
+   Readout rows, mono values, one accent: the status colour (state meaning
+   only, always with its text label). Tokens only — no raw colors here. */
 
 .header {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
   gap: var(--space-2);
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--space-1);
 }
 
 .id {
@@ -16,18 +16,27 @@
   color: var(--ink);
 }
 
-.status {
-  font-family: var(--font-mono);
+/* Sections separate by a stronger border, never by paint or shadows. */
+.section {
+  border-top: 1px solid var(--border-strong);
+  padding: var(--space-2) 0 var(--space-1);
+  margin-top: var(--space-2);
+}
+
+.sectionTitle {
+  font-family: var(--font-sans);
   font-size: var(--text-body);
-  font-weight: 500;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0 0 var(--space-1);
 }
 
 .row {
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
   gap: var(--space-3);
   padding: var(--space-1) 0;
-  border-top: 1px solid var(--border);
 }
 
 .label {
@@ -40,4 +49,81 @@
   font-size: var(--text-body);
   color: var(--ink);
   text-align: right;
+}
+
+/* Role semantics and multi-word explanations: sans, left-aligned where the
+   value wraps (long sentences must not right-align raggedly). */
+.explain {
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  color: var(--ink);
+  text-align: right;
+  max-width: 60%;
+}
+
+/* LVLH component caption under the position vector. */
+.caption {
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  color: var(--ink-muted);
+  margin: 0;
+  padding: 0 0 var(--space-1);
+}
+
+.bigValue {
+  font-family: var(--font-mono);
+  font-size: var(--text-body);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+  padding: var(--space-1) 0;
+}
+
+/* Appendix D suspect annotation — caution token with the literal text
+   "SUSPECT" (colorblind rule). An annotation, never a status color. */
+.suspectLabel {
+  font-family: var(--font-mono);
+  font-size: var(--text-body);
+  font-weight: 500;
+  color: var(--status-caution);
+  text-align: right;
+}
+
+.reason {
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  color: var(--ink-muted);
+  margin: 0;
+  padding: var(--space-1) 0;
+}
+
+/* Role and task history — a vertical timeline: hairline spine, mono stamp,
+   sans sentence. Structure by border, not decoration. */
+.timeline {
+  list-style: none;
+  margin: var(--space-1) 0 0;
+  padding: 0 0 0 var(--space-3);
+  border-left: 2px solid var(--border-strong);
+}
+
+.timelineRow {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-2);
+  align-items: baseline;
+  padding: var(--space-1) 0;
+}
+
+.timelineT {
+  font-family: var(--font-mono);
+  font-size: var(--text-body);
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.timelineText {
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  color: var(--ink);
 }

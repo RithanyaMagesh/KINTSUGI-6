@@ -20,10 +20,24 @@
   inset: 0;
 }
 
-/* Satellite labels (CSS2D DOM created by the controller). Buttons so they are
-   keyboard-reachable selection targets (§13.3). */
+/* Screen-space label layer — positioned by the controller's collision pass
+   (sceneLabels.ts); root never captures pointers, labels do. */
+.labelLayer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Satellite labels (DOM created by the controller). Buttons so they are
+   keyboard-reachable selection targets (§13.3). Opaque panel background keeps
+   text readable over the Earth/starfield. */
 .satLabel {
-  background: transparent;
+  position: absolute;
+  left: 0;
+  top: 0;
+  visibility: hidden; /* the layout pass places (or keeps hidden) every label */
+  background: var(--panel);
   border: 1px solid var(--border-strong);
   border-left-width: 3px;
   border-radius: 3px;
@@ -34,13 +48,48 @@
   white-space: nowrap;
   color: var(--ink);
   cursor: pointer;
+  transition: background var(--motion-duration) var(--motion-ease);
+}
+
+.satLabel:hover {
+  background: var(--panel-raised);
+}
+
+.satLabel:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
 }
 
 .slotLabel {
+  position: absolute;
+  left: 0;
+  top: 0;
   font-family: var(--font-mono);
   font-size: var(--text-tick);
   color: var(--ink-muted);
   white-space: nowrap;
+}
+
+/* Fixed scene captions (mono 12px, non-interactive, frame-of-reference). */
+.earthCaption {
+  position: absolute;
+  left: var(--space-2);
+  bottom: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-tick);
+  color: var(--ink-faint);
+  pointer-events: none;
+}
+
+.axesHint {
+  position: absolute;
+  right: var(--space-2);
+  bottom: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-tick);
+  color: var(--ink-faint);
+  text-align: right;
+  pointer-events: none;
 }
 
 .overlay {

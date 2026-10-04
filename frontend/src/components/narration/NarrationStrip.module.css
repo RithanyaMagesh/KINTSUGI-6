@@ -1,0 +1,22 @@
+/* NarrationStrip — the one-sentence recovery story (§13.6 voice). Severity
+   left border set inline from missionStateColor(); tokens only (§13.1). */
+
+.strip {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--ink-faint);
+  border-radius: var(--radius-panel);
+  padding: var(--space-2) var(--space-4);
+}
+
+.sentence {
+  font-size: var(--text-body); /* 16px — body/labels floor (§13.2) */
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+/* Values and times are telemetry — mono, tabular (§13.2). */
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}

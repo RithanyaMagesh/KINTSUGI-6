@@ -72,6 +72,7 @@ export default function SwarmScene() {
       controller.update({
         satellites: s.satellites,
         selectedId: useUiStore.getState().selectedSatelliteId,
+        missionState: s.missionState,
       });
       // §7.3/§7.4 banner sequence: the mission-state literals themselves
       // (uppercase is a backend data value, §13.2). FAILURE_DETECTED carries
@@ -108,6 +109,7 @@ export default function SwarmScene() {
       controller.update({
         satellites: useSimStore.getState().satellites,
         selectedId: s.selectedSatelliteId,
+        missionState: useSimStore.getState().missionState,
       });
     });
 
@@ -194,13 +196,16 @@ export default function SwarmScene() {
           </div>
         )}
       </div>
+      {/* Fixed scene captions — frame-of-reference honesty, mono 12px (§13.2). */}
+      <div className={styles.earthCaption}>Earth - stylized, not to scale</div>
+      <div className={styles.axesHint}>x radial / y along-track / z cross-track</div>
       {notice !== null && (
         <div className={styles.stateNotice}>
           <strong>{notice.title}</strong>
           {notice.body !== "" && <span>{notice.body}</span>}
           {notice.title.startsWith("Backend disconnected") && (
             <button className={chrome.btn} onClick={() => void openReplay()}>
-              Open Replay Mode
+              Open replay mode
             </button>
           )}
           {replayError !== null && <span>{replayError}</span>}

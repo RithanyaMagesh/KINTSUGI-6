@@ -5,12 +5,17 @@ the traversal guard and the CUBESAT_LOG_DIR override. H3/H4: the per-process
 Session + Hub (lifespan), WS /ws/state (hello -> snapshot -> reader/writer),
 /simulation/*, /failure/inject and the /replay/* control routes. The session
 layer holds all state; routes only map SessionError -> HTTP (section 7.1).
+G5 console addition: POST /scenarios/upload saves a user-authored scenario
+(sanitized name, no overwrites, validated with the real Scenario loader) so
+/simulation/start can run it by file name.
 """
 
 from __future__ import annotations
 
 import asyncio
+import json
 import os
+import re
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -18,9 +23,11 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, ValidationError
 
 from cubesat import __version__
 from cubesat.replay import list_logs
+from cubesat.scenario import Scenario
 from cubesat.session import Hub, Session, SessionError
 from cubesat.wire import (
     InjectRequest,
@@ -101,13 +108,79 @@ def health() -> dict:
     }
 
 
+def _scenario_listing(directory: Path) -> list[str]:
+    """Sorted .json names in a scenarios dir; [] never 500 (section 7.1)."""
+    if not directory.is_dir():
+        return []
+    return sorted(p.name for p in directory.iterdir() if p.is_file() and p.suffix == ".json")
+
+
 @app.get("/scenarios")
 def scenarios() -> dict:
+    return {"scenarios": _scenario_listing(scenarios_dir())}  # [] never 500 (section 7.1)
+
+
+# ---- G5 console addition: scenario upload --------------------------------
+# Not in BACKEND_SPEC v1.1: lets the console save a user-authored scenario so
+# POST /simulation/start can run it by file name. The request model lives here
+# rather than wire.py because the session layer never sees it -- the scenarios
+# directory is the contract.
+
+
+class UploadRequest(BaseModel):
+    name: str | None = None  # sanitized to [A-Za-z0-9_-]; absent -> "custom"
+    scenario: dict
+
+
+def _sanitize_scenario_name(name: str | None) -> str:
+    """Keep [A-Za-z0-9_-] only -- no path separators survive, so the upload is
+    traversal-safe by construction. Absent -> "custom"; a name that sanitizes
+    to empty (or exceeds 64 chars, keeping filenames well under OS limits) -> 422."""
+    cleaned = re.sub(r"[^A-Za-z0-9_-]", "", name) if name is not None else ""
+    if not cleaned:
+        if name is None:
+            return "custom"
+        raise HTTPException(
+            status_code=422, detail="scenario name is empty after sanitizing to [A-Za-z0-9_-]"
+        )
+    if len(cleaned) > 64:
+        raise HTTPException(status_code=422, detail="scenario name exceeds 64 characters")
+    return cleaned
+
+
+@app.post("/scenarios/upload")
+def scenarios_upload(req: UploadRequest) -> dict:
+    """Save a console-authored scenario into the scenarios dir. Overwrites are
+    refused (the committed scenarios are protected) and the payload goes through
+    the same parse path as load_scenario, so an accepted file always starts."""
+    name = _sanitize_scenario_name(req.name)
     directory = scenarios_dir()
-    listing: list[str] = []
-    if directory.is_dir():
-        listing = sorted(p.name for p in directory.iterdir() if p.is_file() and p.suffix == ".json")
-    return {"scenarios": listing}  # [] never 500 (section 7.1)
+    base = directory.resolve()
+    candidate = (base / f"{name}.json").resolve()
+    # Unreachable while the name is sanitized -- kept as the explicit guard.
+    if base not in candidate.parents:
+        raise HTTPException(
+            status_code=422, detail="scenario name escapes the scenarios directory"
+        )
+    if candidate.exists():
+        raise HTTPException(
+            status_code=409,
+            detail=f"scenario already exists: {candidate.name}; pick another name",
+        )
+    try:
+        # model_validate_json on exactly the bytes we are about to write, so
+        # what was validated is what load_scenario will parse at start time.
+        Scenario.model_validate_json(json.dumps(req.scenario))
+    except ValidationError as exc:
+        raise HTTPException(status_code=422, detail=f"invalid scenario: {exc}") from None
+    directory.mkdir(parents=True, exist_ok=True)  # only after every check passed
+    candidate.write_text(
+        json.dumps(req.scenario, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    return {"status": "saved", "filename": candidate.name,
+            "scenarios": _scenario_listing(directory)}
 
 
 @app.get("/replay/files")

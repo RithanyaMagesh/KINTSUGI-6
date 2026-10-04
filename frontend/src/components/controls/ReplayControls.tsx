@@ -1,37 +1,24 @@
-// Replay controls — §6.2 / §7.8. The backend owns replay playback
-// (POST /replay/*) and streams frames over the same /ws/state socket, so the
-// UI is identical to live mode. Seek is a range slider over the log's measured
-// end time (read once from GET /replay/file) plus the numeric input for exact
-// values; without a measured end time only the numeric input is offered.
+// Replay transport bar — §7.8. The backend owns replay playback (POST
+// /replay/*) and streams frames over the same /ws/state socket as live mode,
+// so the visualization needs no replay-specific path. Play/pause/restart and
+// speed go to the session; the scrub slider seeks over the log's MEASURED end
+// time (read once from GET /replay/file) — without a measured duration the
+// slider is hidden, never guessed (repo invariant 1). This element carries
+// id="replay-controls" so the Live-run panel's "Switch to replay" button can
+// scroll to it.
 import { useEffect, useState } from "react";
-import { backend, replayFileText } from "../../api/backend";
+import { backend, replayLogDuration } from "../../api/backend";
 import { useSimStore } from "../../stores/simStore";
 import { useReplayStore } from "../../stores/replayStore";
+import { useUiStore } from "../../stores/uiStore";
 import { formatSimTime } from "../../utils/format";
 import chrome from "../../styles/chrome.module.css";
 import styles from "./ReplayControls.module.css";
 
-const SPEEDS = [1, 10, 100, 500];
-
-/** End time of a replay log [s]: the t of its last parseable line. Null when
- * the file cannot be read — the slider is hidden rather than the duration
- * guessed (repo invariant 1). */
-async function logDuration(filename: string): Promise<number | null> {
-  const text = await replayFileText(filename);
-  if (text === null) return null;
-  const lines = text.split("\n");
-  for (let i = lines.length - 1; i >= 0; i--) {
-    const line = lines[i].trim();
-    if (line === "") continue;
-    try {
-      const t = (JSON.parse(line) as { t?: unknown }).t;
-      if (typeof t === "number" && Number.isFinite(t)) return t;
-    } catch {
-      continue; // skip unparsable tail lines, keep scanning backwards
-    }
-  }
-  return null;
-}
+// Transport speeds for the demo (§7.8): 0.5×–10×. Default 10× so a loaded log
+// visibly moves — a 5676 s log takes 95 minutes at 1×.
+const SPEEDS = [0.5, 1, 2, 5, 10];
+const DEFAULT_SPEED = 10;
 
 export default function ReplayControls() {
   const mode = useSimStore((s) => s.mode);
@@ -53,6 +40,15 @@ export default function ReplayControls() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // The store defaults to the backend's 100× (cubesat/wire.py StartRequest);
+  // normalize once so the select always shows a value it actually offers.
+  const speed = SPEEDS.includes(playbackSpeed) ? playbackSpeed : DEFAULT_SPEED;
+  useEffect(() => {
+    if (!SPEEDS.includes(useReplayStore.getState().playbackSpeed)) {
+      useReplayStore.getState().setPlaybackSpeed(DEFAULT_SPEED);
+    }
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     backend
@@ -67,6 +63,37 @@ export default function ReplayControls() {
       cancelled = true;
     };
   }, []);
+
+  // The mission brief's "Open replay mode" sets uiStore.replayModeRequested
+  // and loads the latest log itself; preselect that same latest log here so
+  // the dropdown reflects the running replay. Reactive (not mount-only) so the
+  // flag is observed even when this bar is already mounted in BottomPanel, and
+  // in either flag/files arrival order. One-shot: consumed once it acts.
+  const replayModeRequested = useUiStore((s) => s.replayModeRequested);
+  useEffect(() => {
+    if (!replayModeRequested || files.length === 0) return;
+    setSelected(files[files.length - 1]);
+    useUiStore.getState().setReplayModeRequested(false);
+  }, [replayModeRequested, files]);
+
+  // Replay loaded from OUTSIDE this bar (mission brief, PresentationView's
+  // "Switch to replay") never runs loadSelected, so the measured log duration
+  // would be missing and the scrub slider hidden. Measure it whenever a replay
+  // session is active with an unread duration — same source as loadSelected.
+  useEffect(() => {
+    if (mode !== "replay" || activeFile === null) return;
+    let cancelled = false;
+    replayLogDuration(activeFile)
+      .then((d) => {
+        if (!cancelled && d !== null) setDuration(d);
+      })
+      .catch(() => {
+        // unreadable tail: duration stays null, the honest hint shows instead
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, activeFile]);
 
   async function run(action: () => Promise<unknown>, after?: () => void) {
     setBusy(true);
@@ -87,12 +114,12 @@ export default function ReplayControls() {
     setBusy(true);
     setError(null);
     try {
-      await backend.replayLoad(selected, playbackSpeed);
+      await backend.replayLoad(selected, speed);
       resetStore();
       setActiveFile(selected);
       setIsPlaying(true);
       setMode("replay");
-      setDuration(await logDuration(selected)); // measured end time for the slider
+      setDuration(await replayLogDuration(selected)); // measured end time for the slider
     } catch (err) {
       setError(err instanceof Error ? err.message : "Replay command failed");
     } finally {
@@ -108,7 +135,89 @@ export default function ReplayControls() {
   }
 
   return (
-    <section className={styles.controls} aria-label="Replay controls">
+    <section
+      id="replay-controls"
+      tabIndex={-1}
+      className={styles.controls}
+      aria-label="Replay controls"
+      aria-busy={busy}
+    >
+      <div className={styles.transportRow}>
+        <span
+          className={replay ? styles.badgeActive : styles.badge}
+          aria-label={replay ? "Replay mode active" : "No replay loaded"}
+        >
+          Replay
+        </span>
+        <button
+          className={chrome.btn}
+          disabled={!replay || isPlaying || busy}
+          onClick={() => run(backend.replayResume, () => setIsPlaying(true))}
+        >
+          Play
+        </button>
+        <button
+          className={chrome.btn}
+          disabled={!replay || !isPlaying || busy}
+          onClick={() => run(backend.replayPause, () => setIsPlaying(false))}
+        >
+          Pause
+        </button>
+        <button
+          className={chrome.btn}
+          disabled={!replay || busy}
+          onClick={() => run(() => backend.replaySeek(0), () => setIsPlaying(true))}
+        >
+          Restart
+        </button>
+        <label className={`${chrome.fieldLabel} ${styles.inlineLabel}`} htmlFor="replay-speed">
+          Speed
+        </label>
+        <select
+          id="replay-speed"
+          className={chrome.select}
+          value={speed}
+          disabled={!replay || busy}
+          onChange={(e) => {
+            const next = Number(e.target.value);
+            setPlaybackSpeed(next);
+            run(() => backend.replaySpeed(next));
+          }}
+        >
+          {SPEEDS.map((s) => (
+            <option key={s} value={s}>
+              {s}×
+            </option>
+          ))}
+        </select>
+        {replay && (
+          <span className={styles.timeMono}>
+            {formatSimTime(simTime)}
+            {duration !== null ? ` of t + ${duration.toFixed(1)} s` : ""}
+          </span>
+        )}
+      </div>
+      {replay && duration !== null && (
+        <div className={styles.seekRow}>
+          <label className={chrome.fieldLabel} htmlFor="replay-seek">
+            Scrub — {formatSimTime(simTime)} of t + {duration.toFixed(1)} s
+          </label>
+          <input
+            id="replay-seek"
+            type="range"
+            className={styles.seek}
+            min={0}
+            max={duration}
+            step={1}
+            value={sliderT ?? simTime ?? 0}
+            disabled={!replay || busy}
+            onChange={(e) => setSliderT(Number(e.target.value))}
+            onPointerUp={commitSliderSeek}
+            onKeyUp={commitSliderSeek}
+            aria-valuetext={formatSimTime(sliderT ?? simTime)}
+          />
+        </div>
+      )}
       <div className={styles.loadRow}>
         <select
           className={chrome.select}
@@ -131,67 +240,6 @@ export default function ReplayControls() {
         >
           Load replay
         </button>
-      </div>
-      <div className={chrome.btnRow}>
-        <button
-          className={chrome.btn}
-          disabled={!replay || isPlaying || busy}
-          onClick={() => run(backend.replayResume, () => setIsPlaying(true))}
-        >
-          Play
-        </button>
-        <button
-          className={chrome.btn}
-          disabled={!replay || !isPlaying || busy}
-          onClick={() => run(backend.replayPause, () => setIsPlaying(false))}
-        >
-          Pause
-        </button>
-        <button
-          className={chrome.btn}
-          disabled={!replay || busy}
-          onClick={() => run(() => backend.replaySeek(0), () => setIsPlaying(true))}
-        >
-          Restart
-        </button>
-      </div>
-      <div className={styles.loadRow}>
-        <input
-          className={chrome.input}
-          type="number"
-          min={0}
-          step={10}
-          value={seekTo}
-          disabled={!replay || busy}
-          onChange={(e) => setSeekTo(e.target.value)}
-          aria-label="Seek to sim time in seconds"
-        />
-        <button
-          className={chrome.btn}
-          disabled={!replay || busy || seekTo === ""}
-          onClick={() => run(() => backend.replaySeek(Number(seekTo)))}
-        >
-          Seek
-        </button>
-        <select
-          className={chrome.select}
-          value={playbackSpeed}
-          disabled={!replay || busy}
-          onChange={(e) => {
-            const speed = Number(e.target.value);
-            setPlaybackSpeed(speed);
-            run(() => backend.replaySpeed(speed));
-          }}
-          aria-label="Replay speed"
-        >
-          {SPEEDS.map((s) => (
-            <option key={s} value={s}>
-              {s}×
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className={styles.loadRow}>
         <button
           className={chrome.btn}
           disabled={!replay || busy}
@@ -209,32 +257,36 @@ export default function ReplayControls() {
           Stop replay
         </button>
       </div>
-      {replay && duration !== null && (
-        <div className={styles.seekRow}>
-          <label className={chrome.fieldLabel} htmlFor="replay-seek">
-            Seek timeline — time {formatSimTime(simTime)} of t + {duration.toFixed(1)} s
-          </label>
-          <input
-            id="replay-seek"
-            type="range"
-            className={styles.seek}
-            min={0}
-            max={duration}
-            step={1}
-            value={sliderT ?? simTime ?? 0}
-            disabled={busy}
-            onChange={(e) => setSliderT(Number(e.target.value))}
-            onPointerUp={commitSliderSeek}
-            onKeyUp={commitSliderSeek}
-            aria-valuetext={formatSimTime(sliderT ?? simTime)}
-          />
-        </div>
+      <div className={styles.loadRow}>
+        <input
+          className={`${chrome.input} ${styles.input}`}
+          type="number"
+          min={0}
+          step={10}
+          value={seekTo}
+          disabled={!replay || busy}
+          onChange={(e) => setSeekTo(e.target.value)}
+          aria-label="Seek to sim time in seconds"
+        />
+        <button
+          className={chrome.btn}
+          disabled={!replay || busy || seekTo === ""}
+          onClick={() => run(() => backend.replaySeek(Number(seekTo)))}
+        >
+          Seek
+        </button>
+        {activeFile !== null && <span className={styles.fileMono}>{activeFile}</span>}
+      </div>
+      {replay && duration === null && (
+        <p className={chrome.hint}>Log duration unreadable — use the exact seek input.</p>
       )}
-      {mode !== "replay" && activeFile === null && (
+      {replay && activeFile === null && (
+        <p className={chrome.hint}>
+          Replay session in progress — the session greeting does not report the file name.
+        </p>
+      )}
+      {!replay && activeFile === null && (
         <p className={chrome.hint}>No replay file loaded. Select a log file to play.</p>
-      )}
-      {replay && activeFile !== null && (
-        <p className={chrome.hint}>Loaded log: {activeFile}</p>
       )}
       {error !== null && <p className={chrome.errorText}>{error}</p>}
     </section>

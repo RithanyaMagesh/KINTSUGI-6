@@ -1,3 +1,5 @@
+/* Replay transport bar (§7.8) — tokens only, radius ≤ 8px, no shadows. */
+
 .controls {
   background: var(--panel);
   border: 1px solid var(--border);
@@ -6,6 +8,53 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+}
+
+.transportRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* §7.9-style mode badge: saturated color only as semantics, always with its
+   text label (§22). Active = replay session live on the wire. */
+.badge,
+.badgeActive {
+  font-size: var(--text-body);
+  font-weight: 600;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-control);
+  border: 1px solid var(--border);
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+
+.badgeActive {
+  border-color: var(--status-info);
+  color: var(--status-info);
+}
+
+.inlineLabel {
+  margin-bottom: 0;
+}
+
+/* Current / total time — telemetry value, mono per §13.2. */
+.timeMono {
+  font-family: var(--font-mono);
+  font-size: var(--text-body);
+  color: var(--ink);
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.fileMono {
+  font-family: var(--font-mono);
+  font-size: var(--text-event);
+  color: var(--ink-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .loadRow {
@@ -24,7 +73,7 @@
   width: 110px;
 }
 
-/* §7.8 seek timeline — native range, ordinary product control (§13.3). */
+/* §7.8 scrub timeline — native range, ordinary product control (§13.3). */
 .seekRow {
   display: flex;
   flex-direction: column;

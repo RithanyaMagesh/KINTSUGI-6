@@ -43,4 +43,10 @@ export const SCENE_TOKENS = {
   inkMuted: "--ink-muted",
   inkFaint: "--ink-faint",
   leader: "--status-leader",
+  focus: "--focus-ring",
+  earthOcean: "--scene-earth-ocean",
+  earthLand: "--scene-earth-land",
+  earthGraticule: "--scene-earth-graticule",
+  atmo: "--scene-atmo",
+  star: "--scene-star",
 } as const;

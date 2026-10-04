@@ -116,3 +116,45 @@ export function distanceToSeat(sat: Satellite, fit: FormationFit): number | null
   if (seat === undefined) return null;
   return Math.hypot(sat.r[0] - seat[0], sat.r[1] - seat[1], sat.r[2] - seat[2]);
 }
+
+// ---- Auto-fit view math (pure; the 3D scene plugs in camera state) --------
+
+export interface Bounds {
+  cx: number;
+  cy: number;
+  cz: number;
+  radius: number;
+}
+
+/** Bounding sphere of measured points; null for an empty set. */
+export function boundingSphere(points: ReadonlyArray<readonly [number, number, number]>): Bounds | null {
+  if (points.length === 0) return null;
+  let cx = 0;
+  let cy = 0;
+  let cz = 0;
+  for (const p of points) {
+    cx += p[0];
+    cy += p[1];
+    cz += p[2];
+  }
+  cx /= points.length;
+  cy /= points.length;
+  cz /= points.length;
+  let radius = 0;
+  for (const p of points) {
+    radius = Math.max(radius, Math.hypot(p[0] - cx, p[1] - cy, p[2] - cz));
+  }
+  return { cx, cy, cz, radius };
+}
+
+/** Camera distance so a sphere of `radius` fills ~`fill` of the viewport
+ * (fill in 0..1 of the half-FOV; 0.5-0.65 is the auto-fit band). Uses the
+ * narrower of the vertical/horizontal FOV so wide windows do not crop. */
+export function fitDistance(radius: number, fovYRad: number, aspect: number, fill: number): number {
+  if (radius <= 0) return 0;
+  const halfY = fovYRad / 2;
+  const halfX = Math.atan(Math.tan(halfY) * Math.max(aspect, 1e-6));
+  const half = Math.min(halfY, halfX);
+  const angle = Math.min(Math.max(fill * half, 0.02), half * 0.92);
+  return radius / Math.sin(angle);
+}

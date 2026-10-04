@@ -1,10 +1,15 @@
 // Live WebSocket driver — FRONTEND_SPEC §6.1 + §16.5.
 // - auto-reconnect (1 s, 2 s, 4 s … capped at 10 s)
 // - mandatory 30 s client ping {"type":"ping"} (Render free-tier keepalive)
-// - every message goes to simStore.applyMessage; connection state mirrors the
-//   socket so TopStatusBar can render it
+// - every message goes through ONE funnel: simStore.applyMessage (console
+//   state), recoveryStore.ingest (recovery story) and roleHistoryStore.ingest
+//   (role history + suspects) all receive the SAME parsed message; each store
+//   parses it through the ONE shared deserializer (src/api/deserializer.ts).
+// - connection state mirrors the socket so TopStatusBar can render it
 import { useEffect } from "react";
 import { useSimStore } from "../stores/simStore";
+import { useRecoveryStore } from "../stores/recoveryStore";
+import { useRoleHistoryStore } from "../stores/roleHistoryStore";
 import { stateSocketUrl } from "../api/websocket";
 
 const PING_INTERVAL_MS = 30_000;
@@ -54,7 +59,12 @@ export function useWebSocket(): void {
       };
       socket.onmessage = (ev) => {
         try {
-          applyMessage(JSON.parse(ev.data as string));
+          // One parse, three consumers — the shared deserializer inside each
+          // store re-validates the same object (no second JSON.parse).
+          const parsed: unknown = JSON.parse(ev.data as string);
+          applyMessage(parsed);
+          useRecoveryStore.getState().ingest(parsed);
+          useRoleHistoryStore.getState().ingest(parsed);
         } catch {
           // A malformed frame is dropped, never crashes the console (§6.1).
         }

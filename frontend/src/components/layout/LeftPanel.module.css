@@ -1,5 +1,48 @@
+/* Left panel blocks — densified to the 4/8/12/16/24 scale (§13.3). Mission
+   rows read like the telemetry readouts: label sans muted · value mono ink. */
+
 .panel {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-3);
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-2);
+  padding: var(--space-1) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.rowLabel {
+  color: var(--ink-muted);
+  font-size: var(--text-body);
+  flex: none;
+}
+
+.rowValue {
+  font-family: var(--font-mono);
+  font-size: var(--text-body);
+  color: var(--ink);
+  text-align: right;
+  overflow-wrap: anywhere;
+  min-width: 0;
 }

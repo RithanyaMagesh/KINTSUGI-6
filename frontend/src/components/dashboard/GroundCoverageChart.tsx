@@ -1,6 +1,9 @@
 // Ground coverage over time — §7.5 chart 1, the money chart: high and stable
 // before failure, a sharp drop after, recovery after replanning. Event markers
 // at failure / replanning / recovery with mono sim-time stamps (§13.4).
+// Honesty note (invariant 1): the spec's 3-curve comparison (nominal reference
+// / no-recovery / with-recovery) needs reference runs the wire does not carry,
+// so only the measured swarm curve is drawn — never a fabricated comparison.
 import { useHistoryStore } from "../../stores/historyStore";
 import TelemetryChart from "./TelemetryChart";
 import { EventMarkers } from "./EventMarkers";
@@ -24,6 +27,7 @@ export default function GroundCoverageChart() {
       endLabelY={() => (last?.coverage ?? null)}
       series={[{ key: "coverage", label: "coverage", color: "var(--status-nominal)" }]}
       height={200}
+      caption="Measured swarm curve. The spec's 3-curve comparison (nominal reference / no recovery / with recovery) needs reference runs the live wire does not carry."
     >
       <EventMarkers markers={markers} />
     </TelemetryChart>

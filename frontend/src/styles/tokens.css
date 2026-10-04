@@ -27,6 +27,14 @@
 
   --focus-ring: #e8eaec; /* 2px outline on :focus-visible */
 
+  /* -- 3D scene extras — read through components/three/sceneColors.ts (the
+     §13.1 bridge); no scene file may hardcode these values. */
+  --scene-earth-ocean: #0c2b3f; /* stylized water body */
+  --scene-earth-land: #24523f; /* stylized landmass noise */
+  --scene-earth-graticule: var(--ink-faint); /* faint lat/lon lines */
+  --scene-atmo: var(--status-info); /* atmosphere rim */
+  --scene-star: var(--ink); /* starfield points */
+
   /* -- Typography (§13.2): two faces, vendored woff2, no CDN */
   --font-sans: "IBM Plex Sans", "Segoe UI", sans-serif;
   --font-mono: "IBM Plex Mono", "Consolas", monospace;

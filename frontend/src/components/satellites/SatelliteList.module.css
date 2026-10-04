@@ -70,6 +70,13 @@
   font-size: 13px;
 }
 
+/* Appendix D: suspect annotation — caution token, always with the literal
+   text "SUSPECT" (colorblind rule). An annotation, never a status color. */
+.suspect {
+  color: var(--status-caution);
+  font-weight: 500;
+}
+
 /* §13.3: keyboard focus on a selectable row gets the same signal as hover. */
 .row:focus-visible {
   background: var(--panel-raised);

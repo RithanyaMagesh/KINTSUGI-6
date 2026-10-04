@@ -53,6 +53,28 @@ export async function replayFileText(filename: string): Promise<string | null> {
   }
 }
 
+/** End time of a replay log [s]: the t of its last parseable line. Null when
+ * the file cannot be read — the seek slider is hidden rather than the duration
+ * guessed (repo invariant 1). Shared so every replay-load path (ReplayControls
+ * "Load replay", the mission brief, PresentationView's openReplay) measures the
+ * same way. */
+export async function replayLogDuration(filename: string): Promise<number | null> {
+  const text = await replayFileText(filename);
+  if (text === null) return null;
+  const lines = text.split("\n");
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const line = lines[i].trim();
+    if (line === "") continue;
+    try {
+      const t = (JSON.parse(line) as { t?: unknown }).t;
+      if (typeof t === "number" && Number.isFinite(t)) return t;
+    } catch {
+      continue; // skip unparsable tail lines, keep scanning backwards
+    }
+  }
+  return null;
+}
+
 export interface HealthResponse {
   status: string;
   mode: string;

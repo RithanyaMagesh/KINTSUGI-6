@@ -10,13 +10,14 @@
   color: var(--ink);
 }
 
-.seedRow {
+/* Label + control on one dense row (seed, speed). */
+.rowInline {
   display: flex;
   align-items: center;
   gap: var(--space-2);
 }
 
-.seedRow .fieldLabel {
+.rowInline .fieldLabel {
   margin-bottom: 0;
 }
 

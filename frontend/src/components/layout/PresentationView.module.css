@@ -1,5 +1,7 @@
 /* Presentation layout — FRONTEND_SPEC §12.2: mission status / (3D | key
-   metrics) / event banner. Tokens only (§13.1), big demo buttons per §6.3. */
+   metrics) / recovery-story band. Tokens only (§13.1), big demo buttons per
+   §6.3. The story band is borderless chrome — NarrationStrip carries its own
+   panel surface, so no card sits inside a card. */
 
 .presentation {
   height: 100%;
@@ -52,34 +54,64 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Event banner row — the §12.2 bottom band. */
-.bannerRow {
+/* Recovery-story band — the §12.2 bottom row, rebuilt compact: narration
+   strip, then state banner + latest event + demo actions on one line. */
+.storyBand {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.bandRow {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: baseline;
   gap: var(--space-4);
 }
 
-.banner {
-  flex: 1;
-  min-width: 0;
+.stateBlock {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  flex: 0 0 auto;
+}
+
+/* State banner (§12.2 story band): §13.2 mandates 28-36px / 600 for the
+   mission state — the token carries the floor of that band. The top-bar chip
+   stays compact (18-24px band per its layout ask). */
+.stateBanner {
   font-size: var(--text-mission-state);
   font-weight: 600;
-  overflow-wrap: anywhere;
+}
+
+.simTime {
+  font-family: var(--font-mono);
+  font-size: var(--text-event);
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.eventLine {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-event); /* one 14px mono line — the old banner is gone */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.eventText {
+  color: var(--ink);
 }
 
 .level {
-  font-size: var(--text-body);
   font-weight: 500;
-}
-
-.bannerText {
-  font-family: var(--font-mono);
 }
 
 .actions {
   display: flex;
   gap: var(--space-3);
+  flex: 0 0 auto;
 }
 
 /* Big demo buttons (§6.3): same rectangular product pattern, larger hit area.

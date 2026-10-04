@@ -1,13 +1,39 @@
+/* Event log — 14px mono rows (§13.2), severity via tokens only (§13.1).
+   Collapsed state keeps the header + one latest-event line: stable height. */
+
 .log {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.title {
+  font-size: var(--text-panel-title);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.count {
+  flex: 1;
+  color: var(--ink-muted);
+  font-size: var(--text-body);
+  font-variant-numeric: tabular-nums;
 }
 
 .list {
   list-style: none;
   font-family: var(--font-mono);
-  font-size: var(--text-event);
+  font-size: var(--text-event); /* 14px mono rows (§13.2) */
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .row {
@@ -30,4 +56,19 @@
 .message {
   color: var(--ink);
   overflow-wrap: anywhere;
+}
+
+/* Collapsed: the latest event as ONE 14px line, truncated, not wrapped. */
+.latestLine {
+  display: flex;
+  gap: var(--space-3);
+  min-height: 1.4em;
+  font-family: var(--font-mono);
+  font-size: var(--text-event);
+  white-space: nowrap;
+}
+
+.latestLine .message {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

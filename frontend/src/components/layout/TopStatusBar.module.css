@@ -1,45 +1,91 @@
+/* One compact status row — 52px tall, everything on the 4/8/12/16/24 scale,
+   colors ONLY via tokens (§13.1). No wordmark, no two-row layout. */
+
 .bar {
   display: flex;
-  align-items: baseline;
-  gap: var(--space-5);
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 52px;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius-panel);
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-2) var(--space-4);
 }
 
-.state {
-  font-size: var(--text-mission-state);
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-
-.item {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.label {
-  color: var(--ink-muted);
+.name {
   font-size: var(--text-body);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.scenario {
+  font-family: var(--font-mono);
+  font-size: var(--text-body);
+  color: var(--ink);
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Mission state chip: colored dot + state word (§7.2 colors via the store
+   mapping). While waiting for the first frame the word is not a state literal,
+   so it drops to body size (§6.1 text) instead of shouting. */
+.stateChip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.stateWord {
+  font-size: 20px; /* ask: compact chip state word 18-24px (§13.2 full-size state stays on the §12.2 layout) */
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.stateChip[data-waiting="true"] .stateWord {
+  font-size: var(--text-body);
+  font-weight: 500;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
 }
 
 .mono {
   font-family: var(--font-mono);
-  font-size: 18px;
+  font-size: var(--text-body);
+  white-space: nowrap;
+}
+
+/* Rectangular bordered chip — not a pill (§13.3). Replay keeps the info token
+   the old replay badge used; Live stays neutral so color stays semantic. */
+.modeChip {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-body);
   font-weight: 500;
+  white-space: nowrap;
+}
+
+.modeChip[data-mode="replay"] {
+  color: var(--status-info);
+  border-color: var(--status-info);
 }
 
 .connection {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
   margin-left: auto;
   color: var(--ink-muted);
   font-size: var(--text-body);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-control);
-  padding: var(--space-1) var(--space-2);
-  transition: color var(--motion-duration) var(--motion-ease),
-    border-color var(--motion-duration) var(--motion-ease);
+  white-space: nowrap;
 }
 
 .connection[data-connection="connected"] {
@@ -54,11 +100,11 @@
   color: var(--status-failed);
 }
 
-/* Rectangular text badge with a border — not a pill (§13.3). */
-.replayBadge {
-  color: var(--status-info);
-  border: 1px solid var(--status-info);
-  border-radius: var(--radius-control);
-  padding: var(--space-1) var(--space-2);
-  font-weight: 500;
+.helpBtn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  flex: none;
+  font-weight: 600;
+  line-height: 1;
 }
