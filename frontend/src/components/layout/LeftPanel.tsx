@@ -1,8 +1,12 @@
-// Left panel — §12.1 scenario panel: a Mission readout block first (scenario,
-// seed, satellite counts, counts by role — every value straight from the
-// simStore stream or derived from streamed statuses/roles; absent values
-// render "unmeasured", repo invariant 1), then the console controls, then the
-// satellite list hosted unchanged (another agent owns SatelliteList).
+// Left panel — round 2 tabbed sidebar (verdict: "too much things to look
+// at"). SideTabs hosts Mission / Satellites / Recovery / Events; every block
+// the old stacked panel had stays reachable — mission readout + run controls
+// in Mission, the satellite list in Satellites, failure injection (the
+// recovery trigger: inject -> detect -> replan -> recover) in Recovery, the
+// event log in Events. `builder` is the documented slot for the live page's
+// scenario Builder — <LeftPanel builder={<BuilderPanel />} /> — forwarded to
+// SideTabs, which appends a Builder tab when present.
+import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { backend } from "../../api/backend";
 import { useSimStore } from "../../stores/simStore";
@@ -11,10 +15,12 @@ import ScenarioSelector from "../controls/ScenarioSelector";
 import SimulationControls from "../controls/SimulationControls";
 import FailureInjectionPanel from "../controls/FailureInjectionPanel";
 import SatelliteList from "../satellites/SatelliteList";
+import EventLog from "../events/EventLog";
+import SideTabs from "./SideTabs";
 import chrome from "../../styles/chrome.module.css";
 import styles from "./LeftPanel.module.css";
 
-export default function LeftPanel() {
+export default function LeftPanel({ builder }: { builder?: ReactNode }) {
   const [scenarios, setScenarios] = useState<string[]>([]);
   const [selected, setSelected] = useState<string>("");
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -64,48 +70,67 @@ export default function LeftPanel() {
     .join(" · ");
 
   return (
-    <aside className={`${chrome.panel} ${styles.panel}`}>
-      <section className={styles.block} aria-label="Mission">
-        <h2 className={chrome.panelTitle}>Mission</h2>
-        <div className={styles.rows}>
-          <div className={styles.row}>
-            <span className={styles.rowLabel}>Scenario</span>
-            <span className={styles.rowValue}>{scenario ?? UNMEASURED}</span>
-          </div>
-          <div className={styles.row}>
-            <span className={styles.rowLabel}>Seed</span>
-            <span className={styles.rowValue}>{seed === null ? UNMEASURED : String(seed)}</span>
-          </div>
-          <div className={styles.row}>
-            <span className={styles.rowLabel}>Satellites healthy / failed</span>
-            <span className={styles.rowValue}>
-              {hasSats ? `${healthy} / ${failed}` : UNMEASURED}
-            </span>
-          </div>
-          <div className={styles.row}>
-            <span className={styles.rowLabel}>Satellites by role</span>
-            <span className={styles.rowValue}>{hasSats ? rolesText : UNMEASURED}</span>
-          </div>
-        </div>
-      </section>
-
-      <section className={styles.block} aria-label="Controls">
-        <h2 className={chrome.panelTitle}>Controls</h2>
-        <ScenarioSelector
-          scenarios={scenarios}
-          selected={selected}
-          loading={loading}
-          error={loadError}
-          onSelect={setSelected}
-        />
-        <SimulationControls scenario={selected || null} />
-        <FailureInjectionPanel />
-      </section>
-
-      <section className={styles.block} aria-label="Satellites">
-        <h2 className={chrome.panelTitle}>Satellites</h2>
-        <SatelliteList />
-      </section>
+    <aside className={chrome.panel}>
+      <SideTabs
+        label="Console sidebar"
+        builder={builder}
+        tabs={[
+          {
+            id: "mission",
+            label: "Mission",
+            content: (
+              <>
+                <div className={styles.rows} aria-label="Mission readout">
+                  <div className={styles.row}>
+                    <span className={styles.rowLabel}>Scenario</span>
+                    <span className={styles.rowValue}>{scenario ?? UNMEASURED}</span>
+                  </div>
+                  <div className={styles.row}>
+                    <span className={styles.rowLabel}>Seed</span>
+                    <span className={styles.rowValue}>{seed === null ? UNMEASURED : String(seed)}</span>
+                  </div>
+                  <div className={styles.row}>
+                    <span className={styles.rowLabel}>Satellites healthy / failed</span>
+                    <span className={styles.rowValue}>
+                      {hasSats ? `${healthy} / ${failed}` : UNMEASURED}
+                    </span>
+                  </div>
+                  <div className={styles.row}>
+                    <span className={styles.rowLabel}>Satellites by role</span>
+                    <span className={styles.rowValue}>{hasSats ? rolesText : UNMEASURED}</span>
+                  </div>
+                </div>
+                <section className={styles.group} aria-label="Run controls">
+                  <h2 className={chrome.panelTitle}>Run controls</h2>
+                  <ScenarioSelector
+                    scenarios={scenarios}
+                    selected={selected}
+                    loading={loading}
+                    error={loadError}
+                    onSelect={setSelected}
+                  />
+                  <SimulationControls scenario={selected || null} />
+                </section>
+              </>
+            ),
+          },
+          {
+            id: "satellites",
+            label: "Satellites",
+            content: <SatelliteList />,
+          },
+          {
+            id: "recovery",
+            label: "Recovery",
+            content: <FailureInjectionPanel />,
+          },
+          {
+            id: "events",
+            label: "Events",
+            content: <EventLog />,
+          },
+        ]}
+      />
     </aside>
   );
 }

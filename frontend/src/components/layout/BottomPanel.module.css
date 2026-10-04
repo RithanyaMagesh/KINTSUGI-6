@@ -1,28 +1,35 @@
-/* Bottom panel — two-zone recovery story (§13.5). NarrationStrip, Timeline
-   and ReplayControls bring their own panel chrome; this file is layout only. */
+/* Bottom panel — two-zone recovery story (§13.5): NarrationStrip + Timeline
+   (story) | EventLog. Replay chrome lives on the replay page, not here.
+   NarrationStrip, Timeline and EventLog bring their own panel chrome; this
+   file is layout only. */
 
 .footer {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(340px, 460px);
   gap: var(--space-2);
-  min-height: 200px;
+  min-height: 150px;
 }
 
 .storyZone {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: var(--space-2);
   min-height: 0;
 }
 
+/* Bounded: an expanded log scrolls here instead of growing the footer row
+   and crushing the 3D center (§13.3 stable dimensions). */
 .logZone {
   display: flex;
+  flex-direction: column;
   min-height: 0;
+  max-height: 240px;
 }
 
 .logZone > * {
   flex: 1;
   min-width: 0;
+  min-height: 0;
 }
 
 @media (max-width: 1023px) {

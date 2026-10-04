@@ -5,7 +5,7 @@
 .panel {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 
 .readouts {
@@ -14,14 +14,20 @@
 }
 
 /* Tabs — underline/border indicator per §13.3. The active underline sits on
-   the shared border (-1px margin) like an ordinary product tab strip. */
+   the shared border (-1px margin) like an ordinary product tab strip. One
+   row, never wrapping: five labels overflow a 336px panel, so the strip
+   scrolls horizontally instead of stacking to a second row (§13.3 dense). */
 .tabs {
   display: flex;
   gap: var(--space-1);
   border-bottom: 1px solid var(--border-strong);
+  overflow-x: auto;
+  min-height: 0;
 }
 
 .tab {
+  flex: 0 0 auto;
+  white-space: nowrap;
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
@@ -50,13 +56,28 @@
 }
 
 /* Chart area: min-height keeps the panel steady across tabs of slightly
-   different chart heights (§13.3: stable dimensions). */
+   different chart heights (§13.3: stable dimensions). 220px — the panel
+   must fit 1080p on the Coverage tab without scrolling (round-2 ask), so
+   the chart cedes height to the readouts. */
 .chartPanel {
-  min-height: 280px;
+  min-height: 220px;
+}
+
+/* Selected-satellite detail: the only part of the panel that scrolls. It
+   fills what is left of the definite-height panel (grid 1fr row) after the
+   monitoring stack — readouts, tabs, chart, roles — so at 1080p everything
+   above is visible at once and deep satellite history never pushes the
+   charts off screen. */
+.detail {
+  flex: 1 1 0;
+  min-height: 96px;
+  min-width: 0;
+  overflow-y: auto;
 }
 
 /* §8.1 collapsible section — native details/summary (ordinary product
-   pattern, keyboard operable for free), 6px control radius. */
+   pattern, keyboard operable for free), 6px control radius. Collapsed by
+   default: role analysis, not live monitoring (round-2 ask). */
 .roles {
   border: 1px solid var(--border);
   border-radius: var(--radius-control);

@@ -1,13 +1,8 @@
-/* Left panel blocks — densified to the 4/8/12/16/24 scale (§13.3). Mission
-   rows read like the telemetry readouts: label sans muted · value mono ink. */
+/* Left panel content — the layout chrome (tab strip + panel) lives in
+   SideTabs.module.css; this file keeps the mission readout rows: label sans
+   muted · value mono ink (§13.3), on the 4/8/12/16/24 scale. */
 
-.panel {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.block {
+.group {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);

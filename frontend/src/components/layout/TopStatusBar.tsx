@@ -1,10 +1,12 @@
-// Top status bar — ONE compact row (§12.1 mission status bar): identity,
-// scenario, mission state chip (§7.2 state colors), sim time, live/replay
-// mode chip (§7.9), connection dot + text, mission-brief "?" and the
-// presentation toggle. The brief modal itself mounts in App.tsx (one instance
-// for both layouts); this bar's "?" button drives its uiStore flag.
+// Top bar — round 2: persistent across pages. The wordmark links home (#/),
+// the primary nav carries the hash-router pages with an underline indicator
+// on the active route (§13.3), then the sim status cluster (mission state
+// chip §7.2, sim time, live/replay mode chip §7.9, connection), then "?" —
+// now a link to #/faq, the mission-brief overlay is retired as first-load —
+// and the presentation toggle. In the §12.2 pitch layout PresentationView
+// mounts this same bar; there the nav hides (the pitch strips chrome).
 import { useSimStore } from "../../stores/simStore";
-import { useUiStore } from "../../stores/uiStore";
+import { useUiStore, type Route } from "../../stores/uiStore";
 import { missionStateColor } from "../../utils/colors";
 import { formatSimTime } from "../../utils/format";
 import { isMissionState } from "../../types/satellite";
@@ -23,15 +25,22 @@ const CONNECTION_COLOR: Record<string, string> = {
   disconnected: "var(--status-failed)",
 };
 
+const NAV: Array<{ route: Route; hash: string; label: string }> = [
+  { route: "live", hash: "#/live", label: "Live simulation" },
+  { route: "replay", hash: "#/replay", label: "Replay" },
+  { route: "tutorial", hash: "#/tutorial", label: "Tutorial" },
+  { route: "faq", hash: "#/faq", label: "FAQ" },
+  { route: "docs", hash: "#/docs", label: "Docs" },
+];
+
 export default function TopStatusBar() {
   const missionState = useSimStore((s) => s.missionState);
   const simTime = useSimStore((s) => s.simTime);
   const connection = useSimStore((s) => s.connection);
   const mode = useSimStore((s) => s.mode);
-  const scenario = useSimStore((s) => s.scenario);
+  const route = useUiStore((s) => s.route);
   const presentation = useUiStore((s) => s.presentationMode);
   const setPresentationMode = useUiStore((s) => s.setPresentationMode);
-  const setMissionBriefOpen = useUiStore((s) => s.setMissionBriefOpen);
 
   const stateLabel =
     missionState !== null && isMissionState(missionState)
@@ -40,10 +49,24 @@ export default function TopStatusBar() {
 
   return (
     <header className={styles.bar}>
-        <span className={styles.name}>Swarm console</span>
-        <span className={styles.scenario} title={scenario ?? undefined}>
-          {scenario ?? "—"}
-        </span>
+      <a href="#/" className={styles.name}>
+        Swarm console
+      </a>
+      {!presentation && (
+        <nav className={styles.nav} aria-label="Primary">
+          {NAV.map((n) => (
+            <a
+              key={n.route}
+              href={n.hash}
+              className={styles.navLink}
+              aria-current={route === n.route ? "page" : undefined}
+            >
+              {n.label}
+            </a>
+          ))}
+        </nav>
+      )}
+      <div className={styles.status}>
         <span
           className={styles.stateChip}
           data-waiting={missionState === null}
@@ -69,22 +92,23 @@ export default function TopStatusBar() {
           />
           {CONNECTION_LABEL[connection] ?? connection}
         </span>
-        <button
-          className={`${chrome.btn} ${styles.helpBtn}`}
-          onClick={() => setMissionBriefOpen(true)}
-          aria-label="Open mission brief"
-          title="Mission brief"
-        >
-          ?
-        </button>
-        {/* §23 primary demo button — switches to the §12.2 presentation layout. */}
-        <button
-          className={chrome.btn}
-          onClick={() => setPresentationMode(!presentation)}
-          aria-pressed={presentation}
-        >
-          {presentation ? "Exit presentation" : "Presentation mode"}
-        </button>
+      </div>
+      <a
+        href="#/faq"
+        className={`${chrome.btn} ${styles.helpBtn}`}
+        aria-label="Frequently asked questions"
+        title="Questions and answers"
+      >
+        ?
+      </a>
+      {/* §23 primary demo button — switches to the §12.2 presentation layout. */}
+      <button
+        className={chrome.btn}
+        onClick={() => setPresentationMode(!presentation)}
+        aria-pressed={presentation}
+      >
+        {presentation ? "Exit presentation" : "Presentation mode"}
+      </button>
     </header>
   );
 }

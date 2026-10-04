@@ -3,6 +3,33 @@ import { create } from "zustand";
 
 export type CameraMode = "free" | "formation" | "follow";
 
+/** Hash-router pages (round 2). pages/Router.tsx owns the hashchange wiring;
+ * TopStatusBar reads `route` for the active nav underline. */
+export type Route = "landing" | "live" | "replay" | "tutorial" | "faq" | "docs";
+
+/** Hash → route. Unknown or missing hash resolves to landing. */
+export function routeFromHash(hash: string): Route {
+  const name = hash.replace(/^#\/?/, "");
+  switch (name) {
+    case "live":
+    case "replay":
+    case "tutorial":
+    case "faq":
+    case "docs":
+      return name;
+    default:
+      return "landing";
+  }
+}
+
+function initialRoute(): Route {
+  try {
+    return routeFromHash(window.location.hash);
+  } catch {
+    return "landing"; // no window (non-browser): land, never crash
+  }
+}
+
 /** sessionStorage key marking the mission brief as shown this browser session
  * (the brief is the first-load landing page; "?" in the top bar reopens it).
  * Session-scoped by design: a fresh tab is a fresh audience member. */
@@ -41,6 +68,8 @@ interface UiStore {
    * fallback button) so the button works today; components that want to react
    * to the request (e.g. preselecting a log in ReplayControls) read this flag. */
   replayModeRequested: boolean;
+  /** Active hash-router page (round 2). Set by pages/Router.tsx on hashchange. */
+  route: Route;
 
   setShowLabels(v: boolean): void;
   setShowTrails(v: boolean): void;
@@ -52,6 +81,7 @@ interface UiStore {
   setCameraMode(m: CameraMode): void;
   setMissionBriefOpen(v: boolean): void;
   setReplayModeRequested(v: boolean): void;
+  setRoute(r: Route): void;
 }
 
 export const useUiStore = create<UiStore>((set) => ({
@@ -65,6 +95,7 @@ export const useUiStore = create<UiStore>((set) => ({
   cameraMode: "free",
   missionBriefOpen: !missionBriefSeenThisSession(),
   replayModeRequested: false,
+  route: initialRoute(),
 
   setShowLabels: (v) => set({ showLabels: v }),
   setShowTrails: (v) => set({ showTrails: v }),
@@ -81,4 +112,5 @@ export const useUiStore = create<UiStore>((set) => ({
     set({ missionBriefOpen: v });
   },
   setReplayModeRequested: (v) => set({ replayModeRequested: v }),
+  setRoute: (r) => set({ route: r }),
 }));

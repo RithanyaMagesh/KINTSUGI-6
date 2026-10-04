@@ -43,9 +43,11 @@ export interface SatRecord {
 }
 
 /** LVLH -> scene mapping used everywhere: scene x = along-track, y (up) =
- * cross-track, z = radial (repo invariant 4). */
+ * radial (nadir = scene -y, so Earth hangs BELOW the formation from every
+ * camera azimuth — 2026-10-04 staging rework), z = cross-track (repo
+ * invariant 4). */
 export function lvlhToScene(r: Satellite["r"]): [number, number, number] {
-  return [r[1], r[2], r[0]];
+  return [r[1], r[0], r[2]];
 }
 
 /** World radius that renders a marker at `targetPx` on screen at `dist`,
@@ -121,7 +123,7 @@ export function createSatelliteRecord(
     new THREE.LineBasicMaterial({
       color: tokenColor(statusToken("failed")),
       transparent: true,
-      opacity: 0.9,
+      opacity: 1,
       depthWrite: false,
     }),
   );
@@ -212,11 +214,14 @@ export function syncSatellite(
   const statusCol = tokenColor(statusToken(sat.status));
   const failed = sat.status === "failed";
   const selected = sat.id === opts.selectedId;
+  // 2026-10-04 legibility ask: failed markers read clearly — brighter disc and
+  // a halo at the same weight as healthy (was 0.5 disc / 0.25 halo), the X at
+  // full alpha. Color + X + pulse still carry the state (colorblind rule).
   (rec.disc.material as THREE.MeshBasicMaterial).color = statusCol;
-  (rec.disc.material as THREE.MeshBasicMaterial).opacity = failed ? 0.5 : 1;
+  (rec.disc.material as THREE.MeshBasicMaterial).opacity = failed ? 0.7 : 1;
   const ringMat = rec.ring.material as THREE.MeshBasicMaterial;
   ringMat.color = selected ? tokenColor(SCENE_TOKENS.focus) : statusCol;
-  ringMat.opacity = failed ? 0.25 : selected ? 0.95 : 0.55;
+  ringMat.opacity = failed ? 0.55 : selected ? 0.95 : 0.55;
   rec.leaderRing.visible = sat.role === "leader";
   rec.cross.visible = failed;
   rec.trail.visible = opts.showTrails;

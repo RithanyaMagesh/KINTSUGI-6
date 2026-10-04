@@ -3,9 +3,14 @@
 // so the visualization needs no replay-specific path. Play/pause/restart and
 // speed go to the session; the scrub slider seeks over the log's MEASURED end
 // time (read once from GET /replay/file) — without a measured duration the
-// slider is hidden, never guessed (repo invariant 1). This element carries
-// id="replay-controls" so the Live-run panel's "Switch to replay" button can
-// scroll to it.
+// slider is hidden, never guessed (repo invariant 1).
+//
+// Home: the replay page mounts this component (the §7.8 transport is the
+// page's core). The live console no longer hosts it — its replay entry
+// points navigate to #/replay. `compact` condenses the same controls into
+// fewer rows for a narrow band; every function (load/play/pause/restart/
+// speed/seek/stop/file picker) survives in both variants. The element keeps
+// id="replay-controls" so legacy scroll targets still land somewhere sane.
 import { useEffect, useState } from "react";
 import { backend, replayLogDuration } from "../../api/backend";
 import { useSimStore } from "../../stores/simStore";
@@ -20,7 +25,12 @@ import styles from "./ReplayControls.module.css";
 const SPEEDS = [0.5, 1, 2, 5, 10];
 const DEFAULT_SPEED = 10;
 
-export default function ReplayControls() {
+interface Props {
+  /** Narrow-band variant: same controls, fewer rows, tighter padding. */
+  compact?: boolean;
+}
+
+export default function ReplayControls({ compact = false }: Props) {
   const mode = useSimStore((s) => s.mode);
   const setMode = useSimStore((s) => s.setMode);
   const resetStore = useSimStore((s) => s.reset);
@@ -66,9 +76,9 @@ export default function ReplayControls() {
 
   // The mission brief's "Open replay mode" sets uiStore.replayModeRequested
   // and loads the latest log itself; preselect that same latest log here so
-  // the dropdown reflects the running replay. Reactive (not mount-only) so the
-  // flag is observed even when this bar is already mounted in BottomPanel, and
-  // in either flag/files arrival order. One-shot: consumed once it acts.
+  // the dropdown reflects the running replay. Reactive (not mount-only) so
+  // the flag is consumed whenever this bar is mounted, in either flag/files
+  // arrival order. One-shot: consumed once it acts.
   const replayModeRequested = useUiStore((s) => s.replayModeRequested);
   useEffect(() => {
     if (!replayModeRequested || files.length === 0) return;
@@ -76,10 +86,11 @@ export default function ReplayControls() {
     useUiStore.getState().setReplayModeRequested(false);
   }, [replayModeRequested, files]);
 
-  // Replay loaded from OUTSIDE this bar (mission brief, PresentationView's
-  // "Switch to replay") never runs loadSelected, so the measured log duration
-  // would be missing and the scrub slider hidden. Measure it whenever a replay
-  // session is active with an unread duration — same source as loadSelected.
+  // Replay loaded from OUTSIDE this bar (mission brief, a page's "Open
+  // replay" entry) never runs loadSelected, so the measured log duration
+  // would be missing and the scrub slider hidden. Measure it whenever a
+  // replay session is active with an unread duration — same source as
+  // loadSelected.
   useEffect(() => {
     if (mode !== "replay" || activeFile === null) return;
     let cancelled = false;
@@ -134,11 +145,33 @@ export default function ReplayControls() {
     void run(() => backend.replaySeek(t));
   }
 
+  const seekInput = (
+    <>
+      <input
+        className={`${chrome.input} ${styles.input}`}
+        type="number"
+        min={0}
+        step={10}
+        value={seekTo}
+        disabled={!replay || busy}
+        onChange={(e) => setSeekTo(e.target.value)}
+        aria-label="Seek to sim time in seconds"
+      />
+      <button
+        className={chrome.btn}
+        disabled={!replay || busy || seekTo === ""}
+        onClick={() => run(() => backend.replaySeek(Number(seekTo)))}
+      >
+        Seek
+      </button>
+    </>
+  );
+
   return (
     <section
       id="replay-controls"
       tabIndex={-1}
-      className={styles.controls}
+      className={`${styles.controls} ${compact ? styles.compact : ""}`}
       aria-label="Replay controls"
       aria-busy={busy}
     >
@@ -256,31 +289,18 @@ export default function ReplayControls() {
         >
           Stop replay
         </button>
-      </div>
-      <div className={styles.loadRow}>
-        <input
-          className={`${chrome.input} ${styles.input}`}
-          type="number"
-          min={0}
-          step={10}
-          value={seekTo}
-          disabled={!replay || busy}
-          onChange={(e) => setSeekTo(e.target.value)}
-          aria-label="Seek to sim time in seconds"
-        />
-        <button
-          className={chrome.btn}
-          disabled={!replay || busy || seekTo === ""}
-          onClick={() => run(() => backend.replaySeek(Number(seekTo)))}
-        >
-          Seek
-        </button>
+        {compact && seekInput}
         {activeFile !== null && <span className={styles.fileMono}>{activeFile}</span>}
       </div>
+      {!compact && (
+        <div className={styles.loadRow}>
+          {seekInput}
+        </div>
+      )}
       {replay && duration === null && (
         <p className={chrome.hint}>Log duration unreadable — use the exact seek input.</p>
       )}
-      {replay && activeFile === null && (
+      {!compact && replay && activeFile === null && (
         <p className={chrome.hint}>
           Replay session in progress — the session greeting does not report the file name.
         </p>

@@ -6,6 +6,9 @@
 // framing back permanently; camera presets re-enable the managed view, with
 // "focus" tracking the failed satellite (follow-cam) instead of the formation
 // centre — otherwise a formation-centred refit would undo the focus at once.
+// 2026-10-04: the fit target sits below the formation centre (scene +y =
+// zenith) so the swarm rides above screen centre and the nadir Earth fills
+// the lower third of the managed view.
 import * as THREE from "three";
 import type { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import type { Satellite } from "../../types/satellite";
@@ -14,6 +17,11 @@ import { lvlhToScene } from "./sceneSatellites";
 
 const FIT_FILL = 0.575; // auto-fit: formation fills 50-65% of the viewport (midpoint)
 const FIT_RESPONSE = 1.8; // 1/s ease rate — gentle re-fit, never snappy
+// The fit target sits this x formation-radius BELOW the formation centre
+// (scene +y = zenith): looking at a point under the swarm lifts it above
+// screen centre, and the nadir Earth fills the lower third (2026-10-04
+// staging ask; verified by projection: centroid sy 0.43, limb sy 0.63).
+const FRAME_LIFT = 0.3;
 
 export class AutoFitController {
   private enabled = true;
@@ -93,7 +101,7 @@ export class AutoFitController {
     const center =
       this.center === "failed"
         ? lvlhToScene(sats.find((s) => s.status === "failed")?.r ?? [sphere.cx, sphere.cy, sphere.cz])
-        : ([sphere.cy, sphere.cz, sphere.cx] as [number, number, number]); // LVLH centroid -> scene
+        : ([sphere.cy, sphere.cx, sphere.cz] as [number, number, number]); // LVLH centroid -> scene
     const dTarget = fitDistance(
       sphere.radius,
       (camera.fov * Math.PI) / 180,
@@ -105,7 +113,7 @@ export class AutoFitController {
     const dist = this.dir.length();
     if (dist < 1e-6) return;
     this.dir.divideScalar(dist);
-    this.target.set(center[0], center[1], center[2]);
+    this.target.set(center[0], center[1] - sphere.radius * FRAME_LIFT, center[2]);
     controls.target.lerp(this.target, k);
     camera.position.copy(controls.target).addScaledVector(this.dir, dist + (dTarget - dist) * k);
     controls.update();

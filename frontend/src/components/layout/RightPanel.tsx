@@ -151,7 +151,9 @@ export default function RightPanel() {
       </details>
 
       <h2 className={chrome.panelTitle}>Selected satellite</h2>
-      <SelectedSatellitePanel />
+      <div className={styles.detail}>
+        <SelectedSatellitePanel />
+      </div>
     </aside>
   );
 }

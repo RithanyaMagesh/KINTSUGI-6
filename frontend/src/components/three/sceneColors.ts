@@ -48,5 +48,6 @@ export const SCENE_TOKENS = {
   earthLand: "--scene-earth-land",
   earthGraticule: "--scene-earth-graticule",
   atmo: "--scene-atmo",
+  orbit: "--scene-orbit",
   star: "--scene-star",
 } as const;

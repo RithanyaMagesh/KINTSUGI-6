@@ -115,7 +115,9 @@
 }
 
 /* Big demo buttons (§6.3): same rectangular product pattern, larger hit area.
-   Hover stays color/border only (§13.5). */
+   Hover stays color/border only (§13.5). "Open replay" is an <a> styled to
+   the same pattern — hash navigation is the mechanism, so new-tab/middle-click
+   behave like any link. */
 .bigBtn {
   background: var(--panel-raised);
   color: var(--ink);
@@ -125,12 +127,21 @@
   font-size: 18px;
   font-weight: 600;
   cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   transition: background var(--motion-duration) var(--motion-ease),
     border-color var(--motion-duration) var(--motion-ease);
 }
 
 .bigBtn:hover:not(:disabled) {
   background: var(--border);
+}
+
+.bigBtn:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
 .bigBtn:disabled {

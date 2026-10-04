@@ -14,10 +14,12 @@ from bisect import bisect_right
 from pathlib import Path
 from typing import Literal
 
+import cubesat.sim as sim_module
+from cubesat.benchmark_policies import even_split_replan, hungarian_keepout_replan
 from cubesat.replay import ReplayLog, index_at, load_jsonl
 from cubesat.scenario import Failure, FailureMode, Scenario, load_scenario
 from cubesat.sim import run_scenario
-from cubesat.wire import SessionEnrich, to_event, to_messages, to_sim_state
+from cubesat.wire import POLICY_VALUES, SessionEnrich, to_event, to_messages, to_sim_state
 
 
 class SessionError(Exception):
@@ -27,6 +29,18 @@ class SessionError(Exception):
         super().__init__(detail)
         self.status_code = status_code
         self.detail = detail
+
+
+# The replan seam (docs/ENDGAME_PLAN.md 3.2-3.3): sim.py resolves the module-global
+# `replan` at its call site (cubesat/sim.py:265), so rebinding cubesat.sim.replan
+# in-process switches the recovery algorithm with ZERO core diffs -- the exact
+# mechanism cubesat.benchmark.run_one uses. "hungarian" is NOT in this map: the
+# default never rebinds, so a default start is byte-identical to the pre-policy
+# core (the golden determinism pin stays untouched).
+_POLICY_REPLANNERS = {
+    "even_split": even_split_replan,
+    "hungarian_keepout": hungarian_keepout_replan,
+}
 
 
 class Hub:

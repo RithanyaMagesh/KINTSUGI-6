@@ -163,12 +163,14 @@ export class SwarmSceneController {
       target.set(...lvlhToScene(focusSat.r));
     }
     this.controls.target.copy(target);
+    // Side presets sit high enough (scene +y = zenith) that the nadir Earth
+    // catches the lower frame (2026-10-04 staging: Earth below, never beside).
     if (preset === "top") {
       this.camera.position.set(target.x + e * 0.001, e * 2.5, target.z);
     } else if (preset === "formation") {
-      this.camera.position.set(target.x + e * 1.6, e * 0.5, target.z + e * 1.2);
+      this.camera.position.set(target.x + e * 1.6, e * 1.0, target.z + e * 1.2);
     } else if (preset === "focus") {
-      this.camera.position.set(target.x + e * 0.8, e * 0.5, target.z + e * 0.8);
+      this.camera.position.set(target.x + e * 0.8, e * 0.7, target.z + e * 0.8);
     } else {
       this.camera.position.set(e * 2, e * 1.5, e * 2);
       this.controls.target.set(0, 0, 0);

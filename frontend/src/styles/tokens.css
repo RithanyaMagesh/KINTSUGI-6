@@ -33,6 +33,7 @@
   --scene-earth-land: #24523f; /* stylized landmass noise */
   --scene-earth-graticule: var(--ink-faint); /* faint lat/lon lines */
   --scene-atmo: var(--status-info); /* atmosphere rim */
+  --scene-orbit: var(--ink-faint); /* chief-orbit ring — faint chrome */
   --scene-star: var(--ink); /* starfield points */
 
   /* -- Typography (§13.2): two faces, vendored woff2, no CDN */

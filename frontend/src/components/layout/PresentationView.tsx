@@ -2,20 +2,19 @@
 // mission status bar / (3D swarm view | key metrics) / recovery-story band —
 // compact state banner, the one-sentence NarrationStrip, and the latest event
 // as ONE compact 14px mono line (the old banner-sized event text is gone).
-// In replay mode the §7.8 transport (ReplayControls) mounts in the story band;
-// during replay the §20.1 live-connection overlay stays off (SwarmScene keeps
-// it live-mode-only — the top-bar badge carries connection state).
+// NO replay transport here — the §7.8 transport lives on the replay page;
+// the replay entry below navigates there via the #/replay hash. During replay
+// the §20.1 live-connection overlay stays off (SwarmScene keeps it
+// live-mode-only — the top-bar badge carries connection state).
 // §13 design law applies unchanged: readout rows, tokens only, no new pattern.
 import { useState } from "react";
-import { useSimStore } from "../../stores/simStore";
-import { useRecoveryStore } from "../../stores/recoveryStore";
 import { backend } from "../../api/backend";
+import { useSimStore } from "../../stores/simStore";
 import TopStatusBar from "./TopStatusBar";
 import SwarmScene from "../three/SwarmScene.tsx"; // .tsx: keeps tsc from case-matching swarmScene.ts on Windows
 import ReadoutRow from "../dashboard/ReadoutRow";
 import GroundCoverageChart from "../dashboard/GroundCoverageChart";
 import NarrationStrip from "../narration/NarrationStrip";
-import ReplayControls from "../controls/ReplayControls";
 import { missionStateColor, eventLevelColor } from "../../utils/colors";
 import { formatSimTime } from "../../utils/format";
 import { missionHealthScore } from "../../utils/health";
@@ -62,27 +61,6 @@ export default function PresentationView() {
       await backend.failureInject(target.id, "DEAD");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Injection failed");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function openReplay(): Promise<void> {
-    // §6.3 replay fallback: same path as the console's Open Replay Mode.
-    setBusy(true);
-    setError(null);
-    try {
-      const { files } = await backend.replayFiles();
-      if (files.length === 0) {
-        setError("No replay logs available. Generate one with: uv run python -m cubesat.run");
-        return;
-      }
-      useSimStore.getState().reset();
-      useRecoveryStore.getState().resetForNewRun(); // the story resets with the run
-      await backend.replayLoad(files[files.length - 1]);
-      useSimStore.getState().setMode("replay");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Replay could not be loaded");
     } finally {
       setBusy(false);
     }
@@ -157,20 +135,14 @@ export default function PresentationView() {
             >
               Inject failure
             </button>
-            <button
-              className={styles.bigBtn}
-              disabled={mode === "replay" || busy}
-              onClick={() => void openReplay()}
-            >
-              Switch to replay
-            </button>
+            {/* Replay entry is pure navigation: the transport lives on the
+                replay page (#/replay), which loads a log itself. An <a> —
+                the hash is the mechanism, middle-click/new-tab still works. */}
+            <a className={styles.bigBtn} href="#/replay">
+              Open replay
+            </a>
           </div>
         </div>
-        {/* §7.8 replay transport: mounts only in replay mode (the "Switch to
-            replay" button above loads the latest log first). Console mode
-            keeps its own instance in BottomPanel — App renders one layout at
-            a time, so the two never coexist. */}
-        {mode === "replay" && <ReplayControls />}
         {error !== null && <p className={chrome.errorText}>{error}</p>}
       </footer>
     </div>

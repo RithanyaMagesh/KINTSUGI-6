@@ -28,15 +28,25 @@ class SessionEnrich:
 
     scenario: str | None = None
     seed: int | None = None
+    policy: str | None = None  # active recovery policy; None = unknown (replay/stopped)
     assignment_map: dict[int, str] = field(default_factory=dict)  # log sat id -> "slot_i"
     detection_latency_s: float | None = None
     replanning_latency_ms: float | None = None  # stays None in G5 (section 6.1 cut)
+
+
+# Live-selectable recovery policies (the benchmark's seam policies + the shipped
+# default; cubesat.benchmark.POLICY_ORDER also carries do_nothing/greedy, which
+# are measurement baselines, NOT live-selectable). POLICY_VALUES is the runtime
+# mirror of Policy for the session-layer validation (session.py has no pydantic).
+POLICY_VALUES = ("hungarian", "even_split", "hungarian_keepout")
+Policy = Literal["hungarian", "even_split", "hungarian_keepout"]
 
 
 class StartRequest(BaseModel):
     scenario: str | None = None
     seed: int | None = None
     speed: float = Field(default=100.0, gt=0)
+    policy: Policy = "hungarian"
 
 
 class InjectRequest(BaseModel):
@@ -138,8 +148,23 @@ def _sat_to_wire(sat: dict, enrich: SessionEnrich) -> dict:
     return out
 
 
+def _policy_field(enrich: SessionEnrich) -> dict:
+    """Active recovery policy echo, deviation-only: the field is emitted ONLY
+    when the session's policy is known AND differs from the shipped default
+    "hungarian". Rationale: every pre-policy committed log was produced by the
+    core hungarian replan, and the default-policy wire bytes are pinned
+    (tests/fixtures/wire_golden.json; tests/test_session.py
+    test_live_equals_replay_frames) -- deviation-only echo keeps those pins
+    byte-identical while still carrying the field where it is informative.
+    Absence means "the default": the frontend defaults to hungarian."""
+    if enrich.policy is not None and enrich.policy != "hungarian":
+        return {"policy": enrich.policy}
+    return {}
+
+
 def to_sim_state(frame: dict, enrich: SessionEnrich) -> dict:
     """FRONTEND_SPEC section 16.1 sim_state (INIT header maps to the empty state)."""
+    policy = _policy_field(enrich)
     if frame.get("state") == "INIT":
         return {
             "type": "sim_state",
@@ -147,6 +172,7 @@ def to_sim_state(frame: dict, enrich: SessionEnrich) -> dict:
             "state": "NOMINAL",  # INIT never appears on the wire (section 6.1)
             "scenario": enrich.scenario,
             "seed": enrich.seed,
+            **policy,
             "sats": [],
             "coverage": None,
             "min_sep": None,
@@ -158,6 +184,7 @@ def to_sim_state(frame: dict, enrich: SessionEnrich) -> dict:
         "state": frame["state"],
         "scenario": enrich.scenario,
         "seed": enrich.seed,
+        **policy,
         "sats": [_sat_to_wire(s, enrich) for s in frame.get("sats", [])],
         "coverage": frame.get("coverage"),
         "min_sep": frame.get("min_sep"),

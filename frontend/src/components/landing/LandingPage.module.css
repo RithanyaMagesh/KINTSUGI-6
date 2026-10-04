@@ -1,0 +1,331 @@
+/* Landing page — §13 design law. Color only via tokens.css custom properties
+   (zero raw hex here); IBM Plex Sans for labels/body, IBM Plex Mono for the
+   state chain and SVG data labels; radius 8px panels / 6px controls; spacing
+   on the 4px scale; motion is color/border/opacity only, 120-180ms.
+   Interactive elements here are plain hash links (the page fetches nothing),
+   so hover / :focus-visible / active are shipped and disabled / loading /
+   error / empty do not apply — those states live on the console pages the
+   links lead to. Dimensions are stable: fixed padding, color-only transitions. */
+
+.page {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--ink);
+  padding: var(--space-5) var(--space-4);
+}
+
+.inner {
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+/* -- Hero ---------------------------------------------------------------- */
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: center;
+  padding: var(--space-5) 0;
+}
+
+.headline {
+  font-size: clamp(40px, 6vw, 64px);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  margin: 0 0 var(--space-4);
+}
+
+.headline span {
+  display: block;
+}
+
+.subline {
+  font-size: 18px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+  max-width: 52ch;
+  margin: 0 0 var(--space-5);
+}
+
+.ctaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-3);
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  font-weight: 500;
+  text-decoration: none;
+  transition:
+    background-color var(--motion-duration) var(--motion-ease),
+    border-color var(--motion-duration) var(--motion-ease),
+    color var(--motion-duration) var(--motion-ease),
+    opacity var(--motion-duration) var(--motion-ease);
+}
+
+.cta:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.ctaPrimary {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--bg);
+}
+
+.ctaPrimary:hover {
+  opacity: 0.85;
+}
+
+.ctaPrimary:active {
+  opacity: 0.7;
+}
+
+.ctaSecondary {
+  background: var(--panel-raised);
+  color: var(--ink);
+}
+
+.ctaSecondary:hover {
+  border-color: var(--ink-faint);
+}
+
+.ctaSecondary:active {
+  background: var(--panel);
+}
+
+.linkRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.link {
+  color: var(--ink-muted);
+  font-size: var(--text-body);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color var(--motion-duration) var(--motion-ease);
+}
+
+.link:hover {
+  color: var(--ink);
+}
+
+.link:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* -- Hero schematic (token colors only, drawn via classes) ---------------- */
+
+.figure {
+  margin: 0;
+}
+
+.figureSvg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.earth {
+  fill: var(--scene-earth-ocean);
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+
+.grat {
+  fill: none;
+  stroke: var(--scene-earth-graticule);
+  stroke-width: 1;
+  opacity: 0.55;
+}
+
+.orbit {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+}
+
+.sat {
+  fill: var(--status-nominal);
+}
+
+.deadSlot {
+  fill: none;
+  stroke: var(--ink-faint);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.deadX {
+  stroke: var(--status-failed);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+.targetSlot {
+  fill: none;
+  stroke: var(--status-info);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+
+.arrow {
+  stroke: var(--status-info);
+  stroke-width: 1.5;
+}
+
+.arrowHead {
+  fill: var(--status-info);
+}
+
+.svgLabel {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  fill: var(--ink-muted);
+}
+
+.svgLabelFail {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  fill: var(--status-failed);
+}
+
+/* -- Pillars: readout rows, not cards ------------------------------------ */
+
+.section {
+  margin-top: var(--space-5);
+}
+
+.sectionTitle {
+  font-size: var(--text-panel-title);
+  font-weight: 600;
+  margin: 0;
+}
+
+.pillar {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: var(--space-5);
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--border);
+  margin-top: var(--space-4);
+}
+
+.pillarName {
+  font-size: var(--text-panel-title);
+  font-weight: 500;
+  color: var(--ink);
+  margin: 0;
+}
+
+.pillarBody {
+  font-size: var(--text-body);
+  line-height: 1.55;
+  color: var(--ink-muted);
+  max-width: 68ch;
+  margin: 0;
+}
+
+/* -- State-machine strip -------------------------------------------------- */
+
+.strip {
+  margin-top: var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  background: var(--panel);
+  padding: var(--space-4) var(--space-5);
+}
+
+.chain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-body);
+  font-weight: 500;
+  margin: var(--space-3) 0 0;
+}
+
+.chainSep {
+  color: var(--ink-faint);
+}
+
+.stateNominal {
+  color: var(--status-nominal);
+}
+
+.stateFailed {
+  color: var(--status-failed);
+}
+
+.stateCaution {
+  color: var(--status-caution);
+}
+
+.stateInfo {
+  color: var(--status-info);
+}
+
+.stripNote {
+  font-size: var(--text-body);
+  line-height: 1.5;
+  color: var(--ink-muted);
+  max-width: 68ch;
+  margin: var(--space-3) 0 0;
+}
+
+/* -- Footer ---------------------------------------------------------------- */
+
+.footer {
+  margin-top: var(--space-5);
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-4);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.footerText {
+  font-size: var(--text-body);
+  line-height: 1.5;
+  color: var(--ink-muted);
+  max-width: 72ch;
+  margin: 0;
+}
+
+/* -- Small screens --------------------------------------------------------- */
+
+@media (max-width: 900px) {
+  .hero {
+    grid-template-columns: 1fr;
+  }
+
+  .pillar {
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+  }
+
+  .footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
