@@ -1,0 +1,397 @@
+{
+ "selected_variant": "L3600",
+ "variant_selection": {
+  "L1800": {
+   "train_pos": 3690,
+   "best_iter": 213,
+   "cal_recall": 1.0,
+   "cal_median_lead_frac": 0.946255891314767,
+   "tau": 0.0003456395533524521
+  },
+  "L3600": {
+   "train_pos": 5378,
+   "best_iter": 86,
+   "cal_recall": 1.0,
+   "cal_median_lead_frac": 0.968843167563918,
+   "tau": 0.02568341593548139
+  },
+  "onset": {
+   "train_pos": 5378,
+   "best_iter": 86,
+   "cal_recall": 1.0,
+   "cal_median_lead_frac": 0.968843167563918,
+   "tau": 0.02568341593548139
+  }
+ },
+ "dev_mode": false,
+ "methods": {
+  "ewma": {
+   "tau": 51.61795013611519,
+   "pr_auc_test": 0.9495402227469157,
+   "test_fa_per_sat_orbit": 0.5396327942524284,
+   "test_fa_events": 338,
+   "fa_sat_orbits": 626.3518518518558,
+   "events": {
+    "eps": {
+     "detected": 13,
+     "events": 13,
+     "recall_ci95": [
+      0.752947361999529,
+      1.0
+     ],
+     "median_lead_s": 4540.0,
+     "median_lead_frac_of_ramp": 0.930137684854666
+    },
+    "comms": {
+     "detected": 10,
+     "events": 10,
+     "recall_ci95": [
+      0.6915028921812392,
+      1.0
+     ],
+     "median_lead_s": 3830.0,
+     "median_lead_frac_of_ramp": 0.8266019152286385
+    },
+    "compound": {
+     "detected": 8,
+     "events": 8,
+     "recall_ci95": [
+      0.6305833524471807,
+      1.0
+     ],
+     "median_lead_s": 3749.0,
+     "median_lead_frac_of_ramp": 0.9276274214617848
+    },
+    "sudden": {
+     "detected": 0,
+     "events": 16,
+     "recall_ci95": [
+      0.0,
+      0.2059072142078227
+     ],
+     "median_lead_s": null,
+     "median_lead_frac_of_ramp": null
+    },
+    "gradual_all": {
+     "detected": 31,
+     "events": 31,
+     "recall_ci95": [
+      0.88781125307763,
+      1.0
+     ]
+    }
+   },
+   "events_holdout_sats_4_5": {
+    "eps": {
+     "detected": 3,
+     "events": 3,
+     "recall_ci95": [
+      0.2924017738212866,
+      1.0
+     ],
+     "median_lead_s": 4608.0,
+     "median_lead_frac_of_ramp": 0.9388753056234719
+    },
+    "comms": {
+     "detected": 4,
+     "events": 4,
+     "recall_ci95": [
+      0.3976353643835253,
+      1.0
+     ],
+     "median_lead_s": 4236.0,
+     "median_lead_frac_of_ramp": 0.8410600678822322
+    },
+    "compound": {
+     "detected": 3,
+     "events": 3,
+     "recall_ci95": [
+      0.2924017738212866,
+      1.0
+     ],
+     "median_lead_s": 3672.0,
+     "median_lead_frac_of_ramp": 0.9362570117287098
+    },
+    "sudden": {
+     "detected": 0,
+     "events": 3,
+     "recall_ci95": [
+      0.0,
+      0.7075982261787133
+     ],
+     "median_lead_s": null,
+     "median_lead_frac_of_ramp": null
+    },
+    "gradual_all": {
+     "detected": 10,
+     "events": 10,
+     "recall_ci95": [
+      0.6915028921812392,
+      1.0
+     ]
+    }
+   }
+  },
+  "cusum": {
+   "tau": 474.00733818651474,
+   "pr_auc_test": 0.925506445557813,
+   "test_fa_per_sat_orbit": 0.5428258877095433,
+   "test_fa_events": 340,
+   "fa_sat_orbits": 626.3518518518558,
+   "events": {
+    "eps": {
+     "detected": 11,
+     "events": 13,
+     "recall_ci95": [
+      0.5455289443234422,
+      0.9807933280174715
+     ],
+     "median_lead_s": 4600.0,
+     "median_lead_frac_of_ramp": 0.939662447257384
+    },
+    "comms": {
+     "detected": 9,
+     "events": 10,
+     "recall_ci95": [
+      0.5549838829718047,
+      0.9974714214555382
+     ],
+     "median_lead_s": 4182.0,
+     "median_lead_frac_of_ramp": 0.9113821138211382
+    },
+    "compound": {
+     "detected": 6,
+     "events": 8,
+     "recall_ci95": [
+      0.3491442055871758,
+      0.9681459737500557
+     ],
+     "median_lead_s": 4188.0,
+     "median_lead_frac_of_ramp": 0.9411773976970956
+    },
+    "sudden": {
+     "detected": 2,
+     "events": 16,
+     "recall_ci95": [
+      0.015513603815413885,
+      0.38347623684926346
+     ],
+     "median_lead_s": 270.0,
+     "median_lead_frac_of_ramp": null
+    },
+    "gradual_all": {
+     "detected": 26,
+     "events": 31,
+     "recall_ci95": [
+      0.6627284150268207,
+      0.9454756737849165
+     ]
+    }
+   },
+   "events_holdout_sats_4_5": {
+    "eps": {
+     "detected": 1,
+     "events": 3,
+     "recall_ci95": [
+      0.008403758659612636,
+      0.9057006759497539
+     ],
+     "median_lead_s": 4986.0,
+     "median_lead_frac_of_ramp": 0.9700389105058366
+    },
+    "comms": {
+     "detected": 4,
+     "events": 4,
+     "recall_ci95": [
+      0.3976353643835253,
+      1.0
+     ],
+     "median_lead_s": 4656.0,
+     "median_lead_frac_of_ramp": 0.9188089276330025
+    },
+    "compound": {
+     "detected": 3,
+     "events": 3,
+     "recall_ci95": [
+      0.2924017738212866,
+      1.0
+     ],
+     "median_lead_s": 3672.0,
+     "median_lead_frac_of_ramp": 0.9409853817000542
+    },
+    "sudden": {
+     "detected": 0,
+     "events": 3,
+     "recall_ci95": [
+      0.0,
+      0.7075982261787133
+     ],
+     "median_lead_s": null,
+     "median_lead_frac_of_ramp": null
+    },
+    "gradual_all": {
+     "detected": 8,
+     "events": 10,
+     "recall_ci95": [
+      0.4439045376923585,
+      0.9747892736731666
+     ]
+    }
+   }
+  },
+  "lgb": {
+   "tau": 0.02568341593548139,
+   "pr_auc_test": 0.991614158036586,
+   "test_fa_per_sat_orbit": 0.4805605652958016,
+   "test_fa_events": 301,
+   "fa_sat_orbits": 626.3518518518558,
+   "events": {
+    "eps": {
+     "detected": 13,
+     "events": 13,
+     "recall_ci95": [
+      0.752947361999529,
+      1.0
+     ],
+     "median_lead_s": 4860.0,
+     "median_lead_frac_of_ramp": 0.9820815859702631
+    },
+    "comms": {
+     "detected": 10,
+     "events": 10,
+     "recall_ci95": [
+      0.6915028921812392,
+      1.0
+     ],
+     "median_lead_s": 4470.0,
+     "median_lead_frac_of_ramp": 0.9781881985841846
+    },
+    "compound": {
+     "detected": 8,
+     "events": 8,
+     "recall_ci95": [
+      0.6305833524471807,
+      1.0
+     ],
+     "median_lead_s": 3979.0,
+     "median_lead_frac_of_ramp": 0.9808789993648461
+    },
+    "sudden": {
+     "detected": 1,
+     "events": 16,
+     "recall_ci95": [
+      0.0015811117227658871,
+      0.3023207384345319
+     ],
+     "median_lead_s": 156.0,
+     "median_lead_frac_of_ramp": null
+    },
+    "gradual_all": {
+     "detected": 31,
+     "events": 31,
+     "recall_ci95": [
+      0.88781125307763,
+      1.0
+     ]
+    }
+   },
+   "events_holdout_sats_4_5": {
+    "eps": {
+     "detected": 3,
+     "events": 3,
+     "recall_ci95": [
+      0.2924017738212866,
+      1.0
+     ],
+     "median_lead_s": 4868.0,
+     "median_lead_frac_of_ramp": 0.985603112840467
+    },
+    "comms": {
+     "detected": 4,
+     "events": 4,
+     "recall_ci95": [
+      0.3976353643835253,
+      1.0
+     ],
+     "median_lead_s": 4946.0,
+     "median_lead_frac_of_ramp": 0.9799777427432068
+    },
+    "compound": {
+     "detected": 3,
+     "events": 3,
+     "recall_ci95": [
+      0.2924017738212866,
+      1.0
+     ],
+     "median_lead_s": 3852.0,
+     "median_lead_frac_of_ramp": 0.9821519632840388
+    },
+    "sudden": {
+     "detected": 0,
+     "events": 3,
+     "recall_ci95": [
+      0.0,
+      0.7075982261787133
+     ],
+     "median_lead_s": null,
+     "median_lead_frac_of_ramp": null
+    },
+    "gradual_all": {
+     "detected": 10,
+     "events": 10,
+     "recall_ci95": [
+      0.6915028921812392,
+      1.0
+     ]
+    }
+   }
+  }
+ },
+ "sealed_seeds": [
+  9500,
+  9560
+ ],
+ "comparison": {
+  "best_baseline": "ewma",
+  "paired_events": 31,
+  "lgb_earlier": 31,
+  "lgb_later": 0,
+  "median_lead_gain_s": 260.0,
+  "sign_test_p": 9.313225746154785e-10,
+  "VERDICT": "LGB ships"
+ },
+ "top_features_gain": [
+  [
+   "jit_c15_300",
+   1569573.8715057373
+  ],
+  [
+   "soc_w15_mean",
+   1042180.399017334
+  ],
+  [
+   "jit_w15_min",
+   455875.99590301514
+  ],
+  [
+   "jit_w15_mean",
+   182546.14030456543
+  ],
+  [
+   "jit_w60_min",
+   76386.48989868164
+  ],
+  [
+   "soc_w15_z",
+   39835.052154541016
+  ],
+  [
+   "lat_w60_min",
+   29463.55322265625
+  ],
+  [
+   "jit_w60_std",
+   24382.18441772461
+  ]
+ ]
+}

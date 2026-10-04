@@ -925,3 +925,36 @@ hook approval (the plan's only contemplated core diff); the second-delta scope a
 by construction); before the demo: Dockerfile content fix + `docker run` healthcheck
 (risk #8) and the canonical-log whitelist commit so replay-from-fresh-clone works
 (risk #10, `git ls-files data/logs` lists only `.gitkeep` today).
+
+## Endgame P4 — predictor bundle integration (2026-10-03, Gate 0)
+
+User-supplied bundle (files/INTEGRATION_PROMPT.md, phase-gated: oracle sweep is the
+kill switch BEFORE any in-loop hook). Sources live at **files/**; the ORIGINAL bundle
+seal (src sha256 48fb27d7…, also recorded in GATES.md) was replaced by a
+user-approved I/O-edge-only hardening applied 2026-10-03/04 — path-confinement guard
+(--out must be a single directory name resolved under the repo root; confined chdir;
+all sinks absolute or literal relative names; zero generator/feature/training/eval
+logic touched) — and the pipeline was RE-SEALED through its own manifest mechanism
+(current seal src sha256 deefeae1…, self-enforced by out2/test_manifest.json). The
+model artifact seal is untouched by the hardening. Artifacts: **models/**
+(predictor.txt + predictor_manifest.json, model sha256-pinned) and **out2/**
+(reference results.json + sealed manifest, committed so the repro rerun diffs
+against git).
+
+- Seals: tests/test_predictor_seal.py — pipeline sha256 == out2/test_manifest.json
+  src_sha256 (deefeae1… hardened; original bundle seal 48fb27d7… on record in
+  GATES.md); model sha256 == models/predictor_manifest.json model_sha256
+  (37900918…). CI verifies hashes, never retrains.
+- Hardening inertness proof: the repro rerun must still reproduce the bundle's
+  reference out2/results.json byte-identically — any drift: REPORT, do not fix.
+- Repro of record: `uv run python files/predictor_pipeline.py run --out out2` —
+  out2/ must stay byte-identical afterward (results.json unchanged, fresh
+  out2/predictor.txt sha == manifest). If it differs: REPORT, do not fix
+  (prompt rule — likely a lightgbm version drift; 4.7.0 installed 2026-10-03).
+- Gate-2 pre-registration (GATES.md decisions log, written before any sweep
+  number): GO iff any scenario ≥ 0.5 pp critical-seat health gain at L=300 s;
+  else CUT + reactive-only + curve, README says the predictor was not shipped.
+- Offline results of record (bundle out2/results.json, sealed pipeline): LGB
+  label variant L3600 selected on CAL; test FA ≤ 1.2 × 0.5 budget; ~260 s
+  median lead gain vs best baseline on trained families; comms-holdout 0/15
+  (no generalization to unseen families); sudden death ≈ 0 recall by design.
