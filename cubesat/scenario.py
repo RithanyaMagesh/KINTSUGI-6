@@ -91,6 +91,17 @@ class Allocation(BaseModel):
     )
 
 
+class Oracle(BaseModel):
+    """Oracle early-warning parameters (Phase 2). Gated default-off; byte-inert when disabled."""
+
+    enabled: bool = Field(
+        default=False, description="True = oracle early warning active"
+    )
+    lead_s: float = Field(
+        default=0.0, ge=0.0, description="Warning lead time L in seconds"
+    )
+
+
 class Scenario(BaseModel):
     name: str = Field(min_length=1)
     seed: int = Field(ge=0)
@@ -109,6 +120,7 @@ class Scenario(BaseModel):
     )
     detection: Detection = Field(default_factory=Detection)
     allocation: Allocation = Field(default_factory=Allocation)
+    oracle: Oracle = Field(default_factory=Oracle)
 
     @property
     def n_sats(self) -> int:
