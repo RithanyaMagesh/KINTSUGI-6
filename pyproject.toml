@@ -5,10 +5,11 @@ description = "Self-healing 6-CubeSat swarm: failure detection, replanning, and 
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115",
+    "lightgbm>=4.7.0",
     "numpy>=2.1",
     "pydantic>=2.9",
     "scipy>=1.14",
-    "uvicorn>=0.30",
+    "uvicorn[standard]>=0.30",
 ]
 
 [dependency-groups]
@@ -37,6 +38,12 @@ select = ["E", "F", "I", "W", "B", "UP"]
 # cubesat.hcw does not exist until G1, so ruff's resolution-based first-party
 # detection misses it; pin the package so import order is stable.
 known-first-party = ["cubesat"]
+
+[tool.ruff.lint.per-file-ignores]
+# Frozen user bundle (files/INTEGRATION_PROMPT.md Phase 0): the pipeline is
+# sha256-sealed by out2/test_manifest.json, so these files must stay byte-exact --
+# lint is waived wholesale and the seal tests are the quality gate.
+"files/**" = ["E", "F", "I", "W", "B", "UP"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

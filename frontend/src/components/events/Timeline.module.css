@@ -1,0 +1,125 @@
+/* Timeline — §13.5 signature element. Rail colors via tokens keyed on the
+   backend state literal (data, not styling); hover/focus = color/border only. */
+
+.timeline {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.rail {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px solid var(--border-strong);
+  padding-top: var(--space-2);
+}
+
+.nodeWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  background: var(--panel);
+  padding: 0 var(--space-1);
+}
+
+.node {
+  display: block;
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 2px;
+  background: var(--panel);
+  transition: border-color var(--motion-duration) var(--motion-ease),
+    background var(--motion-duration) var(--motion-ease);
+}
+
+.reached {
+  background: var(--panel-raised);
+}
+
+/* State literals are backend enum data — uppercase is data, not styling. */
+.reached[data-state="NOMINAL"] {
+  border-color: var(--status-nominal);
+}
+.reached[data-state="FAILURE_DETECTED"] {
+  border-color: var(--status-failed);
+}
+.reached[data-state="REPLANNING"],
+.reached[data-state="RECONFIGURING"] {
+  border-color: var(--status-caution);
+}
+.reached[data-state="RECOVERED"] {
+  border-color: var(--status-info);
+}
+
+.active {
+  background: var(--border-strong);
+}
+
+/* Replay seek buttons on the spine (§13.5): same rail, clickable nodes and
+   stamps; hover = color/border only. Live mode renders plain spans. */
+.nodeBtn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.nodeBtn:hover .node,
+.nodeBtn:focus-visible .node {
+  border-color: var(--ink);
+}
+
+.nodeLabel {
+  font-family: var(--font-mono);
+  font-size: var(--text-tick);
+  color: var(--ink-faint);
+  transition: color var(--motion-duration) var(--motion-ease);
+}
+
+.labelReached {
+  color: var(--ink);
+}
+
+.tick {
+  position: absolute;
+  top: -5px;
+  width: 2px;
+  height: 9px;
+}
+
+.stamps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.stamp,
+.stampBtn {
+  font-family: var(--font-mono);
+  font-size: var(--text-tick);
+  color: var(--ink-muted);
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+.stampBtn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: color var(--motion-duration) var(--motion-ease);
+}
+
+.stampBtn:hover,
+.stampBtn:focus-visible {
+  color: var(--ink);
+}

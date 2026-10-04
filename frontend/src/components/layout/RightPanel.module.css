@@ -1,0 +1,87 @@
+/* Right panel — §13.3: readout column, underline tabs (never sliding pills),
+   collapsible section. Tokens only (§13.1); motion is color/border/opacity
+   only at §13.5 duration. */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.readouts {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Tabs — underline/border indicator per §13.3. The active underline sits on
+   the shared border (-1px margin) like an ordinary product tab strip. */
+.tabs {
+  display: flex;
+  gap: var(--space-1);
+  border-bottom: 1px solid var(--border-strong);
+}
+
+.tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  padding: var(--space-1) var(--space-2);
+  color: var(--ink-muted);
+  font-size: var(--text-body);
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: color var(--motion-duration) var(--motion-ease),
+    border-color var(--motion-duration) var(--motion-ease);
+}
+
+.tab:hover {
+  color: var(--ink);
+}
+
+.tab[aria-selected="true"] {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+}
+
+.tab:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+/* Chart area: min-height keeps the panel steady across tabs of slightly
+   different chart heights (§13.3: stable dimensions). */
+.chartPanel {
+  min-height: 280px;
+}
+
+/* §8.1 collapsible section — native details/summary (ordinary product
+   pattern, keyboard operable for free), 6px control radius. */
+.roles {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+}
+
+.rolesSummary {
+  padding: var(--space-2);
+  color: var(--ink);
+  font-size: var(--text-body);
+  font-weight: 600;
+  cursor: pointer;
+  transition: color var(--motion-duration) var(--motion-ease);
+}
+
+.rolesSummary:hover {
+  color: var(--ink);
+  background: var(--panel-raised);
+  border-radius: var(--radius-control);
+}
+
+.rolesSummary:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.rolesBody {
+  padding: 0 var(--space-2) var(--space-2);
+}

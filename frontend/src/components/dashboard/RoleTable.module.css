@@ -1,0 +1,57 @@
+/* §8.1 real table, ordinary product pattern (§13.3) — mirrors
+   SatelliteList.module.css so the console has ONE table voice. */
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-body);
+}
+
+.th {
+  text-align: left;
+  color: var(--ink-muted);
+  font-weight: 500;
+  border-bottom: 1px solid var(--border-strong);
+  padding: var(--space-1);
+}
+
+.thRight {
+  text-align: right;
+}
+
+.cell {
+  padding: var(--space-1);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  padding: var(--space-1);
+  font-variant-numeric: tabular-nums;
+}
+
+.monoRight {
+  font-family: var(--font-mono);
+  text-align: right;
+  padding: var(--space-1);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Role change is flagged in TEXT next to the value (§22: never colour alone). */
+.changed {
+  color: var(--status-caution);
+  font-size: var(--text-event);
+}
+
+.footLabel {
+  padding: var(--space-1);
+  color: var(--ink-muted);
+  border-top: 1px solid var(--border-strong);
+}
+
+.footValue {
+  font-family: var(--font-mono);
+  text-align: right;
+  padding: var(--space-1);
+  border-top: 1px solid var(--border-strong);
+  font-variant-numeric: tabular-nums;
+}

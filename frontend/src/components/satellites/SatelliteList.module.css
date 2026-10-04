@@ -1,0 +1,85 @@
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-body);
+}
+
+.th {
+  text-align: left;
+  color: var(--ink-muted);
+  font-weight: 500;
+  border-bottom: 1px solid var(--border-strong);
+  padding: var(--space-1) var(--space-1);
+}
+
+.thRight {
+  text-align: right;
+}
+
+.row {
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background var(--motion-duration) var(--motion-ease);
+}
+
+.row:hover {
+  background: var(--panel-raised);
+}
+
+.selected {
+  background: var(--panel-raised);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  padding: var(--space-1);
+}
+
+.monoRight {
+  font-family: var(--font-mono);
+  text-align: right;
+  padding: var(--space-1);
+  font-variant-numeric: tabular-nums;
+}
+
+.role {
+  padding: var(--space-1);
+}
+
+/* Leader is a state, not decoration — token color + text label (§13.1). */
+.leader {
+  padding: var(--space-1);
+  color: var(--status-leader);
+}
+
+.status {
+  padding: var(--space-1);
+}
+
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: var(--space-1);
+  vertical-align: baseline;
+}
+
+.failureType {
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+/* Appendix D: suspect annotation — caution token, always with the literal
+   text "SUSPECT" (colorblind rule). An annotation, never a status color. */
+.suspect {
+  color: var(--status-caution);
+  font-weight: 500;
+}
+
+/* §13.3: keyboard focus on a selectable row gets the same signal as hover. */
+.row:focus-visible {
+  background: var(--panel-raised);
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}

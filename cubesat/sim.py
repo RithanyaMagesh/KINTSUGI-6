@@ -111,6 +111,7 @@ def run_scenario(scenario: Scenario) -> list[dict]:
     replan_due = False
     assigned = False
     recover_tol = 0.0
+    oracle_warned = [False] * len(scenario.failures)
 
     n_ticks = int(round(scenario.duration_s / dt)) + 1
     lines = [
@@ -211,6 +212,39 @@ def run_scenario(scenario: Scenario) -> list[dict]:
         # between sim steps, one control cycle per machine transition. The decision
         # states FAILURE_DETECTED and REPLANNING therefore each last exactly one
         # tick in the log; RECONFIGURING spans the physical transfers until every
+        # Oracle value-of-warning hook (Phase 2): gated default-off; inert when disabled
+        if (
+            scenario.oracle.enabled
+            and scenario.recovery_enabled
+            and scenario.oracle.lead_s > 0
+            and not replan_due
+            and mission in (STATE_NOMINAL, STATE_RECOVERED)
+        ):
+            lead = scenario.oracle.lead_s
+            for f_idx, f in enumerate(failures):
+                if not oracle_warned[f_idx] and t < f.t:
+                    t_warn = max(f.t - lead, 0.0)
+                    if t_warn <= t:
+                        oracle_warned[f_idx] = True
+                        mission = STATE_REPLANNING
+                        replan_due = True
+                        events.append(
+                            {
+                                "type": "ORACLE_ALERT",
+                                "payload": {
+                                    "sat_id": f.sat_id,
+                                    "lead_s": lead,
+                                    "t_fail": f.t,
+                                    "t_warn": t,
+                                },
+                            }
+                        )
+                        break
+
+        # Between-step orchestration (MASTER_PROMPT 3.5): the replanner runs here,
+        # between sim steps, one control cycle per machine transition. The decision
+        # states FAILURE_DETECTED and REPLANNING therefore each last exactly one
+        # tick in the log; RECONFIGURING spans the physical transfers until every
         # survivor settles within tolerance, and RECOVERED holds to the end.
         if (
             mission == STATE_FAILURE_DETECTED
@@ -250,6 +284,41 @@ def run_scenario(scenario: Scenario) -> list[dict]:
                 sat_id = assignable[row]
                 seat_of[sat_id] = col
                 roles[sat_id] = plan.seat_roles[col]
+            if scenario.oracle.enabled and scenario.oracle.lead_s > 0:
+                lead = scenario.oracle.lead_s
+                failing_soon = {
+                    f.sat_id
+                    for f in scenario.failures
+                    if t <= f.t <= t + lead + 1e-9
+                }
+                for crit_role in ("leader", "downlink"):
+                    holders = [s for s in assignable if roles[s] == crit_role]
+                    if not holders:
+                        continue
+                    holder = holders[0]
+                    if holder in failing_soon:
+                        candidates = [
+                            s
+                            for s in assignable
+                            if s not in failing_soon
+                            and roles[s] not in ("leader", "downlink")
+                        ]
+                        if candidates:
+                            target = min(candidates)
+                            h_seat, t_seat = seat_of[holder], seat_of[target]
+                            seat_of[holder], seat_of[target] = t_seat, h_seat
+                            roles[holder], roles[target] = roles[target], roles[holder]
+                            events.append(
+                                {
+                                    "type": "ORACLE_SWAP",
+                                    "payload": {
+                                        "role": crit_role,
+                                        "from_sat": holder,
+                                        "to_sat": target,
+                                        "t": t,
+                                    },
+                                }
+                            )
             recover_tol = max(_RECOVER_TOL_FRAC * max_transfer, 1.0)
             assigned = True
             replan_due = False
@@ -261,10 +330,10 @@ def run_scenario(scenario: Scenario) -> list[dict]:
                         "assignments": [
                             {
                                 "sat_id": assignable[r],
-                                "slot_index": c,
-                                "role": plan.seat_roles[c],
+                                "slot_index": seat_of[assignable[r]],
+                                "role": roles[assignable[r]],
                             }
-                            for r, c in sorted(pairs)
+                            for r, _ in sorted(pairs)
                         ],
                         "method": method,
                         "cost_total": cost_total,

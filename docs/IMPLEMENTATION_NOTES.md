@@ -925,3 +925,102 @@ hook approval (the plan's only contemplated core diff); the second-delta scope a
 by construction); before the demo: Dockerfile content fix + `docker run` healthcheck
 (risk #8) and the canonical-log whitelist commit so replay-from-fresh-clone works
 (risk #10, `git ls-files data/logs` lists only `.gitkeep` today).
+
+## Endgame P4 — predictor bundle integration (2026-10-03, Gate 0)
+
+User-supplied bundle (files/INTEGRATION_PROMPT.md, phase-gated: oracle sweep is the
+kill switch BEFORE any in-loop hook). Sources live at **files/**; the ORIGINAL bundle
+seal (src sha256 48fb27d7…, also recorded in GATES.md) was replaced by a
+user-approved I/O-edge-only hardening applied 2026-10-03/04 — path-confinement guard
+(--out must be a single directory name resolved under the repo root; confined chdir;
+all sinks absolute or literal relative names; zero generator/feature/training/eval
+logic touched) — and the pipeline was RE-SEALED through its own manifest mechanism
+(current seal src sha256 deefeae1…, self-enforced by out2/test_manifest.json). The
+model artifact seal is untouched by the hardening. Artifacts: **models/**
+(predictor.txt + predictor_manifest.json, model sha256-pinned) and **out2/**
+(reference results.json + sealed manifest, committed so the repro rerun diffs
+against git).
+
+- Seals: tests/test_predictor_seal.py — pipeline sha256 == out2/test_manifest.json
+  src_sha256 (deefeae1… hardened; original bundle seal 48fb27d7… on record in
+  GATES.md); model sha256 == models/predictor_manifest.json model_sha256
+  (37900918…). CI verifies hashes, never retrains.
+- Hardening inertness proof: the repro rerun must still reproduce the bundle's
+  reference out2/results.json byte-identically — any drift: REPORT, do not fix.
+  MEASURED 2026-10-04 (exit 0): every semantic number identical (tau_lgb exact to
+  17 digits, all counts/recalls/p-values identical, "LGB ships" verdict
+  reproduced, median lead gain 260.0 s); two benign divergences reported: one
+  1-ulp scipy CI digit and model BYTES (lightgbm 4.7.0 build drift vs the
+  bundle's unrecorded build) — the shipped artifact stays the record, reference
+  outputs restored, fresh artifacts discarded.
+- Repro of record: `uv run python files/predictor_pipeline.py run --out out2` —
+  out2/ must stay byte-identical afterward (results.json unchanged, fresh
+  out2/predictor.txt sha == manifest). If it differs: REPORT, do not fix
+  (prompt rule — likely a lightgbm version drift; 4.7.0 installed 2026-10-03).
+- Gate-2 pre-registration (GATES.md decisions log, written before any sweep
+  number): GO iff any scenario ≥ 0.5 pp critical-seat health gain at L=300 s;
+  else CUT + reactive-only + curve, README says the predictor was not shipped.
+- Offline results of record (bundle out2/results.json, sealed pipeline): LGB
+  label variant L3600 selected on CAL; test FA ≤ 1.2 × 0.5 budget; ~260 s
+  median lead gain vs best baseline on trained families; comms-holdout 0/15
+  (no generalization to unseen families); sudden death ≈ 0 recall by design.
+
+## 2026-10-04 — console redesign (frontend, g5-local working tree, UNCOMMITTED)
+
+Frontend redesign landed via parallel workflow (7 builders + integrator +
+fresh design reviewer; dynamic-workflow run dwfrun-75399998 completed with
+all gates green). Same locked stack, same §13 tokens; what changed is the
+explanation layer, density and the 3D staging. By surface:
+
+- 3D scene (`components/three/`): procedural Earth globe + atmosphere rim +
+  graticule ("Earth — stylized, not to scale"), seeded starfield, constant
+  screen-size satellite markers (zoom no longer turns them into blobs),
+  label declutter with priority, gentle formation auto-fit (disengages on
+  user drag), ghost slots / trails / failure lines toned down, LVLH axes
+  hint. New: sceneEarth.ts, sceneLabels.ts, sceneCamera.ts, sceneLines.ts.
+- Onboarding (`components/onboarding/`): MissionBrief.tsx first-load overlay
+  — what the swarm is (hypothetical, FIREFLY-1 orbit kept verbatim), live vs
+  replay, the detect→replan→reconfigure→recover story, glossary; "?" reopens.
+  Copy lives in helpContent.ts.
+- Narration (`components/narration/` + `stores/recoveryStore.ts`):
+  NarrationStrip renders the plain-language sentence of NOW (mover names
+  from live role_reassignment events, unchanged rows filtered, per-failure
+  coverage drop/restore). The §13.5 spine carries real event ticks with mono
+  stamps and is seekable in replay.
+- Satellite detail (`satellites/` + `stores/roleHistoryStore.ts`): role +
+  role semantics in plain words, LVLH r/v with axis labels, target slot,
+  Δv, suspect (rule-based slot-drift detector `utils/suspect.ts`, Appendix D
+  display), and the role/task history timeline ("took over slot_0 after
+  SAT-2 failed" → "failed as imager holding slot_0 (DEAD)" → "formation
+  recovered").
+- Telemetry (`dashboard/`): readout rows with explainer tooltips + tabbed
+  charts (Coverage / Deviation / Separation / Δv / Health), event markers,
+  measured reference line on min-sep, health-score derivation in tooltip.
+  The spec's 3-curve coverage comparison is NOT built (the wire carries no
+  reference runs); the chart says so instead of inventing curves.
+- Controls: full replay transport (play/pause/restart/speed/scrub with
+  fetched duration, file picker, Replay badge) visible in console AND
+  presentation layouts; failure injection with mode descriptions;
+  CustomScenarioModal → POST /scenarios/upload (cubesat/api.py additive
+  route: sanitized name, 409 on collision, server-side validation;
+  tests/test_scenario_upload.py).
+- Verified live (first hand, 1920×1080): mission brief → live firefly_swarm
+  run (Earth, markers, labels, narration, measured telemetry: detection
+  latency 4.00 s, Δv sum 441.14 m/s, health 47/100 caution band) → satellite
+  detail with role history → replay two_failure.jsonl (transport, seek,
+  duration, spine) → formation view close-up (markers constant-size) →
+  presentation mode (transport visible, narration present) → custom-scenario
+  modal (client-side JSON validation inline).
+- Gates: `cd frontend && npm run build` ok (tsc + vite, 4.98 s);
+  `uv run pytest -q` full suite exit 0 (workflow gate, includes the
+  concurrent P4 session's tree); hex gate + avoid-ai-design scanner clean.
+- Known cosmetics, not fixed: right-panel tab row overflows at 1920 px
+  (horizontal scrollbar); readout tooltips may clip inside scrolling panels
+  (inferred from CSS, not observed).
+- Playwright note (automation only, not a user bug): buttons inside the
+  streaming panels defeat actionability waits under the 30 Hz re-render
+  cadence; scripted clicks must dispatch inside the page.
+- The tree also carries the concurrent P4 predictor session's work (see the
+  section above). The Suspect display renders wire `risk` when present
+  (Appendix D) and falls back to the rule-based detector otherwise. Commit
+  the two workstreams separately.

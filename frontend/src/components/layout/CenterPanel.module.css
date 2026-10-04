@@ -1,0 +1,9 @@
+/* Full-bleed scene host: chrome.panel's padding and scroll are overridden so
+   the viewport (SwarmScene, flex: 1) fills the panel body edge to edge. */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}

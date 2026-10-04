@@ -1,0 +1,82 @@
+/* Readout row — §13.3. Tokens only (§13.1: no raw colors outside tokens.css).
+   The tooltip is plain chrome: solid raised surface, 1px border, 6px radius,
+   no shadow, no glassmorphism. It animates opacity only (§13.5). */
+
+.row {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  border-bottom: 1px solid var(--border);
+  padding: var(--space-2) 0;
+}
+
+.label {
+  color: var(--ink-muted);
+  font-size: var(--text-body);
+}
+
+/* Dotted underline marks the label as carrying an explanation (§13.6: text
+   affordances, not icons). Keyboard focusable — the tooltip is not
+   hover-only (§13.3: every interactive element ships :focus-visible). */
+.labelTip {
+  cursor: help;
+  text-decoration: underline dotted var(--ink-faint);
+  text-underline-offset: 3px;
+}
+
+.labelTip:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.valueWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.value {
+  font-family: var(--font-mono);
+  font-size: var(--text-metric);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+/* Context line under the value (threshold reference, §8.7 band) — mono at
+   the event-log size, secondary voice. */
+.context {
+  font-family: var(--font-mono);
+  font-size: var(--text-event);
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Pure-CSS tooltip: hover on the row OR focus on the label reveals it.
+   Absolutely positioned so opening it never shifts layout (§13.3). */
+.tip {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  left: 0;
+  z-index: 3;
+  width: max-content;
+  max-width: 300px;
+  background: var(--panel-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  padding: var(--space-2);
+  color: var(--ink);
+  font-size: var(--text-body);
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity var(--motion-duration) var(--motion-ease);
+}
+
+.row:hover .tip,
+.labelTip:hover + .tip,
+.labelTip:focus-visible + .tip {
+  visibility: visible;
+  opacity: 1;
+}

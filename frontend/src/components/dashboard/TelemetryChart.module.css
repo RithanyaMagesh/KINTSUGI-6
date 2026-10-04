@@ -1,0 +1,11 @@
+/* Chart panel styles — §13.4. One module serves every telemetry chart. */
+
+.chart {
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-2);
+}
+
+.chart:first-child {
+  border-top: none;
+  padding-top: 0;
+}

@@ -9,6 +9,7 @@ __pycache__/
 .pytest_tmp/
 .ruff_cache/
 dist/
+frontend/node_modules/
 data/logs/*
 !data/logs/.gitkeep
 !data/logs/nominal.jsonl

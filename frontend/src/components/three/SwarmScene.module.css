@@ -1,0 +1,164 @@
+/* Swarm scene overlay + CSS2D label styles — derived ONLY from tokens.css
+   (§13.1: raw hex lives nowhere else). Overlay chrome is color/border/opacity
+   motion only, 120-180 ms (§13.5); the 3D scene itself is the exempt data. */
+
+.viewport {
+  position: relative;
+  flex: 1;
+  min-height: 320px;
+  overflow: hidden;
+  border-radius: var(--radius-panel);
+  background: var(--bg);
+}
+
+.viewport:focus-visible {
+  outline: 2px solid var(--focus-ring);
+}
+
+.canvasHost {
+  position: absolute;
+  inset: 0;
+}
+
+/* Screen-space label layer — positioned by the controller's collision pass
+   (sceneLabels.ts); root never captures pointers, labels do. */
+.labelLayer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Satellite labels (DOM created by the controller). Buttons so they are
+   keyboard-reachable selection targets (§13.3). Opaque panel background keeps
+   text readable over the Earth/starfield. */
+.satLabel {
+  position: absolute;
+  left: 0;
+  top: 0;
+  visibility: hidden; /* the layout pass places (or keeps hidden) every label */
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  border-left-width: 3px;
+  border-radius: 3px;
+  padding: 1px 6px;
+  font-family: var(--font-mono);
+  font-size: var(--text-tick);
+  line-height: 1.4;
+  white-space: nowrap;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background var(--motion-duration) var(--motion-ease);
+}
+
+.satLabel:hover {
+  background: var(--panel-raised);
+}
+
+.satLabel:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.slotLabel {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-tick);
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+/* Fixed scene captions (mono 12px, non-interactive, frame-of-reference). */
+.earthCaption {
+  position: absolute;
+  left: var(--space-2);
+  bottom: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-tick);
+  color: var(--ink-faint);
+  pointer-events: none;
+}
+
+.axesHint {
+  position: absolute;
+  right: var(--space-2);
+  bottom: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-tick);
+  color: var(--ink-faint);
+  text-align: right;
+  pointer-events: none;
+}
+
+.overlay {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  right: var(--space-2);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: flex-start;
+  pointer-events: none;
+}
+
+.overlay > * {
+  pointer-events: auto;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  padding: var(--space-1) var(--space-2);
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-tick);
+  color: var(--ink-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.banner {
+  margin-left: auto;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  background: var(--panel);
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-body);
+  font-weight: 600;
+}
+
+.stateNotice {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--space-5);
+  background: var(--panel);
+  color: var(--ink-muted);
+}
+
+.stateNotice strong {
+  color: var(--ink);
+  font-size: var(--text-panel-title);
+}
