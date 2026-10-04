@@ -947,6 +947,12 @@ against git).
   (37900918…). CI verifies hashes, never retrains.
 - Hardening inertness proof: the repro rerun must still reproduce the bundle's
   reference out2/results.json byte-identically — any drift: REPORT, do not fix.
+  MEASURED 2026-10-04 (exit 0): every semantic number identical (tau_lgb exact to
+  17 digits, all counts/recalls/p-values identical, "LGB ships" verdict
+  reproduced, median lead gain 260.0 s); two benign divergences reported: one
+  1-ulp scipy CI digit and model BYTES (lightgbm 4.7.0 build drift vs the
+  bundle's unrecorded build) — the shipped artifact stays the record, reference
+  outputs restored, fresh artifacts discarded.
 - Repro of record: `uv run python files/predictor_pipeline.py run --out out2` —
   out2/ must stay byte-identical afterward (results.json unchanged, fresh
   out2/predictor.txt sha == manifest). If it differs: REPORT, do not fix
