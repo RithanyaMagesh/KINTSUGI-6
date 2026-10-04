@@ -103,9 +103,7 @@ export function LandingPage() {
         {/* 1 — Hero: the recovery story plus a schematic of it. */}
         <section className={styles.hero}>
           <div>
-            <h1 className={styles.headline}>
-              <span>A satellite dies.</span> <span>The swarm heals.</span>
-            </h1>
+            <h1 className={styles.headline}>A satellite dies. The swarm heals.</h1>
             <p className={styles.subline}>
               A hypothetical 6-satellite swarm on the real orbit of FIREFLY-1
               (Pixxel). Physics: Clohessy-Wiltshire relative dynamics in the

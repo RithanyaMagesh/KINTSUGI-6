@@ -1,41 +1,13 @@
-/* Shared frame for the reference pages (tutorial / faq / docs) — §13 design
-   law. Tokens ONLY (§13.1: no raw colors outside tokens.css). Static reading
-   surfaces: one centered column, sections separated by 1px rules — readout /
-   definition-list patterns, never card grids (§13.3). No interactive elements
-   ship in these pages, so no hover/focus/disabled states exist to style;
-   commands and state literals render mono (§13.2) like the event log. */
-
-.page {
-  height: 100%;
-  overflow-y: auto;
-  background: var(--bg);
-  color: var(--ink);
-  font-family: var(--font-sans);
-  font-size: var(--text-body);
-  line-height: 1.5;
-}
-
-.inner {
-  max-width: 860px;
-  margin: 0 auto;
-  padding: var(--space-5) var(--space-4) 96px;
-}
-
-/* Page head — title + lede, closed by a strong rule. */
-.head {
-  padding-bottom: var(--space-4);
-  border-bottom: 1px solid var(--border-strong);
-}
-
-.title {
-  margin: 0;
-  font-size: 20px; /* §13.2 panel-title band top: page-level title */
-  font-weight: 600;
-  color: var(--ink);
-}
+/* Shared content styles for the reference pages (tutorial / faq / docs).
+   The page frame (scroll column, h1 title, typographic baseline) comes from
+   src/pages/PageShell — these classes style the content INSIDE it: sections
+   separated by 1px rules, definition lists and numbered steps — readout
+   patterns, never card grids (§13.3). Tokens ONLY (§13.1). No interactive
+   elements ship in these pages, so no hover/focus/disabled states exist to
+   style; commands and state literals render mono (§13.2) like the event log. */
 
 .lede {
-  margin: var(--space-2) 0 0;
+  margin: 0;
   color: var(--ink-muted);
 }
 
@@ -99,7 +71,7 @@
   color: var(--ink);
 }
 
-/* FAQ — question/answer rows, all visible (dense and scannable, §13.3). */
+/* FAQ: question/answer rows, all visible (dense and scannable, §13.3). */
 .qa {
   padding: var(--space-4) 0;
   border-bottom: 1px solid var(--border);
@@ -176,7 +148,7 @@
   padding: 0 var(--space-1);
 }
 
-/* Aside — a quiet note with a rule, not a colored callout. */
+/* Aside: a quiet note with a rule, not a colored callout. */
 .note {
   margin: var(--space-3) 0;
   padding-left: var(--space-3);

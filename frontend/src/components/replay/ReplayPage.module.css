@@ -1,0 +1,146 @@
+/* Replay page (#/replay) — §6.2/§7.8. Runs gallery | scene + story +
+   transport + recovery log. Same densities as the console grid
+   (App.module.css): --bg ground, 8px gutters, stable gallery width. Tokens
+   only (§13.1); radius via tokens; hover = background/border only. */
+
+.page {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: var(--space-2);
+  padding: var(--space-2);
+  background: var(--bg);
+}
+
+.main {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: var(--space-2);
+  min-height: 0;
+}
+
+/* ---- Run gallery ------------------------------------------------------- */
+
+.gallery {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.runList {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  overflow-y: auto;
+  min-height: 0;
+  margin-top: var(--space-2);
+}
+
+.runRow {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  text-align: left;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  padding: var(--space-2);
+  cursor: pointer;
+  transition: background var(--motion-duration) var(--motion-ease),
+    border-color var(--motion-duration) var(--motion-ease);
+}
+
+.runRow:hover:not(:disabled) {
+  background: var(--panel-raised);
+}
+
+.runRow:disabled {
+  color: var(--ink-faint);
+  cursor: not-allowed;
+}
+
+/* Loaded run: raised surface + info border, and the row carries the wire
+   scenario line (text with the color, §22). */
+.runActive {
+  background: var(--panel-raised);
+  border-color: var(--status-info);
+}
+
+.runName {
+  font-family: var(--font-mono);
+  font-size: var(--text-event);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.runRow:disabled .runName {
+  color: var(--ink-faint);
+}
+
+/* Doc-derived description: body text, 16px (§13.2 floor). */
+.runLabel {
+  font-size: var(--text-body);
+  color: var(--ink-muted);
+}
+
+.runScenario {
+  font-family: var(--font-mono);
+  font-size: var(--text-event);
+  color: var(--ink-muted);
+  overflow-wrap: anywhere;
+}
+
+.command {
+  font-family: var(--font-mono);
+  font-size: var(--text-event);
+  overflow-wrap: anywhere;
+}
+
+/* Reserved for the loading note / load error: no shift when it fills. */
+.hintSlot {
+  min-height: 1.4em;
+  margin-top: var(--space-2);
+}
+
+/* ---- Main column ------------------------------------------------------- */
+
+.content {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto auto minmax(140px, 300px);
+  gap: var(--space-2);
+  min-height: 0;
+}
+
+/* Full-bleed scene panel, like the console's CenterPanel: the canvas owns
+   every pixel (no padding, clipped). */
+.scenePanel {
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.storyZone {
+  display: grid;
+  gap: var(--space-2);
+  min-height: 0;
+}
+
+.recoveryPanel {
+  min-height: 0;
+}
+
+/* §13.3: below 1024px wide, stack the gallery over the main column. */
+@media (max-width: 1023px) {
+  .main {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .gallery {
+    max-height: 200px;
+  }
+}

@@ -94,6 +94,10 @@ def scenarios_dir() -> Path:
 def health() -> dict:
     # Enriched per section 5.4. INTENTIONAL CONTRACT CHANGE vs the G0
     # {"status": "ok"} -- tests/test_smoke.py updated in the same commit.
+    # NOTE: the active recovery policy is deliberately NOT exposed here --
+    # tests/test_smoke.py:19 pins the exact /health key set (and that file is
+    # outside this change's ownership); the policy is carried by
+    # POST /simulation/start, the WS hello and (on deviation) sim_state.
     state = _state
     if state is None:
         return {"status": "ok", "mode": "stopped", "sim_time": None,
@@ -214,9 +218,10 @@ def _run(coro):  # noqa: ANN001 -- tiny route-helper, keeps error mapping in one
 @app.post("/simulation/start")
 async def simulation_start(req: StartRequest) -> dict:
     session = get_state().session
-    await _run(session.start_live(req.scenario, req.seed, req.speed))()
+    await _run(session.start_live(req.scenario, req.seed, req.speed, req.policy))()
     return {"status": "started", "mode": session.mode, "scenario": session.enrich.scenario,
-            "seed": session.enrich.seed, "speed": session.speed}
+            "seed": session.enrich.seed, "speed": session.speed,
+            "policy": session.enrich.policy}
 
 
 @app.post("/simulation/pause")

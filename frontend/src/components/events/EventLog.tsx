@@ -12,8 +12,12 @@ import styles from "./EventLog.module.css";
 export default function EventLog() {
   const events = useSimStore((s) => s.events);
   const [collapsed, setCollapsed] = useState(false);
+  const [showAll, setShowAll] = useState(false);
   const listRef = useRef<HTMLOListElement | null>(null);
   const latest = events.length > 0 ? events[events.length - 1] : null;
+  // Dedensify contract: the default view shows the latest 3 rows (the zone is
+  // height-bounded by BottomPanel.module.css, so "show all" scrolls, never grows).
+  const visible = showAll ? events : events.slice(-3);
 
   // Newest visible: keep the list scrolled to the newest row as events land.
   useEffect(() => {
@@ -57,17 +61,29 @@ export default function EventLog() {
           state transitions appear here as they happen.
         </p>
       ) : (
-        <ol id="event-log-body" ref={listRef} className={styles.list}>
-          {events.map((event, i) => (
-            <li key={`${event.simTime}-${i}`} className={styles.row}>
-              <span className={styles.time}>{formatSimTime(event.simTime)}</span>
-              <span className={styles.level} style={{ color: eventLevelColor(event.level) }}>
-                {event.level}
-              </span>
-              <span className={styles.message}>{event.message}</span>
-            </li>
-          ))}
-        </ol>
+        <>
+          <ol id="event-log-body" ref={listRef} className={styles.list}>
+            {visible.map((event, i) => (
+              <li key={`${event.simTime}-${i}`} className={styles.row}>
+                <span className={styles.time}>{formatSimTime(event.simTime)}</span>
+                <span className={styles.level} style={{ color: eventLevelColor(event.level) }}>
+                  {event.level}
+                </span>
+                <span className={styles.message}>{event.message}</span>
+              </li>
+            ))}
+          </ol>
+          {events.length > 3 && (
+            <button
+              type="button"
+              className={chrome.btn}
+              aria-expanded={showAll}
+              onClick={() => setShowAll(!showAll)}
+            >
+              {showAll ? "Show latest" : `Show all (${events.length})`}
+            </button>
+          )}
+        </>
       )}
     </div>
   );

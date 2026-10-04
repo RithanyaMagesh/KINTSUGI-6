@@ -1,10 +1,11 @@
-// FAQ — the questions a judge actually asks, answered with the repo's own
+// FAQ: the questions a judge actually asks, answered with the repo's own
 // recorded words and numbers. Every answer traces to a committed source:
 // FRONTEND_SPEC Appendix C (hypothetical-swarm wording), MASTER_PROMPT 3.3/3.5
 // (detection, allocation), IMPLEMENTATION_NOTES.md (G4 a_max finding, measured
 // results), GATES.md P4 decisions + the sealed bundle's INTEGRATION_PROMPT
 // (predictor status), AGENTS.md invariant 1 (unmeasured). Static Q/A rows —
 // all answers visible at once, dense and scannable (§13.3).
+import PageShell from "../../pages/PageShell";
 import styles from "./pages.module.css";
 
 const QUESTIONS = [
@@ -41,9 +42,9 @@ const QUESTIONS = [
         <p className={styles.p}>
           A <span className={styles.lit}>DEAD</span> satellite goes silent and coasts
           ballistically — it never freezes, and it keeps counting as a collision obstacle the
-          replanner must respect. A <span className={styles.lit}>THRUSTER_OUT</span>{" "}
-          satellite keeps reporting heartbeats but cannot maneuver — invisible to failure
-          detection by design, shown as a failure annotation in the UI.
+          replanner must respect. A <span className={styles.lit}>THRUSTER_OUT</span> satellite
+          keeps reporting heartbeats but cannot maneuver — invisible to failure detection by
+          design, shown as a failure annotation in the UI.
         </p>
       </>
     ),
@@ -74,8 +75,8 @@ const QUESTIONS = [
     a: (
       <>
         <p className={styles.p}>
-          Delta-v is the velocity change a satellite&apos;s thrusters have spent, in m/s —
-          the fuel cost of flying to a new slot. Thrust is saturated at an engine limit{" "}
+          Delta-v is the velocity change a satellite&apos;s thrusters have spent, in m/s — the
+          fuel cost of flying to a new slot. Thrust is saturated at an engine limit{" "}
           <span className={styles.lit}>a_max</span>, a scenario parameter.
         </p>
         <p className={styles.p}>
@@ -83,8 +84,8 @@ const QUESTIONS = [
           cold-gas class — because the measured finding is that at the 8 km formation scale
           the small-satellite default (0.01 m/s²) cannot complete the transfers at all: CW
           dynamics cap what a saturated controller can chase. The result is honest heavy
-          spending — up to 193.68 m/s per satellite in the committed two_failure run,
-          recorded in the gate ledger rather than tuned away. Details in Docs.
+          spending — up to 193.68 m/s per satellite in the committed two_failure run, recorded
+          in the gate ledger rather than tuned away. <a href="#/docs">Details in Docs</a>.
         </p>
       </>
     ),
@@ -98,7 +99,7 @@ const QUESTIONS = [
           telemetry from the simulator&apos;s own failure schedule. Its honest status: on the
           failure families it was trained on it flags precursors earlier than the EWMA/CUSUM
           baseline — about 260 s median lead across 31/31 paired events. It does not
-          generalize to unseen families (family-holdout: 0/15 detected), and sudden death has
+          generalize to unseen families (family holdout: 0/15 detected), and sudden death has
           about zero recall by construction — a satellite that dies without warning has no
           precursor to learn; the reactive 4 s detection is the safety net for it.
         </p>
@@ -142,25 +143,20 @@ const QUESTIONS = [
 
 export default function FaqPage() {
   return (
-    <div className={styles.page}>
-      <div className={styles.inner}>
-        <header className={styles.head}>
-          <h1 className={styles.title}>FAQ</h1>
-          <p className={styles.lede}>
-            Short answers to the questions this console gets asked in the room. Each answer
-            names its source — the repo&apos;s specs, gate ledger and committed logs.
-          </p>
-        </header>
+    <PageShell title="FAQ">
+      <p className={styles.lede}>
+        Short answers to the questions this console gets asked in the room. Each answer names
+        its source — the repo&apos;s specs, gate ledger and committed logs.
+      </p>
 
-        <section className={styles.section} aria-label="Questions and answers">
-          {QUESTIONS.map((item) => (
-            <article key={item.q} className={styles.qa}>
-              <h2 className={styles.q}>{item.q}</h2>
-              {item.a}
-            </article>
-          ))}
-        </section>
-      </div>
-    </div>
+      <section className={styles.section} aria-label="Questions and answers">
+        {QUESTIONS.map((item) => (
+          <article key={item.q} className={styles.qa}>
+            <h2 className={styles.q}>{item.q}</h2>
+            {item.a}
+          </article>
+        ))}
+      </section>
+    </PageShell>
   );
 }

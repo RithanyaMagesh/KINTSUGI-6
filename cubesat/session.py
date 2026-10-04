@@ -179,6 +179,7 @@ class Session:
         self._anchor_t = 0.0
         self._anchor_wall = 0.0
         self._last_emit_wall: float | None = None
+        self._seam_original = None  # cubesat.sim.replan before the policy seam rebind
 
     # ---- read-only view (hello / snapshot / health) -----------------------
 
@@ -187,7 +188,7 @@ class Session:
         return self._last_frame_t
 
     def hello(self) -> dict:
-        return {
+        msg = {
             "type": "hello",
             "mode": self.mode,
             "scenario": self.enrich.scenario,
@@ -195,6 +196,17 @@ class Session:
             "sim_time": self._last_frame_t,
             "skipped": self._source.skipped if self._source else 0,
         }
+        # Policy echo, known-only: live runs always carry the session's active
+        # policy (including the default "hungarian"); stopped and replay omit
+        # the key -- a replayed log records no policy field, and the committed
+        # benchmark logs under data/eval/benchmark include even_split and
+        # do_nothing runs, so claiming "hungarian" for a replay would be a
+        # fabrication (AGENTS.md invariant 1). Absence = unknown: the frontend
+        # defaults to "hungarian" (every pre-policy committed data/logs log IS
+        # a hungarian run by construction).
+        if self.enrich.policy is not None:
+            msg["policy"] = self.enrich.policy
+        return msg
 
     def snapshot(self) -> dict:
         """Current sim_state for WS hello / late joiners (section 5.3)."""
@@ -203,8 +215,19 @@ class Session:
     # ---- lifecycle ---------------------------------------------------------
 
     async def start_live(
-        self, scenario_name: str | None = None, seed: int | None = None, speed: float = 100.0
+        self,
+        scenario_name: str | None = None,
+        seed: int | None = None,
+        speed: float = 100.0,
+        policy: str = "hungarian",
     ) -> None:
+        # Input validation before any state change: a bad policy never clobbers
+        # a running session. The API's pydantic Literal already 422s at the
+        # boundary; this mirrors it for direct session callers (section 5.3).
+        if policy not in POLICY_VALUES:
+            raise SessionError(
+                422, f"unknown policy {policy!r}; expected one of: {', '.join(POLICY_VALUES)}"
+            )
         self._teardown()
         name = scenario_name
         if name is None:
@@ -222,14 +245,19 @@ class Session:
             scenario = scenario.model_copy(update={"seed": seed})
         self.mode = "live"
         self.speed = speed
-        self._prepare(SessionEnrich(scenario=scenario.name, seed=scenario.seed))
+        self._prepare(SessionEnrich(scenario=scenario.name, seed=scenario.seed, policy=policy))
         try:
             lines = await asyncio.wait_for(
                 asyncio.to_thread(run_scenario, scenario), self.run_timeout_s
             )
         except TimeoutError:
-            self._teardown()
+            self._teardown()  # also closes the policy seam
             raise SessionError(504, "scenario computation timed out") from None
+        except BaseException:
+            # Never leak the process-global replan seam on a failed start
+            # (the abandoned thread's output is discarded either way).
+            self._restore_seam()
+            raise
         self._source = LiveSource(scenario, lines)
         await self._spawn_driver()
 
@@ -298,7 +326,9 @@ class Session:
 
     async def inject_failure(self, sat_display_id: str, mode: str) -> None:
         """Live only (section 5.3). 409: not live / run finished / unknown sat /
-        already failed (section 7.1)."""
+        already failed (section 7.1). The recompute (LiveSource.with_failure ->
+        run_scenario) replans under the session's active policy: the replan
+        seam opened in _prepare is still installed across the live lifetime."""
         if self.mode != "live":
             raise SessionError(409, "failure injection requires a live run")
         source = self._source
@@ -339,6 +369,28 @@ class Session:
         if self.mode == "stopped":
             raise SessionError(409, "no simulation running")
 
+    def _install_seam(self) -> None:
+        """Open the replan seam for the selected policy, scoped to the run (set
+        up here in _prepare, restored in _teardown -- the same rebind
+        cubesat.benchmark.run_one performs with try/finally, but held open
+        across the session's whole live lifetime so that failure-injection
+        RECOMPUTES replan under the same policy). "hungarian" never rebinds:
+        a default start runs the untouched core, byte-identical to the golden
+        pin. Process-global by nature -- safe under the API's one-Session-per-
+        process model (section 9.1), the same assumption cubesat.benchmark makes.
+        """
+        replanner = _POLICY_REPLANNERS.get(self.enrich.policy or "")
+        if replanner is None:
+            return
+        self._seam_original = sim_module.replan
+        sim_module.replan = replanner
+
+    def _restore_seam(self) -> None:
+        """Close the replan seam (idempotent; no-op when never opened)."""
+        if self._seam_original is not None:
+            sim_module.replan = self._seam_original
+            self._seam_original = None
+
     def _prepare(self, enrich: SessionEnrich) -> None:
         self.enrich = enrich
         self.paused = False
@@ -347,9 +399,11 @@ class Session:
         self._last_frame_t = None
         self._last_emit_wall = None
         self._snapshot = to_sim_state({"state": "INIT", "t": 0.0}, self.enrich)
+        self._install_seam()
 
     def _teardown(self) -> None:
         self._cancel_driver()
+        self._restore_seam()
         self.mode = "stopped"
         self.paused = False
         self.finished = False

@@ -1,0 +1,273 @@
+/* Live page — #/live. Tokens only (§13.1): no raw hex, no gradients, no
+   shadows, radius via --radius-*. .page/.main mirror the §12.1 console grid
+   (App.module.css) minus the top row — App.tsx owns the persistent
+   TopStatusBar above the Router, so the page fills the area below it. The
+   sidebar column is LeftPanel hosting the builder + risk sections in its
+   documented `builder` slot. */
+
+.page {
+  height: 100%;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  background: var(--bg);
+}
+
+.main {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr) 336px;
+  gap: var(--space-2);
+  min-height: 0;
+}
+
+/* §13.3: below 1024px wide, collapse the side panels over the 3D view. */
+@media (max-width: 1023px) {
+  .main {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+  }
+}
+
+/* Builder-tab sections: flex column on the shared gap scale (the tabbed
+   sidebar's aside carries the panel chrome — no card inside a card). */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.panelHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+/* ---- form scaffolding ---------------------------------------------------- */
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  border: none;
+  padding: 0;
+  min-width: 0;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.fieldGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+/* Input values are numbers a reader scans (§13.2): mono. */
+.numberInput,
+.cellInput {
+  font-family: var(--font-mono);
+  width: 100%;
+  min-width: 0;
+}
+
+.advanced {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  padding: var(--space-2);
+}
+
+.advancedSummary {
+  cursor: pointer;
+  color: var(--ink-muted);
+  font-size: var(--text-body);
+}
+
+.advancedSummary:hover {
+  color: var(--ink);
+}
+
+/* ---- mission readout rows (§13.3: label sans muted · value mono ink) ----- */
+
+.rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-2);
+  padding: var(--space-1) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.rowLabel {
+  color: var(--ink-muted);
+  font-size: var(--text-body);
+  flex: none;
+}
+
+.rowValue {
+  font-family: var(--font-mono);
+  font-size: var(--text-body);
+  color: var(--ink);
+  text-align: right;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.cautionNote {
+  color: var(--status-caution);
+  font-size: var(--text-body);
+}
+
+/* ---- failures table ------------------------------------------------------- */
+
+.failTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.failTable th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--ink-muted);
+  font-size: var(--text-body);
+  padding: var(--space-1) 0;
+  border-bottom: 1px solid var(--border-strong);
+}
+
+.failTable td {
+  padding: var(--space-1) 0;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.failTable tr:last-child td {
+  border-bottom: none;
+}
+
+.failTable .cellInput {
+  padding: var(--space-1) var(--space-2);
+}
+
+/* ---- risk readout (Appendix D) -------------------------------------------- */
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--ink-muted);
+  font-size: var(--text-body);
+  cursor: pointer;
+}
+
+.riskList {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.riskRow {
+  display: grid;
+  grid-template-columns: 3.5rem minmax(0, 1fr) 3.5rem;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.riskId {
+  font-family: var(--font-mono);
+  font-size: var(--text-body);
+  color: var(--ink);
+}
+
+/* Track = structure (--border); bar = semantics (--status-caution), always
+   paired with the mono value on the right (§22 colorblind rule). */
+.riskTrack {
+  display: block;
+  height: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  overflow: hidden;
+}
+
+.riskBar {
+  display: block;
+  height: 100%;
+  background: var(--status-caution);
+}
+
+.riskValue {
+  font-family: var(--font-mono);
+  font-size: var(--text-body);
+  color: var(--ink);
+  text-align: right;
+}
+
+.riskAbsent {
+  color: var(--ink-muted);
+  font-size: var(--text-body);
+}
+
+.riskAbsent a {
+  color: var(--status-info);
+}
+
+.riskAbsent a:hover {
+  text-decoration: underline;
+}
+
+/* ---- run row --------------------------------------------------------------- */
+
+.runBtn {
+  min-width: 176px;
+}
+
+.runStatus {
+  min-height: 1.4em;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---- role grid -------------------------------------------------------------- */
+
+.roleGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-1) var(--space-2);
+}
+
+.roleCell {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.roleSeat {
+  font-family: var(--font-mono);
+  font-size: var(--text-body);
+  color: var(--ink-muted);
+}

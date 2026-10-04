@@ -1,13 +1,22 @@
-/* Console grid — §12.1, densified (§13.3): 8px gutters on the 4-base scale,
-   stable side-panel widths, the 3D center takes everything left over. */
+/* App shell — round 2: persistent top bar + routed page area (pages/Router).
+   The console grid classes below are Router's live/replay bridge layout
+   (ConsoleFallback): 8px gutters on the 4-base scale, stable side-panel
+   widths, the 3D center takes everything left over. */
 
-.console {
+.app {
   height: 100%;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: var(--space-2);
   padding: var(--space-2);
   background: var(--bg);
+}
+
+.console {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  min-height: 0;
 }
 
 .main {

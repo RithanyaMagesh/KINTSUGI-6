@@ -21,6 +21,10 @@ export interface SimFrame {
   coverage: number | null;
   minSep: number | null;
   metrics: Partial<Metrics>;
+  /** Recovery policy the backend session reports on hello/sim_state (`policy`,
+   * additive wire field). null/absent until the wire carries it — never
+   * guessed (repo invariant 1); the UI renders "unmeasured" meanwhile. */
+  policy?: string | null;
 }
 
 export type SimMode = "live" | "replay" | "stopped";

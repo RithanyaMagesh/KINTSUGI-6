@@ -91,7 +91,7 @@ export default function Timeline() {
         ))}
       </div>
       <div className={styles.stamps}>
-        {notable.slice(-4).map((event, i) => {
+        {notable.slice(-2).map((event, i) => {
           const label = `Seek to t + ${event.simTime.toFixed(1)} s`;
           const stamp = (
             <>

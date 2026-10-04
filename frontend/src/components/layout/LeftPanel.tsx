@@ -16,6 +16,7 @@ import SimulationControls from "../controls/SimulationControls";
 import FailureInjectionPanel from "../controls/FailureInjectionPanel";
 import SatelliteList from "../satellites/SatelliteList";
 import EventLog from "../events/EventLog";
+import RecoveryLog from "../recovery/RecoveryLog";
 import SideTabs from "./SideTabs";
 import chrome from "../../styles/chrome.module.css";
 import styles from "./LeftPanel.module.css";
@@ -122,7 +123,15 @@ export default function LeftPanel({ builder }: { builder?: ReactNode }) {
           {
             id: "recovery",
             label: "Recovery",
-            content: <FailureInjectionPanel />,
+            // FailureInjectionPanel is the trigger; RecoveryLog (components/
+            // recovery/, the agent's documented embed surface for this tab)
+            // answers "HOW did it recover" from measured episodes.
+            content: (
+              <>
+                <FailureInjectionPanel />
+                <RecoveryLog />
+              </>
+            ),
           },
           {
             id: "events",

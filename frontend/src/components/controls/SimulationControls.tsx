@@ -44,9 +44,9 @@ export default function SimulationControls({ scenario }: Props) {
   }
 
   function switchToReplay(): void {
-    const el = document.getElementById("replay-controls");
-    el?.scrollIntoView({ block: "nearest" });
-    el?.focus();
+    // Replay chrome lives on the #/replay page since the round-2 page split —
+    // navigating (not scrolling) is the only reach behavior left.
+    window.location.hash = "#/replay";
   }
 
   const live = mode === "live";

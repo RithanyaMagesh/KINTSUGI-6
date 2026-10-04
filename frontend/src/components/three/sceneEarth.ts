@@ -9,14 +9,14 @@
 // origin, in the orbital plane (scene x-y = along-track x radial; the chief's
 // cross-track is 0); its dashes drift along-track as the slow motion cue.
 // The texture is seeded multi-octave value noise, bilinear-interpolated and
-// seamless in longitude — smooth blended landmasses, no square blocks. Sizes
+// wrapping cleanly in longitude: smooth blended landmasses, no square blocks. Sizes
 // are stylized multiples of the measured swarm extent (caption: "not to
 // scale"). No external textures, no new deps. All colors via sceneColors.ts.
 import * as THREE from "three";
 import { SCENE_TOKENS, tokenColor } from "./sceneColors";
 
 // Visual constants (multiples of the measured swarm extent).
-const EARTH_RADIUS_FACTOR = 2.6; // planet radius — large; the formation stays the focus
+const EARTH_RADIUS_FACTOR = 2.6; // planet radius (large); the formation stays the focus
 const LIMB_GAP_FACTOR = 0.9; // formation origin -> limb clearance
 const RING_DASH_FACTOR = 0.45; // orbit-ring dash length (world)
 const RING_GAP_FACTOR = 0.3;
@@ -26,7 +26,7 @@ const EARTH_SPIN_RATE = 0.02; // rad/s surface roll, prograde
 const STAR_RADIUS_FACTOR = 45;
 const STAR_COUNT = 700;
 
-/** Deterministic LCG — the starfield and texture noise must be identical on
+/** Deterministic LCG: the starfield and texture noise must be identical on
  * every load (repo invariant 2 spirit: no unseeded RNG). Never Math.random. */
 function lcg(seed: number): () => number {
   let s = seed >>> 0;

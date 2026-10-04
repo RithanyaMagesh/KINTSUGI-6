@@ -1,0 +1,121 @@
+/* Recovery log — numbered, timestamped episode chains (user demand: show HOW
+   it recovered). Bare section: the host supplies panel chrome (no card inside
+   a card, §13.3). Prose 16px sans, times/ids/slots 14px mono (§13.2); color
+   appears only as the episode-outcome semantics of §13.1. */
+
+.log {
+  min-width: 0;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-2);
+}
+
+.title {
+  font-size: var(--text-panel-title);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.policy {
+  color: var(--ink-muted);
+  font-size: var(--text-body);
+}
+
+.empty {
+  color: var(--ink-muted);
+  font-size: var(--text-body);
+  min-height: 1.4em; /* stable height while empty (§13.3) */
+}
+
+.episodes {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* Outcome on the left rail: recovered = info, in progress = caution,
+   superseded = quiet border. Always paired with the text step that says so
+   (§22: never color alone). */
+.episode {
+  border-left: 2px solid var(--border-strong);
+  padding-left: var(--space-3);
+}
+
+.episodeRecovered {
+  border-left-color: var(--status-info);
+}
+
+.episodeActive {
+  border-left-color: var(--status-caution);
+}
+
+.episodeSuperseded {
+  border-left-color: var(--border);
+}
+
+.episodeTitle {
+  font-size: var(--text-body);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.steps {
+  list-style: none;
+  margin-top: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.step,
+.stepMuted {
+  display: flex;
+  gap: var(--space-3);
+  align-items: baseline;
+  font-size: var(--text-body);
+}
+
+.stepTime {
+  flex: 0 0 108px; /* same time column as the event log rows */
+  font-family: var(--font-mono);
+  font-size: var(--text-event);
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.stepBody {
+  color: var(--ink);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.stepMuted .stepBody {
+  color: var(--ink-muted);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.burnList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+
+/* Telemetry values: 14px mono rows (§13.2 event-log scale). */
+.burn {
+  font-family: var(--font-mono);
+  font-size: var(--text-event);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}

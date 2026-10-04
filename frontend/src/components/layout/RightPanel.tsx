@@ -1,5 +1,5 @@
-// Telemetry panel — the operator's answers to "what is happening and why":
-// §13.3 readout rows on top (label sans muted · value mono 28px+, tooltip
+// Telemetry panel, the operator's answers to "what is happening and why":
+// §13.3 readout rows on top (label sans muted, value mono 28px+, tooltip
 // explains what the metric means and why it is watched — definitions from
 // §7.5/§8.7, no invented numbers), the §7.5 charts behind underline tabs
 // (§13.3: underline indicators, never sliding-pill tabs), the §8.1 role
@@ -94,7 +94,7 @@ export default function RightPanel() {
         />
         <ReadoutRow
           label="Satellites active / failed"
-          value={hasSats ? `${active} active · ${failed} failed` : null}
+          value={hasSats ? `${active} active, ${failed} failed` : null}
           tip="Live fleet health from sats[].status — how many satellites are flying versus failed; the degradation picture at a glance (spec 7.5)."
         />
         <ReadoutRow

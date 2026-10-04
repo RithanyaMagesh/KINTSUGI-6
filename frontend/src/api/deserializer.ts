@@ -25,10 +25,22 @@ export type Deserialized =
       mode: SimMode;
       scenario: string | null;
       seed: number | null;
+      /** Recovery policy the session reports (additive `policy` field). null
+       * while the backend predates the field — never guessed (invariant 1). */
+      policy: string | null;
     };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+/** Additive wire field: the session's recovery policy (hello and sim_state
+ * both carry it once the backend grows it; cubesat/session.py). Read off the
+ * raw record — SimStateMessage in types/events.ts predates the field. Empty
+ * or missing -> null; the UI renders "unmeasured", never a guessed default
+ * (repo invariant 1). */
+function readPolicy(raw: Record<string, unknown>): string | null {
+  return typeof raw.policy === "string" && raw.policy.length > 0 ? raw.policy : null;
 }
 
 function toVec3(raw: unknown): [number, number, number] | null {
@@ -122,7 +134,9 @@ export function deserializeMessage(raw: unknown): Deserialized | null {
         return null; // malformed sim_state: dropped, last good state kept (§18)
       }
       const frame = toSimFrame(raw as unknown as SimStateMessage);
-      return { kind: "frame", frame };
+      // policy is read off the raw record (see readPolicy) and attached here —
+      // SimFrame.policy is optional, so no other frame constructor breaks.
+      return { kind: "frame", frame: { ...frame, policy: readPolicy(raw) } };
     }
     case "event": {
       const event = toEvent(raw as unknown as EventMessage);
@@ -140,6 +154,7 @@ export function deserializeMessage(raw: unknown): Deserialized | null {
         mode: mode as SimMode,
         scenario: typeof raw.scenario === "string" ? raw.scenario : null,
         seed: typeof raw.seed === "number" ? raw.seed : null,
+        policy: readPolicy(raw),
       };
     }
     default:

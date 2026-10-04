@@ -74,7 +74,7 @@ export const glossary: GlossaryEntry[] = [
   {
     term: "Suspect",
     definition:
-      "A failure-risk annotation for a satellite that still reports heartbeats but shows rule-based signs of degradation. It is an annotation, not a satellite status: the learned risk predictor was cut from the endgame plan, and a suspect alert arrives as an ordinary warning event (spec Appendix D).",
+      "A failure-risk annotation for a satellite that still reports heartbeats but shows rule-based signs of degradation. It is an annotation, not a satellite status. The learned predictor is a sealed LightGBM pipeline (trained on synthetic degradation — strong on trained families, it does not generalize to unseen fault families, and sudden death is unpredictable by construction); when its risk rides the wire the suspect label arms early. A suspect alert arrives as an ordinary warning event (spec Appendix D).",
   },
 ];
 
