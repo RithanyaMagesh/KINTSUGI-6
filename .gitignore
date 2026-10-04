@@ -20,3 +20,15 @@ data/eval/benchmark/
 
 # P1 Pareto sweep per-run JSONL logs (ENDGAME_PLAN 4) -- same rule as P0
 data/eval/pareto/
+
+# Pitch-deck audit scratch (local only; ~1.3 GB of screenshots/logs)
+audit_out/
+
+# gitdiagram.com render of the repo (regenerable from gitdiagram.com/dptel22/cubesat)
+diagram.png
+
+# graphify working state from re-runs; the committed knowledge graph is
+# GRAPH_REPORT.md / graph.json / graph.html / manifest.json / cost.json
+graphify-out/.graphify_*
+graphify-out/_ast_log.txt
+graphify-out/cache/
