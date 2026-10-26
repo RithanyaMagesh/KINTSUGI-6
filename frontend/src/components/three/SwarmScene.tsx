@@ -166,7 +166,7 @@ export default function SwarmScene() {
       <div ref={hostRef} className={styles.canvasHost} />
       <div className={styles.overlay}>
         <div className={styles.controls}>
-          {/* Prominent Two-View Switcher: Earth orbit view vs Formation array view */}
+          {/* Prominent Two-View Switcher: Global Orbit vs Formation Array */}
           <div className={styles.viewSwitcher} role="group" aria-label="3D view mode">
             <button
               type="button"
@@ -174,7 +174,7 @@ export default function SwarmScene() {
               onClick={() => setOrbitViewMode("global")}
               aria-pressed={orbitViewMode === "global"}
             >
-              Earth orbit view
+              Global Orbit
             </button>
             <button
               type="button"
@@ -182,7 +182,7 @@ export default function SwarmScene() {
               onClick={() => setOrbitViewMode("local")}
               aria-pressed={orbitViewMode === "local"}
             >
-              Formation array view
+              Formation Array
             </button>
           </div>
 
@@ -233,8 +233,8 @@ export default function SwarmScene() {
 
       <div className={styles.earthCaption}>
         {orbitViewMode === "global"
-          ? "Earth orbit view · Constellation orbiting Earth in inclined LEO"
-          : "Formation array view · Local 2:1 Clohessy-Wiltshire relative ellipse"}
+          ? "Global Orbit · Constellation orbiting Earth in inclined LEO"
+          : "Formation Array · Local 2:1 Clohessy-Wiltshire relative grid"}
       </div>
       <div className={styles.axesHint}>
         {orbitViewMode === "global"

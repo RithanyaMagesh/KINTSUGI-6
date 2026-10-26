@@ -70,6 +70,13 @@ export class FormationLines {
     this.applyVisibility();
   }
 
+  refreshTheme(): void {
+    (this.healthy.material as THREE.LineBasicMaterial).color = tokenColor(
+      SCENE_TOKENS.borderStrong,
+    );
+    (this.failed.material as THREE.LineBasicMaterial).color = tokenColor(statusToken("failed"));
+  }
+
   private applyVisibility(): void {
     this.healthy.visible = this.linesOn;
     this.failed.visible = this.linesOn && this.failureActive;

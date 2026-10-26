@@ -165,6 +165,8 @@ export class SwarmSceneController {
     this.bg = tokenColor(SCENE_TOKENS.bg).clone();
     this.scene.background = this.bg.clone();
     this.environment.refreshTheme();
+    this.slots.refreshTheme();
+    this.lines.refreshTheme();
     const nSeats = Math.max(this.lastSats.length, 1);
     const fit = fitFormation(this.lastSats, nSeats);
     this.syncAllObjects(this.lastSats, fit);

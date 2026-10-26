@@ -74,6 +74,17 @@ export class SlotLayer {
     this.group.visible = v;
   }
 
+  refreshTheme(): void {
+    (this.cwEllipseLine.material as THREE.LineBasicMaterial).color = tokenColor(
+      SCENE_TOKENS.cwEllipse,
+    );
+    for (const slot of this.markers.values()) {
+      (slot.connector.material as THREE.LineDashedMaterial).color = tokenColor(
+        statusToken("reconfiguring"),
+      );
+    }
+  }
+
   update(sats: Satellite[], fit: FormationFit, extent: number, selectedId: string | null): void {
     if (!fit.ok || fit.amplitude <= 0) {
       this.group.visible = false;
