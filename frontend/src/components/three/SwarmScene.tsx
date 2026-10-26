@@ -1,8 +1,7 @@
-// SwarmScene — FRONTEND_SPEC §7.2/§14. Thin React wrapper: creates the plain
-// Three.js controller (swarmScene.ts) once, feeds it from the stores via
-// subscriptions (React never re-renders per WS message, §19), and renders the
-// §20 connection/empty states plus the §7.3/§7.4 banners and §8.8 camera
-// presets as chrome overlays.
+// SwarmScene — FRONTEND_SPEC §7.2/§14. Thin React wrapper around the plain
+// Three.js SwarmSceneController.
+// Features the Two-View 3D Toggle ([ Earth orbit view | Formation array view ])
+// and adapts overlay controls to Simplified vs Advanced view mode.
 import { useEffect, useRef, useState } from "react";
 import { useSimStore } from "../../stores/simStore";
 import { useUiStore } from "../../stores/uiStore";
@@ -11,18 +10,14 @@ import { SwarmSceneController, type CameraPreset } from "./swarmScene";
 import chrome from "../../styles/chrome.module.css";
 import styles from "./SwarmScene.module.css";
 
-const PRESETS: Array<{ id: CameraPreset; label: string }> = [
-  { id: "reset", label: "Reset view" },
-  { id: "top", label: "Top view" },
-  { id: "formation", label: "Formation view" },
-  { id: "focus", label: "Focus failed" },
-];
-
 export default function SwarmScene() {
   const hostRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<SwarmSceneController | null>(null);
   const lastBannerRef = useRef<string | null>(null);
-  const presentation = useUiStore((s) => s.presentationMode); // §6.3 hides developer toggles
+  const presentation = useUiStore((s) => s.presentationMode);
+  const viewMode = useUiStore((s) => s.viewMode);
+  const orbitViewMode = useUiStore((s) => s.orbitViewMode);
+  const setOrbitViewMode = useUiStore((s) => s.setOrbitViewMode);
   const [notice, setNotice] = useState<{ title: string; body: string } | null>(null);
   const [banner, setBanner] = useState<{ text: string; token: string } | null>(null);
   const [replayError, setReplayError] = useState<string | null>(null);
@@ -32,9 +27,6 @@ export default function SwarmScene() {
   useEffect(() => {
     const render = (): void => {
       const { connection, satellites, mode } = useSimStore.getState();
-      // §20 connection notices are LIVE-mode language: during replay the
-      // top-bar badge carries the state, and an overlay over a playing
-      // replay misleads (found in the 2026-09-30 live run).
       if (mode === "replay") {
         setNotice(null);
       } else if (connection === "reconnecting") {
@@ -45,9 +37,11 @@ export default function SwarmScene() {
           body: "Live simulation unavailable. Switch to Replay Mode.",
         });
       } else if (satellites.length === 0) {
-        // §24.2 verbatim when the session is stopped; §6.1 waiting text otherwise.
         if (mode === "stopped") {
-          setNotice({ title: "Simulation stopped.", body: "Press Start to begin." });
+          setNotice({
+            title: "Simulation ready",
+            body: "Configure your swarm on the left and press Start live simulation.",
+          });
         } else {
           setNotice({ title: "Waiting for simulation data", body: "" });
         }
@@ -67,16 +61,18 @@ export default function SwarmScene() {
       useUiStore.getState().selectSatellite(id);
     });
     sceneRef.current = controller;
+    controller.setOrbitViewMode(useUiStore.getState().orbitViewMode);
+
+    let prevOrbitMode = useUiStore.getState().orbitViewMode;
+    let prevTheme = useUiStore.getState().theme;
 
     const unsubSim = useSimStore.subscribe((s) => {
       controller.update({
         satellites: s.satellites,
         selectedId: useUiStore.getState().selectedSatelliteId,
         missionState: s.missionState,
+        simTime: s.simTime ?? undefined,
       });
-      // §7.3/§7.4 banner sequence: the mission-state literals themselves
-      // (uppercase is a backend data value, §13.2). FAILURE_DETECTED carries
-      // the latest critical event message so the judge sees WHICH satellite.
       const state = s.missionState;
       const bannerState =
         state === "FAILURE_DETECTED" ||
@@ -95,7 +91,7 @@ export default function SwarmScene() {
       setBanner({
         text:
           bannerState === "FAILURE_DETECTED" && critical !== undefined
-            ? critical.message // event message as delivered — no ALL-CAPS restyle (§13.2)
+            ? critical.message
             : bannerState,
         token:
           bannerState === "FAILURE_DETECTED"
@@ -105,11 +101,21 @@ export default function SwarmScene() {
               : "var(--status-info)",
       });
     });
+
     const unsubUi = useUiStore.subscribe((s) => {
+      if (s.orbitViewMode !== prevOrbitMode) {
+        prevOrbitMode = s.orbitViewMode;
+        controller.setOrbitViewMode(s.orbitViewMode);
+      }
+      if (s.theme !== prevTheme) {
+        prevTheme = s.theme;
+        controller.refreshTheme();
+      }
       controller.update({
         satellites: useSimStore.getState().satellites,
         selectedId: s.selectedSatelliteId,
         missionState: useSimStore.getState().missionState,
+        simTime: useSimStore.getState().simTime ?? undefined,
       });
     });
 
@@ -119,7 +125,6 @@ export default function SwarmScene() {
       controller.dispose();
       sceneRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function applyPreset(preset: CameraPreset): void {
@@ -140,8 +145,6 @@ export default function SwarmScene() {
   }
 
   async function openReplay(): Promise<void> {
-    // §20.1: one button to the fallback. Loads the LAST file the backend
-    // lists (the same /replay/files list ReplayControls shows).
     setReplayError(null);
     try {
       const { files } = await backend.replayFiles();
@@ -163,19 +166,49 @@ export default function SwarmScene() {
       <div ref={hostRef} className={styles.canvasHost} />
       <div className={styles.overlay}>
         <div className={styles.controls}>
-          {PRESETS.map((p) => (
-            <button key={p.id} className={chrome.btn} onClick={() => applyPreset(p.id)}>
-              {p.label}
+          {/* Prominent Two-View Switcher: Earth orbit view vs Formation array view */}
+          <div className={styles.viewSwitcher} role="group" aria-label="3D view mode">
+            <button
+              type="button"
+              className={`${styles.viewBtn} ${orbitViewMode === "global" ? styles.viewBtnActive : ""}`}
+              onClick={() => setOrbitViewMode("global")}
+              aria-pressed={orbitViewMode === "global"}
+            >
+              Earth orbit view
             </button>
-          ))}
+            <button
+              type="button"
+              className={`${styles.viewBtn} ${orbitViewMode === "local" ? styles.viewBtnActive : ""}`}
+              onClick={() => setOrbitViewMode("local")}
+              aria-pressed={orbitViewMode === "local"}
+            >
+              Formation array view
+            </button>
+          </div>
+
+          <button
+            type="button"
+            className={chrome.btn}
+            onClick={() => applyPreset(orbitViewMode === "global" ? "reset" : "formation")}
+          >
+            Reset camera
+          </button>
+          <button
+            type="button"
+            className={chrome.btn}
+            onClick={() => applyPreset("focus")}
+          >
+            Track failed
+          </button>
         </div>
-        {!presentation && (
+
+        {!presentation && viewMode === "advanced" && (
           <div className={styles.toggles}>
             {(
               [
                 ["labels", "Labels"],
                 ["trails", "Trails"],
-                ["lines", "Formation lines"],
+                ["lines", "Formation links"],
                 ["slots", "Target slots"],
               ] as const
             ).map(([key, label]) => (
@@ -190,15 +223,25 @@ export default function SwarmScene() {
             ))}
           </div>
         )}
+
         {banner !== null && (
           <div className={styles.banner} style={{ color: banner.token }} role="status">
             {banner.text}
           </div>
         )}
       </div>
-      {/* Fixed scene captions — frame-of-reference honesty, mono 12px (§13.2). */}
-      <div className={styles.earthCaption}>Earth - stylized, not to scale</div>
-      <div className={styles.axesHint}>x radial / y along-track / z cross-track</div>
+
+      <div className={styles.earthCaption}>
+        {orbitViewMode === "global"
+          ? "Earth orbit view · Constellation orbiting Earth in inclined LEO"
+          : "Formation array view · Local 2:1 Clohessy-Wiltshire relative ellipse"}
+      </div>
+      <div className={styles.axesHint}>
+        {orbitViewMode === "global"
+          ? "Click any satellite to inspect or inject a fault"
+          : "LVLH: x radial · y along-track · z cross-track"}
+      </div>
+
       {notice !== null && (
         <div className={styles.stateNotice}>
           <strong>{notice.title}</strong>

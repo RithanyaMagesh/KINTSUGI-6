@@ -1,35 +1,24 @@
-// Stylized environment — Earth at the RING CENTRE + faint starfield + the
-// chief-orbit ring (2026-10-04 staging, user verdicts: "satellites should be
-// ORBITING Earth", then bug 3: "didn't even make Earth the middle"). LVLH +x
-// is radial AWAY from Earth (repo invariant 4) and lvlhToScene maps LVLH x ->
-// scene y (up), so nadir (-x LVLH) is scene -y: Earth hangs BELOW the
-// formation's frame origin from every camera azimuth, and the chief orbit is
-// a dashed circle CENTRED ON EARTH through that origin, in the orbital plane
-// (scene x-y = along-track x radial; the chief's cross-track is 0). The
-// camera treats the ring centre (= Earth centre, exposed via frame()) as the
-// orbited body it frames — Earth-centred fit in sceneCamera.ts; the ring's
-// dashes drift along-track as the slow motion cue.
-// The texture is seeded multi-octave value noise, bilinear-interpolated and
-// wrapping cleanly in longitude: smooth blended landmasses, no square blocks. Sizes
-// are stylized multiples of the measured swarm extent (caption: "not to
-// scale"). No external textures, no new deps. All colors via sceneColors.ts.
+// Orbital Environment — Natural shaded Earth globe at [0, 0, 0] + inclined LEO
+// chief-orbit ring + deterministic starfield + local LVLH reference grid.
+// Supports two view modes:
+// - "global" (Earth orbit view): Earth centered at [0, 0, 0] with satellites
+//   orbiting all the way around the planet along an inclined orbital ring.
+// - "local" (Formation array view): Earth hidden, showing the close-up 2:1
+//   Clohessy-Wiltshire relative formation grid around [0, 0, 0].
+// All colors derive strictly from tokens.css via sceneColors.ts (§13.1).
 import * as THREE from "three";
 import { SCENE_TOKENS, tokenColor } from "./sceneColors";
+import type { OrbitViewMode } from "../../stores/uiStore";
 
-// Visual constants (multiples of the measured swarm extent).
-const EARTH_RADIUS_FACTOR = 2.6; // planet radius; ring = a few extents out, so the
-// pulled-back Earth-centred frame still reads (caption: "not to scale")
-const LIMB_GAP_FACTOR = 0.9; // formation origin -> limb clearance
-const RING_DASH_FACTOR = 0.45; // orbit-ring dash length (world)
-const RING_GAP_FACTOR = 0.3;
-const RING_OPACITY = 0.4; // thin, low-alpha chrome
-const ORBIT_DRIFT_RATE = 0.05; // rad/s ring dash drift — a slow crawl
-const EARTH_SPIN_RATE = 0.02; // rad/s surface roll, prograde
+export const EARTH_RADIUS_FACTOR = 1.45;
+export const ORBIT_RADIUS_FACTOR = 2.35;
+export const ORBIT_INCLINATION_RAD = (22 * Math.PI) / 180;
+const EARTH_SPIN_RATE = 0.025;
 const STAR_RADIUS_FACTOR = 45;
-const STAR_COUNT = 700;
+const STAR_COUNT = 800;
 
-/** Deterministic LCG: the starfield and texture noise must be identical on
- * every load (repo invariant 2 spirit: no unseeded RNG). Never Math.random. */
+/** Deterministic LCG: identical starfield and continent texture on every load
+ * (repo invariant 2: no unseeded RNG). */
 function lcg(seed: number): () => number {
   let s = seed >>> 0;
   return () => {
@@ -47,19 +36,6 @@ function smoothstep(a: number, b: number, x: number): number {
   return smooth01((x - a) / (b - a));
 }
 
-/** sRGB bytes of a token color (getStyle/getHexString round-trips the CSS
- * value, so canvas pixels match the chrome palette exactly). */
-function rgbOf(color: THREE.Color): [number, number, number] {
-  const hex = color.getHexString();
-  return [
-    Number.parseInt(hex.slice(0, 2), 16),
-    Number.parseInt(hex.slice(2, 4), 16),
-    Number.parseInt(hex.slice(4, 6), 16),
-  ];
-}
-
-/** One noise octave: p cells around the equator (periodic in u), p/2
- * pole-to-pole. Bilinear + smoothstep sampling — smooth blobs, no blocks. */
 interface Octave {
   p: number;
   lv: number;
@@ -68,8 +44,8 @@ interface Octave {
 }
 
 function buildOctaves(rnd: () => number): Octave[] {
-  const periods = [12, 24, 48, 96];
-  const weights = [0.42, 0.27, 0.18, 0.13];
+  const periods = [10, 20, 40, 80];
+  const weights = [0.44, 0.28, 0.17, 0.11];
   return periods.map((p, i) => {
     const lv = p / 2;
     const vals = new Float32Array(p * lv);
@@ -83,9 +59,9 @@ function sampleOctave(o: Octave, u01: number, v01: number): number {
   const fy = v01 * o.lv;
   const tx = smooth01(fx - Math.floor(fx));
   const ty = smooth01(fy - Math.floor(fy));
-  const x0 = Math.floor(fx) % o.p; // periodic in u — seamless equirect wrap
+  const x0 = Math.floor(fx) % o.p;
   const x1 = (x0 + 1) % o.p;
-  const y0 = Math.min(Math.max(Math.floor(fy), 0), o.lv - 1); // clamped in v
+  const y0 = Math.min(Math.max(Math.floor(fy), 0), o.lv - 1);
   const y1 = Math.min(y0 + 1, o.lv - 1);
   const a = o.vals[y0 * o.p + x0];
   const b = o.vals[y0 * o.p + x1];
@@ -96,86 +72,98 @@ function sampleOctave(o: Octave, u01: number, v01: number): number {
   return top + (bot - top) * ty;
 }
 
-/** Canvas texture 2048x1024: a 1024x512 per-pixel value-noise field (ocean ->
- * land with a soft coast band, subtle relief shading, land faded toward the
- * poles so equirect pinching never shows) bilinear-upscaled 2x, plus a faint
- * graticule. One-time cost (~50 ms). */
+/** Build a smooth procedural equirectangular Earth texture using ocean blue,
+ * continental green, and subtle lat/lon graticule lines from tokens.css. */
 function buildEarthTexture(): THREE.CanvasTexture {
-  const W = 1024;
-  const H = 512;
-  const w = W * 2;
-  const h = H * 2;
+  const W = 512;
+  const H = 256;
   const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
+  canvas.width = W;
+  canvas.height = H;
   const ctx = canvas.getContext("2d");
-  if (ctx === null) throw new Error("2D canvas context unavailable");
+  if (ctx === null) {
+    return new THREE.CanvasTexture(canvas);
+  }
+
+  const ocean = tokenColor(SCENE_TOKENS.earthOcean);
+  const land = tokenColor(SCENE_TOKENS.earthLand);
+  const grat = tokenColor(SCENE_TOKENS.earthGraticule);
+  const img = ctx.createImageData(W, H);
+  const data = img.data;
+
   const rnd = lcg(19700101);
-  const [ocR, ocG, ocB] = rgbOf(tokenColor(SCENE_TOKENS.earthOcean));
-  const [laR, laG, laB] = rgbOf(tokenColor(SCENE_TOKENS.earthLand));
   const octaves = buildOctaves(rnd);
 
-  const field = document.createElement("canvas");
-  field.width = W;
-  field.height = H;
-  const fctx = field.getContext("2d");
-  if (fctx === null) throw new Error("2D canvas context unavailable");
-  const img = fctx.createImageData(W, H);
-  const px = img.data;
   for (let y = 0; y < H; y++) {
-    const v01 = (y + 0.5) / H;
-    const polar = smoothstep(0.06, 0.14, Math.min(v01, 1 - v01));
+    const v01 = y / (H - 1);
+    const polar = smoothstep(0.06, 0.16, Math.min(v01, 1 - v01));
     for (let x = 0; x < W; x++) {
-      const u01 = (x + 0.5) / W;
+      const u01 = x / W;
       let n = 0;
       for (const o of octaves) n += o.weight * sampleOctave(o, u01, v01);
-      const t = smoothstep(0.52, 0.6, n) * polar;
-      const shade = 0.82 + 0.36 * n; // subtle relief in both media
-      const i = (y * W + x) * 4;
-      px[i] = Math.min(255, (ocR + (laR - ocR) * t) * shade);
-      px[i + 1] = Math.min(255, (ocG + (laG - ocG) * t) * shade);
-      px[i + 2] = Math.min(255, (ocB + (laB - ocB) * t) * shade);
-      px[i + 3] = 255;
+      const landMask = smoothstep(0.48, 0.54, n * polar);
+
+      // Subtle directional shading across the globe texture
+      const shade = 0.78 + 0.22 * Math.sin(v01 * Math.PI);
+      let r = (ocean.r * (1 - landMask) + land.r * landMask) * shade;
+      let g = (ocean.g * (1 - landMask) + land.g * landMask) * shade;
+      let b = (ocean.b * (1 - landMask) + land.b * landMask) * shade;
+
+      // Subtle 30-deg lat/lon graticule lines
+      const latDeg = v01 * 180;
+      const lonDeg = u01 * 360;
+      const onLat = Math.min(latDeg % 30, 30 - (latDeg % 30)) < 0.65;
+      const onLon = Math.min(lonDeg % 30, 30 - (lonDeg % 30)) < 0.65;
+      if (onLat || onLon) {
+        r = r * 0.72 + grat.r * 0.28;
+        g = g * 0.72 + grat.g * 0.28;
+        b = b * 0.72 + grat.b * 0.28;
+      }
+
+      const idx = (y * W + x) * 4;
+      data[idx] = Math.round(Math.min(1, Math.max(0, r)) * 255);
+      data[idx + 1] = Math.round(Math.min(1, Math.max(0, g)) * 255);
+      data[idx + 2] = Math.round(Math.min(1, Math.max(0, b)) * 255);
+      data[idx + 3] = 255;
     }
   }
-  fctx.putImageData(img, 0, 0);
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(field, 0, 0, W, H, 0, 0, w, h);
-
-  // Faint graticule: meridians + parallels every 15 deg, brighter equator.
-  // 1 px at 2048 — texture detail, never a UI element.
-  ctx.lineWidth = 1;
-  ctx.strokeStyle = tokenColor(SCENE_TOKENS.earthGraticule).getStyle();
-  ctx.globalAlpha = 0.16;
-  for (let i = 0; i <= 24; i++) {
-    const x = (i * w) / 24;
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, h);
-    ctx.stroke();
-  }
-  for (let j = 1; j < 12; j++) {
-    const y = (j * h) / 12;
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(w, y);
-    ctx.stroke();
-  }
-  ctx.globalAlpha = 0.28;
-  ctx.beginPath();
-  ctx.moveTo(0, h / 2);
-  ctx.lineTo(w, h / 2);
-  ctx.stroke();
-
+  ctx.putImageData(img, 0, 0);
   const tex = new THREE.CanvasTexture(canvas);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 8;
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+  tex.needsUpdate = true;
   return tex;
 }
 
-/** Backside fresnel-style rim: the planet mesh writes depth, so only the
- * annulus outside the silhouette shows the shell — a thin glowing limb. */
+function buildEarthGlobe(): {
+  group: THREE.Group;
+  rebuildTexture: () => void;
+  dispose: () => void;
+} {
+  const globe = new THREE.Group();
+  const sphereGeo = new THREE.SphereGeometry(1, 64, 48);
+  let tex = buildEarthTexture();
+  const sphereMat = new THREE.MeshBasicMaterial({ map: tex });
+  const sphereMesh = new THREE.Mesh(sphereGeo, sphereMat);
+  globe.add(sphereMesh);
+
+  return {
+    group: globe,
+    rebuildTexture: () => {
+      tex.dispose();
+      tex = buildEarthTexture();
+      sphereMat.map = tex;
+      sphereMat.needsUpdate = true;
+    },
+    dispose: () => {
+      tex.dispose();
+      sphereGeo.dispose();
+      sphereMat.dispose();
+    },
+  };
+}
+
+/** Subtle blue atmospheric rim around Earth. */
 function buildAtmosphere(): THREE.Mesh {
   const mat = new THREE.ShaderMaterial({
     uniforms: { uColor: { value: tokenColor(SCENE_TOKENS.atmo) } },
@@ -190,8 +178,8 @@ function buildAtmosphere(): THREE.Mesh {
       uniform vec3 uColor;
       varying vec3 vNormal;
       void main() {
-        float rim = pow(clamp(0.72 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 0.0, 2.0), 3.5);
-        gl_FragColor = vec4(uColor * rim * 0.55, 1.0);
+        float rim = pow(clamp(0.72 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 0.0, 2.0), 3.4);
+        gl_FragColor = vec4(uColor * rim * 0.45, 1.0);
       }
     `,
     side: THREE.BackSide,
@@ -199,28 +187,31 @@ function buildAtmosphere(): THREE.Mesh {
     transparent: true,
     depthWrite: false,
   });
-  return new THREE.Mesh(new THREE.SphereGeometry(1.15, 72, 48), mat);
+  return new THREE.Mesh(new THREE.SphereGeometry(1.11, 64, 48), mat);
 }
 
-/** Chief-orbit ring: unit circle in the local x-y plane (the orbital plane:
- * along-track x radial), dashed, scaled+positioned so the circle passes
- * through the formation's frame origin. Dashes drift along-track in
- * update() — the "moving along the orbit" cue. */
+/** Inclined Chief-Orbit Ring encircling Earth at [0, 0, 0]. */
 function buildOrbitRing(): THREE.Line {
   const N = 256;
   const pts: THREE.Vector3[] = [];
+  const cosI = Math.cos(ORBIT_INCLINATION_RAD);
+  const sinI = Math.sin(ORBIT_INCLINATION_RAD);
   for (let i = 0; i <= N; i++) {
     const t = (i / N) * Math.PI * 2;
-    pts.push(new THREE.Vector3(Math.cos(t), Math.sin(t), 0));
+    const x = Math.cos(t);
+    const zFlat = Math.sin(t);
+    const y = -zFlat * sinI;
+    const z = zFlat * cosI;
+    pts.push(new THREE.Vector3(x, y, z));
   }
   const line = new THREE.Line(
     new THREE.BufferGeometry().setFromPoints(pts),
     new THREE.LineDashedMaterial({
       color: tokenColor(SCENE_TOKENS.orbit),
       transparent: true,
-      opacity: RING_OPACITY,
-      dashSize: 0.12, // unit-circle arc units — rescaled to extent in place()
-      gapSize: 0.08,
+      opacity: 0.55,
+      dashSize: 0.08,
+      gapSize: 0.05,
       depthWrite: false,
     }),
   );
@@ -228,8 +219,6 @@ function buildOrbitRing(): THREE.Line {
   return line;
 }
 
-/** The placement the camera frames: the chief-orbit ring centre (= Earth's
- * centre) and the ring radius — the circle the formation rides. */
 export interface EnvFrame {
   center: [number, number, number];
   ringRadius: number;
@@ -237,11 +226,9 @@ export interface EnvFrame {
 
 export interface Environment {
   group: THREE.Group;
-  /** Re-fit the faint reference grid + body scales when the measured swarm
-   * extent leaves the current scale band; returns the tracked extent. */
   trackExtent(maxR: number): number;
-  /** The staging in effect: ring centre (= Earth) + ring radius — the fit
-   * subject of the Earth-centred camera (sceneCamera.ts). */
+  setMode(mode: OrbitViewMode): void;
+  refreshTheme(): void;
   frame(): EnvFrame;
   update(dt: number, reducedMotion: boolean): void;
   dispose(): void;
@@ -250,26 +237,16 @@ export interface Environment {
 export function createEnvironment(): Environment {
   const group = new THREE.Group();
 
-  // Lights affect only the lit Earth material; every marker is MeshBasicMaterial.
-  const white = tokenColor(SCENE_TOKENS.ink).getHex();
-  const dir = new THREE.DirectionalLight(white, 2.4);
-  dir.position.set(3, 2, 2); // overhead-ish sun: the visible upper hemisphere reads bright
-  const amb = new THREE.AmbientLight(white, 0.5); // was 0.32 — Earth is bigger now, keep it readable
-  group.add(dir, amb);
-
-  const earth = new THREE.Mesh(
-    new THREE.SphereGeometry(1, 96, 64), // smooth silhouette — Earth spans half the frame
-    new THREE.MeshLambertMaterial({ map: buildEarthTexture() }),
-  );
+  const earthGlobe = buildEarthGlobe();
   const atmo = buildAtmosphere();
   const earthGroup = new THREE.Group();
-  earthGroup.add(earth, atmo);
+  earthGroup.add(earthGlobe.group, atmo);
   group.add(earthGroup);
 
   const ring = buildOrbitRing();
   group.add(ring);
 
-  // Starfield: points on a unit sphere, scaled far out. Seeded, tiny, faint.
+  // Starfield: deterministic points on a far sphere.
   const rnd = lcg(42);
   const starPos = new Float32Array(STAR_COUNT * 3);
   for (let i = 0; i < STAR_COUNT; i++) {
@@ -282,90 +259,102 @@ export function createEnvironment(): Environment {
   }
   const starGeo = new THREE.BufferGeometry();
   starGeo.setAttribute("position", new THREE.BufferAttribute(starPos, 3));
-  const stars = new THREE.Points(
-    starGeo,
-    new THREE.PointsMaterial({
-      color: tokenColor(SCENE_TOKENS.star),
-      size: 1.6, // px — sizeAttenuation false
-      sizeAttenuation: false,
-      transparent: true,
-      opacity: 0.45,
-      depthWrite: false,
-    }),
-  );
+  const starMat = new THREE.PointsMaterial({
+    color: tokenColor(SCENE_TOKENS.star),
+    size: 1.5,
+    sizeAttenuation: false,
+    transparent: true,
+    opacity: 0.4,
+    depthWrite: false,
+  });
+  const stars = new THREE.Points(starGeo, starMat);
   const starGroup = new THREE.Group();
   starGroup.add(stars);
   group.add(starGroup);
 
-  /** One staging pass: Earth's top limb sits LIMB_GAP below the formation
-   * origin; the ring (radius = Earth-center distance, centred on Earth)
-   * passes through it. The placement is exposed via frame() for the camera. */
-  let envFrame: EnvFrame = { center: [0, 0, 0], ringRadius: 0 };
-  function place(e: number): void {
-    const radius = e * EARTH_RADIUS_FACTOR;
-    const centerDist = radius + e * LIMB_GAP_FACTOR;
-    envFrame = { center: [0, -centerDist, 0], ringRadius: centerDist };
-    earthGroup.scale.setScalar(radius);
-    earthGroup.position.set(0, -centerDist, 0); // nadir = scene -y (lvlhToScene)
-    ring.position.copy(earthGroup.position);
-    ring.scale.setScalar(centerDist);
-    const rm = ring.material as THREE.LineDashedMaterial;
-    rm.dashSize = (e * RING_DASH_FACTOR) / centerDist; // lineDistance attr is unit-arc
-    rm.gapSize = (e * RING_GAP_FACTOR) / centerDist;
-    starGroup.scale.setScalar(e * STAR_RADIUS_FACTOR);
-  }
-  place(1000); // pre-data staging (the §20 notice overlay covers the canvas)
-
-  let extent = 0;
+  let currentMode: OrbitViewMode = "global";
+  let extent = 1000;
+  let envFrame: EnvFrame = { center: [0, 0, 0], ringRadius: 1000 * ORBIT_RADIUS_FACTOR };
   let grid: THREE.GridHelper | null = null;
+
+  function place(e: number): void {
+    const earthR = e * EARTH_RADIUS_FACTOR;
+    const orbitR = e * ORBIT_RADIUS_FACTOR;
+    // Earth is ALWAYS centered at [0, 0, 0]; satellites orbit around [0, 0, 0]
+    envFrame = {
+      center: [0, 0, 0],
+      ringRadius: currentMode === "global" ? orbitR : e * 1.35,
+    };
+    earthGroup.position.set(0, 0, 0);
+    earthGroup.scale.setScalar(earthR);
+    ring.position.set(0, 0, 0);
+    ring.scale.setScalar(orbitR);
+    starGroup.scale.setScalar(e * STAR_RADIUS_FACTOR);
+
+    earthGroup.visible = currentMode === "global";
+    ring.visible = currentMode === "global";
+    if (grid !== null) {
+      grid.visible = currentMode === "local";
+    }
+  }
+
+  function rebuildGrid(maxR: number): void {
+    if (grid !== null) {
+      group.remove(grid);
+      grid.dispose();
+    }
+    const border = tokenColor(SCENE_TOKENS.borderStrong);
+    grid = new THREE.GridHelper(3.2 * maxR, 12, border, border);
+    const mat = grid.material as THREE.Material;
+    mat.transparent = true;
+    mat.opacity = 0.32;
+    grid.visible = currentMode === "local";
+    group.add(grid);
+  }
+
+  rebuildGrid(1000);
+  place(1000);
+
   let earthSpin = 0;
   return {
     group,
     trackExtent(maxR: number): number {
       if (maxR <= 0) return Math.max(extent, 1000);
-      // Scale-band check: re-fit only when the swarm leaves [0.4x, 1.5x].
       if (grid !== null && maxR <= extent * 1.5 && maxR >= extent * 0.4) return extent;
-      extent = maxR;
-      if (grid !== null) {
-        group.remove(grid);
-        grid.dispose();
-      }
-      const border = tokenColor(SCENE_TOKENS.border);
-      grid = new THREE.GridHelper(4 * maxR, 8, border, border);
-      const mat = grid.material as THREE.Material;
-      mat.transparent = true;
-      mat.opacity = 0.18; // faint spatial reference (was 0.5 — dominated the view)
-      group.add(grid);
-      place(Math.max(maxR, 1000));
-      return maxR;
+      extent = Math.max(maxR, 1000);
+      rebuildGrid(extent);
+      place(extent);
+      return extent;
+    },
+    setMode(mode: OrbitViewMode): void {
+      currentMode = mode;
+      place(Math.max(extent, 1000));
+    },
+    refreshTheme(): void {
+      earthGlobe.rebuildTexture();
+      (atmo.material as THREE.ShaderMaterial).uniforms.uColor.value = tokenColor(SCENE_TOKENS.atmo);
+      (ring.material as THREE.LineDashedMaterial).color = tokenColor(SCENE_TOKENS.orbit);
+      starMat.color = tokenColor(SCENE_TOKENS.star);
+      rebuildGrid(Math.max(extent, 1000));
     },
     frame(): EnvFrame {
       return envFrame;
     },
     update(dt: number, reducedMotion: boolean): void {
-      // Prograde roll + ring dash drift (the 3D scene is the product; both
-      // honoured for prefers-reduced-motion). elapsed accumulates only while
-      // running. rotation.z = the orbital-plane normal — surface and dashes
-      // crawl along-track (+x scene) at the formation.
-      if (!reducedMotion) {
-        earthSpin -= dt * EARTH_SPIN_RATE;
-        earth.rotation.z = earthSpin;
-        ring.rotation.z -= dt * ORBIT_DRIFT_RATE;
+      if (!reducedMotion && currentMode === "global") {
+        earthSpin += dt * EARTH_SPIN_RATE;
+        earthGlobe.group.rotation.y = earthSpin;
       }
     },
     dispose(): void {
       if (grid !== null) grid.dispose();
-      earth.geometry.dispose();
-      (earth.material as THREE.MeshLambertMaterial).map?.dispose();
-      (earth.material as THREE.Material).dispose();
+      earthGlobe.dispose();
       atmo.geometry.dispose();
       (atmo.material as THREE.Material).dispose();
       ring.geometry.dispose();
       (ring.material as THREE.Material).dispose();
       starGeo.dispose();
-      (stars.material as THREE.Material).dispose();
-      dir.dispose();
-      amb.dispose();
+      starMat.dispose();
     },
   };
 }

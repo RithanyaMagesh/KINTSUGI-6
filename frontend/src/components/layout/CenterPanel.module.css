@@ -1,9 +1,24 @@
-/* Full-bleed scene host: chrome.panel's padding and scroll are overridden so
-   the viewport (SwarmScene, flex: 1) fills the panel body edge to edge. */
+/* Center column: full-bleed 3D scene above a single compact recovery status rail. */
 
-.panel {
+.centerColumn {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  min-height: 0;
+  min-width: 0;
+}
+
+.sceneHost {
   display: flex;
   flex-direction: column;
   padding: 0;
   overflow: hidden;
+  min-height: 0;
+}
+
+.storyBar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
 }

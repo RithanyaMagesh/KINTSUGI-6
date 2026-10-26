@@ -1,11 +1,9 @@
 // Replay page (#/replay) — FRONTEND_SPEC §6.2 + §7.8.
-// Strictly playback-only: premade runs in the left gallery (GET /replay/files)
-// + fleet list for quick selection; the center column hosts the 3D LVLH scene,
-// NarrationStrip, §13.5 state-machine Timeline, the ONE ReplayControls
-// transport bar, and the step-by-step RecoveryLog; the right column mounts
-// the read-only RightPanel (telemetry readouts, 5 underline-tabbed charts,
-// Role reassignment table, and SelectedSatellitePanel inspector).
-// Zero live simulation or failure-injection controls appear on this page.
+// Strictly playback-only: committed scenario runs in the left gallery
+// (GET /replay/files) + clickable fleet list; center column hosts the 3D
+// SwarmScene, the single NarrationStrip + Timeline recovery status bar, and
+// the single ReplayControls transport bar; right column mounts the view-aware
+// RightPanel (Simplified vs Advanced). Zero builder or fault-injection controls.
 import { useEffect, useState } from "react";
 import { backend } from "../../api/backend";
 import { useReplayStore } from "../../stores/replayStore";
@@ -16,7 +14,6 @@ import SwarmScene from "../three/SwarmScene.tsx";
 import NarrationStrip from "../narration/NarrationStrip";
 import Timeline from "../events/Timeline";
 import ReplayControls from "../controls/ReplayControls";
-import RecoveryLog from "../recovery/RecoveryLog";
 import RightPanel from "../layout/RightPanel";
 import SatelliteList from "../satellites/SatelliteList";
 import chrome from "../../styles/chrome.module.css";
@@ -24,7 +21,6 @@ import styles from "./ReplayPage.module.css";
 
 const LOAD_SPEED = 10;
 
-// Doc-sourced gallery labels (docs/IMPLEMENTATION_NOTES.md + MASTER_PROMPT.md).
 const RUN_LABELS: Record<string, string> = {
   firefly_swarm: "Hypothetical 6-sat swarm on FIREFLY-1's real orbit (NORAD 62701)",
   two_failure: "Primary 6-sat two-failure recovery demo (SAT-2 & SAT-3 DEAD)",
@@ -103,17 +99,16 @@ export default function ReplayPage() {
   return (
     <div className={styles.page}>
       <div className={styles.main}>
-        {/* tabIndex -1: focus target for ReplayControls' "Change recording". */}
         <aside
           id="replay-gallery"
           tabIndex={-1}
           className={`${chrome.panel} ${styles.gallery}`}
           aria-label="Replay runs"
         >
-          <h2 className={chrome.panelTitle}>Committed replay runs</h2>
+          <h2 className={chrome.panelTitle}>Scenario replays</h2>
           <p className={chrome.hint}>
-            Playback-only evidence logs. Click a recording to stream it through
-             the console; click any satellite to inspect its role &amp; task history.
+            Pre-recorded mission logs. Select a scenario below to play and scrub through its
+            recovery timeline.
           </p>
           {files === null ? (
             <p className={chrome.hint}>Loading runs…</p>
@@ -139,10 +134,10 @@ export default function ReplayPage() {
                       disabled={busyFile !== null}
                       aria-current={active ? "true" : undefined}
                     >
-                      <span className={styles.runName}>{f}</span>
+                      <span className={styles.runName}>{f.replace(/\.jsonl$/, "")}</span>
                       {label !== null && <span className={styles.runLabel}>{label}</span>}
                       {active && scenario !== null && (
-                        <span className={styles.runScenario}>Scenario: {scenario}</span>
+                        <span className={styles.runScenario}>Active recording</span>
                       )}
                     </button>
                   </li>
@@ -161,8 +156,9 @@ export default function ReplayPage() {
             <SatelliteList />
           </div>
         </aside>
+
         <div className={styles.content}>
-          <section className={`${chrome.panel} ${styles.scenePanel}`} aria-label="Swarm view">
+          <section className={`${chrome.panel} ${styles.scenePanel}`} aria-label="Swarm 3D view">
             <SwarmScene />
           </section>
           <div className={styles.storyZone}>
@@ -170,10 +166,8 @@ export default function ReplayPage() {
             <Timeline />
           </div>
           <ReplayControls />
-          <section className={`${chrome.panel} ${styles.recoveryPanel}`} aria-label="Recovery log">
-            <RecoveryLog />
-          </section>
         </div>
+
         <RightPanel />
       </div>
     </div>

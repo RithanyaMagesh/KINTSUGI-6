@@ -1,19 +1,21 @@
-// SwarmScene controller — FRONTEND_SPEC §7.2 / §14, plain Three.js (locked
-// stack §5: no React Three Fiber). One imperative class driven imperatively by
-// the React wrapper (SwarmScene.tsx) via store subscriptions — React never
-// re-renders per frame (§19 performance rules). All colors come from
-// tokens.css through sceneColors.ts (§13.1). Satellites live in
-// sceneSatellites.ts, ghost slots in sceneSlots.ts, screen-space labels in
-// sceneLabels.ts, Earth + starfield in sceneEarth.ts.
+// SwarmScene controller — FRONTEND_SPEC §7.2 / §14, plain Three.js.
+// Supports two 3D view modes:
+// - "global" (Earth orbit view): Earth centered at [0, 0, 0] with satellites
+//   orbiting all the way around the planet along an inclined orbital ring.
+// - "local" (Formation array view): Close-up 2:1 Clohessy-Wiltshire relative
+//   formation grid around [0, 0, 0] with Earth hidden.
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import type { MissionState, Satellite } from "../../types/satellite";
+import type { OrbitViewMode } from "../../stores/uiStore";
 import { fitDistance, fitFormation } from "../../utils/geometry";
 import {
+  clearSatelliteTrail,
   createSatelliteRecord,
   disposeSatelliteRecord,
   lvlhToScene,
   pushTrail,
+  setSceneCoordinateTransform,
   syncSatellite,
   updateMarkerView,
   type SatRecord,
@@ -37,6 +39,7 @@ export interface SceneUpdate {
   satellites: Satellite[];
   selectedId: string | null;
   missionState: MissionState | null;
+  simTime?: number;
 }
 
 export class SwarmSceneController {
@@ -51,15 +54,16 @@ export class SwarmSceneController {
   private onPick: (id: string | null) => void;
 
   private records = new Map<string, SatRecord>();
-  private extent = 0;
+  private extent = 1000;
+  private orbitMode: OrbitViewMode = "global";
+  private orbitPhase = 0;
+  private lastSimTime = 0;
   private slots: SlotLayer;
   private labels = new LabelLayer();
   private fit = new AutoFitController();
   private environment: Environment;
-  // Healthy pairs (faint chrome) vs failed-touching pairs (thin red, gated to
-  // the failure mission states — §7.3 without lines shooting across the view).
   private lines = new FormationLines();
-  private bg = tokenColor(SCENE_TOKENS.bg).clone(); // trail fade target
+  private bg = tokenColor(SCENE_TOKENS.bg).clone();
 
   private toggles = { labels: true, trails: true, lines: true, slots: true };
   private reducedMotion: boolean;
@@ -84,7 +88,7 @@ export class SwarmSceneController {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.domElement.style.display = "block";
     container.appendChild(this.renderer.domElement);
-    container.appendChild(this.labels.root); // above the canvas, below overlay chrome
+    container.appendChild(this.labels.root);
 
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = true;
@@ -94,14 +98,14 @@ export class SwarmSceneController {
 
     this.environment = createEnvironment();
     this.scene.add(this.environment.group);
-    this.environment.trackExtent(0); // no grid/earth scale until real data arrives
+    this.environment.trackExtent(0);
 
     this.scene.add(this.lines.healthy, this.lines.failed);
 
     this.ro = new ResizeObserver(() => this.resize());
     this.ro.observe(container);
     this.resize();
-    this.frameEarth(2, 1.5, 2); // Earth-centred pre-data staging (§20 notice covers the canvas)
+    this.frameEarth(2.2, 1.35, 2.2);
 
     this.renderer.domElement.addEventListener("pointerdown", this.handlePointerDown);
     this.renderer.domElement.addEventListener("pointerup", this.handlePointerUp);
@@ -113,41 +117,57 @@ export class SwarmSceneController {
 
   // ---- public API (called by the React wrapper) ---------------------------
 
-  update({ satellites, selectedId, missionState }: SceneUpdate): void {
+  update({ satellites, selectedId, missionState, simTime }: SceneUpdate): void {
     this.lastSats = satellites.slice();
     this.selectedId = selectedId;
     this.missionState = missionState;
+    if (simTime !== undefined && simTime !== this.lastSimTime) {
+      const deltaSim = simTime - this.lastSimTime;
+      this.lastSimTime = simTime;
+      // Advance orbital angle deterministically with simulation time
+      if (Math.abs(deltaSim) > 0) {
+        this.orbitPhase = (simTime * 0.0022) % (Math.PI * 2);
+      }
+    }
 
     this.updateExtent(satellites);
-    for (const sat of satellites) {
-      let rec = this.records.get(sat.id);
-      if (rec === undefined) {
-        rec = createSatelliteRecord(sat, (id) => this.onPick(id), this.labels);
-        this.scene.add(rec.group, rec.trail);
-        this.records.set(sat.id, rec);
-      }
-      syncSatellite(rec, sat, { selectedId, showTrails: this.toggles.trails });
+    const nSeats = Math.max(satellites.length, 1);
+    const fit = fitFormation(satellites, nSeats);
+    setSceneCoordinateTransform({
+      mode: this.orbitMode,
+      extent: this.extent || 1000,
+      amplitude: fit.ok && fit.amplitude > 0 ? fit.amplitude : (this.extent || 1000) * 0.55,
+      orbitPhase: this.orbitPhase,
+    });
+
+    this.syncAllObjects(satellites, fit);
+  }
+
+  setOrbitViewMode(mode: OrbitViewMode): void {
+    if (this.orbitMode === mode) return;
+    this.orbitMode = mode;
+    this.environment.setMode(mode);
+    setSceneCoordinateTransform({ mode });
+    for (const rec of this.records.values()) {
+      clearSatelliteTrail(rec);
     }
-    for (const [id, rec] of this.records) {
-      if (!satellites.some((s) => s.id === id)) {
-        disposeSatelliteRecord(rec, this.scene);
-        this.records.delete(id);
-      }
-    }
-    if (this.toggles.trails) {
-      const now = performance.now(); // cadence gate only (§19)
-      for (const sat of satellites) {
-        const rec = this.records.get(sat.id);
-        if (rec !== undefined) pushTrail(rec, sat, now, this.bg);
-      }
-    }
-    this.lines.update(satellites, this.failureActive());
-    if (this.toggles.slots) {
-      const nSeats = Math.max(satellites.length, 1);
-      this.slots.update(satellites, fitFormation(satellites, nSeats), this.extent || 1000, selectedId);
+    const nSeats = Math.max(this.lastSats.length, 1);
+    const fit = fitFormation(this.lastSats, nSeats);
+    this.syncAllObjects(this.lastSats, fit);
+    if (mode === "global") {
+      this.applyPreset("reset", null);
     } else {
-      this.slots.visible = false;
+      this.applyPreset("formation", null);
     }
+  }
+
+  refreshTheme(): void {
+    this.bg = tokenColor(SCENE_TOKENS.bg).clone();
+    this.scene.background = this.bg.clone();
+    this.environment.refreshTheme();
+    const nSeats = Math.max(this.lastSats.length, 1);
+    const fit = fitFormation(this.lastSats, nSeats);
+    this.syncAllObjects(this.lastSats, fit);
   }
 
   setToggles(t: typeof this.toggles): void {
@@ -159,34 +179,68 @@ export class SwarmSceneController {
   applyPreset(preset: CameraPreset, focusSat: Satellite | null): void {
     const e = this.extent || 1000;
     if (preset === "reset") {
-      this.frameEarth(2, 1.5, 2); // default frame: Earth centred, ring around it
+      if (this.orbitMode === "local") {
+        this.setOrbitViewMode("global");
+        return;
+      }
+      this.frameEarth(2.2, 1.35, 2.2);
     } else if (preset === "top") {
-      this.frameEarth(0.001, 1, 0); // plan view over Earth's centre (hair offset
-      // keeps OrbitControls off the pole singularity)
+      this.frameEarth(0.001, 1, 0);
+    } else if (preset === "formation") {
+      if (this.orbitMode === "global") {
+        this.setOrbitViewMode("local");
+        return;
+      }
+      const target = new THREE.Vector3(0, 0, 0);
+      this.controls.target.copy(target);
+      this.camera.position.set(e * 1.6, e * 1.0, e * 1.2);
     } else {
       const target = new THREE.Vector3(0, 0, 0);
-      if (preset === "focus" && focusSat !== null) {
+      if (focusSat !== null) {
         target.set(...lvlhToScene(focusSat.r));
       }
       this.controls.target.copy(target);
-      // Formation stays formation-tight; focus is the failed-sat follow-cam.
-      if (preset === "formation") {
-        this.camera.position.set(target.x + e * 1.6, e * 1.0, target.z + e * 1.2);
-      } else {
-        this.camera.position.set(target.x + e * 0.8, e * 0.7, target.z + e * 0.8);
-      }
+      this.camera.position.set(target.x + e * 0.8, target.y + e * 0.7, target.z + e * 0.8);
     }
-    // Every preset re-enables the managed view. "Focus failed" keeps auto-fit
-    // ON but tracks the failed satellite (follow-cam) — otherwise an
-    // Earth-centred refit would undo the focus a second later.
-    this.fit.onPreset(preset);
+    this.fit.onPreset(preset === "formation" ? "formation" : preset === "focus" ? "focus" : "reset");
     this.controls.update();
   }
 
-  /** Jump to an Earth-centred frame (2026-10-04 bug 3): target = ring centre
-   * (= Earth's centre), distance = the managed fit for the whole ring plus
-   * the formation riding it. `dir` is the view offset direction from the
-   * centre — oblique for the default, ~straight up for the top view. */
+  private syncAllObjects(satellites: Satellite[], fit: ReturnType<typeof fitFormation>): void {
+    for (const sat of satellites) {
+      let rec = this.records.get(sat.id);
+      if (rec === undefined) {
+        rec = createSatelliteRecord(sat, (id) => this.onPick(id), this.labels);
+        this.scene.add(rec.group, rec.trail);
+        this.records.set(sat.id, rec);
+      }
+      syncSatellite(rec, sat, {
+        selectedId: this.selectedId,
+        showTrails: this.toggles.trails,
+        extent: this.extent || 1000,
+      });
+    }
+    for (const [id, rec] of this.records) {
+      if (!satellites.some((s) => s.id === id)) {
+        disposeSatelliteRecord(rec, this.scene);
+        this.records.delete(id);
+      }
+    }
+    if (this.toggles.trails) {
+      const now = performance.now();
+      for (const sat of satellites) {
+        const rec = this.records.get(sat.id);
+        if (rec !== undefined) pushTrail(rec, sat, now, this.bg);
+      }
+    }
+    this.lines.update(satellites, this.failureActive());
+    if (this.toggles.slots) {
+      this.slots.update(satellites, fit, this.extent || 1000, this.selectedId);
+    } else {
+      this.slots.visible = false;
+    }
+  }
+
   private frameEarth(dirX: number, dirY: number, dirZ: number): void {
     const f = this.environment.frame();
     const d = fitDistance(
@@ -233,8 +287,6 @@ export class SwarmSceneController {
     return this.missionState !== null && FAILURE_STATES.has(this.missionState);
   }
 
-  /** Track the measured swarm extent (grid + environment scale + marker
-   * clamps); the environment re-fits only when the swarm leaves the band. */
   private updateExtent(sats: Satellite[]): void {
     let maxR = 0;
     for (const sat of sats) maxR = Math.max(maxR, Math.hypot(sat.r[0], sat.r[1], sat.r[2]));
@@ -249,13 +301,11 @@ export class SwarmSceneController {
     this.slots.updateView(this.camera, this.viewH, extent);
   }
 
-  /** Screen-space label pass: project, then let the layer resolve collisions
-   * (priority failed > selected > leader > others). */
   private updateLabels(): void {
     const items: LabelItem[] = [];
     const project = (pos: THREE.Vector3): { x: number; y: number } | null => {
       this.scratch.copy(pos).applyMatrix4(this.camera.matrixWorldInverse);
-      if (this.scratch.z >= -0.5) return null; // behind / at the camera
+      if (this.scratch.z >= -0.5) return null;
       this.scratch.copy(pos).project(this.camera);
       const x = (this.scratch.x * 0.5 + 0.5) * this.viewW;
       const y = (-this.scratch.y * 0.5 + 0.5) * this.viewH;
@@ -285,7 +335,7 @@ export class SwarmSceneController {
           x: p.x,
           y: p.y,
           dotR: slot.screenR + 2,
-          priority: 10, // slot captions always lose to satellite labels
+          priority: 10,
           tie: slot.text,
           show: true,
         });
@@ -306,8 +356,6 @@ export class SwarmSceneController {
   }
 
   private handleVisibility = (): void => {
-    // §19: pause the render loop when the tab is hidden (the 30 s ping in
-    // useWebSocket keeps running — it lives outside the scene).
     const visible = document.visibilityState === "visible";
     if (visible && !this.running) {
       this.running = true;
@@ -321,15 +369,12 @@ export class SwarmSceneController {
     this.pointerDownAt = { x: ev.clientX, y: ev.clientY };
   };
 
-  /** Drag (not click) disables auto-fit; a plain click still raycasts the
-   * satellite discs/rings; empty space deselects. Keyboard users select via
-   * the satellite list / labels. */
   private handlePointerUp = (ev: PointerEvent): void => {
     const down = this.pointerDownAt;
     this.pointerDownAt = null;
     if (down === null) return;
     if (Math.hypot(ev.clientX - down.x, ev.clientY - down.y) > 5) {
-      this.fit.onDrag(); // orbit drag — the user owns the framing now
+      this.fit.onDrag();
       return;
     }
     const rect = this.renderer.domElement.getBoundingClientRect();
@@ -353,7 +398,7 @@ export class SwarmSceneController {
   };
 
   private handleWheel = (): void => {
-    this.fit.onWheel(); // zoom — the user owns the framing now
+    this.fit.onWheel();
   };
 
   private animate = (): void => {
@@ -361,8 +406,15 @@ export class SwarmSceneController {
     this.raf = requestAnimationFrame(this.animate);
     const dt = this.clock.getDelta();
     const elapsed = this.clock.elapsedTime;
+    if (!this.reducedMotion && this.orbitMode === "global" && this.lastSats.length > 0) {
+      this.orbitPhase = (this.orbitPhase + dt * 0.12) % (Math.PI * 2);
+      setSceneCoordinateTransform({ orbitPhase: this.orbitPhase });
+      const nSeats = Math.max(this.lastSats.length, 1);
+      const fit = fitFormation(this.lastSats, nSeats);
+      this.syncAllObjects(this.lastSats, fit);
+    }
     this.controls.update();
-    this.camera.updateMatrixWorld(); // keep matrixWorldInverse fresh for projection
+    this.camera.updateMatrixWorld();
     this.fit.update(this.camera, this.controls, dt, this.lastSats, this.environment.frame());
     this.environment.update(dt, this.reducedMotion);
     this.updateMarkers(elapsed);

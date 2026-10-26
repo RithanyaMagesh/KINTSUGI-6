@@ -1,40 +1,41 @@
 /*
- * Design tokens — FRONTEND_SPEC §13.1, verbatim.
+ * Design tokens — FRONTEND_SPEC §13.1.
  * This is THE ONLY file in src/ allowed to contain raw hex/rgb values
  * (§13.1; the grep gate in Appendix B enforces it mechanically).
- * Every component derives from these tokens, never from a library default.
+ * Supports both Dark mode (:root default) and Light mode (:root[data-theme="light"]).
  */
 
 :root {
-  /* -- Color: surfaces (neutral graphite, deliberately not Tailwind slate) */
-  --bg: #17191a; /* page ground */
-  --panel: #1e2123; /* panel surfaces */
-  --panel-raised: #24272a; /* hover / selected rows / raised surfaces */
-  --border: #31363a; /* 1px panel borders */
-  --border-strong: #43494e; /* table headers, emphasis borders */
+  /* -- Color: surfaces (dark graphite aerospace console) */
+  --bg: #0b0d10; /* page & 3D space ground */
+  --panel: #11151b; /* panel surfaces */
+  --panel-raised: #181e26; /* hover / selected rows / raised surfaces */
+  --border: #222933; /* 1px hairline borders */
+  --border-strong: #343f4e; /* emphasis borders, table headers */
 
-  /* -- Color: text */
-  --ink: #e8eaec; /* primary text (≈13:1 on --bg) */
-  --ink-muted: #9ba3a9; /* secondary text — ≥4.5:1 on its background (AA) */
-  --ink-faint: #6e767c; /* tertiary/disabled only; never body text */
+  /* -- Color: text (≥4.5:1 AA contrast) */
+  --ink: #e8ecf2; /* primary text & readout numerals */
+  --ink-muted: #98a2b0; /* secondary labels & descriptions */
+  --ink-faint: #5e6875; /* tertiary ticks, axis captions, disabled controls */
 
   /* -- Color: state only — saturated color appears ONLY as semantics */
-  --status-nominal: #46c07a; /* healthy / success / nominal curve */
-  --status-caution: #e0a526; /* reconfiguring / warnings */
-  --status-failed: #f25555; /* failure / critical */
-  --status-info: #5b9bf0; /* recovered / informational */
-  --status-leader: #f2cc46; /* leader marker — always paired with a text label */
+  --status-nominal: #2fbf71; /* healthy / active imager / nominal curve */
+  --status-caution: #e0a020; /* reconfiguring / Hungarian transfer / warnings */
+  --status-failed: #e05252; /* failure / critical / ballistic keep-out hazard */
+  --status-info: #5b9bf0; /* recovered / informational / active selection */
+  --status-leader: #f5cc4d; /* leader marker & crown — always paired with text */
 
-  --focus-ring: #e8eaec; /* 2px outline on :focus-visible */
+  --focus-ring: #e8ecf2; /* 2px outline on :focus-visible */
 
-  /* -- 3D scene extras — read through components/three/sceneColors.ts (the
-     §13.1 bridge); no scene file may hardcode these values. */
-  --scene-earth-ocean: #0c2b3f; /* stylized water body */
-  --scene-earth-land: #24523f; /* stylized landmass noise */
-  --scene-earth-graticule: var(--ink-faint); /* faint lat/lon lines */
-  --scene-atmo: var(--status-info); /* atmosphere rim */
-  --scene-orbit: var(--ink-faint); /* chief-orbit ring — faint chrome */
-  --scene-star: var(--ink); /* starfield points */
+  /* -- 3D scene extras — read through components/three/sceneColors.ts */
+  --scene-earth-ocean: #0c2b3f; /* natural deep ocean blue */
+  --scene-earth-land: #24523f; /* natural continental green */
+  --scene-earth-graticule: #1e3d52; /* subtle lat/lon graticule */
+  --scene-atmo: #5b9bf0; /* natural blue orbital limb */
+  --scene-orbit: #58687a; /* chief-orbit ring */
+  --scene-cw-ellipse: #2fbf71; /* 2:1 CW formation ellipse track */
+  --scene-cone: #2fbf71; /* sensor accent */
+  --scene-star: #e8ecf2; /* starfield points */
 
   /* -- Typography (§13.2): two faces, vendored woff2, no CDN */
   --font-sans: "IBM Plex Sans", "Segoe UI", sans-serif;
@@ -56,10 +57,39 @@
   --space-5: 24px;
 
   /* -- Radii: ≤8px panels, 6px controls. Shadows: none (modal only). */
-  --radius-panel: 8px;
-  --radius-control: 6px;
+  --radius-panel: 6px;
+  --radius-control: 4px;
 
   /* -- Motion (§13.5): 120-180 ms ease-out, color/border/opacity only */
   --motion-duration: 150ms;
   --motion-ease: ease-out;
+}
+
+:root[data-theme="light"] {
+  --bg: #f4f6f9;
+  --panel: #ffffff;
+  --panel-raised: #eaeef4;
+  --border: #d5dce6;
+  --border-strong: #b4c0cf;
+
+  --ink: #11161f;
+  --ink-muted: #4b5666;
+  --ink-faint: #788496;
+
+  --status-nominal: #168045;
+  --status-caution: #b87800;
+  --status-failed: #c82828;
+  --status-info: #1d64c8;
+  --status-leader: #a87600;
+
+  --focus-ring: #11161f;
+
+  --scene-earth-ocean: #14496b;
+  --scene-earth-land: #2d6b4f;
+  --scene-earth-graticule: #356785;
+  --scene-atmo: #3b82f6;
+  --scene-orbit: #64748b;
+  --scene-cw-ellipse: #168045;
+  --scene-cone: #168045;
+  --scene-star: #64748b;
 }

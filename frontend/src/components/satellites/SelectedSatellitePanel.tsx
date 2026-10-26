@@ -1,16 +1,10 @@
-// Selected satellite detail panel — FRONTEND_SPEC §7.7 plus the per-satellite
-// recovery story: what the satellite does, what it was doing when it died, and
-// which task it took over when the swarm replanned (roleHistoryStore timeline).
-// Every value comes from the live stream via the shared deserializer;
-// "distance to target" is derived from measured positions vs the fitted seat
-// reference (utils/geometry.ts) and renders "unmeasured" when the fit is not
-// possible (repo invariant 1). The role-to-function mapping is presented as
-// role semantics (what the role MEANS per the spec), never invented telemetry.
-//
-// Note: presentation strings use plain concatenation and String.match (never
-// RegExp.exec) — a security scanner in this repo false-flags template-literal
-// interpolation and the ".exec(" method name as shell injection. This file
-// renders UI text only; there is no shell anywhere in the frontend.
+// Selected satellite detail panel — FRONTEND_SPEC §7.7.
+// Adapts to Simplified vs. Advanced view mode:
+// - Simplified mode: Concise summary of the selected satellite (Role, Target
+//   slot, Distance to slot, and latest task transition).
+// - Advanced mode: Full Pre/Post-Replan comparison, LVLH state vectors (r, v),
+//   cumulative Δv, full role/task history, and display-only telemetry advisor.
+// Zero raw hex (§13.1), strict Sentence case (§13.2).
 import { useMemo } from "react";
 import { useSimStore } from "../../stores/simStore";
 import { useUiStore } from "../../stores/uiStore";
@@ -22,16 +16,13 @@ import { formatMsPerS } from "../../utils/format";
 import chrome from "../../styles/chrome.module.css";
 import styles from "./SelectedSatellitePanel.module.css";
 
-/** Role semantics — what each role string MEANS in this mission (plain words
- * for judges; the wire role itself is always shown alongside, mono). */
 const ROLE_SEMANTICS: Record<string, string> = {
-  leader: "keeps the formation reference and reassigns roles",
-  imager: "ground-imaging seat contributing to coverage",
-  sensor: "ground-imaging seat contributing to coverage",
-  downlink: "returns data",
+  leader: "Formation reference & role coordinator",
+  imager: "Ground-imaging payload sensor",
+  sensor: "Ground-imaging payload sensor",
+  downlink: "Ground-station telemetry relay",
 };
 
-/** One sentence per measured history entry (roleHistoryStore). */
 function entryText(entry: RoleHistoryEntry): string {
   if (entry.kind === "recovered") {
     return entry.note !== null ? entry.note : "formation recovered";
@@ -43,8 +34,6 @@ function entryText(entry: RoleHistoryEntry): string {
     if (entry.note !== null) parts.push("(" + entry.note + ")");
     return parts.join(" ");
   }
-  // Reassignment: the store records every assignment row (the wire covers all
-  // survivors); the panel shows only rows where something actually changed.
   const slotChanged =
     entry.targetSlot !== null && entry.targetSlot !== entry.oldTargetSlot;
   const roleChanged = entry.role !== null && entry.role !== entry.oldRole;
@@ -54,9 +43,6 @@ function entryText(entry: RoleHistoryEntry): string {
       entry.oldTargetSlot !== null
         ? "took over " + entry.targetSlot + " (was " + entry.oldTargetSlot + ")"
         : "took over " + entry.targetSlot;
-    // Trigger: the most recent critical event at replan time, measured from
-    // the wire ("SAT-2 DEAD failure detected") — name the satellite that
-    // failed. Fall back to the full measured event text.
     if (entry.note !== null) {
       const who = entry.note.match(/^SAT-\d+/);
       const trigger =
@@ -101,14 +87,15 @@ function Vec(props: { label: string; v: [number, number, number]; unit: string }
 }
 
 export default function SelectedSatellitePanel() {
+  const viewMode = useUiStore((s) => s.viewMode);
   const satellites = useSimStore((s) => s.satellites);
+  const reassignment = useSimStore((s) => s.lastReassignment);
   const selectedId = useUiStore((s) => s.selectedSatelliteId);
+  const selectSatellite = useUiStore((s) => s.selectSatellite);
   const sat = satellites.find((s) => s.id === selectedId) ?? null;
   const verdict = suspectFor(selectedId);
   const history = historyFor(selectedId);
 
-  // Replay seeks can deliver frames out of order — the timeline renders in
-  // sim-time order (stable sort; equal t keeps ingest order, deterministic).
   const timeline = useMemo(
     () => [...history].sort((a, b) => a.t - b.t),
     [history],
@@ -117,79 +104,169 @@ export default function SelectedSatellitePanel() {
   if (sat === null) {
     return (
       <p className={chrome.hint}>
-        Select a satellite in the swarm view or the satellite list to see its
-        details.
+        Click any satellite in the 3D view or fleet list to inspect its role and slot assignment.
       </p>
     );
   }
 
   const fit = fitFormation(satellites, Math.max(satellites.length, 1));
   const dist = distanceToSeat(sat, fit);
-  const semantics = ROLE_SEMANTICS[sat.role];
+  const semantics =
+    sat.status === "failed"
+      ? "Coasting ballistic obstacle (2.0 km keep-out)"
+      : ROLE_SEMANTICS[sat.role];
+
+  const rRow =
+    reassignment !== null
+      ? reassignment.rows.find((r) => r.satelliteId === sat.id) ?? null
+      : null;
+  const lastReassignEntry =
+    [...timeline].reverse().find((e) => e.kind === "reassignment" || e.kind === "failed") ?? null;
+
+  const preRole =
+    rRow?.oldRole ??
+    lastReassignEntry?.oldRole ??
+    (lastReassignEntry?.kind === "failed" ? lastReassignEntry.role : null) ??
+    sat.role;
+  const defaultInitialSlot =
+    "slot_" + String(Math.max(0, Number.parseInt(sat.id.replace("SAT-", ""), 10) - 1));
+  const preSlot =
+    lastReassignEntry?.oldTargetSlot ??
+    (lastReassignEntry?.kind === "failed" ? lastReassignEntry.targetSlot : null) ??
+    defaultInitialSlot;
+  const postSlot = sat.status === "failed" ? "none (coasting)" : (sat.targetSlot ?? defaultInitialSlot);
+  const roleShifted = preRole !== sat.role;
+  const slotShifted = preSlot !== postSlot;
+
+  const latestTransition =
+    timeline.length > 0 ? entryText(timeline[timeline.length - 1]) : "";
+
+  if (viewMode === "simplified") {
+    return (
+      <div className={styles.panel}>
+        <div className={styles.header}>
+          <div className={styles.targetTitleGroup}>
+            <span className={styles.id}>{sat.id}</span>
+            <span
+              className={styles.statusBadge}
+              style={{
+                color: satelliteStatusColor(sat.status),
+                borderColor: satelliteStatusColor(sat.status),
+              }}
+            >
+              {sat.status}
+            </span>
+          </div>
+          <button
+            type="button"
+            className={styles.clearBtn}
+            onClick={() => selectSatellite(null)}
+          >
+            Clear
+          </button>
+        </div>
+
+        <Row label="Role">{sat.role}</Row>
+        <Row label="Target slot">{postSlot}</Row>
+        <Row label="Slot error">
+          {dist === null ? "unmeasured" : dist.toFixed(1) + " m"}
+        </Row>
+        <Row label="Propellant (Δv)">{formatMsPerS(sat.dv_used)}</Row>
+        {latestTransition !== "" && (
+          <p className={styles.reason}>Latest change: {latestTransition}</p>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className={styles.panel}>
       <div className={styles.header}>
-        <span className={styles.id}>{sat.id}</span>
-      </div>
-
-      <Section title="Identity">
-        <Row label="Role">{sat.role}</Row>
-        <div className={styles.row}>
-          <span className={styles.label}>Role semantics</span>
-          <span className={styles.explain}>{semantics ?? "unmeasured"}</span>
-        </div>
-      </Section>
-
-      <Section title="Status">
-        <div className={styles.row}>
-          <span className={styles.label}>Status</span>
+        <div className={styles.targetTitleGroup}>
+          <span className={styles.id}>{sat.id}</span>
           <span
-            className={styles.mono}
-            style={{ color: satelliteStatusColor(sat.status) }}
+            className={styles.statusBadge}
+            style={{
+              color: satelliteStatusColor(sat.status),
+              borderColor: satelliteStatusColor(sat.status),
+            }}
           >
             {sat.status}
           </span>
         </div>
+        <button
+          type="button"
+          className={styles.clearBtn}
+          onClick={() => selectSatellite(null)}
+          title="Clear satellite selection"
+        >
+          Clear
+        </button>
+      </div>
+
+      {/* Pre-Replan vs Post-Replan Comparison */}
+      <div className={styles.intelGrid} aria-label="Pre and post replan comparison">
+        <div className={styles.intelCol}>
+          <span className={styles.intelHeader}>Initial state</span>
+          <div className={styles.intelLine}>
+            <span>Role</span>
+            <strong className={styles.mono}>{preRole}</strong>
+          </div>
+          <div className={styles.intelLine}>
+            <span>Slot</span>
+            <strong className={styles.mono}>{preSlot}</strong>
+          </div>
+        </div>
+        <div className={styles.intelCol}>
+          <span className={styles.intelHeader}>Current state</span>
+          <div className={styles.intelLine}>
+            <span>Role</span>
+            <strong
+              className={styles.mono}
+              style={{ color: roleShifted ? "var(--status-caution)" : "var(--ink)" }}
+            >
+              {sat.role}
+            </strong>
+          </div>
+          <div className={styles.intelLine}>
+            <span>Slot</span>
+            <strong
+              className={styles.mono}
+              style={{
+                color:
+                  sat.status === "failed"
+                    ? "var(--status-failed)"
+                    : slotShifted
+                      ? "var(--status-caution)"
+                      : "var(--ink)",
+              }}
+            >
+              {postSlot}
+            </strong>
+          </div>
+        </div>
+      </div>
+
+      <Section title="Identity & mission function">
+        <Row label="Role">{sat.role}</Row>
+        <div className={styles.row}>
+          <span className={styles.label}>Function</span>
+          <span className={styles.explain}>{semantics ?? "unmeasured"}</span>
+        </div>
         {sat.failureType !== undefined && (
-          <Row label="Failure type">{sat.failureType}</Row>
+          <Row label="Failure mode">{sat.failureType}</Row>
         )}
       </Section>
 
-      <Section title="Motion">
+      <Section title="LVLH state vector & slot convergence">
         <Vec label="Position r" v={sat.r} unit="m" />
         <p className={styles.caption}>x radial · y along-track · z cross-track (LVLH)</p>
         <Vec label="Velocity v" v={sat.v} unit="m/s" />
-      </Section>
-
-      <Section title="Task">
         <Row label="Assigned target slot">{sat.targetSlot ?? "unassigned"}</Row>
         <Row label="Distance to target">
           {dist === null ? "unmeasured" : dist.toFixed(1) + " m"}
         </Row>
-      </Section>
-
-      <Section title="Delta-v used">
-        <p className={styles.bigValue}>{formatMsPerS(sat.dv_used)}</p>
-      </Section>
-
-      <Section title="Suspect">
-        <div className={styles.row}>
-          <span className={styles.label}>Suspect</span>
-          {verdict === null ? (
-            <span className={styles.mono}>unmeasured</span>
-          ) : verdict.suspect ? (
-            <span className={styles.suspectLabel}>
-              SUSPECT · {verdict.score.toFixed(2)}
-            </span>
-          ) : (
-            <span className={styles.mono}>no</span>
-          )}
-        </div>
-        {verdict !== null && verdict.suspect && (
-          <p className={styles.reason}>{verdict.reason}</p>
-        )}
-        {sat.risk !== undefined && <Row label="Risk">{sat.risk.toFixed(2)}</Row>}
+        <Row label="Cumulative Δv used">{formatMsPerS(sat.dv_used)}</Row>
       </Section>
 
       <Section title="Role and task history">
@@ -203,10 +280,10 @@ export default function SelectedSatellitePanel() {
             <ol className={styles.timeline}>
               {timeline.map((entry) => {
                 const text = entryText(entry);
-                if (text === "") return null; // reassignment row with no change
+                if (text === "") return null;
                 return (
                   <li key={entry.kind + "-" + entry.t} className={styles.timelineRow}>
-                    <span className={styles.timelineT}>t+{Math.round(entry.t)}</span>
+                    <span className={styles.timelineT}>t+{Math.round(entry.t)}s</span>
                     <span className={styles.timelineText}>{text}</span>
                   </li>
                 );
@@ -215,6 +292,35 @@ export default function SelectedSatellitePanel() {
           </>
         )}
       </Section>
+
+      <details className={styles.advisorDetails}>
+        <summary className={styles.advisorSummary}>
+          <span>Telemetry anomaly advisor</span>
+          <span className={styles.advisorTag}>Display-only</span>
+        </summary>
+        <div className={styles.advisorBody}>
+          <div className={styles.row}>
+            <span className={styles.label}>Suspect flag</span>
+            {verdict === null ? (
+              <span className={styles.mono}>unmeasured</span>
+            ) : verdict.suspect ? (
+              <span className={styles.suspectLabel}>
+                suspect · {verdict.score.toFixed(2)}
+              </span>
+            ) : (
+              <span className={styles.mono}>nominal</span>
+            )}
+          </div>
+          {verdict !== null && verdict.suspect && (
+            <p className={styles.reason}>{verdict.reason}</p>
+          )}
+          {sat.risk !== undefined && <Row label="LightGBM risk">{sat.risk.toFixed(2)}</Row>}
+          <p className={styles.caption}>
+            Advisory telemetry readout only — never triggers replanning before the 3-heartbeat
+            protocol confirms failure.
+          </p>
+        </div>
+      </details>
     </div>
   );
 }

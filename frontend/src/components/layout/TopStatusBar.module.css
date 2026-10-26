@@ -1,11 +1,6 @@
 /* One compact status row — 52px tall, everything on the 4/8/12/16/24 scale,
-   colors ONLY via tokens (§13.1). No wordmark, no two-row layout. */
+   colors ONLY via tokens (§13.1). */
 
-/* Status text is read-only telemetry: no accidental drag-selection over sim
-   time / Connected / the chips. Interaction is untouched — links and the
-   presentation button keep focus/hover. user-select inherits, so .bar covers
-   every child; the chips restate it so they stay unselectable on their own.
-   Prefixed for Safari (no autoprefixer in the build). */
 .bar,
 .stateChip,
 .modeChip,
@@ -19,14 +14,32 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  min-height: 52px;
+  min-height: 46px;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius-panel);
-  padding: var(--space-2) var(--space-4);
+  padding: var(--space-1) var(--space-3);
+}
+
+.brandCluster {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.brandMark {
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid var(--status-info);
+  transform: rotate(45deg);
+  flex: none;
 }
 
 .name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
   font-size: var(--text-body);
   font-weight: 600;
   white-space: nowrap;
@@ -34,8 +47,19 @@
   text-decoration: none;
 }
 
-/* Primary nav: quiet muted links, active route underlined (§13.3 underline
-   indicator — never a sliding pill). */
+.metaTag {
+  font-family: var(--font-mono);
+  font-size: var(--text-tick);
+  color: var(--ink-muted);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  padding: 2px var(--space-2);
+  white-space: nowrap;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .nav {
   display: flex;
   align-items: center;
@@ -58,13 +82,9 @@
 
 .navLink[aria-current="page"] {
   color: var(--ink);
-  border-bottom-color: var(--border-strong);
+  border-bottom-color: var(--status-info);
 }
 
-/* Icon links (FAQ, Docs): same quiet → ink hover and underline-on-active
-   affordance as the text links. Fixed 30×32 box ≈ a navLink's height
-   (16px × 1.4 line + 2 × 4px pad + 2px rule = 32.4px), so icon centers and
-   underlines line up across the row and dimensions never shift (§13.3). */
 .iconLink {
   display: inline-flex;
   align-items: center;
@@ -82,31 +102,17 @@
 
 .iconLink[aria-current="page"] {
   color: var(--ink);
-  border-bottom-color: var(--border-strong);
+  border-bottom-color: var(--status-info);
 }
 
-/* Status cluster: keeps the chip / sim time / mode / connection from cramming
-   together when the wordmark and nav take their share of the row. */
 .status {
   display: flex;
   align-items: center;
   gap: var(--space-3);
   min-width: 0;
+  margin-left: auto;
 }
 
-.scenario {
-  font-family: var(--font-mono);
-  font-size: var(--text-body);
-  color: var(--ink);
-  max-width: 220px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* Mission state chip: colored dot + state word (§7.2 colors via the store
-   mapping). While waiting for the first frame the word is not a state literal,
-   so it drops to body size (§6.1 text) instead of shouting. */
 .stateChip {
   display: inline-flex;
   align-items: center;
@@ -115,12 +121,14 @@
 }
 
 .stateWord {
-  font-size: 20px; /* ask: compact chip state word 18-24px (§13.2 full-size state stays on the §12.2 layout) */
+  font-size: 16px;
   font-weight: 600;
+  font-family: var(--font-mono);
   white-space: nowrap;
 }
 
 .stateChip[data-waiting="true"] .stateWord {
+  font-family: var(--font-sans);
   font-size: var(--text-body);
   font-weight: 500;
 }
@@ -132,19 +140,26 @@
   flex: none;
 }
 
-.mono {
+.fleetCount {
   font-family: var(--font-mono);
-  font-size: var(--text-body);
+  font-size: var(--text-event);
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-/* Rectangular bordered chip — not a pill (§13.3). Replay keeps the info token
-   the old replay badge used; Live stays neutral so color stays semantic. */
+.mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-body);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .modeChip {
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-control);
-  padding: var(--space-1) var(--space-2);
-  font-size: var(--text-body);
+  padding: 2px var(--space-2);
+  font-size: var(--text-event);
   font-weight: 500;
   white-space: nowrap;
 }
@@ -157,10 +172,9 @@
 .connection {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
-  margin-left: auto;
+  gap: var(--space-1);
   color: var(--ink-muted);
-  font-size: var(--text-body);
+  font-size: var(--text-event);
   white-space: nowrap;
 }
 
@@ -174,4 +188,42 @@
 
 .connection[data-connection="disconnected"] {
   color: var(--status-failed);
+}
+
+.toolbarControls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.segBtn {
+  background: transparent;
+  color: var(--ink-muted);
+  border: none;
+  padding: var(--space-1) var(--space-2);
+  font-family: var(--font-sans);
+  font-size: var(--text-event);
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--motion-duration) var(--motion-ease),
+    color var(--motion-duration) var(--motion-ease);
+}
+
+.segBtn:hover {
+  color: var(--ink);
+}
+
+.segActive {
+  background: var(--panel-raised);
+  color: var(--ink);
+  border-bottom: 2px solid var(--status-info);
 }

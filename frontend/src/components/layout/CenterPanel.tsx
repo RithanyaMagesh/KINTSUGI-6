@@ -1,16 +1,22 @@
-// Center panel — the 3D swarm scene, full bleed (§12.1): no title row and no
-// padding, the canvas owns every pixel of the panel. The §8.8 camera preset
-// buttons are the scene's own compact overlay row (SwarmScene.tsx, another
-// agent's file) and stay exactly where they are; the scene also owns its §20
-// connection/empty overlays so the canvas never shows a blank screen.
-import SwarmScene from "../three/SwarmScene.tsx"; // .tsx: keeps tsc from case-matching swarmScene.ts on Windows
+// Center panel — hosts the 3D SwarmScene viewport plus the single unified
+// recovery status rail (NarrationStrip + state-machine Timeline spine) directly
+// underneath so there are never duplicate recovery timelines across the screen.
+import SwarmScene from "../three/SwarmScene.tsx";
+import NarrationStrip from "../narration/NarrationStrip";
+import Timeline from "../events/Timeline";
 import chrome from "../../styles/chrome.module.css";
 import styles from "./CenterPanel.module.css";
 
 export default function CenterPanel() {
   return (
-    <section className={`${chrome.panel} ${styles.panel}`} aria-label="Swarm view">
-      <SwarmScene />
-    </section>
+    <div className={styles.centerColumn}>
+      <section className={`${chrome.panel} ${styles.sceneHost}`} aria-label="Swarm 3D view">
+        <SwarmScene />
+      </section>
+      <div className={styles.storyBar}>
+        <NarrationStrip />
+        <Timeline />
+      </div>
+    </div>
   );
 }

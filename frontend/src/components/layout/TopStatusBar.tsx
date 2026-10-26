@@ -1,11 +1,7 @@
-// Top bar — round 2: persistent across pages. The wordmark links home (#/),
-// the primary nav carries the operator pages as text links plus FAQ and Docs
-// as 16px inline-SVG icon links (user order: "replace with icons for Docs,
-// FAQs" — the old square "?" help button is retired by the FAQ icon), the
-// sim status cluster (mission state chip §7.2, sim time, live/replay mode
-// chip §7.9, connection), and the presentation toggle. In the §12.2 pitch
-// layout PresentationView mounts this same bar; there the nav hides (the
-// pitch strips chrome).
+// Top bar — persistent across pages.
+// Includes primary navigation, Mission State chip, active/failed fleet count,
+// Simulation time, Simplified vs. Advanced workspace view switcher, and
+// Dark vs. Light theme toggle. Zero raw hex (§13.1).
 import type { ReactElement } from "react";
 import { useSimStore } from "../../stores/simStore";
 import { useUiStore, type Route } from "../../stores/uiStore";
@@ -28,14 +24,12 @@ const CONNECTION_COLOR: Record<string, string> = {
 };
 
 const NAV: Array<{ route: Route; hash: string; label: string }> = [
+  { route: "landing", hash: "#/", label: "Overview" },
   { route: "live", hash: "#/live", label: "Live simulation" },
   { route: "replay", hash: "#/replay", label: "Replay" },
   { route: "tutorial", hash: "#/tutorial", label: "Tutorial" },
 ];
 
-// Hand-drawn 16px icons (§13.6: one consistent set, meaning-bearing) — 1.5px
-// currentColor stroke, rounded caps, geometry on the 16 grid. The parent
-// link carries aria-label + title; the svg is decorative.
 function FaqIcon() {
   return (
     <svg
@@ -79,8 +73,6 @@ function DocsIcon() {
   );
 }
 
-// Reference surfaces render as icon links (user order: text links go to the
-// operator surfaces only); labels are announced via aria-label + title.
 const ICON_NAV: Array<{ route: Route; hash: string; label: string; icon: ReactElement }> = [
   { route: "faq", hash: "#/faq", label: "Frequently asked questions", icon: <FaqIcon /> },
   { route: "docs", hash: "#/docs", label: "Documentation", icon: <DocsIcon /> },
@@ -91,20 +83,38 @@ export default function TopStatusBar() {
   const simTime = useSimStore((s) => s.simTime);
   const connection = useSimStore((s) => s.connection);
   const mode = useSimStore((s) => s.mode);
+  const scenario = useSimStore((s) => s.scenario);
+  const satellites = useSimStore((s) => s.satellites);
   const route = useUiStore((s) => s.route);
+  const viewMode = useUiStore((s) => s.viewMode);
+  const setViewMode = useUiStore((s) => s.setViewMode);
+  const theme = useUiStore((s) => s.theme);
+  const toggleTheme = useUiStore((s) => s.toggleTheme);
   const presentation = useUiStore((s) => s.presentationMode);
   const setPresentationMode = useUiStore((s) => s.setPresentationMode);
 
   const stateLabel =
     missionState !== null && isMissionState(missionState)
-      ? missionState // backend enum value — uppercase is data, not styling (§13.2)
-      : "Waiting for simulation data"; // §6.1 verbatim while no frame has arrived
+      ? missionState
+      : "Standby";
+
+  const failedCount = satellites.reduce((n, s) => (s.status === "failed" ? n + 1 : n), 0);
+  const activeCount = satellites.length - failedCount;
 
   return (
     <header className={styles.bar}>
-      <a href="#/" className={styles.name}>
-        Swarm console
-      </a>
+      <div className={styles.brandCluster}>
+        <a href="#/" className={styles.name}>
+          <span className={styles.brandMark} aria-hidden="true" />
+          CubeSat swarm console
+        </a>
+        {scenario !== null && scenario !== "" && (
+          <span className={styles.metaTag} title="Active scenario">
+            {scenario}
+          </span>
+        )}
+      </div>
+
       {!presentation && (
         <nav className={styles.nav} aria-label="Primary">
           {NAV.map((n) => (
@@ -131,6 +141,7 @@ export default function TopStatusBar() {
           ))}
         </nav>
       )}
+
       <div className={styles.status}>
         <span
           className={styles.stateChip}
@@ -140,11 +151,14 @@ export default function TopStatusBar() {
           <span className={styles.dot} style={{ background: missionStateColor(missionState) }} />
           <span className={styles.stateWord}>{stateLabel}</span>
         </span>
-        <span className={styles.mono} aria-label="Sim time">
+        {satellites.length > 0 && (
+          <span className={styles.fleetCount} title="Active / total satellites">
+            {activeCount}/{satellites.length} active
+          </span>
+        )}
+        <span className={styles.mono} aria-label="Simulation time">
           {formatSimTime(simTime)}
         </span>
-        {/* §7.9 mode is part of the operator's picture; hidden while stopped
-            because "Live" with no backend would be a lie (§20). */}
         {mode !== "stopped" && (
           <span className={styles.modeChip} data-mode={mode}>
             {mode === "replay" ? "Replay" : "Live"}
@@ -158,14 +172,50 @@ export default function TopStatusBar() {
           {CONNECTION_LABEL[connection] ?? connection}
         </span>
       </div>
-      {/* §23 primary demo button — switches to the §12.2 presentation layout. */}
-      <button
-        className={chrome.btn}
-        onClick={() => setPresentationMode(!presentation)}
-        aria-pressed={presentation}
-      >
-        {presentation ? "Exit presentation" : "Presentation mode"}
-      </button>
+
+      {/* Console density toggle (Simplified vs Advanced) + Theme toggle (Dark vs Light) */}
+      <div className={styles.toolbarControls}>
+        {(route === "live" || route === "replay") && !presentation && (
+          <div className={styles.segmented} role="group" aria-label="Console view density">
+            <button
+              type="button"
+              className={`${styles.segBtn} ${viewMode === "simplified" ? styles.segActive : ""}`}
+              onClick={() => setViewMode("simplified")}
+              aria-pressed={viewMode === "simplified"}
+            >
+              Simplified
+            </button>
+            <button
+              type="button"
+              className={`${styles.segBtn} ${viewMode === "advanced" ? styles.segActive : ""}`}
+              onClick={() => setViewMode("advanced")}
+              aria-pressed={viewMode === "advanced"}
+            >
+              Advanced
+            </button>
+          </div>
+        )}
+
+        <button
+          type="button"
+          className={chrome.btn}
+          onClick={toggleTheme}
+          title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+        >
+          {theme === "dark" ? "Light mode" : "Dark mode"}
+        </button>
+
+        {presentation && (
+          <button
+            type="button"
+            className={chrome.btn}
+            onClick={() => setPresentationMode(false)}
+          >
+            Exit presentation
+          </button>
+        )}
+      </div>
     </header>
   );
 }

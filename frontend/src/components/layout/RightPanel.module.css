@@ -1,29 +1,37 @@
-/* Right panel — §13.3: readout column, underline tabs (never sliding pills),
-   collapsible section. Tokens only (§13.1); motion is color/border/opacity
-   only at §13.5 duration. ONE scroll container: the panel itself (the grid
-   row clamps this aside because chrome.panel carries overflow + min-height
-   0). Every child is flex: 0 0 auto, so no section can ever shrink below
-   its content and paint over a sibling — the round-2 verdict bug: the old
-   min-height floor on the chart box let flexbox crush it ~137px below its
-   content and the caption bled into the next sections, while .detail's own
-   overflow made a second scrollbar. */
+/* Right panel — View-aware telemetry & strictly tabbed engineering inspector.
+   Strict token compliance (§13.1: zero raw hex). */
 
 .panel {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-2);
+  overflow-y: auto;
+  min-height: 0;
 }
 
-/* Nothing in this column is shrinkable: normal flow, natural heights,
-   overflow belongs to the panel alone. */
 .panel > * {
   flex: 0 0 auto;
 }
 
-/* Section titles sit tight on their content (the shared 12px margin is for
-   standalone panels); keeps the 1080p column as short as it can be. */
-.panel > h2 {
-  margin-bottom: var(--space-1);
+.titleRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.titleRow h2 {
+  margin-bottom: 0;
+}
+
+.fleetTag {
+  font-family: var(--font-mono);
+  font-size: var(--text-tick);
+  color: var(--status-nominal);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  padding: 1px var(--space-2);
+  white-space: nowrap;
 }
 
 .readouts {
@@ -31,15 +39,40 @@
   flex-direction: column;
 }
 
-/* Tabs — underline/border indicator per §13.3. Sized so all five labels
-   (Coverage / Deviation / Separation / Delta-v / Health) fit on a single row
-   inside the 336px column at 1920x1080 without a horizontal scrollbar (§3.2 #9). */
+.simplifiedBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-1);
+}
+
+.chartBox {
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-2);
+}
+
+.detailBox {
+  border-top: 1px solid var(--border-strong);
+  padding-top: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.advancedBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+  min-width: 0;
+}
+
+/* Primary Inspector Tabs — underline indicator per §13.3 */
 .tabs {
   display: flex;
   justify-content: space-between;
   gap: 2px;
   border-bottom: 1px solid var(--border-strong);
-  overflow-x: hidden;
 }
 
 .tab {
@@ -50,10 +83,11 @@
   border: none;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
-  padding: var(--space-1) 4px;
+  padding: var(--space-1) var(--space-1);
   color: var(--ink-muted);
   font-size: var(--text-event);
   font-family: var(--font-sans);
+  font-weight: 500;
   cursor: pointer;
   transition: color var(--motion-duration) var(--motion-ease),
     border-color var(--motion-duration) var(--motion-ease);
@@ -65,7 +99,7 @@
 
 .tab[aria-selected="true"] {
   color: var(--ink);
-  border-bottom-color: var(--ink);
+  border-bottom-color: var(--status-info);
 }
 
 .tab:focus-visible {
@@ -73,41 +107,58 @@
   outline-offset: -2px;
 }
 
-/* Selected-satellite detail: plain flow — it grows with its content and the
-   panel scrolls as one column (round-2 verdict: ONE scrollbar). */
-.detail {
+.tabContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
   min-width: 0;
 }
 
-/* §8.1 collapsible section — native details/summary (ordinary product
-   pattern, keyboard operable for free), 6px control radius, aria-expanded
-   reflected on the summary. Collapsed by default: role analysis, not live
-   monitoring (round-2 ask). */
-.roles {
+/* Chart Sub-Tabs inside the Charts tab */
+.chartsSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.subTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.subTab {
+  background: var(--bg);
+  color: var(--ink-muted);
   border: 1px solid var(--border);
   border-radius: var(--radius-control);
-}
-
-.rolesSummary {
-  padding: var(--space-2);
-  color: var(--ink);
-  font-size: var(--text-body);
-  font-weight: 600;
+  padding: 2px var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-tick);
   cursor: pointer;
-  transition: color var(--motion-duration) var(--motion-ease);
 }
 
-.rolesSummary:hover {
+.subTab:hover {
   color: var(--ink);
+}
+
+.subTab[aria-selected="true"] {
+  color: var(--ink);
+  border-color: var(--status-info);
   background: var(--panel-raised);
-  border-radius: var(--radius-control);
 }
 
-.rolesSummary:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: -2px;
+.reassignmentSection,
+.eventsSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
-.rolesBody {
-  padding: 0 var(--space-2) var(--space-2);
+.sectionDivider {
+  border-top: 1px solid var(--border);
+}
+
+.detail {
+  min-width: 0;
 }

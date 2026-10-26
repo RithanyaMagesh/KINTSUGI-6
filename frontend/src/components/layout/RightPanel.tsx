@@ -1,17 +1,18 @@
-// Telemetry panel, the operator's answers to "what is happening and why":
-// §13.3 readout rows on top (label sans muted, value mono 28px+, tooltip
-// explains what the metric means and why it is watched — definitions from
-// §7.5/§8.7, no invented numbers), the §7.5 charts behind underline tabs
-// (§13.3: underline indicators, never sliding-pill tabs), the §8.1 role
-// table as a collapsible section, and the §7.7 selected-satellite panel.
-// One plain stacked column: every section is in normal flow at its natural
-// height and the panel itself is the single scroll container (round-2
-// verdict — sections must never overlap; one scrollbar). Every value
-// traces to the stream or a derivation on streamed values; absent values
-// render "unmeasured" (invariant 1).
+// RightPanel — View-Aware Telemetry & Inspector.
+// Adapts automatically to Simplified vs. Advanced view mode:
+// - Simplified mode (default): 3 core readout rows (Ground coverage, Minimum
+//   separation, Satellites active / failed), the Ground coverage chart, and a
+//   compact Selected satellite card.
+// - Advanced mode: All 6 readout rows + 4 strictly tabbed inspector panels
+//   (Charts | Satellite detail | Role reassignment | Events & AI risk) so
+//   panels never stack on top of each other.
+// Every value traces strictly to the stream; absent values render "unmeasured"
+// (repo invariant 1). Zero raw hex (§13.1).
 import { useState } from "react";
 import { useSimStore } from "../../stores/simStore";
 import { useHistoryStore } from "../../stores/historyStore";
+import { useRecoveryStore, selectLatestFailure } from "../../stores/recoveryStore";
+import { useUiStore } from "../../stores/uiStore";
 import { healthBand } from "../../utils/health";
 import ReadoutRow from "../dashboard/ReadoutRow";
 import GroundCoverageChart from "../dashboard/GroundCoverageChart";
@@ -20,150 +21,207 @@ import InterSatDistanceChart from "../dashboard/InterSatDistanceChart";
 import DvChart from "../dashboard/DvChart";
 import MissionHealthScore from "../dashboard/MissionHealthScore";
 import RoleTable from "../dashboard/RoleTable";
+import RecoveryLog from "../recovery/RecoveryLog";
+import EventLog from "../events/EventLog";
+import RiskPanel from "../live/RiskPanel";
 import SelectedSatellitePanel from "../satellites/SelectedSatellitePanel";
 import chrome from "../../styles/chrome.module.css";
 import styles from "./RightPanel.module.css";
 
-const TABS = [
+const INSPECTOR_TABS = [
+  { id: "charts", label: "Charts" },
+  { id: "satellite", label: "Satellite" },
+  { id: "reassignment", label: "Reassignment" },
+  { id: "events", label: "Events & AI" },
+] as const;
+
+type InspectorTabId = (typeof INSPECTOR_TABS)[number]["id"];
+
+const CHART_TABS = [
   { id: "coverage", label: "Coverage" },
-  { id: "deviation", label: "Deviation" },
   { id: "separation", label: "Separation" },
+  { id: "deviation", label: "Deviation" },
   { id: "dv", label: "Delta-v" },
   { id: "health", label: "Health" },
 ] as const;
 
-type TabId = (typeof TABS)[number]["id"];
+type ChartTabId = (typeof CHART_TABS)[number]["id"];
 
 export default function RightPanel() {
+  const viewMode = useUiStore((s) => s.viewMode);
   const metrics = useSimStore((s) => s.metrics);
   const satellites = useSimStore((s) => s.satellites);
-  const [tab, setTab] = useState<TabId>("coverage");
-  // Mirrors the <details> open state so the summary carries aria-expanded
-  // (the native attribute lives on details, not on the summary button).
-  const [rolesOpen, setRolesOpen] = useState(false);
+  const latestFailure = useRecoveryStore(selectLatestFailure);
+  const [inspectorTab, setInspectorTab] = useState<InspectorTabId>("charts");
+  const [chartTab, setChartTab] = useState<ChartTabId>("coverage");
 
-  // Δv used, swarm total: arithmetic on streamed values only — never invented.
   const dvTotal = satellites.reduce((sum, s) => sum + s.dv_used, 0);
   const hasSats = satellites.length > 0;
 
-  // Fleet counts from sats[].status (§7.5): active = not failed (healthy,
-  // reconfiguring, recovered); re-renders only when the counts move.
   const failed = satellites.reduce((n, s) => (s.status === "failed" ? n + 1 : n), 0);
   const active = satellites.length - failed;
 
-  // Mission health: the sampler's last derived value (utils/health.ts, §8.7,
-  // measured inputs only) and the §8.7 band. Primitive selectors — RightPanel
-  // re-renders only when the score or the reference actually changes.
   const health = useHistoryStore((s) =>
     s.samples.length > 0 ? s.samples[s.samples.length - 1].health : null,
   );
   const minSepRef = useHistoryStore((s) => s.minSepRef);
   const band = health === null ? null : healthBand(health);
 
-  // Roving tabindex + arrow keys on the tablist (§13.3 interactive states).
-  const onTabKeyDown = (e: React.KeyboardEvent) => {
-    const idx = TABS.findIndex((t) => t.id === tab);
-    let next: number;
-    if (e.key === "ArrowRight") next = (idx + 1) % TABS.length;
-    else if (e.key === "ArrowLeft") next = (idx + TABS.length - 1) % TABS.length;
-    else if (e.key === "Home") next = 0;
-    else if (e.key === "End") next = TABS.length - 1;
-    else return;
-    e.preventDefault();
-    setTab(TABS[next].id);
-    document.getElementById(`telemetry-tab-${TABS[next].id}`)?.focus();
-  };
+  const preCov = latestFailure?.coverage.pre ?? null;
+  const covNow = metrics.coverage ?? null;
+  let covContext: string | undefined;
+  if (preCov !== null && covNow !== null) {
+    const diffPts = (covNow - preCov) * 100;
+    const sign = diffPts >= 0 ? "+" : "";
+    covContext = `${sign}${diffPts.toFixed(1)} pts vs ${(preCov * 100).toFixed(1)}% pre-fault`;
+  }
+
+  const sepContext =
+    minSepRef !== null
+      ? `2000 m keep-out · ref ${minSepRef.toFixed(0)} m`
+      : "2000 m keep-out floor";
+
+  const latencyVal = metrics.detectionLatencyS ?? latestFailure?.detectionLatencyS ?? null;
 
   return (
-    <aside className={`${chrome.panel} ${styles.panel}`}>
-      <h2 className={chrome.panelTitle}>Telemetry</h2>
+    <aside className={`${chrome.panel} ${styles.panel}`} aria-label="Swarm telemetry">
+      <div className={styles.titleRow}>
+        <h2 className={chrome.panelTitle}>Swarm telemetry</h2>
+        <span className={styles.fleetTag}>
+          {hasSats ? `${active}/${satellites.length} active` : "Standby"}
+        </span>
+      </div>
+
+      {/* Primary Readout Rows: 3 in Simplified mode, 6 in Advanced mode */}
       <div className={styles.readouts}>
         <ReadoutRow
           label="Ground coverage"
           value={metrics.coverage === undefined ? null : metrics.coverage}
           format={(v) => `${(v * 100).toFixed(1)} %`}
-          tip="Share of ground targets the swarm can observe. The primary mission metric: stable before failure, sharp drop at failure, recovery after replanning (spec 7.5)."
+          tip="Share of ground targets observed by healthy imagers. Drops when an imager fails; recovers as survivors re-phase around the formation (spec 7.5)."
+          context={covContext}
         />
         <ReadoutRow
           label="Minimum separation"
           value={metrics.minSep}
-          format={(v) => `${v.toFixed(1)} m`}
-          tip="Distance between the two closest satellites. Watched against the session's first measured clearance — a dip toward it is collision risk (spec 7.5)."
-          context={minSepRef === null ? undefined : `reference ${minSepRef.toFixed(0)} m`}
-        />
-        <ReadoutRow
-          label="Mission health score"
-          value={health}
-          format={(v) => `${v.toFixed(0)} / 100`}
-          tip="One judge-facing number: 0.5 x coverage + 0.3 x formation quality + 0.2 x safety, computed only from measured inputs (spec 8.7)."
-          context={band === null ? undefined : `${band} band`}
+          format={(v) => `${v.toFixed(0)} m`}
+          tip="Closest pair distance across the swarm (including coasting dead satellites). Must remain above the 2000 m keep-out safety floor (spec 7.5)."
+          context={sepContext}
         />
         <ReadoutRow
           label="Satellites active / failed"
-          value={hasSats ? `${active} / ${failed}` : null}
-          tip="Live fleet health from sats[].status — active / failed counts; how many satellites are flying versus failed, the degradation picture at a glance (spec 7.5)."
+          value={hasSats ? active : null}
+          format={() => `${active} / ${failed}`}
+          tip="Count of healthy/reconfiguring satellites vs failed satellites."
         />
-        <ReadoutRow
-          label="Detection latency"
-          value={metrics.detectionLatencyS}
-          format={(v) => `${v.toFixed(2)} s`}
-          tip="t_detect − t_fail: how quickly the swarm flagged the failure after injection (spec 7.5)."
-        />
-        <ReadoutRow
-          label="Delta-v used (sum)"
-          value={hasSats ? dvTotal : null}
-          format={(v) => `${v.toFixed(2)} m/s`}
-          tip="Sum of dv_used across all satellites — the thrust budget the mission has spent so far (spec 7.5)."
-        />
+
+        {viewMode === "advanced" && (
+          <>
+            <ReadoutRow
+              label="Mission health score"
+              value={health}
+              format={(v) => `${v.toFixed(0)} / 100${band ? ` (${band})` : ""}`}
+              tip="Composite 0-100 score combining ground coverage, formation slot tracking, and separation margin."
+            />
+            <ReadoutRow
+              label="Detection latency"
+              value={latencyVal}
+              format={(v) => `${v.toFixed(1)} s`}
+              tip="t_detect − t_fail: time from fault injection until 3 missed heartbeats trigger autonomous Hungarian replanning (spec 7.5)."
+            />
+            <ReadoutRow
+              label="Delta-v used (sum)"
+              value={hasSats ? dvTotal : null}
+              format={(v) => `${v.toFixed(2)} m/s`}
+              tip="Total propellant (Δv) burned by saturated PD thrusters across all satellites during slot reconfiguration (spec 7.5)."
+            />
+          </>
+        )}
       </div>
 
-      <div role="tablist" aria-label="Telemetry charts" className={styles.tabs} onKeyDown={onTabKeyDown}>
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            role="tab"
-            id={`telemetry-tab-${t.id}`}
-            aria-selected={tab === t.id}
-            aria-controls="telemetry-chart-panel"
-            tabIndex={tab === t.id ? 0 : -1}
-            className={styles.tab}
-            onClick={() => setTab(t.id)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-      <div
-        role="tabpanel"
-        id="telemetry-chart-panel"
-        aria-labelledby={`telemetry-tab-${tab}`}
-      >
-        {tab === "coverage" && <GroundCoverageChart />}
-        {tab === "deviation" && <FormationDeviationChart />}
-        {tab === "separation" && <InterSatDistanceChart />}
-        {tab === "dv" && <DvChart />}
-        {tab === "health" && <MissionHealthScore />}
-      </div>
-
-      {/* §8.1 role reallocation — collapsible to keep the panel dense; the
-          old-role column is still the simStore frame diff (no invented field). */}
-      <details
-        className={styles.roles}
-        onToggle={(e) => setRolesOpen(e.currentTarget.open)}
-      >
-        <summary className={styles.rolesSummary} aria-expanded={rolesOpen}>
-          Role reassignment
-        </summary>
-        <div className={styles.rolesBody}>
-          <RoleTable />
+      {/* Simplified Mode: Primary Coverage Chart + Selected Satellite Summary */}
+      {viewMode === "simplified" ? (
+        <div className={styles.simplifiedBody}>
+          <div className={styles.chartBox}>
+            <GroundCoverageChart />
+          </div>
+          <div className={styles.detailBox}>
+            <h3 className={chrome.panelTitle}>Selected satellite</h3>
+            <SelectedSatellitePanel />
+          </div>
         </div>
-      </details>
+      ) : (
+        /* Advanced Mode: Strictly Tabbed Engineering Inspector (Zero Stacking) */
+        <div className={styles.advancedBody}>
+          <div role="tablist" aria-label="Engineering inspector tabs" className={styles.tabs}>
+            {INSPECTOR_TABS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                id={`inspector-tab-${t.id}`}
+                aria-selected={inspectorTab === t.id}
+                className={styles.tab}
+                onClick={() => setInspectorTab(t.id)}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
 
-      <h2 className={chrome.panelTitle}>Selected satellite</h2>
-      <div className={styles.detail}>
-        <SelectedSatellitePanel />
-      </div>
+          <div
+            role="tabpanel"
+            aria-labelledby={`inspector-tab-${inspectorTab}`}
+            className={styles.tabContent}
+          >
+            {inspectorTab === "charts" && (
+              <div className={styles.chartsSection}>
+                <div role="tablist" aria-label="Telemetry chart type" className={styles.subTabs}>
+                  {CHART_TABS.map((ct) => (
+                    <button
+                      key={ct.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={chartTab === ct.id}
+                      className={styles.subTab}
+                      onClick={() => setChartTab(ct.id)}
+                    >
+                      {ct.label}
+                    </button>
+                  ))}
+                </div>
+                {chartTab === "coverage" && <GroundCoverageChart />}
+                {chartTab === "separation" && <InterSatDistanceChart />}
+                {chartTab === "deviation" && <FormationDeviationChart />}
+                {chartTab === "dv" && <DvChart />}
+                {chartTab === "health" && <MissionHealthScore />}
+              </div>
+            )}
+
+            {inspectorTab === "satellite" && (
+              <div className={styles.detail}>
+                <SelectedSatellitePanel />
+              </div>
+            )}
+
+            {inspectorTab === "reassignment" && (
+              <div className={styles.reassignmentSection}>
+                <RoleTable />
+                <div className={styles.sectionDivider} />
+                <RecoveryLog />
+              </div>
+            )}
+
+            {inspectorTab === "events" && (
+              <div className={styles.eventsSection}>
+                <RiskPanel />
+                <div className={styles.sectionDivider} />
+                <EventLog />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </aside>
   );
 }

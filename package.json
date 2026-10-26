@@ -1,0 +1,11 @@
+{
+  "name": "cubesat-swarm-workspace",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": ".venv/bin/uvicorn cubesat.api:app --host 0.0.0.0 --port 3000",
+    "build": "npm --prefix frontend run build",
+    "start": ".venv/bin/uvicorn cubesat.api:app --host 0.0.0.0 --port 3000",
+    "lint": "npm --prefix frontend run build"
+  }
+}

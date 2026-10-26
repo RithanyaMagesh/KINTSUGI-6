@@ -1,13 +1,20 @@
+/* FailureInjectionPanel — clean live fault trigger. Strict token compliance (§13.1). */
+
 .group {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
 }
 
-.subTitle {
-  font-size: var(--text-body);
-  font-weight: 600;
-  color: var(--ink);
+.headRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.headRow h2 {
+  margin-bottom: 0;
 }
 
 .row {
@@ -16,25 +23,22 @@
   gap: var(--space-1);
 }
 
-/* One-line plain-language description of the selected mode (§13.3). */
-.modeHint {
-  color: var(--ink-muted);
-  font-size: var(--text-body);
-}
-
-/* Caution semantics (§22: color paired with the "Inject failure" text label):
-   amber border on the destructive-adjacent action, kept on hover, with the
-   shared disabled state still visibly dimmed. */
 .injectBtn {
-  border-color: var(--status-caution);
+  width: 100%;
+  justify-content: center;
+  border-color: var(--status-failed);
+  color: var(--status-failed);
+  font-weight: 500;
 }
 
 .injectBtn:hover:not(:disabled) {
-  border-color: var(--status-caution);
   background: var(--panel-raised);
+  border-color: var(--status-failed);
 }
 
-.injectBtn:disabled {
-  border-color: var(--status-caution);
-  opacity: 0.6;
+.modeHint {
+  color: var(--ink-muted);
+  font-size: var(--text-event);
+  line-height: 1.4;
+  margin: 0;
 }

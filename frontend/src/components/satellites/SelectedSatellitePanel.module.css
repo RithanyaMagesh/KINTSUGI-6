@@ -1,12 +1,31 @@
-/* Selected satellite detail — §7.7 + per-satellite recovery timeline.
-   Readout rows, mono values, one accent: the status colour (state meaning
-   only, always with its text label). Tokens only — no raw colors here. */
+/* Selected satellite detail — §7.7. Strict token compliance (§13.1: zero raw hex)
+   and Sentence case (§13.2: no text-transform: uppercase). */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
 
 .header {
   display: flex;
-  align-items: baseline;
+  justify-content: space-between;
+  align-items: center;
   gap: var(--space-2);
-  margin-bottom: var(--space-1);
+  padding-bottom: var(--space-1);
+  border-bottom: 1px solid var(--border-strong);
+}
+
+.targetTitleGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.reticleIcon {
+  font-family: var(--font-mono);
+  font-size: var(--text-panel-title);
+  color: var(--status-caution);
 }
 
 .id {
@@ -16,18 +35,78 @@
   color: var(--ink);
 }
 
-/* Sections separate by a stronger border, never by paint or shadows. */
+.statusBadge {
+  font-family: var(--font-mono);
+  font-size: var(--text-tick);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  padding: 1px var(--space-2);
+}
+
+.clearBtn {
+  background: var(--bg);
+  color: var(--ink-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  padding: 2px var(--space-2);
+  font-size: var(--text-tick);
+  font-family: var(--font-mono);
+  cursor: pointer;
+}
+
+.clearBtn:hover {
+  color: var(--ink);
+  border-color: var(--border-strong);
+}
+
+.intelGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  padding: var(--space-2);
+}
+
+.intelCol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.intelCol:first-child {
+  border-right: 1px solid var(--border);
+  padding-right: var(--space-2);
+}
+
+.intelHeader {
+  font-family: var(--font-sans);
+  font-size: var(--text-tick);
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+
+.intelLine {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-1);
+  font-size: var(--text-event);
+  color: var(--ink-muted);
+}
+
 .section {
-  border-top: 1px solid var(--border-strong);
-  padding: var(--space-2) 0 var(--space-1);
-  margin-top: var(--space-2);
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-2);
 }
 
 .sectionTitle {
   font-family: var(--font-sans);
-  font-size: var(--text-body);
+  font-size: var(--text-event);
   font-weight: 600;
-  color: var(--ink);
+  color: var(--ink-muted);
   margin: 0 0 var(--space-1);
 }
 
@@ -36,7 +115,7 @@
   justify-content: space-between;
   align-items: baseline;
   gap: var(--space-3);
-  padding: var(--space-1) 0;
+  padding: 3px 0;
 }
 
 .label {
@@ -49,23 +128,21 @@
   font-size: var(--text-body);
   color: var(--ink);
   text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
-/* Role semantics and multi-word explanations: sans, left-aligned where the
-   value wraps (long sentences must not right-align raggedly). */
 .explain {
   font-family: var(--font-sans);
-  font-size: var(--text-body);
+  font-size: var(--text-event);
   color: var(--ink);
   text-align: right;
-  max-width: 60%;
+  max-width: 65%;
 }
 
-/* LVLH component caption under the position vector. */
 .caption {
-  font-family: var(--font-sans);
-  font-size: var(--text-body);
-  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-tick);
+  color: var(--ink-faint);
   margin: 0;
   padding: 0 0 var(--space-1);
 }
@@ -79,8 +156,6 @@
   padding: var(--space-1) 0;
 }
 
-/* Appendix D suspect annotation — caution token with the literal text
-   "SUSPECT" (colorblind rule). An annotation, never a status color. */
 .suspectLabel {
   font-family: var(--font-mono);
   font-size: var(--text-body);
@@ -91,19 +166,17 @@
 
 .reason {
   font-family: var(--font-sans);
-  font-size: var(--text-body);
+  font-size: var(--text-event);
   color: var(--ink-muted);
   margin: 0;
   padding: var(--space-1) 0;
 }
 
-/* Role and task history — a vertical timeline: hairline spine, mono stamp,
-   sans sentence. Structure by border, not decoration. */
 .timeline {
   list-style: none;
   margin: var(--space-1) 0 0;
   padding: 0 0 0 var(--space-3);
-  border-left: 2px solid var(--border-strong);
+  border-left: 2px solid var(--status-caution);
 }
 
 .timelineRow {
@@ -111,19 +184,51 @@
   grid-template-columns: auto 1fr;
   gap: var(--space-2);
   align-items: baseline;
-  padding: var(--space-1) 0;
+  padding: 3px 0;
 }
 
 .timelineT {
   font-family: var(--font-mono);
-  font-size: var(--text-body);
-  color: var(--ink-muted);
+  font-size: var(--text-event);
+  color: var(--status-caution);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
 .timelineText {
   font-family: var(--font-sans);
-  font-size: var(--text-body);
+  font-size: var(--text-event);
   color: var(--ink);
+}
+
+.advisorDetails {
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-2);
+}
+
+.advisorSummary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  font-size: var(--text-event);
+  color: var(--ink-muted);
+  list-style: none;
+}
+
+.advisorSummary::-webkit-details-marker {
+  display: none;
+}
+
+.advisorTag {
+  font-family: var(--font-mono);
+  font-size: var(--text-tick);
+  color: var(--ink-faint);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  padding: 1px var(--space-1);
+}
+
+.advisorBody {
+  padding-top: var(--space-1);
 }

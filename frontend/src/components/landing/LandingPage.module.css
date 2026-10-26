@@ -1,55 +1,67 @@
 /* Landing page — §13 design law. Color only via tokens.css custom properties
-   (zero raw hex here); IBM Plex Sans for labels/body, IBM Plex Mono for the
-   state chain and SVG data labels; radius 8px panels / 6px controls; spacing
-   on the 4px scale; motion is color/border/opacity only, 120-180ms.
-   Interactive elements here are plain hash links (the page fetches nothing),
-   so hover / :focus-visible / active are shipped and disabled / loading /
-   error / empty do not apply — those states live on the console pages the
-   links lead to. Dimensions are stable: fixed padding, color-only transitions. */
+   (zero raw hex here); IBM Plex Sans for labels/body, IBM Plex Mono for tags;
+   radius ≤8px panels / 4px controls; spacing on the 4px scale. */
 
 .page {
-  min-height: 100vh;
+  min-height: 100%;
   background: var(--bg);
   color: var(--ink);
   padding: var(--space-5) var(--space-4);
+  overflow-y: auto;
 }
 
 .inner {
-  max-width: 1120px;
+  max-width: 1040px;
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
 }
 
-/* -- Hero ---------------------------------------------------------------- */
+/* -- Hero Banner --------------------------------------------------------- */
 
 .hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
-  gap: var(--space-5);
-  align-items: center;
-  padding: var(--space-5) 0;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  padding: var(--space-5);
+}
+
+.heroContent {
+  max-width: 720px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.kicker {
+  font-family: var(--font-mono);
+  font-size: var(--text-event);
+  color: var(--status-info);
+  margin: 0;
 }
 
 .headline {
-  font-size: clamp(40px, 6vw, 64px);
+  font-size: clamp(32px, 4.5vw, 48px);
   font-weight: 600;
-  line-height: 1.05;
+  line-height: 1.12;
   letter-spacing: -0.02em;
-  margin: 0 0 var(--space-4);
+  margin: 0;
+  color: var(--ink);
 }
 
 .subline {
-  font-size: 18px;
-  line-height: 1.5;
+  font-size: var(--text-body);
+  line-height: 1.6;
   color: var(--ink-muted);
-  max-width: 52ch;
-  margin: 0 0 var(--space-5);
+  margin: 0;
 }
 
 .ctaRow {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-3);
-  margin: 0 0 var(--space-3);
+  margin-top: var(--space-2);
 }
 
 .cta {
@@ -82,11 +94,7 @@
 }
 
 .ctaPrimary:hover {
-  opacity: 0.85;
-}
-
-.ctaPrimary:active {
-  opacity: 0.7;
+  opacity: 0.88;
 }
 
 .ctaSecondary {
@@ -95,11 +103,105 @@
 }
 
 .ctaSecondary:hover {
-  border-color: var(--ink-faint);
+  border-color: var(--status-info);
 }
 
-.ctaSecondary:active {
+/* -- Workspace Modes Section --------------------------------------------- */
+
+.modesSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.sectionTitle {
+  font-size: var(--text-panel-title);
+  font-weight: 600;
+  margin: 0;
+  color: var(--ink);
+}
+
+.modesGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.modeCard {
   background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-panel);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.modeHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-2);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: var(--space-2);
+}
+
+.modeTitle {
+  font-size: var(--text-panel-title);
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0;
+}
+
+.modeTag {
+  font-family: var(--font-mono);
+  font-size: var(--text-tick);
+  color: var(--ink-muted);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  padding: 2px var(--space-2);
+  white-space: nowrap;
+}
+
+.modeDesc {
+  font-size: var(--text-body);
+  line-height: 1.55;
+  color: var(--ink-muted);
+  margin: 0;
+}
+
+.modeList {
+  margin: 0;
+  padding-left: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  color: var(--ink);
+  font-size: var(--text-event);
+  line-height: 1.5;
+}
+
+.modeAction {
+  margin-top: auto;
+  padding-top: var(--space-2);
+}
+
+/* -- Footer -------------------------------------------------------------- */
+
+.footer {
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-4);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.footerText {
+  font-size: var(--text-event);
+  color: var(--ink-muted);
+  margin: 0;
 }
 
 .linkRow {
@@ -109,213 +211,19 @@
 }
 
 .link {
-  color: var(--ink-muted);
-  font-size: var(--text-body);
+  color: var(--ink);
+  font-size: var(--text-event);
   text-decoration: underline;
   text-underline-offset: 3px;
-  transition: color var(--motion-duration) var(--motion-ease);
 }
 
 .link:hover {
-  color: var(--ink);
-}
-
-.link:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 2px;
-}
-
-/* -- Hero schematic (token colors only, drawn via classes) ---------------- */
-
-.figure {
-  margin: 0;
-}
-
-.figureSvg {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-
-.earth {
-  fill: var(--scene-earth-ocean);
-  stroke: var(--border-strong);
-  stroke-width: 1;
-}
-
-.grat {
-  fill: none;
-  stroke: var(--scene-earth-graticule);
-  stroke-width: 1;
-  opacity: 0.55;
-}
-
-.orbit {
-  fill: none;
-  stroke: var(--border-strong);
-  stroke-width: 1.5;
-}
-
-.sat {
-  fill: var(--status-nominal);
-}
-
-.deadSlot {
-  fill: none;
-  stroke: var(--ink-faint);
-  stroke-width: 1;
-  stroke-dasharray: 3 3;
-}
-
-.deadX {
-  stroke: var(--status-failed);
-  stroke-width: 3;
-  stroke-linecap: round;
-}
-
-.targetSlot {
-  fill: none;
-  stroke: var(--status-info);
-  stroke-width: 1.5;
-  stroke-dasharray: 4 3;
-}
-
-.arrow {
-  stroke: var(--status-info);
-  stroke-width: 1.5;
-}
-
-.arrowHead {
-  fill: var(--status-info);
-}
-
-.svgLabel {
-  font-family: var(--font-mono);
-  font-size: var(--text-tick);
-  fill: var(--ink-muted);
-}
-
-.svgLabelFail {
-  font-family: var(--font-mono);
-  font-size: var(--text-tick);
-  fill: var(--status-failed);
-}
-
-/* -- Pillars: readout rows, not cards ------------------------------------ */
-
-.section {
-  margin-top: var(--space-5);
-}
-
-.sectionTitle {
-  font-size: var(--text-panel-title);
-  font-weight: 600;
-  margin: 0 0 var(--space-4);
-}
-
-.pillar {
-  display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  gap: var(--space-5);
-  padding: var(--space-4) 0;
-  border-top: 1px solid var(--border);
-}
-
-.pillarName {
-  font-size: var(--text-panel-title);
-  font-weight: 600;
-  color: var(--ink);
-  margin: 0;
-}
-
-.pillarBody {
-  font-size: var(--text-body);
-  line-height: 1.55;
-  color: var(--ink-muted);
-  max-width: 68ch;
-  margin: 0;
-}
-
-/* -- State-machine strip -------------------------------------------------- */
-
-.strip {
-  margin-top: var(--space-5);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-panel);
-  background: var(--panel);
-  padding: var(--space-4) var(--space-5);
-}
-
-.chain {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-2);
-  font-family: var(--font-mono);
-  font-size: var(--text-body);
-  font-weight: 500;
-  margin: 0;
-}
-
-.chainSep {
-  color: var(--ink-faint);
-}
-
-.stateNominal {
-  color: var(--status-nominal);
-}
-
-.stateFailed {
-  color: var(--status-failed);
-}
-
-.stateCaution {
-  color: var(--status-caution);
-}
-
-.stateInfo {
   color: var(--status-info);
 }
 
-.stripNote {
-  font-size: var(--text-body);
-  line-height: 1.5;
-  color: var(--ink-muted);
-  max-width: 68ch;
-  margin: var(--space-3) 0 0;
-}
-
-/* -- Footer ---------------------------------------------------------------- */
-
-.footer {
-  margin-top: var(--space-5);
-  border-top: 1px solid var(--border);
-  padding-top: var(--space-4);
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
-.footerText {
-  font-size: var(--text-body);
-  line-height: 1.5;
-  color: var(--ink-muted);
-  max-width: 72ch;
-  margin: 0;
-}
-
-/* -- Small screens --------------------------------------------------------- */
-
 @media (max-width: 900px) {
-  .hero {
+  .modesGrid {
     grid-template-columns: 1fr;
-  }
-
-  .pillar {
-    grid-template-columns: 1fr;
-    gap: var(--space-2);
   }
 
   .footer {

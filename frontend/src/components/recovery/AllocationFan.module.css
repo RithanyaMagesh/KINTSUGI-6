@@ -1,0 +1,73 @@
+/* AllocationFan styles — Image 1 inspired cubic-bezier survivor-to-slot
+   assignment diagram. Strict token compliance (§13.1: zero raw hex). */
+
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+}
+
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-family: var(--font-mono);
+  font-size: var(--text-tick);
+  color: var(--ink-muted);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: var(--space-1);
+}
+
+.headerLabel {
+  color: var(--ink-muted);
+}
+
+.headerCenter {
+  color: var(--status-caution);
+}
+
+.headerRight {
+  color: var(--ink-muted);
+}
+
+.diagramHost {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  overflow: hidden;
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.clickableNode {
+  cursor: pointer;
+}
+
+.footerMeta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-event);
+  color: var(--ink-muted);
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-1);
+}
+
+.monoVal {
+  font-family: var(--font-mono);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.empty {
+  color: var(--ink-muted);
+  font-size: var(--text-body);
+  padding: var(--space-2) 0;
+}

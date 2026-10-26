@@ -8,8 +8,9 @@
 
 .page {
   height: 100%;
+  min-height: 0;
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr);
   gap: var(--space-2);
   padding: var(--space-2);
   background: var(--bg);
@@ -17,7 +18,7 @@
 
 .main {
   display: grid;
-  grid-template-columns: 320px minmax(0, 1fr) 336px;
+  grid-template-columns: 310px minmax(0, 1fr) 340px;
   gap: var(--space-2);
   min-height: 0;
 }

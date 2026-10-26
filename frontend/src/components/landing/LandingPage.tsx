@@ -1,100 +1,43 @@
-// Landing page — route #/ (Router slot 'landing'). The page that sells the
-// console to judges in one screen: the recovery story, then the receipts.
-//
-// Copy sources (no invented mission facts, no displayed numbers at all — the
-// unmeasured rule is satisfied by construction, repo invariant 1):
-//   - FRONTEND_SPEC §2 (vision), §4 (recovery narrative)
-//   - MASTER_PROMPT §2/§3.1-3.5 (physics, allocation, control, state machine)
-//   - IMPLEMENTATION_NOTES "hypothetical swarm on a real chief orbit"
-//     (FIREFLY-1 framing) and the P4 predictor section (LightGBM status)
-//   - docs/FRONTEND_SPEC Appendix C via onboarding/helpContent.ts wording
-//
-// Exports: named `LandingPage` (Router slot export) plus a default export of
-// the same function, so either import style works.
-import { STATE_SPINE } from "../../types/satellite";
+// Landing page — route #/ (Router slot 'landing').
+// Clean, normal product introduction for the CubeSat Swarm Self-Healing Console.
+// Explains what the console does and provides direct entry points to the
+// Unscripted Live Sandbox (#/live) and Pre-Recorded Scenario Replays (#/replay),
+// while keeping deep mathematical derivations and benchmarks in Tutorial/Docs.
 import styles from "./LandingPage.module.css";
 
-/** The six formation slots on the 2:1 CW ellipse (along-track amplitude is
- * 2x radial — MASTER_PROMPT §3.1), phase-spaced 60 deg, drawn in SVG user
- * units around Earth at (320, 210). Index 3 (theta 180) is the failed seat. */
-const SLOT_XY: ReadonlyArray<readonly [number, number]> = [
-  [530, 210],
-  [425, 119],
-  [215, 119],
-  [110, 210],
-  [215, 301],
-  [425, 301],
-];
-const DEAD = 3;
-/** Survivors that cover the dead seat, and the reassigned target slots they
- * are arrowed to (re-phased into the gap — replanning picks a k-slot
- * formation, MASTER_PROMPT §3.3 step 1). */
-const REASSIGN_FROM = [2, 4] as const;
-const TARGET_XY: ReadonlyArray<readonly [number, number]> = [
-  [138, 158],
-  [138, 263],
-];
-
-/** Arrow geometry derived once at module scope (pure, deterministic): a line
- * that clears the survivor square and the target circle, plus a filled
- * triangle head oriented along the line. */
-const ARROWS = REASSIGN_FROM.map((from, i) => {
-  const [sx, sy] = SLOT_XY[from];
-  const [tx, ty] = TARGET_XY[i];
-  const dx = tx - sx;
-  const dy = ty - sy;
-  const len = Math.hypot(dx, dy);
-  const ux = dx / len;
-  const uy = dy / len;
-  return {
-    x1: sx + ux * 10,
-    y1: sy + uy * 10,
-    x2: tx - ux * 13,
-    y2: ty - uy * 13,
-    hx: tx - ux * 9,
-    hy: ty - uy * 9,
-    angle: (Math.atan2(dy, dx) * 180) / Math.PI,
-  };
-});
-
-/** State literal -> token color class. The chain strings come from the shared
- * STATE_SPINE so copy and the console's timeline spine cannot drift.
- * MissionState also carries DEGRADED (wire value, not in the spine); the
- * fallback covers it if the spine ever grows. */
-const STATE_CLASS: Partial<Record<(typeof STATE_SPINE)[number], string>> = {
-  NOMINAL: styles.stateNominal,
-  FAILURE_DETECTED: styles.stateFailed,
-  REPLANNING: styles.stateCaution,
-  RECONFIGURING: styles.stateCaution,
-  RECOVERED: styles.stateInfo,
-};
-
-const PILLARS: ReadonlyArray<{ name: string; body: string }> = [
+const WORKFLOW_MODES: ReadonlyArray<{
+  title: string;
+  tag: string;
+  description: string;
+  bullets: ReadonlyArray<string>;
+  ctaLabel: string;
+  href: string;
+}> = [
   {
-    name: "Physics with receipts",
-    body:
-      "The sim runs the same Clohessy-Wiltshire core that writes the " +
-      "committed run logs. Every number on screen is traceable to a " +
-      "committed log; anything the wire does not carry renders as " +
-      "unmeasured.",
+    title: "Live simulation sandbox",
+    tag: "Interactive physics engine",
+    description:
+      "Configure your own constellation from scratch, launch the live Clohessy-Wiltshire orbital physics engine, and inject satellite failures at any moment to test autonomous recovery on unseen states.",
+    bullets: [
+      "Choose satellite count (2 to 50), orbit altitude, and formation radius",
+      "Switch between Global Earth orbit view and close-up Formation array view",
+      "Click any satellite in 3D to inject a live fault and watch Hungarian slot reassignment",
+    ],
+    ctaLabel: "Open live sandbox",
+    href: "#/live",
   },
   {
-    name: "Self-healing",
-    body:
-      "A satellite that stops reporting heartbeats is declared failed, and " +
-      "a Hungarian assignment reassigns the survivors across formation " +
-      "slots. PD-controlled burns fly the swarm back into a stable " +
-      "formation while the failed satellite coasts ballistically as a " +
-      "collision hazard.",
-  },
-  {
-    name: "AI early warning (display-only)",
-    body:
-      "A sealed LightGBM model scores slow-degradation precursor risk " +
-      "(sats[].risk) as a display-only operator annotation. Because the " +
-      "pre-registered oracle sweep measured +0.0235 pp critical-seat gain " +
-      "(below the 0.5 pp threshold), the model is cut from the control loop " +
-      "and reactive 4 s heartbeat detection drives recovery.",
+    title: "Scenario replays",
+    tag: "Pre-recorded missions",
+    description:
+      "Stream and scrub through six canonical multi-failure scenarios — including dual imager loss, leader re-election, and cascading 8-satellite faults — with full telemetry playback.",
+    bullets: [
+      "Instant playback of two_failure, firefly_swarm, cascading_n8, and leader_failure runs",
+      "Scrub directly to any timestamp or state transition on the recovery timeline",
+      "Inspect ground coverage, minimum separation, and per-satellite propellant usage",
+    ],
+    ctaLabel: "Browse scenario replays",
+    href: "#/replay",
   },
 ];
 
@@ -102,153 +45,73 @@ export function LandingPage() {
   return (
     <main className={styles.page}>
       <div className={styles.inner}>
-        {/* 1 — Hero: the recovery story plus a schematic of it. */}
-        <section className={styles.hero}>
-          <div>
-            <h1 className={styles.headline}>A satellite dies. The swarm heals.</h1>
+        {/* Clean Hero Banner */}
+        <section className={styles.hero} aria-label="Product overview">
+          <div className={styles.heroContent}>
+            <p className={styles.kicker}>CubeSat constellation operations</p>
+            <h1 className={styles.headline}>
+              Autonomous fault recovery for CubeSat swarms
+            </h1>
             <p className={styles.subline}>
-              This is a hypothetical 6-satellite swarm flying the real orbit
-              of FIREFLY-1. Motion is Clohessy-Wiltshire relative dynamics in
-              the LVLH frame.
+              When a satellite fails in low Earth orbit, the constellation detects missed
+              heartbeats, solves for optimal survivor-to-slot reassignment, and executes
+              thruster burns to close the ground coverage gap while avoiding the coasting
+              debris hazard.
             </p>
             <div className={styles.ctaRow}>
               <a className={`${styles.cta} ${styles.ctaPrimary}`} href="#/live">
-                Start live simulation
+                Open live sandbox
               </a>
-              <a
-                className={`${styles.cta} ${styles.ctaSecondary}`}
-                href="#/replay"
-              >
-                Watch a replay
-              </a>
-              <a
-                className={`${styles.cta} ${styles.ctaSecondary}`}
-                href="#/tutorial"
-              >
-                Learn the console
-              </a>
-            </div>
-            <div className={styles.linkRow}>
-              <a className={styles.link} href="#/faq">
-                FAQ
-              </a>
-              <a className={styles.link} href="#/docs">
-                Docs
+              <a className={`${styles.cta} ${styles.ctaSecondary}`} href="#/replay">
+                Browse scenario replays
               </a>
             </div>
           </div>
-          <figure className={styles.figure}>
-            <svg
-              className={styles.figureSvg}
-              viewBox="80 84 480 240"
-              role="img"
-              aria-label="Schematic of the recovery: on the formation ellipse around Earth, one satellite has failed and two survivors are reassigned to the vacated slots"
-            >
-              {/* Formation orbit — the 2:1 CW ellipse. */}
-              <ellipse
-                className={styles.orbit}
-                cx={320}
-                cy={210}
-                rx={210}
-                ry={105}
-              />
-              {/* Earth disc with a faint graticule. */}
-              <circle className={styles.earth} cx={320} cy={210} r={64} />
-              <ellipse className={styles.grat} cx={320} cy={210} rx={64} ry={24} />
-              <ellipse className={styles.grat} cx={320} cy={210} rx={24} ry={64} />
-              <text className={styles.svgLabel} x={320} y={292} textAnchor="middle">
-                chief: FIREFLY-1
-              </text>
-              {/* The dead seat: empty slot outline, red X, mono label. */}
-              <circle className={styles.deadSlot} cx={110} cy={210} r={11} />
-              <line className={styles.deadX} x1={103} y1={203} x2={117} y2={217} />
-              <line className={styles.deadX} x1={103} y1={217} x2={117} y2={203} />
-              <text className={styles.svgLabelFail} x={110} y={236} textAnchor="middle">
-                failed
-              </text>
-              {/* Survivors on their slots. */}
-              {SLOT_XY.map(([x, y], i) =>
-                i === DEAD ? null : (
-                  <rect
-                    key={i}
-                    className={styles.sat}
-                    x={x - 5.5}
-                    y={y - 5.5}
-                    width={11}
-                    height={11}
-                  />
-                ),
-              )}
-              {/* Reassigned target slots + arrows from two survivors. */}
-              {TARGET_XY.map(([x, y], i) => (
-                <circle
-                  key={i}
-                  className={styles.targetSlot}
-                  cx={x}
-                  cy={y}
-                  r={9}
-                />
-              ))}
-              {ARROWS.map((a, i) => (
-                <g key={i}>
-                  <line
-                    className={styles.arrow}
-                    x1={a.x1}
-                    y1={a.y1}
-                    x2={a.x2}
-                    y2={a.y2}
-                  />
-                  <polygon
-                    className={styles.arrowHead}
-                    points="0,0 -10,4 -10,-4"
-                    transform={`translate(${a.hx} ${a.hy}) rotate(${a.angle})`}
-                  />
-                </g>
-              ))}
-            </svg>
-          </figure>
         </section>
 
-        {/* 2 — The three pillars, readout-row style (no card grid). */}
-        <section className={styles.section} aria-label="What the console proves">
-          <h2 className={styles.sectionTitle}>What the console proves</h2>
-          <div>
-            {PILLARS.map((p) => (
-              <div className={styles.pillar} key={p.name}>
-                <h3 className={styles.pillarName}>{p.name}</h3>
-                <p className={styles.pillarBody}>{p.body}</p>
+        {/* Clear Separation: Live Sandbox vs Scenario Replays */}
+        <section className={styles.modesSection} aria-label="Console modes">
+          <h2 className={styles.sectionTitle}>Choose a workspace mode</h2>
+          <div className={styles.modesGrid}>
+            {WORKFLOW_MODES.map((m) => (
+              <div key={m.title} className={styles.modeCard}>
+                <div className={styles.modeHeader}>
+                  <h3 className={styles.modeTitle}>{m.title}</h3>
+                  <span className={styles.modeTag}>{m.tag}</span>
+                </div>
+                <p className={styles.modeDesc}>{m.description}</p>
+                <ul className={styles.modeList}>
+                  {m.bullets.map((b) => (
+                    <li key={b}>{b}</li>
+                  ))}
+                </ul>
+                <div className={styles.modeAction}>
+                  <a className={`${styles.cta} ${styles.ctaSecondary}`} href={m.href}>
+                    {m.ctaLabel}
+                  </a>
+                </div>
               </div>
             ))}
           </div>
         </section>
 
-        {/* 4 — How recovery works: the state machine, in mono + state colors. */}
-        <section className={styles.strip} aria-label="How recovery works">
-          <h2 className={styles.sectionTitle}>How recovery works</h2>
-          <p className={styles.chain}>
-            {STATE_SPINE.map((state, i) => (
-              <span key={state}>
-                {i > 0 && <span className={styles.chainSep}> → </span>}
-                <span className={STATE_CLASS[state] ?? styles.stateInfo}>{state}</span>
-              </span>
-            ))}
-          </p>
-          <p className={styles.stripNote}>
-            The mission state the console tracks from first missed heartbeat to
-            a stable formation. Every transition is logged with sim time.
-          </p>
-        </section>
-
-        {/* 5 — Footer: the honesty line. */}
+        {/* Footer navigation to Tutorial, FAQ, and Documentation */}
         <footer className={styles.footer}>
           <p className={styles.footerText}>
-            A simulation with receipts: the swarm is hypothetical, the
-            limitations are documented, and no displayed number exists without
-            a committed run log behind it.
+            Use the top bar at any time to switch between Simplified and Advanced telemetry
+            views, or toggle between Dark and Light mode.
           </p>
-          <a className={styles.link} href="#/docs">
-            Read the docs
-          </a>
+          <div className={styles.linkRow}>
+            <a className={styles.link} href="#/tutorial">
+              Interactive tutorial
+            </a>
+            <a className={styles.link} href="#/faq">
+              FAQ
+            </a>
+            <a className={styles.link} href="#/docs">
+              Technical documentation
+            </a>
+          </div>
         </footer>
       </div>
     </main>

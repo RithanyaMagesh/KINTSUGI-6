@@ -1,12 +1,14 @@
 // Token bridge for the 3D scene — §13.1: raw hex lives ONLY in tokens.css.
 // Three.js materials cannot consume var() strings, so the scene reads the CSS
 // custom properties off :root at runtime; every material colour therefore
-// derives from the same token source as the chrome. The numeric grey fallback
-// is NOT a palette colour — it only covers a token failing to resolve, which
-// never happens with the committed tokens.css.
+// derives from the same token source as the chrome.
 import * as THREE from "three";
 
 const cache = new Map<string, THREE.Color>();
+
+export function clearColorCache(): void {
+  cache.clear();
+}
 
 export function tokenColor(varName: string): THREE.Color {
   let color = cache.get(varName);
@@ -49,5 +51,7 @@ export const SCENE_TOKENS = {
   earthGraticule: "--scene-earth-graticule",
   atmo: "--scene-atmo",
   orbit: "--scene-orbit",
+  cwEllipse: "--scene-cw-ellipse",
+  cone: "--scene-cone",
   star: "--scene-star",
 } as const;

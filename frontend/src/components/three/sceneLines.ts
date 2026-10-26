@@ -1,14 +1,12 @@
-// Formation pair lines — §7.2 formation lines + §7.3 failure coloring, plus
-// the decluttering ask: healthy pairs thin and low-alpha chrome; pairs
-// touching a failed satellite thin red (alpha ~0.35) and visible ONLY while
-// the mission is in FAILURE_DETECTED / REPLANNING / RECONFIGURING. Extracted
-// from swarmScene.ts to keep files ~300 lines.
+// Formation pair lines — §7.2 formation lines + §7.3 failure coloring.
+// Supports up to MAX_SATS = 50 (the backend schema ceiling in cubesat/scenario.py)
+// so large swarms never silently truncate formation links.
 import * as THREE from "three";
 import type { Satellite } from "../../types/satellite";
 import { lvlhToScene } from "./sceneSatellites";
 import { SCENE_TOKENS, statusToken, tokenColor } from "./sceneColors";
 
-const MAX_SATS = 8; // scenarios top out at N=8 (cascading_n8)
+const MAX_SATS = 50; // matches backend scenario schema max N=50
 const PAIR_CAPACITY = ((MAX_SATS * (MAX_SATS - 1)) / 2) * 2 * 3; // vertices * floats
 
 export class FormationLines {
@@ -29,13 +27,13 @@ export class FormationLines {
         geo,
         new THREE.LineBasicMaterial({ color, transparent: true, opacity, depthWrite: false }),
       );
-      seg.frustumCulled = false; // drawRange slices a mostly-empty buffer
+      seg.frustumCulled = false;
       return { seg, pos };
     };
-    const healthy = build(tokenColor(SCENE_TOKENS.borderStrong), 0.22);
+    const healthy = build(tokenColor(SCENE_TOKENS.borderStrong), 0.26);
     this.healthy = healthy.seg;
     this.healthyPositions = healthy.pos;
-    const failed = build(tokenColor(statusToken("failed")), 0.35);
+    const failed = build(tokenColor(statusToken("failed")), 0.44);
     this.failed = failed.seg;
     this.failedPositions = failed.pos;
   }
@@ -67,7 +65,6 @@ export class FormationLines {
     this.applyVisibility();
   }
 
-  /** Master toggle (the "Formation lines" checkbox). */
   setVisibility(linesOn: boolean): void {
     this.linesOn = linesOn;
     this.applyVisibility();
