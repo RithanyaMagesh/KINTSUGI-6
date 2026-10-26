@@ -302,6 +302,10 @@ planner, future work); THRUSTER_OUT is invisible to the heartbeat path (see §8)
 
 ## 7. Frontend — architecture, what exists, what's wrong
 
+The task contract for the round-4 redesign AI lives at `docs/FRONTEND_REDESIGN_PROMPT.md` — reading order,
+acceptance bar (the LIVE/REPLAY product definition), the full issue charge sheet, wire honesty rules, design
+law, and gates.
+
 ### 7.1 Architecture (~13.5k lines TS/TSX, current working tree)
 
 - **Stack**: React 18.3 + TS 5.6 + Vite 5.4, Zustand 5, Recharts 2.15, plain Three.js 0.171, CSS Modules +
