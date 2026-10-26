@@ -1024,3 +1024,30 @@ explanation layer, density and the 3D staging. By surface:
   section above). The Suspect display renders wire `risk` when present
   (Appendix D) and falls back to the rule-based detector otherwise. Commit
   the two workstreams separately.
+
+## 2026-10-26 — Round 4 frontend redesign (control seat, replay inspector, REST consolidation, claims audit)
+
+Addressed every open item in `docs/FRONTEND_REDESIGN_PROMPT.md` §3.2–§8 without modifying the simulation core or backend:
+
+- **Unified `#/live` Control Seat (`LivePage.tsx`, `ScenarioBuilder.tsx`, `SwarmSection.tsx`, `LivePage.module.css`)**:
+  - Replaced the 3-tab sidebar split (`Builder | Satellites | Recovery`) with a single-flow control column so the operator never hunts across tabs mid-run (§3.2 #1, #2, #3).
+  - Added committed scenario presets (`two_failure.json`, `firefly_swarm.json`, `cascading_n8.json`, `leader_failure_6sat.json`, `single_failure_n4.json`, `nominal.json`) that populate the builder form with exact committed values and run directly when unmodified or upload a custom variant when edited.
+  - Added collapsible setup (`<details className={styles.setupAccordion}>`) that folds automatically on run start while keeping the Mission readout, Run lifecycle controls, Live Failure Injection (`FailureInjectionPanel`), AI Early Warning (`RiskPanel`), Recovery Story (`RecoveryLog`), and Fleet List (`SatelliteList`) visible in one scroll column.
+  - Added larger-swarm seat options (`2–8` standard + `12, 16, 24, 32, 50` roadmap swarms, §4) with a collapsible seat-role editor when `nSats > 8`.
+- **Per-Option 422 Fallback & Policy Readout Sync (`ScenarioBuilder.tsx`, `simStore.ts`, `RecoveryLog.tsx`)**:
+  - Fixed the combined 422 fallback (§3.2 #4): when `/simulation/start` returns 422, `startWithFallback` probes `policy` and `predictor` individually so only the unsupported option is dropped and reported in a dedicated inline status note.
+  - Fixed the `"unmeasured"` policy readout on Hungarian runs (§3.2 #5): `ScenarioBuilder` reads the resolved `policy` from the `/simulation/start` response via `simStore.setSessionMeta`, `simStore` preserves `state.policy` across the `INIT` empty frame when `wire.py` omits the default `"hungarian"` field, and `RecoveryLog` reads `simStore.policy` instead of hardcoding `RECOVERY_MODE`.
+- **REST Client Consolidation (`api/backend.ts`, `api/scenarios.ts`, `components/live/runApi.ts`)**:
+  - Consolidated `fetch`, `formatErrorDetail`, `uploadScenario`, `simulationSpeed`, and unified `startSimulation` into `api/backend.ts` with clean re-exports in `scenarios.ts` and `runApi.ts` (§3.2 #6, #7).
+- **Read-Only Telemetry & Satellite Inspector on `#/replay` (`ReplayPage.tsx`, `ReplayPage.module.css`)**:
+  - Mounted `RightPanel` (readout rows, 5 underline-tabbed charts, Role reassignment table, and `SelectedSatellitePanel`) and `SatelliteList` on `#/replay` so clicking any satellite in Replay displays its role semantics, LVLH state, and role/task history while keeping `#/replay` strictly playback-only with one transport and zero live controls.
+- **Role History Preservation (`stores/roleHistoryStore.ts`, `SelectedSatellitePanel.tsx`)**:
+  - Skipped no-op survivor rows at ingest in `roleHistoryStore.ts` (recording only rows where `role` or `targetSlot` changed) and raised `MAX_HISTORY_PER_SAT` from 50 to 250 with a truncation caption when reached (§3.2 #8).
+- **RightPanel Tab Fit, Tooltip Containment & Coverage Benchmark Note (`RightPanel.module.css`, `ReadoutRow.module.css`, `GroundCoverageChart.tsx`)**:
+  - Sized `.tabs` / `.tab` in `RightPanel.module.css` so all 5 chart tabs fit inside the 336px column at 1920×1080 without horizontal overflow (§3.2 #9).
+  - Constrained `.tip` in `ReadoutRow.module.css` (`left: 0; right: 0; max-width: 100%`) and flipped the last row's tooltip above so tooltips never clip inside scroll containers (§3.2 #9).
+  - Updated `GroundCoverageChart.tsx` caption with the measured P0 benchmark comparison (`+4.93` coverage pts on `two_failure` seed 42; `+4.93` pts worst-case floor and `-2.13` pts mean across all $C(6,2)=15$ two-failure pairs) and explained why the wire carries a single active run (§3.2 #10).
+- **Claims Audit & Housekeeping (`LandingPage.tsx`, `RiskPanel.tsx`, `TutorialPage.tsx`, `uiStore.ts`)**:
+  - Fixed `LandingPage.tsx` Pillar 3 (`"AI early warning (display-only)"`) to state honestly that the sealed LightGBM model is a display-only precursor score (`sats[].risk`) cut from the control loop by the pre-registered oracle sweep (`+0.0235` pp vs `0.5` pp threshold), and that reactive 4 s heartbeat detection drives recovery (`audit_out/AUDIT.md`, §1.6, §6).
+  - Removed dormant `missionBriefOpen` and `sessionStorage` startup code from `uiStore.ts` (§3.2 #11).
+

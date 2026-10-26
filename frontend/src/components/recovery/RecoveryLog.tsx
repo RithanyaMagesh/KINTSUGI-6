@@ -25,12 +25,19 @@ import { useHistoryStore, type ChartSample } from "../../stores/historyStore";
 import { formatPercent, formatSimTime } from "../../utils/format";
 import styles from "./RecoveryLog.module.css";
 
-/** The recovery mode the UI names. The log's ASSIGNMENT payload carries
- * method: "hungarian" (data/logs/two_failure.jsonl t=1208), but cubesat/wire.py
- * _role_reassignment (wire.py:180-200) forwards only assignments + cost_total
- * to /ws/state — no policy field exists on the wire, so the spec's fallback
- * literal is what shows. Never invent a wire field to "improve" this. */
-const RECOVERY_MODE = "Hungarian (default)";
+/** Format the active recovery policy from simStore.policy when measured on the
+ * session, falling back to "Hungarian (default)" for replay logs where the wire
+ * omits the default policy field (cubesat/wire.py _policy_field). */
+const POLICY_DISPLAY: Record<string, string> = {
+  hungarian: "hungarian (two-step assignment)",
+  even_split: "even_split (even redistribution)",
+  hungarian_keepout: "hungarian_keepout (dead-sat keep-out)",
+};
+
+function formatPolicyLabel(policy: string | null): string {
+  if (policy === null || policy.trim() === "") return "Hungarian (default)";
+  return POLICY_DISPLAY[policy] ?? policy;
+}
 
 /** m/s — below any measured burn (dead satellites coast, invariant 5). */
 const DV_EPSILON = 1e-9;
@@ -174,6 +181,7 @@ function stepsFor(
   isLatest: boolean,
   samples: ChartSample[],
   missionState: string | null,
+  policyLabel: string,
 ): Step[] {
   const f = ep.failure;
   const steps: Step[] = [];
@@ -261,7 +269,7 @@ function stepsFor(
       time: a.time,
       body: (
         <>
-          Replan via {RECOVERY_MODE}: {parts}
+          Replan via {policyLabel}: {parts}
         </>
       ),
     });
@@ -376,15 +384,17 @@ export default function RecoveryLog() {
   const phases = useRecoveryStore((s) => s.phases);
   const simTime = useSimStore((s) => s.simTime);
   const missionState = useSimStore((s) => s.missionState);
+  const policy = useSimStore((s) => s.policy);
   const samples = useHistoryStore((s) => s.samples);
 
+  const policyLabel = formatPolicyLabel(policy);
   const episodes = dedupeEpisodes(failures, assignments, phases, simTime);
 
   return (
     <section className={styles.log} aria-label="Recovery log">
       <div className={styles.header}>
         <h3 className={styles.title}>Recovery log</h3>
-        <span className={styles.policy}>Recovery policy: {RECOVERY_MODE}</span>
+        <span className={styles.policy}>Recovery policy: {policyLabel}</span>
       </div>
       {episodes.length === 0 ? (
         <p className={styles.empty}>
@@ -415,7 +425,7 @@ export default function RecoveryLog() {
                   )}
                 </h4>
                 <ol className={styles.steps}>
-                  {stepsFor(ep, isLatest, samples, missionState).map((s, j) => (
+                  {stepsFor(ep, isLatest, samples, missionState, policyLabel).map((s, j) => (
                     <li key={j} className={s.muted === true ? styles.stepMuted : styles.step}>
                       <span className={styles.stepTime}>
                         {s.time !== null ? formatSimTime(s.time) : ""}

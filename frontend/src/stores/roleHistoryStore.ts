@@ -95,12 +95,11 @@ function alreadyRecorded(
   return entries.some((e) => e.kind === kind && e.t === t);
 }
 
-/** Drop-oldest cap per satellite. The store ingests at 30 Hz for the whole
- * run; without a cap the history grows on every fail-flip/recovered-flip and
- * the detail panel renders an ever-longer list (the "site crashed" beta
- * report's only unbounded accumulator). 50 entries ≈ the whole story of a
- * demo scenario with headroom. */
-const MAX_HISTORY_PER_SAT = 50;
+/** Drop-oldest cap per satellite. Only real state transitions (failed,
+ * recovered, or a reassignment where the satellite's role or targetSlot
+ * actually changed) are appended, so 250 entries preserves full mission
+ * histories even across long multi-failure or large-swarm runs (§3.2 #8). */
+export const MAX_HISTORY_PER_SAT = 250;
 
 function appendEntry(
   history: Record<string, RoleHistoryEntry[]>,
@@ -164,6 +163,7 @@ export const useRoleHistoryStore = create<RoleHistoryState>((set) => ({
             frame.missionState === "RECOVERED"
           ) {
             for (const sat of frame.satellites) {
+              if (sat.status === "failed") continue;
               history = appendEntry(history, sat.id, {
                 t: frame.simTime,
                 kind: "recovered",
@@ -205,20 +205,29 @@ export const useRoleHistoryStore = create<RoleHistoryState>((set) => ({
           };
         }
         case "reassignment": {
-          // One entry per assignment; the payload covers every survivor
-          // (measured: 7 then 6 rows in data/logs/cascading_n8.jsonl), so the
-          // PANEL filters to actual changes — the store records them all.
+          // Record only rows where the satellite's role or target slot actually
+          // changed (§3.2 #8) — unchanged survivor rows are skipped at ingest
+          // so they never evict real movements from the per-satellite history.
           let history = state.history;
           for (const a of msg.reassignment.assignments) {
             const current = state._lastFrameSats[a.satellite_id];
             const prev = state._prevFrameSats[a.satellite_id];
+            const oldRole = prev?.role ?? null;
+            const oldTargetSlot = prev?.targetSlot ?? null;
+            const slotChanged =
+              a.target_slot !== null &&
+              oldTargetSlot !== null &&
+              a.target_slot !== oldTargetSlot;
+            const roleChanged =
+              a.new_role !== null && oldRole !== null && a.new_role !== oldRole;
+            if (!slotChanged && !roleChanged) continue;
             history = appendEntry(history, a.satellite_id, {
               t: msg.reassignment.sim_time,
               kind: "reassignment",
               role: a.new_role,
               targetSlot: a.target_slot,
-              oldRole: prev?.role ?? null,
-              oldTargetSlot: prev?.targetSlot ?? null,
+              oldRole,
+              oldTargetSlot,
               dvUsed: current?.dv_used ?? null,
               note: state._lastCritical?.message ?? null,
             });

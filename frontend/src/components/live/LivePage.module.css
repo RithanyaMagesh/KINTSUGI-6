@@ -2,9 +2,9 @@
    gradients, no shadows, radius via --radius-*. .page/.main mirror the
    §12.1 console grid (App.module.css) minus the top row — App.tsx owns the
    persistent TopStatusBar above the Router, so the page fills the area below
-   it. The sidebar column is composed here (SideTabs, Builder tab first and
-   default) instead of LeftPanel, whose Mission tab duplicated the scenario
-   selector, run controls and mission readout the builder already owns. */
+   it. Single scrollable control column on the left (320px) so scenario setup,
+   live failure injection, AI early warning, recovery story, and fleet list
+   are all reachable without hunting across sidebar tabs. */
 
 .page {
   height: 100%;
@@ -17,7 +17,7 @@
 
 .main {
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr) 336px;
+  grid-template-columns: 320px minmax(0, 1fr) 336px;
   gap: var(--space-2);
   min-height: 0;
 }
@@ -30,8 +30,31 @@
   }
 }
 
-/* Builder-tab sections: flex column on the shared gap scale (the tabbed
-   sidebar's aside carries the panel chrome — no card inside a card). */
+.controlSeat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.controlSeat > * {
+  flex: 0 0 auto;
+}
+
+.seatDivider {
+  border-top: 1px solid var(--border-strong);
+  margin: var(--space-1) 0;
+}
+
+.fleetSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Builder sections: flex column on the shared gap scale (the outer aside
+   carries the panel chrome — no card inside a card). */
 .panel {
   display: flex;
   flex-direction: column;
@@ -44,6 +67,55 @@
   justify-content: space-between;
   align-items: baseline;
   gap: var(--space-2);
+}
+
+/* ---- Collapsible setup accordion ----------------------------------------- */
+
+.setupAccordion {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control);
+  background: var(--bg);
+}
+
+.setupSummary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  cursor: pointer;
+  color: var(--ink);
+  font-size: var(--text-body);
+  font-weight: 500;
+  list-style: none;
+}
+
+.setupSummary::-webkit-details-marker {
+  display: none;
+}
+
+.setupSummary:hover {
+  background: var(--panel-raised);
+}
+
+.setupSummary:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+.setupBadge {
+  font-family: var(--font-mono);
+  font-size: var(--text-event);
+  color: var(--status-info);
+  flex: none;
+}
+
+.setupBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-2);
+  border-top: 1px solid var(--border);
 }
 
 /* ---- form scaffolding ---------------------------------------------------- */
@@ -236,7 +308,9 @@
 /* ---- run row --------------------------------------------------------------- */
 
 .runBtn {
-  min-width: 176px;
+  width: 100%;
+  justify-content: center;
+  border-color: var(--status-info);
 }
 
 .runStatus {
@@ -258,6 +332,12 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-1) var(--space-2);
+}
+
+.roleScroll {
+  max-height: 220px;
+  overflow-y: auto;
+  margin-top: var(--space-2);
 }
 
 .roleCell {

@@ -88,12 +88,13 @@ const PILLARS: ReadonlyArray<{ name: string; body: string }> = [
       "collision hazard.",
   },
   {
-    name: "AI early warning",
+    name: "AI early warning (display-only)",
     body:
-      "A LightGBM predictor scores failure risk and can trigger " +
-      "reassignment earlier than the heartbeat path alone. It is trained " +
-      "on synthetic degradation; the caveats are documented in the Docs " +
-      "page.",
+      "A sealed LightGBM model scores slow-degradation precursor risk " +
+      "(sats[].risk) as a display-only operator annotation. Because the " +
+      "pre-registered oracle sweep measured +0.0235 pp critical-seat gain " +
+      "(below the 0.5 pp threshold), the model is cut from the control loop " +
+      "and reactive 4 s heartbeat detection drives recovery.",
   },
 ];
 

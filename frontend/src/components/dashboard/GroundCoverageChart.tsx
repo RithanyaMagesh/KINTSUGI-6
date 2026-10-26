@@ -1,9 +1,10 @@
 // Ground coverage over time — §7.5 chart 1, the money chart: high and stable
 // before failure, a sharp drop after, recovery after replanning. Event markers
 // at failure / replanning / recovery with mono sim-time stamps (§13.4).
-// Honesty note (invariant 1): the spec's 3-curve comparison (nominal reference
-// / no-recovery / with-recovery) needs reference runs the wire does not carry,
-// so only the measured swarm curve is drawn — never a fabricated comparison.
+// Honesty note (invariant 1 + §3.2 #10): the wire carries a single active run,
+// so only the measured swarm curve is plotted; the caption states the measured
+// P0 benchmark comparison from data/eval/benchmark_results.json rather than
+// fabricating synthetic reference curves.
 import { useHistoryStore } from "../../stores/historyStore";
 import TelemetryChart from "./TelemetryChart";
 import { EventMarkers } from "./EventMarkers";
@@ -27,7 +28,7 @@ export default function GroundCoverageChart() {
       endLabelY={() => (last?.coverage ?? null)}
       series={[{ key: "coverage", label: "coverage", color: "var(--status-nominal)" }]}
       height={200}
-      caption="Measured swarm curve. The spec's 3-curve comparison (nominal reference / no recovery / with recovery) needs reference runs the live wire does not carry."
+      caption="Measured single-run curve (the wire streams one run at a time, never synthetic reference curves). Measured P0 benchmark: +4.93 coverage pts vs no-recovery on two_failure (seed 42) and +4.93 pts worst-case floor across all C(6,2)=15 two-failure pairs (mean −2.13 pts during transit)."
     >
       <EventMarkers markers={markers} />
     </TelemetryChart>

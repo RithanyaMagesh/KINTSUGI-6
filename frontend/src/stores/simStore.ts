@@ -47,6 +47,11 @@ interface SimStore {
 
   setConnection(connection: ConnectionState): void;
   setMode(mode: SimMode): void;
+  setSessionMeta(meta: {
+    scenario?: string | null;
+    seed?: number | null;
+    policy?: string | null;
+  }): void;
   applyMessage(raw: unknown): void;
   reset(): void;
 }
@@ -71,6 +76,12 @@ export const useSimStore = create<SimStore>((set, get) => ({
 
   setConnection: (connection) => set({ connection }),
   setMode: (mode) => set({ mode }),
+  setSessionMeta: (meta) =>
+    set((state) => ({
+      scenario: meta.scenario !== undefined ? meta.scenario : state.scenario,
+      seed: meta.seed !== undefined ? meta.seed : state.seed,
+      policy: meta.policy !== undefined ? meta.policy : state.policy,
+    })),
 
   applyMessage: (raw) => {
     const msg = deserializeMessage(raw);
@@ -92,18 +103,16 @@ export const useSimStore = create<SimStore>((set, get) => ({
         case "frame": {
           // INIT-derived empty state (cubesat/wire.py to_sim_state): resets the
           // console to the §24.3 "no satellites" state instead of faking a
-          // NOMINAL badge with zero satellites on screen. policy resets unless
-          // the INIT frame itself carries one: the wire echoes policy only on
-          // deviation from "hungarian" (cubesat/wire.py _policy_field) and
-          // hello is connect-only (cubesat/api.py:319), so keeping the old
-          // value would mislabel a new hungarian run with the previous run's
-          // policy; null renders "unmeasured" (invariant 1).
+          // NOMINAL badge with zero satellites on screen. Keep state.policy
+          // when msg.frame.policy is absent because wire.py _policy_field omits
+          // "hungarian" by design and hello is connect-only; replay loads call
+          // reset() beforehand so stale live policies never leak into replay.
           if (msg.frame.satellites.length === 0 && msg.frame.simTime === 0) {
             return {
               simTime: 0,
               scenario: msg.frame.scenario ?? state.scenario,
               seed: msg.frame.seed ?? state.seed,
-              policy: msg.frame.policy ?? null,
+              policy: msg.frame.policy ?? state.policy,
               satellites: [],
               metrics: {},
               events: [],

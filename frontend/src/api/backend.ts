@@ -1,6 +1,35 @@
-// REST client for the G5 backend (cubesat/api.py). Error semantics:
-// non-2xx -> thrown Error with the backend detail; network failure -> thrown
+// Single REST client for the G5 backend (cubesat/api.py).
+// Consolidates all HTTP calls and FastAPI 422/409 error formatting in one
+// module (§3.2 #6, #7). Error semantics: non-2xx -> thrown ApiError (.status
+// attached) with the backend detail verbatim; network failure -> actionable
 // Error telling the operator what to do next (§13.6 voice).
+
+const BACKEND_UNREACHABLE =
+  "Backend unreachable — start it with: uv run uvicorn cubesat.api:app --port 8000";
+
+export interface ApiError extends Error {
+  status?: number;
+}
+
+/** FastAPI renders 422 two ways: an HTTPException detail is a string, a
+ * request-body validation error is an array of {loc, msg}. Format both to a
+ * single line so the server's validation detail can be shown verbatim. */
+export function formatErrorDetail(detail: unknown): string | null {
+  if (typeof detail === "string") return detail;
+  if (Array.isArray(detail)) {
+    const parts: string[] = [];
+    for (const item of detail) {
+      if (item !== null && typeof item === "object") {
+        const rec = item as { loc?: unknown; msg?: unknown };
+        const loc = Array.isArray(rec.loc) ? rec.loc.join(".") : "";
+        const msg = typeof rec.msg === "string" ? rec.msg : "";
+        parts.push(loc !== "" ? `${loc}: ${msg}` : msg);
+      }
+    }
+    if (parts.length > 0) return parts.join("; ");
+  }
+  return null;
+}
 
 async function post(path: string, body?: unknown): Promise<Record<string, unknown>> {
   let res: Response;
@@ -11,16 +40,19 @@ async function post(path: string, body?: unknown): Promise<Record<string, unknow
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {
-    throw new Error("Backend unreachable — start it with: uv run uvicorn cubesat.api:app --port 8000");
+    throw new Error(BACKEND_UNREACHABLE);
   }
+  const json = (await res.json().catch(() => null)) as unknown;
   if (!res.ok) {
-    const detail = await res
-      .json()
-      .then((j) => (j && typeof j.detail === "string" ? j.detail : null))
-      .catch(() => null);
-    throw new Error(detail ?? `POST ${path} failed (HTTP ${res.status})`);
+    const detail =
+      json !== null && typeof json === "object"
+        ? formatErrorDetail((json as { detail?: unknown }).detail)
+        : null;
+    const err = new Error(detail ?? `POST ${path} failed (HTTP ${res.status})`) as ApiError;
+    err.status = res.status;
+    throw err;
   }
-  return (await res.json()) as Record<string, unknown>;
+  return json !== null && typeof json === "object" ? (json as Record<string, unknown>) : {};
 }
 
 async function get<T>(path: string): Promise<T> {
@@ -28,9 +60,18 @@ async function get<T>(path: string): Promise<T> {
   try {
     res = await fetch(path);
   } catch {
-    throw new Error("Backend unreachable — start it with: uv run uvicorn cubesat.api:app --port 8000");
+    throw new Error(BACKEND_UNREACHABLE);
   }
-  if (!res.ok) throw new Error(`GET ${path} failed (HTTP ${res.status})`);
+  if (!res.ok) {
+    const json = (await res.json().catch(() => null)) as unknown;
+    const detail =
+      json !== null && typeof json === "object"
+        ? formatErrorDetail((json as { detail?: unknown }).detail)
+        : null;
+    const err = new Error(detail ?? `GET ${path} failed (HTTP ${res.status})`) as ApiError;
+    err.status = res.status;
+    throw err;
+  }
   return (await res.json()) as T;
 }
 
@@ -55,9 +96,7 @@ export async function replayFileText(filename: string): Promise<string | null> {
 
 /** End time of a replay log [s]: the t of its last parseable line. Null when
  * the file cannot be read — the seek slider is hidden rather than the duration
- * guessed (repo invariant 1). Shared so every replay-load path (ReplayControls
- * "Load replay", the mission brief, PresentationView's openReplay) measures the
- * same way. */
+ * guessed (repo invariant 1). */
 export async function replayLogDuration(filename: string): Promise<number | null> {
   const text = await replayFileText(filename);
   if (text === null) return null;
@@ -69,7 +108,7 @@ export async function replayLogDuration(filename: string): Promise<number | null
       const t = (JSON.parse(line) as { t?: unknown }).t;
       if (typeof t === "number" && Number.isFinite(t)) return t;
     } catch {
-      continue; // skip unparsable tail lines, keep scanning backwards
+      continue;
     }
   }
   return null;
@@ -83,17 +122,114 @@ export interface HealthResponse {
   paused: boolean;
 }
 
+export interface StartOptions {
+  scenario: string | null;
+  seed?: number | null;
+  speed?: number;
+  policy?: string;
+  predictor?: boolean;
+}
+
+export interface StartResponse {
+  status: string;
+  mode: string;
+  scenario: string | null;
+  seed: number | null;
+  speed: number;
+  policy: string | null;
+  predictor: boolean;
+}
+
+export interface ScenarioUploadResult {
+  filename: string | null;
+  scenarios: string[] | null;
+}
+
+/** POST /scenarios/upload {name, scenario} (cubesat/api.py UploadRequest). */
+export async function uploadScenario(
+  name: string | null,
+  scenario: object,
+): Promise<ScenarioUploadResult> {
+  let saved: Record<string, unknown>;
+  try {
+    saved = await post("/scenarios/upload", { name, scenario });
+  } catch (err) {
+    const status = (err as ApiError).status;
+    if (status === 404 || status === 405) {
+      throw new Error("Custom scenario upload is not available on this backend");
+    }
+    throw err;
+  }
+  const filename = typeof saved.filename === "string" ? saved.filename : null;
+  let scenarios: string[] | null = null;
+  if (Array.isArray(saved.scenarios)) {
+    scenarios = saved.scenarios.filter((s): s is string => typeof s === "string");
+  } else {
+    try {
+      const listing = await get<{ scenarios: string[] }>("/scenarios");
+      scenarios = Array.isArray(listing.scenarios) ? listing.scenarios : null;
+    } catch {
+      scenarios = null;
+    }
+  }
+  return { filename, scenarios };
+}
+
+/** POST /simulation/speed {speed} — live-run speed (cubesat/wire.py SpeedRequest). */
+export async function simulationSpeed(speed: number): Promise<void> {
+  await post("/simulation/speed", { speed });
+}
+
+/** Unified POST /simulation/start carrying {scenario, seed, speed, policy, predictor}. */
+export async function startSimulation(opts: StartOptions): Promise<StartResponse> {
+  const payload: Record<string, unknown> = {
+    scenario: opts.scenario,
+  };
+  if (opts.seed !== undefined) payload.seed = opts.seed;
+  if (opts.speed !== undefined) payload.speed = opts.speed;
+  if (opts.policy !== undefined) payload.policy = opts.policy;
+  if (opts.predictor !== undefined) payload.predictor = opts.predictor;
+  const raw = await post("/simulation/start", payload);
+  return {
+    status: typeof raw.status === "string" ? raw.status : "started",
+    mode: typeof raw.mode === "string" ? raw.mode : "live",
+    scenario: typeof raw.scenario === "string" ? raw.scenario : opts.scenario,
+    seed: typeof raw.seed === "number" ? raw.seed : (opts.seed ?? null),
+    speed: typeof raw.speed === "number" ? raw.speed : (opts.speed ?? 100),
+    policy:
+      typeof raw.policy === "string"
+        ? raw.policy
+        : opts.policy !== undefined
+          ? opts.policy
+          : null,
+    predictor: typeof raw.predictor === "boolean" ? raw.predictor : Boolean(opts.predictor),
+  };
+}
+
 export const backend = {
   health: () => get<HealthResponse>("/health"),
   scenarios: () => get<{ scenarios: string[] }>("/scenarios"),
   replayFiles: () => get<{ files: string[] }>("/replay/files"),
+  uploadScenario,
+  simulationSpeed,
+  startSimulation,
 
-  simulationStart: (scenario: string | null, seed: number | null) =>
-    post("/simulation/start", { scenario, seed }),
+  simulationStart: (
+    scenario: string | null,
+    seed: number | null = null,
+    extra?: { speed?: number; policy?: string; predictor?: boolean },
+  ) =>
+    startSimulation({
+      scenario,
+      seed,
+      speed: extra?.speed,
+      policy: extra?.policy,
+      predictor: extra?.predictor,
+    }),
   simulationPause: () => post("/simulation/pause"),
   simulationResume: () => post("/simulation/resume"),
   simulationReset: () => post("/simulation/reset"),
-  failureInject: (satId: string, mode: "DEAD" | "THRUSTER_OUT") =>
+  failureInject: (satId: string, mode: string) =>
     post("/failure/inject", { sat_id: satId, mode }),
 
   replayLoad: (filename: string, speed = 100) =>

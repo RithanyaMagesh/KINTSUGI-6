@@ -1,25 +1,27 @@
-// Scenario builder — the #/live control seat (the live sidebar's first and
-// default tab). Customises everything the engine reads (cubesat/scenario.py
-// Scenario) and runs it against the real backend: POST /scenarios/upload then
-// POST /simulation/start (cubesat/api.py:155, :218). Every default is the
-// committed reference scenario data/scenarios/nominal.json or a documented
-// engine value — no invented numbers (repo invariant 1). Schema ranges stay
-// the server's authority: its 422 detail is surfaced verbatim on the error
-// row. The Run group also carries the run lifecycle (pause/resume/reset,
-// spec 7.1) and the "Switch to replay" navigation — playback itself lives on
-// #/replay only. Standalone, wrap in chrome.panel.
+// Scenario builder — the #/live control seat.
+// Allows loading any committed scenario preset into the builder as an editable
+// template (or running it directly if unmodified), customising every parameter
+// the engine reads (cubesat/scenario.py), and starting the live simulation
+// with per-option 422 fallback for policy vs predictor (§3.2 #4) and immediate
+// policy readout sync (§3.2 #5). When a run starts, the parameter setup
+// collapses into an expandable section so Live Failure Injection, AI Early
+// Warning, and Recovery Log right below stay in view without tab hunting.
 import { useRef, useState } from "react";
 import { uploadScenario, type ScenarioUploadResult } from "../../api/scenarios";
 import { useSimStore } from "../../stores/simStore";
 import { useReplayStore } from "../../stores/replayStore";
+import { useRecoveryStore } from "../../stores/recoveryStore";
+import { useRoleHistoryStore } from "../../stores/roleHistoryStore";
 import { UNMEASURED } from "../../utils/format";
 import chrome from "../../styles/chrome.module.css";
 import { backend } from "../../api/backend";
 import FailureRowView from "./FailureRow";
 import PhysicsSection from "./PhysicsSection";
 import SwarmSection from "./SwarmSection";
-import { postStart, type StartError } from "./runApi";
+import { postStart, type StartError, type StartResponse } from "./runApi";
 import {
+  COMMITTED_PRESETS,
+  MAX_SATS,
   POLICIES,
   buildScenario,
   clampNumber,
@@ -32,49 +34,31 @@ import {
 } from "./scenarioDraft";
 import styles from "./LivePage.module.css";
 
-/** Default failure time: the documented example failure time from
- * data/scenarios/two_failure.json (also CustomScenarioModal's reference). */
 const DEFAULT_FAILURE_T = 1200;
-
 type RunPhase = "idle" | "building" | "running" | "error";
 
-/** Form number defaults: data/scenarios/nominal.json + the backend's
- * StartRequest speed default (cubesat/wire.py:39). */
-const NUMBER_DEFAULTS: NumberValues = {
-  seed: 42,
-  durationS: 5676,
-  dtS: 2,
-  altitudeKm: 500,
-  radialAmpKm: 11,
-  phaseOffsetDeg: 0,
-  aMax: 0.01,
-  wn: 0.01,
-  zeta: 1,
-  fovHalfAngleDeg: 1.5,
-  gridStepKm: 2,
-  gridExtentKm: 30,
-  speed: 100,
-};
+const INITIAL_PRESET = COMMITTED_PRESETS[0]; // two_failure.json
 
 export default function ScenarioBuilder() {
-  const [nums, setNums] = useState<NumberValues>(NUMBER_DEFAULTS);
-  const [nSats, setNSats] = useState(6);
-  const [roles, setRoles] = useState<Role[]>(defaultRoles(6));
+  const [presetFile, setPresetFile] = useState<string>(INITIAL_PRESET.filename);
+  const [dirtyPreset, setDirtyPreset] = useState(false);
+  const [nums, setNums] = useState<NumberValues>(INITIAL_PRESET.nums);
+  const [nSats, setNSats] = useState<number>(INITIAL_PRESET.nSats);
+  const [roles, setRoles] = useState<Role[]>([...INITIAL_PRESET.roles]);
   const [policy, setPolicy] = useState<PolicyId>("hungarian");
   const [runName, setRunName] = useState("");
-  const [failures, setFailures] = useState<FailureRow[]>([]);
+  const [failures, setFailures] = useState<FailureRow[]>(
+    INITIAL_PRESET.failures.map((f, idx) => ({ ...f, key: idx + 1 })),
+  );
   const [phase, setPhase] = useState<RunPhase>("idle");
   const [error, setError] = useState<string | null>(null);
   const [policyNote, setPolicyNote] = useState<string | null>(null);
-  /** AI-risk overlay for THIS run (cubesat/wire.py StartRequest.predictor,
-   * default false): the backend scores sats[].risk display-only and the AI
-   * early-warning panel below reads it. Off until chosen — no silent cost. */
+  const [predictorNote, setPredictorNote] = useState<string | null>(null);
   const [predictor, setPredictor] = useState(false);
-  /** A pause/resume/reset command is in flight (separate from `building`). */
   const [controlling, setControlling] = useState(false);
-  const nextFailureKey = useRef(1);
+  const [setupOpen, setSetupOpen] = useState(true);
+  const nextFailureKey = useRef(INITIAL_PRESET.failures.length + 1);
 
-  // Wire truth for the mission readout (§13.3 rows; "unmeasured" until frames).
   const wireScenario = useSimStore((s) => s.scenario);
   const wireSeed = useSimStore((s) => s.seed);
   const wirePolicy = useSimStore((s) => s.policy);
@@ -83,21 +67,40 @@ export default function ScenarioBuilder() {
   const building = phase === "building";
   const live = mode === "live";
 
+  function applyPreset(filename: string): void {
+    setPresetFile(filename);
+    setError(null);
+    const found = COMMITTED_PRESETS.find((p) => p.filename === filename);
+    if (!found) {
+      setDirtyPreset(true);
+      return;
+    }
+    setDirtyPreset(false);
+    setNSats(found.nSats);
+    setRoles([...found.roles]);
+    setNums({ ...found.nums });
+    setFailures(
+      found.failures.map((f) => ({
+        key: nextFailureKey.current++,
+        satId: f.satId,
+        t: f.t,
+        mode: f.mode,
+      })),
+    );
+  }
+
   function setNumber(key: keyof NumberValues, v: number): void {
-    // The one funnel every NumberField commits through — clamp here and the
-    // form can never hold a value the validator would 422 (the reported
-    // demo-blocker: altitude 160 accepted by min="160", rejected by gt=160).
-    // NumberField snaps its text back to the committed value, so the field
-    // visibly lands inside the range.
-    setNums((prev) => ({ ...prev, [key]: clampNumber(key, v) }));
+    const clamped = clampNumber(key, v);
+    if (key !== "seed" && key !== "speed") {
+      setDirtyPreset(true);
+    }
+    setNums((prev) => ({ ...prev, [key]: clamped }));
   }
 
   function changeSats(n: number): void {
-    if (!Number.isInteger(n) || n < 2 || n > 8) return;
+    if (!Number.isInteger(n) || n < 2 || n > MAX_SATS) return;
+    setDirtyPreset(true);
     setNSats(n);
-    // Preserve per-seat edits: grow with the default pattern's tail, shrink
-    // by slicing. Failures on removed seats are dropped (they would 422:
-    // scenario.py _failures_reference_existing_sats).
     setRoles((prev) =>
       prev.length === n
         ? prev
@@ -109,74 +112,99 @@ export default function ScenarioBuilder() {
   }
 
   function updateFailure(key: number, patch: Partial<FailureRow>): void {
+    setDirtyPreset(true);
     setFailures((rows) => rows.map((r) => (r.key === key ? { ...r, ...patch } : r)));
   }
 
   function addFailure(): void {
+    setDirtyPreset(true);
     setFailures((rows) => [
       ...rows,
       { key: nextFailureKey.current++, satId: 0, t: DEFAULT_FAILURE_T, mode: "DEAD" },
     ]);
   }
 
+  async function startWithFallback(filename: string): Promise<StartResponse> {
+    const baseReq = { scenario: filename, seed: nums.seed, speed: nums.speed };
+    try {
+      return await postStart({ ...baseReq, policy, predictor });
+    } catch (err) {
+      if ((err as StartError).status !== 422) throw err;
+    }
+    // Probe policy vs predictor individually so only the unsupported field is
+    // dropped and reported (§3.2 #4).
+    try {
+      const res = await postStart({ ...baseReq, policy });
+      if (predictor) {
+        setPredictorNote(
+          "AI-risk option not accepted by this backend — started without predictor overlay.",
+        );
+      }
+      return res;
+    } catch (errPolicyOnly) {
+      if ((errPolicyOnly as StartError).status !== 422) throw errPolicyOnly;
+    }
+    try {
+      const res = await postStart({ ...baseReq, predictor });
+      setPolicyNote(
+        `Policy "${policy}" not accepted by this backend — started with default allocator.`,
+      );
+      return res;
+    } catch (errPredOnly) {
+      if ((errPredOnly as StartError).status !== 422) throw errPredOnly;
+    }
+    const res = await postStart(baseReq);
+    setPolicyNote("Policy option not accepted by this backend — started with default allocator.");
+    if (predictor) {
+      setPredictorNote("AI-risk option not accepted by this backend — started without overlay.");
+    }
+    return res;
+  }
+
   async function run(): Promise<void> {
     setError(null);
     setPolicyNote(null);
+    setPredictorNote(null);
     setPhase("building");
     try {
-      const chosen = sanitizeName(runName);
-      const auto = chosen === "";
-      const base = auto ? "live_custom" : chosen;
-      const scenario = buildScenario({ ...nums, name: base }, roles, failures);
-      // Overwrites are refused: POST /scenarios/upload 409s on an existing
-      // name (cubesat/api.py scenarios_upload). An auto-picked default name
-      // retries suffixed (live_custom_2, …) so a second run never traps on a
-      // name the operator never chose; a typed name is kept and its 409
-      // surfaces verbatim — the operator picked it.
-      let name = base;
-      let saved: ScenarioUploadResult | null = null;
-      for (let attempt = 1; ; attempt++) {
-        try {
-          saved = await uploadScenario(name, scenario);
-          break;
-        } catch (err) {
-          if (!auto || (err as StartError).status !== 409 || attempt >= 8) throw err;
-          name = `${base}_${attempt + 1}`;
+      let filename = presetFile;
+      const customTypedName = sanitizeName(runName);
+      if (dirtyPreset || presetFile === "custom" || customTypedName !== "") {
+        const auto = customTypedName === "";
+        const base = auto ? "live_custom" : customTypedName;
+        const scenario = buildScenario({ ...nums, name: base }, roles, failures);
+        let name = base;
+        let saved: ScenarioUploadResult | null = null;
+        for (let attempt = 1; ; attempt++) {
+          try {
+            saved = await uploadScenario(name, scenario);
+            break;
+          } catch (err) {
+            if (!auto || (err as StartError).status !== 409 || attempt >= 16) throw err;
+            name = `${base}_${attempt + 1}`;
+          }
         }
+        filename = saved.filename ?? `${name}.json`;
       }
-      // uploadScenario surfaces 404/405 as "upload not available" and 409 as
-      // the duplicate-name refusal; filename is candidate.name from
-      // cubesat/api.py. The sanitized name is decided here, so the fallback
-      // below is the same file the backend would have reported.
-      const filename = saved.filename ?? `${name}.json`;
-      try {
-        await postStart({ scenario: filename, seed: nums.seed, speed: nums.speed, policy, predictor });
-      } catch (startErr) {
-        if ((startErr as StartError).status === 422) {
-          // The backend predates the policy/predictor fields — start without
-          // them and say so honestly instead of silently dropping the
-          // selection (§13.6).
-          await postStart({ scenario: filename, seed: nums.seed, speed: nums.speed });
-          setPolicyNote(
-            "Policy and AI-risk options not accepted by this backend — started without them.",
-          );
-        } else {
-          throw startErr;
-        }
-      }
-      // A live start supersedes any replay selection — the same clear the
-      // console's Start control does — so the replay page never presents this
-      // run as its loaded file.
+
+      useRecoveryStore.getState().resetForNewRun();
+      useRoleHistoryStore.getState().resetForNewRun();
+      const started = await startWithFallback(filename);
+      useSimStore.getState().setSessionMeta({
+        scenario: started.scenario ?? filename,
+        seed: started.seed ?? nums.seed,
+        policy: started.policy ?? policy,
+      });
+      useSimStore.getState().setMode("live");
       useReplayStore.getState().setActiveFile(null);
       setPhase("running");
+      setSetupOpen(false);
     } catch (err) {
       setPhase("error");
       setError(err instanceof Error ? err.message : "Run failed");
     }
   }
 
-  /** Run lifecycle (spec 7.1): pause/resume/reset against the real G5 routes.
-   * Errors land on the same inline row as the start flow. */
   async function control(action: () => Promise<unknown>): Promise<void> {
     setControlling(true);
     setError(null);
@@ -192,30 +220,32 @@ export default function ScenarioBuilder() {
   function resetRun(): void {
     void control(async () => {
       await backend.simulationReset();
-      useSimStore.getState().reset(); // same console clear the Start control does
+      useSimStore.getState().reset();
+      useRecoveryStore.getState().resetForNewRun();
+      useRoleHistoryStore.getState().resetForNewRun();
+      setPhase("idle");
+      setSetupOpen(true);
     });
   }
 
-  function switchToReplay(): void {
-    // Playback lives on the #/replay page since the round-2 page split —
-    // navigation, never a mode lie: the mode only flips when a replay is
-    // actually loaded there.
-    window.location.hash = "#/replay";
-  }
-
+  const activePreset = COMMITTED_PRESETS.find((p) => p.filename === presetFile);
   const statusText =
     phase === "building"
-      ? "Uploading scenario and starting the run…"
+      ? "Starting simulation on physics engine…"
       : phase === "running"
-        ? "Simulation started — live frames stream into the swarm view."
-        : "Saves the scenario to the backend, then starts the run.";
+        ? "Live simulation streaming — inject failures or inspect recovery below."
+        : dirtyPreset
+          ? "Custom parameters edited — saves scenario to backend and starts run."
+          : `Ready to run committed preset ${presetFile}.`;
 
   return (
     <section className={styles.panel} aria-label="Scenario builder">
-      <h2 className={chrome.panelTitle}>Scenario builder</h2>
+      <div className={styles.panelHead}>
+        <h2 className={chrome.panelTitle}>Live mission control</h2>
+      </div>
 
-      {/* Mission readout — wire truth; "Recovery mode" always visible so the
-          active policy is never a mystery (the complaint that motivated it). */}
+      {/* Mission readout — wire truth; "Recovery mode" always reflects the
+          active policy from /simulation/start or the WS stream (§3.2 #5). */}
       <div className={styles.rows} aria-label="Mission">
         <div className={styles.row}>
           <span className={styles.rowLabel}>Scenario</span>
@@ -232,81 +262,52 @@ export default function ScenarioBuilder() {
           <span className={styles.rowValue}>{wirePolicy ?? UNMEASURED}</span>
         </div>
       </div>
+
       {policyNote !== null && (
         <p className={styles.cautionNote} role="status">
           {policyNote}
         </p>
       )}
+      {predictorNote !== null && (
+        <p className={styles.cautionNote} role="status">
+          {predictorNote}
+        </p>
+      )}
 
-      <SwarmSection
-        nSats={nSats}
-        roles={roles}
-        building={building}
-        nums={nums}
-        onSats={changeSats}
-        onRole={(seat, role) =>
-          setRoles((prev) => prev.map((r, j) => (j === seat ? role : r)))
-        }
-        onNumber={setNumber}
-      />
+      {/* Primary Run & Lifecycle Bar — always visible at the top of the seat */}
+      <div className={styles.group}>
+        <div className={styles.field}>
+          <label className={chrome.fieldLabel} htmlFor="builder-preset">
+            Scenario preset (editable template)
+          </label>
+          <select
+            id="builder-preset"
+            className={chrome.select}
+            value={dirtyPreset ? "custom" : presetFile}
+            disabled={building}
+            onChange={(e) => applyPreset(e.target.value)}
+          >
+            {COMMITTED_PRESETS.map((p) => (
+              <option key={p.filename} value={p.filename}>
+                {p.label}
+              </option>
+            ))}
+            <option value="custom">Custom (edited in builder)</option>
+          </select>
+          {activePreset !== undefined && !dirtyPreset && (
+            <p className={chrome.hint}>{activePreset.summary}</p>
+          )}
+        </div>
 
-      <fieldset className={styles.group} disabled={building}>
-        <legend className={chrome.panelTitle}>Failures</legend>
-        {failures.length === 0 ? (
-          <p className={chrome.hint}>
-            No failures configured — the swarm flies the whole run nominal.
-          </p>
-        ) : (
-          <table className={styles.failTable}>
-            <thead>
-              <tr>
-                <th scope="col">Satellite</th>
-                <th scope="col">Time (s)</th>
-                <th scope="col">Mode</th>
-                <th scope="col">
-                  <span className={styles.visuallyHidden}>Remove</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {failures.map((f) => (
-                <FailureRowView
-                  key={f.key}
-                  row={f}
-                  maxSat={nSats}
-                  disabled={building}
-                  onChange={(patch) => updateFailure(f.key, patch)}
-                  onRemove={() => setFailures((rows) => rows.filter((r) => r.key !== f.key))}
-                />
-              ))}
-            </tbody>
-          </table>
-        )}
-        <button type="button" className={chrome.btn} onClick={addFailure} disabled={building}>
-          Add failure
-        </button>
-      </fieldset>
-
-      <PhysicsSection values={nums} onNumber={setNumber} disabled={building} />
-
-      {/* Bounded inputs snap into these ranges on commit (clampNumber); the
-          per-field tooltips in the sections above carry the same limits. */}
-      <p className={chrome.hint}>
-        Clamped to the validator's ranges (cubesat/scenario.py): altitude 200–1999
-        km, dt 0.1–10 s, imager FOV 0.1–45 deg, seed ≥ 0; the remaining physics
-        fields must be positive.
-      </p>
-
-      <fieldset className={styles.group} disabled={building}>
-        <legend className={chrome.panelTitle}>Recovery policy</legend>
         <div className={styles.field}>
           <label className={chrome.fieldLabel} htmlFor="builder-policy">
-            Policy
+            Recovery policy
           </label>
           <select
             id="builder-policy"
             className={chrome.select}
             value={policy}
+            disabled={building}
             onChange={(e) => setPolicy(e.target.value as PolicyId)}
           >
             {POLICIES.map((p) => (
@@ -315,53 +316,34 @@ export default function ScenarioBuilder() {
               </option>
             ))}
           </select>
-          <p className={chrome.hint}>
-            Sent as policy on /simulation/start. The active policy reads back on
-            the wire as "Recovery mode" above.
-          </p>
         </div>
-      </fieldset>
 
-      <fieldset className={styles.group} disabled={building}>
-        <legend className={chrome.panelTitle}>Run</legend>
         <div className={styles.field}>
           <label className={styles.toggle} htmlFor="builder-predictor">
             <input
               id="builder-predictor"
               type="checkbox"
               checked={predictor}
+              disabled={building}
               onChange={(e) => setPredictor(e.target.checked)}
             />
-            AI risk overlay
+            AI risk overlay (display-only LightGBM precursor score)
           </label>
-          <p className={chrome.hint}>
-            Scores failure risk for this run (display-only); the AI early-warning panel
-            below reads it.
-          </p>
         </div>
-        <div className={styles.field}>
-          <label className={chrome.fieldLabel} htmlFor="builder-name">
-            Run name (optional)
-          </label>
-          <input
-            id="builder-name"
-            className={chrome.input}
-            type="text"
-            value={runName}
-            placeholder="live_custom"
-            spellCheck={false}
-            onChange={(e) => setRunName(e.target.value)}
-          />
-          <p className={chrome.hint}>Letters, digits, - and _ only. Left empty, a free name is picked.</p>
-        </div>
+
         <button
           type="button"
           className={`${chrome.btn} ${styles.runBtn}`}
           onClick={() => void run()}
           disabled={building}
         >
-          {building ? "Starting simulation…" : "Run simulation"}
+          {building
+            ? "Starting simulation…"
+            : live
+              ? "Restart simulation with builder settings"
+              : "Run simulation"}
         </button>
+
         <div className={chrome.btnRow}>
           <button
             type="button"
@@ -387,10 +369,17 @@ export default function ScenarioBuilder() {
           >
             Reset
           </button>
-          <button type="button" className={chrome.btn} onClick={switchToReplay}>
+          <button
+            type="button"
+            className={chrome.btn}
+            onClick={() => {
+              window.location.hash = "#/replay";
+            }}
+          >
             Switch to replay
           </button>
         </div>
+
         <p className={styles.runStatus} aria-live="polite">
           {error !== null ? (
             <span className={chrome.errorText} role="alert">
@@ -400,7 +389,104 @@ export default function ScenarioBuilder() {
             <span className={chrome.hint}>{statusText}</span>
           )}
         </p>
-      </fieldset>
+      </div>
+
+      {/* Collapsible Scenario Setup — open before start, folds automatically on
+          run so Live Failure Injection and Recovery Log below stay in view. */}
+      <details
+        className={styles.setupAccordion}
+        open={setupOpen}
+        onToggle={(e) => setSetupOpen(e.currentTarget.open)}
+      >
+        <summary className={styles.setupSummary}>
+          <span>
+            Configure swarm, failures &amp; physics ({nSats} sats · {failures.length} scheduled{" "}
+            {failures.length === 1 ? "failure" : "failures"})
+          </span>
+          <span className={styles.setupBadge}>{setupOpen ? "Hide" : "Edit"}</span>
+        </summary>
+        <div className={styles.setupBody}>
+          <SwarmSection
+            nSats={nSats}
+            roles={roles}
+            building={building}
+            nums={nums}
+            onSats={changeSats}
+            onRole={(seat, role) => {
+              setDirtyPreset(true);
+              setRoles((prev) => prev.map((r, j) => (j === seat ? role : r)));
+            }}
+            onNumber={setNumber}
+          />
+
+          <fieldset className={styles.group} disabled={building}>
+            <legend className={chrome.panelTitle}>Scheduled failures</legend>
+            {failures.length === 0 ? (
+              <p className={chrome.hint}>
+                No scheduled failures — swarm flies nominal unless you inject a live failure
+                below.
+              </p>
+            ) : (
+              <table className={styles.failTable}>
+                <thead>
+                  <tr>
+                    <th scope="col">Satellite</th>
+                    <th scope="col">Time (s)</th>
+                    <th scope="col">Mode</th>
+                    <th scope="col">
+                      <span className={styles.visuallyHidden}>Remove</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {failures.map((f) => (
+                    <FailureRowView
+                      key={f.key}
+                      row={f}
+                      maxSat={nSats}
+                      disabled={building}
+                      onChange={(patch) => updateFailure(f.key, patch)}
+                      onRemove={() => {
+                        setDirtyPreset(true);
+                        setFailures((rows) => rows.filter((r) => r.key !== f.key));
+                      }}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            )}
+            <button
+              type="button"
+              className={chrome.btn}
+              onClick={addFailure}
+              disabled={building}
+            >
+              Add scheduled failure
+            </button>
+          </fieldset>
+
+          <PhysicsSection values={nums} onNumber={setNumber} disabled={building} />
+
+          <div className={styles.field}>
+            <label className={chrome.fieldLabel} htmlFor="builder-name">
+              Custom scenario name (optional)
+            </label>
+            <input
+              id="builder-name"
+              className={chrome.input}
+              type="text"
+              value={runName}
+              placeholder="live_custom"
+              spellCheck={false}
+              disabled={building}
+              onChange={(e) => setRunName(e.target.value)}
+            />
+            <p className={chrome.hint}>
+              Letters, digits, - and _ only. Used when saving edited parameters.
+            </p>
+          </div>
+        </div>
+      </details>
     </section>
   );
 }

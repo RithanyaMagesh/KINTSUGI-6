@@ -29,13 +29,13 @@ import chrome from "../../styles/chrome.module.css";
 import styles from "./MissionBrief.module.css";
 
 export default function MissionBrief() {
-  const setMissionBriefOpen = useUiStore((s) => s.setMissionBriefOpen);
   const setReplayModeRequested = useUiStore((s) => s.setReplayModeRequested);
   const exploreRef = useRef<HTMLButtonElement>(null);
+  const [open, setOpen] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const close = (): void => setMissionBriefOpen(false);
+  const close = (): void => setOpen(false);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
@@ -44,8 +44,9 @@ export default function MissionBrief() {
     window.addEventListener("keydown", onKey);
     exploreRef.current?.focus(); // keyboard entry point = the primary action
     return () => window.removeEventListener("keydown", onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  if (!open) return null;
 
   // Same loader as ReplayControls.loadSelected / SwarmScene.openReplay:
   // backend drives replay, frames arrive over the shared /ws/state socket.

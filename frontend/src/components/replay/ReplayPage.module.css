@@ -1,8 +1,7 @@
-/* Replay page (#/replay) — §6.2/§7.8. Runs gallery | scene + story +
-   transport + recovery log. The shell's TopStatusBar sits above this grid
-   (App owns the one top bar). Same densities as the console grid
-   (App.module.css): --bg ground, 8px gutters, stable gallery width. Tokens
-   only (§13.1); radius via tokens; hover = background/border only. */
+/* Replay page (#/replay) — §6.2/§7.8. Runs gallery + fleet selector | scene +
+   story + transport + recovery log | read-only RightPanel (telemetry readouts,
+   charts, role reassignment table, selected satellite inspector). Tokens only
+   (§13.1); radius via tokens; hover = background/border only. */
 
 .page {
   height: 100%;
@@ -16,7 +15,7 @@
 
 .main {
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
+  grid-template-columns: 280px minmax(0, 1fr) 336px;
   gap: var(--space-2);
   min-height: 0;
 }
@@ -26,11 +25,11 @@
 .gallery {
   display: flex;
   flex-direction: column;
+  gap: var(--space-2);
+  overflow-y: auto;
   min-height: 0;
 }
 
-/* Focus target for the transport's "Change recording" button (ReplayControls
-   focuses #replay-gallery): visible ring inside the panel, no layout shift. */
 .gallery:focus {
   outline: 2px solid var(--focus-ring);
   outline-offset: -2px;
@@ -41,9 +40,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  overflow-y: auto;
-  min-height: 0;
-  margin-top: var(--space-2);
+  margin-top: var(--space-1);
 }
 
 .runRow {
@@ -71,8 +68,6 @@
   cursor: not-allowed;
 }
 
-/* Loaded run: raised surface + info border, and the row carries the wire
-   scenario line (text with the color, §22). */
 .runActive {
   background: var(--panel-raised);
   border-color: var(--status-info);
@@ -89,7 +84,6 @@
   color: var(--ink-faint);
 }
 
-/* Doc-derived description: body text, 16px (§13.2 floor). */
 .runLabel {
   font-size: var(--text-body);
   color: var(--ink-muted);
@@ -108,23 +102,27 @@
   overflow-wrap: anywhere;
 }
 
-/* Reserved for the loading note / load error: no shift when it fills. */
 .hintSlot {
   min-height: 1.4em;
-  margin-top: var(--space-2);
+}
+
+.fleetSection {
+  border-top: 1px solid var(--border-strong);
+  padding-top: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
 /* ---- Main column ------------------------------------------------------- */
 
 .content {
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto auto minmax(140px, 300px);
+  grid-template-rows: minmax(0, 1fr) auto auto minmax(140px, 240px);
   gap: var(--space-2);
   min-height: 0;
 }
 
-/* Full-bleed scene panel, like the console's CenterPanel: the canvas owns
-   every pixel (no padding, clipped). */
 .scenePanel {
   min-height: 0;
   padding: 0;
@@ -141,14 +139,14 @@
   min-height: 0;
 }
 
-/* §13.3: below 1024px wide, stack the gallery over the main column. */
+/* §13.3: below 1024px wide, stack the columns cleanly. */
 @media (max-width: 1023px) {
   .main {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
   }
 
   .gallery {
-    max-height: 200px;
+    max-height: 260px;
   }
 }

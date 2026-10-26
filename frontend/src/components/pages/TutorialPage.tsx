@@ -85,13 +85,13 @@ export default function TutorialPage() {
             <div>
               <h3 className={styles.stepTitle}>Run your first failure — the two_failure replay</h3>
               <p className={styles.p}>
-                Scroll to the replay transport in the bottom panel (the button{" "}
-                <span className={styles.lit}>Switch to replay</span> in the Live run panel
-                scrolls there). Pick <span className={styles.lit}>two_failure.jsonl</span> in
-                the log dropdown and press <span className={styles.lit}>Load replay</span>. The
-                log starts playing at 10×; use <span className={styles.lit}>Pause</span>,{" "}
+                Open the <a href="#/replay">Replay</a> page from the top navigation bar (or press{" "}
+                <span className={styles.lit}>Switch to replay</span> on the Live page). Click{" "}
+                <span className={styles.lit}>two_failure.jsonl</span> in the left{" "}
+                <span className={styles.lit}>Committed replay runs</span> gallery. The log starts
+                playing at 10×; use <span className={styles.lit}>Pause</span>,{" "}
                 <span className={styles.lit}>Restart</span>, the speed select, or the scrub
-                slider to move around.
+                slider in the transport bar to move around.
               </p>
               <p className={styles.p}>
                 What you should see, in order: the top-bar state chip runs the spine{" "}
@@ -186,24 +186,27 @@ export default function TutorialPage() {
             </span>
             <div>
               <h3 className={styles.stepTitle}>
-                Try live — build a 4-satellite scenario with one DEAD failure
+                Try live — run a preset or customize a 4-satellite scenario
               </h3>
               <p className={styles.p}>
-                In the Controls panel, press{" "}
-                <span className={styles.lit}>Add your own scenario…</span>, paste this JSON and
-                press <span className={styles.lit}>Save scenario</span>:
+                Open <a href="#/live">Live simulation</a>. In the{" "}
+                <span className={styles.lit}>Live mission control</span> seat on the left, pick{" "}
+                <span className={styles.lit}>single_failure_n4.json</span> in the{" "}
+                <span className={styles.lit}>Scenario preset</span> dropdown (or expand{" "}
+                <span className={styles.lit}>Configure swarm, failures &amp; physics</span> to
+                edit satellite count, roles, and scheduled failures):
               </p>
               <pre className={styles.cmd}>{EXAMPLE_SCENARIO}</pre>
               <p className={styles.p}>
-                Select the new file in the <span className={styles.lit}>Scenario file</span>{" "}
-                dropdown and press <span className={styles.lit}>Start simulation</span> (seed
-                defaults to 42). Once frames arrive, open the Failure injection panel, pick a
-                satellite, leave Mode on <span className={styles.lit}>DEAD</span> — &quot;Goes
-                silent and coasts.&quot; — and press{" "}
-                <span className={styles.lit}>Inject failure</span>. The satellite goes red, the
-                swarm declares <span className={styles.lit}>FAILURE_DETECTED</span> within 4 s
-                (3 missed heartbeats at 2 s per tick), replans and recovers — the same spine
-                you watched in replay, computed live.
+                Press <span className={styles.lit}>Run simulation</span> (seed defaults to 42).
+                Once live frames arrive, use the{" "}
+                <span className={styles.lit}>Failure injection</span> section right below the run
+                controls: pick a satellite, leave Mode on{" "}
+                <span className={styles.lit}>DEAD</span> — &quot;Goes silent and coasts.&quot; —
+                and press <span className={styles.lit}>Inject failure</span>. The satellite goes
+                red, the swarm declares <span className={styles.lit}>FAILURE_DETECTED</span>{" "}
+                within 4 s (3 missed heartbeats at 2 s per tick), replans and recovers — the same
+                spine you watched in replay, computed live.
               </p>
               <p className={`${styles.p} ${styles.muted}`}>
                 The values above match the committed 4-satellite scenario

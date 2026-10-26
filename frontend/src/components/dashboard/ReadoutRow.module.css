@@ -55,23 +55,33 @@
 }
 
 /* Pure-CSS tooltip: hover on the row OR focus on the label reveals it.
-   Absolutely positioned so opening it never shifts layout (§13.3). */
+   Pinned to left: 0; right: 0 of the readout row so it never overflows the
+   336px scroll container horizontally (§3.2 #9). */
 .tip {
   position: absolute;
   top: calc(100% + var(--space-1));
   left: 0;
-  z-index: 3;
-  width: max-content;
-  max-width: 300px;
+  right: 0;
+  z-index: 10;
+  width: auto;
+  max-width: 100%;
+  box-sizing: border-box;
   background: var(--panel-raised);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-control);
   padding: var(--space-2);
   color: var(--ink);
-  font-size: var(--text-body);
+  font-size: var(--text-event);
+  line-height: 1.4;
   visibility: hidden;
   opacity: 0;
+  pointer-events: none;
   transition: opacity var(--motion-duration) var(--motion-ease);
+}
+
+.row:last-child .tip {
+  top: auto;
+  bottom: calc(100% + var(--space-1));
 }
 
 .row:hover .tip,

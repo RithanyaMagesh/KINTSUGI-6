@@ -196,18 +196,23 @@ export default function SelectedSatellitePanel() {
         {timeline.length === 0 ? (
           <p className={styles.reason}>No role or task changes measured yet.</p>
         ) : (
-          <ol className={styles.timeline}>
-            {timeline.map((entry) => {
-              const text = entryText(entry);
-              if (text === "") return null; // reassignment row with no change
-              return (
-                <li key={entry.kind + "-" + entry.t} className={styles.timelineRow}>
-                  <span className={styles.timelineT}>t+{Math.round(entry.t)}</span>
-                  <span className={styles.timelineText}>{text}</span>
-                </li>
-              );
-            })}
-          </ol>
+          <>
+            {timeline.length >= 250 && (
+              <p className={styles.caption}>Showing latest 250 transitions.</p>
+            )}
+            <ol className={styles.timeline}>
+              {timeline.map((entry) => {
+                const text = entryText(entry);
+                if (text === "") return null; // reassignment row with no change
+                return (
+                  <li key={entry.kind + "-" + entry.t} className={styles.timelineRow}>
+                    <span className={styles.timelineT}>t+{Math.round(entry.t)}</span>
+                    <span className={styles.timelineText}>{text}</span>
+                  </li>
+                );
+              })}
+            </ol>
+          </>
         )}
       </Section>
     </div>

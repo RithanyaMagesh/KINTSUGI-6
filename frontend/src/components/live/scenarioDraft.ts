@@ -1,8 +1,9 @@
-// Scenario draft -> POST /scenarios/upload body. Pure mapping, no React.
-// Field-for-field cubesat/scenario.py (the schema authority — its pydantic
-// validation runs server-side on upload, cubesat/api.py scenarios_upload);
-// defaults are the committed reference scenario data/scenarios/nominal.json,
-// never invented numbers (repo invariant 1).
+// Scenario draft -> POST /scenarios/upload body + committed scenario presets.
+// Pure mapping, no React. Field-for-field cubesat/scenario.py (the schema
+// authority — its pydantic validation runs server-side on upload,
+// cubesat/api.py scenarios_upload); defaults and presets are exact copies of
+// the committed data/scenarios/*.json files, never invented numbers (repo
+// invariant 1).
 
 export const ROLES = ["leader", "imager", "downlink"] as const;
 export type Role = (typeof ROLES)[number];
@@ -11,30 +12,32 @@ export const FAILURE_MODES = ["DEAD", "THRUSTER_OUT"] as const;
 export type FailureMode = (typeof FAILURE_MODES)[number];
 
 /** One-line descriptions (cubesat/scenario.py FailureMode docstring). */
-export const MODE_DESCRIPTION: Record<FailureMode, string> = {
-  DEAD: "goes silent and coasts",
-  THRUSTER_OUT: "keeps reporting but cannot maneuver",
+export const MODE_DESCRIPTION: Record<string, string> = {
+  DEAD: "goes silent and coasts ballistically as an obstacle",
+  THRUSTER_OUT: "keeps reporting heartbeats but cannot maneuver",
 };
 
-/** Recovery policies sent as `policy` on /simulation/start. The backend field
- * is landing separately (cubesat/wire.py StartRequest has scenario/seed/speed
- * only today) — a 422 there falls back to starting without it (honest note in
- * the UI). Copy verbatim from the recovery-benchmark policy set. */
+/** Recovery policies sent as `policy` on /simulation/start (cubesat/wire.py). */
 export const POLICIES = [
   {
     id: "hungarian",
-    label: "Hungarian two-step assignment - the engine allocator",
+    label: "Hungarian two-step assignment — the engine allocator",
   },
   {
     id: "even_split",
-    label: "Even redistribution - benchmark policy, adapted from the RL paper baseline",
+    label: "Even redistribution — benchmark policy, adapted from the RL paper baseline",
   },
   {
     id: "hungarian_keepout",
-    label: "Hungarian + dead-sat keep-out - benchmark policy",
+    label: "Hungarian + dead-sat keep-out — benchmark policy",
   },
 ] as const;
 export type PolicyId = (typeof POLICIES)[number]["id"];
+
+/** Supported satellite counts in the builder (2–8 standard + 12–50 larger-swarm
+ * roadmap seats, §4). */
+export const SAT_COUNT_OPTIONS = [2, 3, 4, 5, 6, 7, 8, 12, 16, 24, 32, 50] as const;
+export const MAX_SATS = 50;
 
 export interface FailureRow {
   /** React list identity only — never serialized. */
@@ -68,24 +71,176 @@ export interface BuilderNumbers {
  * default 100). */
 export type NumberValues = Omit<BuilderNumbers, "name"> & { speed: number };
 
+export interface ScenarioPreset {
+  filename: string;
+  label: string;
+  summary: string;
+  nSats: number;
+  roles: Role[];
+  nums: NumberValues;
+  failures: Array<{ satId: number; t: number; mode: FailureMode }>;
+}
+
+/** Exact committed scenarios from data/scenarios/*.json — loading a preset
+ * populates the builder form with the committed numbers and lets the operator
+ * either run the committed file directly or tweak any field to upload a custom
+ * variant. */
+export const COMMITTED_PRESETS: ReadonlyArray<ScenarioPreset> = [
+  {
+    filename: "two_failure.json",
+    label: "two_failure.json — Primary 6-sat two-failure demo",
+    summary: "6 sats, 8 km ellipse, a_max 0.1 m/s²; SAT-2 DEAD at 1200 s, SAT-3 DEAD at 1500 s.",
+    nSats: 6,
+    roles: ["leader", "imager", "imager", "imager", "imager", "downlink"],
+    nums: {
+      seed: 42,
+      durationS: 17028,
+      dtS: 2,
+      altitudeKm: 500,
+      radialAmpKm: 8,
+      phaseOffsetDeg: 0,
+      aMax: 0.1,
+      wn: 0.01,
+      zeta: 1,
+      fovHalfAngleDeg: 1.5,
+      gridStepKm: 2,
+      gridExtentKm: 30,
+      speed: 20,
+    },
+    failures: [
+      { satId: 1, t: 1200, mode: "DEAD" },
+      { satId: 2, t: 1500, mode: "DEAD" },
+    ],
+  },
+  {
+    filename: "firefly_swarm.json",
+    label: "firefly_swarm.json — Hypothetical swarm on FIREFLY-1 orbit",
+    summary: "6 sats on chief FIREFLY-1 (589.309 km, NORAD 62701); two DEAD imagers at 1200 s & 1500 s.",
+    nSats: 6,
+    roles: ["leader", "imager", "imager", "imager", "imager", "downlink"],
+    nums: {
+      seed: 42,
+      durationS: 17363.7,
+      dtS: 2,
+      altitudeKm: 589.309,
+      radialAmpKm: 8,
+      phaseOffsetDeg: 0,
+      aMax: 0.1,
+      wn: 0.01,
+      zeta: 1,
+      fovHalfAngleDeg: 1.5,
+      gridStepKm: 2,
+      gridExtentKm: 30,
+      speed: 20,
+    },
+    failures: [
+      { satId: 1, t: 1200, mode: "DEAD" },
+      { satId: 2, t: 1500, mode: "DEAD" },
+    ],
+  },
+  {
+    filename: "cascading_n8.json",
+    label: "cascading_n8.json — 8-sat cascading DEAD + THRUSTER_OUT",
+    summary: "8 sats, 8.25 km ellipse; SAT-2 & SAT-3 DEAD (1200 s, 1500 s) + SAT-8 THRUSTER_OUT at 2400 s.",
+    nSats: 8,
+    roles: ["leader", "imager", "imager", "imager", "imager", "imager", "imager", "downlink"],
+    nums: {
+      seed: 42,
+      durationS: 17028,
+      dtS: 2,
+      altitudeKm: 500,
+      radialAmpKm: 8.25,
+      phaseOffsetDeg: 0,
+      aMax: 0.1,
+      wn: 0.01,
+      zeta: 1,
+      fovHalfAngleDeg: 1.5,
+      gridStepKm: 2,
+      gridExtentKm: 30,
+      speed: 20,
+    },
+    failures: [
+      { satId: 1, t: 1200, mode: "DEAD" },
+      { satId: 2, t: 1500, mode: "DEAD" },
+      { satId: 7, t: 2400, mode: "THRUSTER_OUT" },
+    ],
+  },
+  {
+    filename: "leader_failure_6sat.json",
+    label: "leader_failure_6sat.json — 6-sat leader death + imager death",
+    summary: "6 sats; SAT-1 (leader) DEAD at 2400 s forcing leader re-election, SAT-3 DEAD at 3000 s.",
+    nSats: 6,
+    roles: ["leader", "imager", "imager", "imager", "imager", "downlink"],
+    nums: {
+      seed: 42,
+      durationS: 17028,
+      dtS: 2,
+      altitudeKm: 500,
+      radialAmpKm: 8,
+      phaseOffsetDeg: 0,
+      aMax: 0.1,
+      wn: 0.01,
+      zeta: 1,
+      fovHalfAngleDeg: 1.5,
+      gridStepKm: 2,
+      gridExtentKm: 30,
+      speed: 20,
+    },
+    failures: [
+      { satId: 0, t: 2400, mode: "DEAD" },
+      { satId: 2, t: 3000, mode: "DEAD" },
+    ],
+  },
+  {
+    filename: "single_failure_n4.json",
+    label: "single_failure_n4.json — 4-sat minimal swarm leader failure",
+    summary: "4 sats (leader, 2 imagers, downlink); SAT-1 (leader) DEAD at 1200 s.",
+    nSats: 4,
+    roles: ["leader", "imager", "imager", "downlink"],
+    nums: {
+      seed: 42,
+      durationS: 17028,
+      dtS: 2,
+      altitudeKm: 500,
+      radialAmpKm: 8,
+      phaseOffsetDeg: 0,
+      aMax: 0.1,
+      wn: 0.01,
+      zeta: 1,
+      fovHalfAngleDeg: 1.5,
+      gridStepKm: 2,
+      gridExtentKm: 30,
+      speed: 20,
+    },
+    failures: [{ satId: 0, t: 1200, mode: "DEAD" }],
+  },
+  {
+    filename: "nominal.json",
+    label: "nominal.json — 6-sat healthy baseline (no failures)",
+    summary: "6 sats, 11 km ellipse, a_max 0.01 m/s², 1 orbit (5676 s), zero failures.",
+    nSats: 6,
+    roles: ["leader", "imager", "imager", "imager", "imager", "downlink"],
+    nums: {
+      seed: 42,
+      durationS: 5676,
+      dtS: 2,
+      altitudeKm: 500,
+      radialAmpKm: 11,
+      phaseOffsetDeg: 0,
+      aMax: 0.01,
+      wn: 0.01,
+      zeta: 1,
+      fovHalfAngleDeg: 1.5,
+      gridStepKm: 2,
+      gridExtentKm: 30,
+      speed: 20,
+    },
+    failures: [],
+  },
+];
+
 /** Per-field clamp ranges, one entry per NumberValues key. Every range
- * satisfies the pydantic model in cubesat/scenario.py WITH margin — a `gt`
- * bound gets a min strictly above the limit, an `lt` bound a max strictly
- * below — so a scenario built through buildScenario passes Scenario
- * validation by construction. Field-by-field against the model:
- *   seed        ge=0, int            -> min 0, rounded
- *   durationS   duration_s gt=0      -> min 1
- *   dtS         dt_s gt=0 le=10      -> min 0.1, max 10
- *   altitudeKm  altitude_km gt=160 lt=2000 -> min 200, max 1999 (the reported
- *               demo-blocker: the builder let 160 through; gt=160 rejects it)
- *   radialAmpKm radial_amp_km gt=0   -> min 0.1
- *   phaseOffsetDeg unconstrained (Formation default 0.0) -> no clamp
- *   aMax        a_max_mps2 gt=0      -> min 0.0001
- *   wn / zeta   Gains gt=0           -> min 0.0001 / 0.1
- *   fovHalfAngleDeg gt=0 le=45       -> min 0.1, max 45
- *   gridStepKm / gridExtentKm gt=0 -> min 0.1 / 1
- *   speed       StartRequest.speed gt=0 (cubesat/wire.py:48) -> min 1
- */
+ * satisfies the pydantic model in cubesat/scenario.py WITH margin. */
 export const BOUNDS: Record<
   keyof NumberValues,
   { min?: number; max?: number; int?: boolean }
@@ -105,8 +260,7 @@ export const BOUNDS: Record<
   speed: { min: 1 },
 };
 
-/** Clamp one builder number into its validated range (BOUNDS). Non-finite
- * input falls to the min (or 0) so a NaN commit can never reach the wire. */
+/** Clamp one builder number into its validated range (BOUNDS). */
 export function clampNumber(key: keyof NumberValues, v: number): number {
   const b = BOUNDS[key];
   if (!Number.isFinite(v)) return b.min ?? 0;
@@ -116,8 +270,7 @@ export function clampNumber(key: keyof NumberValues, v: number): number {
   return b.int === true ? Math.round(out) : out;
 }
 
-/** Default role pattern for n seats: 1 leader, imagers in between, 1 downlink
- * (cubesat/cluster_import.py:145 builds the same shape; nominal.json roles). */
+/** Default role pattern for n seats: 1 leader, imagers in between, 1 downlink. */
 export function defaultRoles(n: number): Role[] {
   return [
     "leader",
@@ -126,17 +279,7 @@ export function defaultRoles(n: number): Role[] {
   ];
 }
 
-/** Draft -> the scenario object. Every number passes through clampNumber
- * (BOUNDS), so the generated scenario satisfies cubesat/scenario.py's pydantic
- * constraints by construction — whatever the inputs allowed (the reported
- * demo-blocker was altitude_km=160 passing the form while gt=160 rejects it).
- * n_slots is roles.length by construction — the validator requires
- * formation.n_slots == len(roles) (scenario.py _slots_match_roles), so the
- * builder exposes one satellite count, not two fields that can drift. Failure
- * rows referencing removed seats are dropped (sat_id >= n_sats would 422,
- * scenario.py _failures_reference_existing_sats). Schema defaults
- * (recovery_enabled, detection, allocation, oracle) are omitted so the
- * backend defaults apply — no copied half-truths. */
+/** Draft -> the scenario object. */
 export function buildScenario(
   n: BuilderNumbers,
   roles: Role[],
@@ -164,16 +307,14 @@ export function buildScenario(
     failures: failures
       .filter((f) => Number.isInteger(f.satId) && f.satId >= 0 && f.satId < roles.length)
       .map((f) => ({
-        t: Math.max(0, Number.isFinite(f.t) ? f.t : 0), // Failure.t ge=0
+        t: Math.max(0, Number.isFinite(f.t) ? f.t : 0),
         sat_id: f.satId,
         mode: f.mode,
       })),
   };
 }
 
-/** Mirrors cubesat/api.py _sanitize_scenario_name ([A-Za-z0-9_-], <= 64) so
- * the name the UI decides is the name the backend keeps — no 422 round-trip
- * for a character the client could have cleaned. */
+/** Mirrors cubesat/api.py _sanitize_scenario_name ([A-Za-z0-9_-], <= 64). */
 export function sanitizeName(raw: string): string {
   return raw
     .replace(/[^A-Za-z0-9_-]/g, "")

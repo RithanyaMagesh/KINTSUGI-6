@@ -31,28 +31,28 @@
   flex-direction: column;
 }
 
-/* Tabs — underline/border indicator per §13.3. The active underline sits on
-   the shared border (-1px margin) like an ordinary product tab strip. One
-   row, never wrapping: five labels overflow a 336px panel, so the strip
-   scrolls horizontally instead of stacking to a second row (§13.3 dense).
-   That strip is the only inner scroll region and it is horizontal-only. */
+/* Tabs — underline/border indicator per §13.3. Sized so all five labels
+   (Coverage / Deviation / Separation / Delta-v / Health) fit on a single row
+   inside the 336px column at 1920x1080 without a horizontal scrollbar (§3.2 #9). */
 .tabs {
   display: flex;
-  gap: var(--space-1);
+  justify-content: space-between;
+  gap: 2px;
   border-bottom: 1px solid var(--border-strong);
-  overflow-x: auto;
+  overflow-x: hidden;
 }
 
 .tab {
-  flex: 0 0 auto;
+  flex: 1 1 auto;
+  text-align: center;
   white-space: nowrap;
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
-  padding: var(--space-1) var(--space-2);
+  padding: var(--space-1) 4px;
   color: var(--ink-muted);
-  font-size: var(--text-body);
+  font-size: var(--text-event);
   font-family: var(--font-sans);
   cursor: pointer;
   transition: color var(--motion-duration) var(--motion-ease),
