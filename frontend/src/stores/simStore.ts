@@ -19,6 +19,12 @@ interface SimStore {
   missionState: MissionState | null;
   scenario: string | null;
   seed: number | null;
+  /** Active recovery policy as the session reports it — hello.policy (carried
+   * on every live run, cubesat/session.py hello()); sim_state echoes it only
+   * when it deviates from "hungarian" (cubesat/wire.py _policy_field). null =
+   * unmeasured: the Recovery-mode readout renders "unmeasured", never a
+   * guessed default (repo invariant 1). */
+  policy: string | null;
   satellites: Satellite[];
   metrics: Partial<Metrics>;
   events: SimEvent[];
@@ -52,6 +58,7 @@ const initial = {
   missionState: null,
   scenario: null,
   seed: null,
+  policy: null as string | null,
   satellites: [] as Satellite[],
   metrics: {} as Partial<Metrics>,
   events: [] as SimEvent[],
@@ -73,21 +80,30 @@ export const useSimStore = create<SimStore>((set, get) => ({
         case "hello":
           // Session greeting (cubesat/session.py): tells the UI which mode the
           // backend session is already in (live | replay) so the Replay badge
-          // is correct even when the console joins mid-session.
+          // is correct even when the console joins mid-session. Live hellos
+          // always carry the active policy; stopped/replay omit it (unknown),
+          // so absence keeps whatever was measured rather than clobbering.
           return {
             mode: msg.mode === "stopped" ? state.mode : msg.mode,
             scenario: msg.scenario ?? state.scenario,
             seed: msg.seed ?? state.seed,
+            policy: msg.policy ?? state.policy,
           };
         case "frame": {
           // INIT-derived empty state (cubesat/wire.py to_sim_state): resets the
           // console to the §24.3 "no satellites" state instead of faking a
-          // NOMINAL badge with zero satellites on screen.
+          // NOMINAL badge with zero satellites on screen. policy resets unless
+          // the INIT frame itself carries one: the wire echoes policy only on
+          // deviation from "hungarian" (cubesat/wire.py _policy_field) and
+          // hello is connect-only (cubesat/api.py:319), so keeping the old
+          // value would mislabel a new hungarian run with the previous run's
+          // policy; null renders "unmeasured" (invariant 1).
           if (msg.frame.satellites.length === 0 && msg.frame.simTime === 0) {
             return {
               simTime: 0,
               scenario: msg.frame.scenario ?? state.scenario,
               seed: msg.frame.seed ?? state.seed,
+              policy: msg.frame.policy ?? null,
               satellites: [],
               metrics: {},
               events: [],
@@ -112,6 +128,10 @@ export const useSimStore = create<SimStore>((set, get) => ({
             missionState: msg.frame.missionState as MissionState,
             scenario: msg.frame.scenario ?? state.scenario,
             seed: msg.frame.seed ?? state.seed,
+            // Frames echo policy only when it deviates from "hungarian"
+            // (cubesat/wire.py _policy_field) — absence must not clobber the
+            // hello's value (a hungarian run's frames never mention it).
+            policy: msg.frame.policy ?? state.policy,
             satellites: msg.frame.satellites,
             metrics: msg.frame.metrics,
             priorRoles,

@@ -35,6 +35,20 @@ const RECOVERY_MODE = "Hungarian (default)";
 /** m/s — below any measured burn (dead satellites coast, invariant 5). */
 const DV_EPSILON = 1e-9;
 
+/** The allocator's semantics in one plain-language line — the answer to the
+ * beta report "satellite 5 failed — why did satellite 6 go?". The re-solve is
+ * ONE Hungarian assignment over ALL survivors (docs/MASTER_PROMPT.md §2:
+ * rectangular linear_sum_assignment, rows = survivors, cols = slots;
+ * cubesat/allocate.py solve_assignment), so every survivor is reassigned at
+ * once and a failure can move several satellites. Algorithm semantics from
+ * the docs, NOT telemetry. Exported so NarrationStrip mounts the same words
+ * while a multi-mover reassignment is the live story. */
+export const WHY_LINE =
+  "Why these moves: the allocator minimizes total burn across every survivor " +
+  "and slot at once — each survivor takes the slot that makes the whole " +
+  "formation cheapest to restore, so a failure can move several satellites, " +
+  "not just the closest one.";
+
 interface Step {
   time: number | null; // sim time stamp [s]; null = no measured instant
   body: ReactNode;
@@ -248,6 +262,30 @@ function stepsFor(
       body: (
         <>
           Replan via {RECOVERY_MODE}: {parts}
+        </>
+      ),
+    });
+
+    // WHY line under the moves (beta report: "satellite 5 failed — why did
+    // satellite 6 go?"). The replan step lists WHO moved; this says WHY more
+    // than one can. Context, not an action: muted, no measured instant.
+    // cost_total suffix only when the wire carried it — never estimated
+    // (invariant 1; measured on data/logs/two_failure.jsonl).
+    steps.push({
+      time: null,
+      muted: true,
+      body: (
+        <>
+          {WHY_LINE}
+          {a.costTotal !== null && (
+            <>
+              {" "}(total weighted assignment cost{" "}
+              <span className={styles.mono}>{a.costTotal.toFixed(2)}</span>
+              {/* cost_total is a dimensionless weighted sum over normalized
+                  distance, fuel and role mismatch (cubesat/allocate.py) — no
+                  physical unit, so none is claimed. */}
+            </>
+          )}
         </>
       ),
     });

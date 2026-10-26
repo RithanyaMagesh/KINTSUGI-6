@@ -15,6 +15,7 @@ import type { FailureRecord, AssignmentEvent } from "../../stores/recoveryStore"
 import type { MissionState, Satellite } from "../../types/satellite";
 import { missionStateColor } from "../../utils/colors";
 import { formatSeconds } from "../../utils/format";
+import { WHY_LINE } from "../recovery/RecoveryLog";
 import styles from "./NarrationStrip.module.css";
 
 function Mono({ children }: { children: ReactNode }) {
@@ -216,6 +217,19 @@ export default function NarrationStrip() {
   const failure = useRecoveryStore(selectLatestFailure);
   const assignment = useRecoveryStore(selectLatestAssignment);
 
+  // Multiple provable movers on the latest role_reassignment (prevSlot ≠
+  // target measured on more than one row): the sentence names the first mover
+  // + a count, which still reads as "the vacated slot's neighbor moved".
+  // While that reassignment IS the story (REPLANNING / RECONFIGURING), mount
+  // the allocator's WHY line beneath it — the same constant RecoveryLog
+  // prints under every assignment episode (beta report: "satellite 5 failed
+  // — why did satellite 6 go?"). Never claimed from rows alone: prevSlot is
+  // required, so the bridge path (prevSlot null) never shows it.
+  const { movers } = moversOf(assignment);
+  const multiMovers =
+    movers.length > 1 &&
+    (missionState === "REPLANNING" || missionState === "RECONFIGURING");
+
   const color = missionStateColor(missionState);
 
   return (
@@ -229,9 +243,19 @@ export default function NarrationStrip() {
           The recovery story starts when a simulation runs — start one or load a replay.
         </p>
       ) : (
-        <p className={styles.sentence} role="status" aria-live="polite">
-          {narrationFor(missionState, satellites, metricsCoverage ?? null, failure, assignment)}
-        </p>
+        <div role="status" aria-live="polite">
+          <p className={styles.sentence}>
+            {narrationFor(missionState, satellites, metricsCoverage ?? null, failure, assignment)}
+          </p>
+          {multiMovers && (
+            <p
+              className={styles.sentence}
+              style={{ color: "var(--ink-muted)", marginTop: "var(--space-1)" }}
+            >
+              {WHY_LINE}
+            </p>
+          )}
+        </div>
       )}
     </section>
   );

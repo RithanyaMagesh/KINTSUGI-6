@@ -8,7 +8,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import type { MissionState, Satellite } from "../../types/satellite";
-import { fitFormation } from "../../utils/geometry";
+import { fitDistance, fitFormation } from "../../utils/geometry";
 import {
   createSatelliteRecord,
   disposeSatelliteRecord,
@@ -20,7 +20,7 @@ import {
 } from "./sceneSatellites";
 import { SlotLayer } from "./sceneSlots";
 import { LabelLayer, labelPriority, type LabelItem } from "./sceneLabels";
-import { AutoFitController } from "./sceneCamera";
+import { AutoFitController, earthFitRadius, FIT_FILL } from "./sceneCamera";
 import { FormationLines } from "./sceneLines";
 import { createEnvironment, type Environment } from "./sceneEarth";
 import { SCENE_TOKENS, tokenColor } from "./sceneColors";
@@ -79,7 +79,6 @@ export class SwarmSceneController {
     this.reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     this.scene.background = tokenColor(SCENE_TOKENS.bg).clone();
-    this.camera.position.set(2000, 1500, 2000);
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -102,6 +101,7 @@ export class SwarmSceneController {
     this.ro = new ResizeObserver(() => this.resize());
     this.ro.observe(container);
     this.resize();
+    this.frameEarth(2, 1.5, 2); // Earth-centred pre-data staging (§20 notice covers the canvas)
 
     this.renderer.domElement.addEventListener("pointerdown", this.handlePointerDown);
     this.renderer.domElement.addEventListener("pointerup", this.handlePointerUp);
@@ -158,28 +158,50 @@ export class SwarmSceneController {
 
   applyPreset(preset: CameraPreset, focusSat: Satellite | null): void {
     const e = this.extent || 1000;
-    const target = new THREE.Vector3(0, 0, 0);
-    if (preset === "focus" && focusSat !== null) {
-      target.set(...lvlhToScene(focusSat.r));
-    }
-    this.controls.target.copy(target);
-    // Side presets sit high enough (scene +y = zenith) that the nadir Earth
-    // catches the lower frame (2026-10-04 staging: Earth below, never beside).
-    if (preset === "top") {
-      this.camera.position.set(target.x + e * 0.001, e * 2.5, target.z);
-    } else if (preset === "formation") {
-      this.camera.position.set(target.x + e * 1.6, e * 1.0, target.z + e * 1.2);
-    } else if (preset === "focus") {
-      this.camera.position.set(target.x + e * 0.8, e * 0.7, target.z + e * 0.8);
+    if (preset === "reset") {
+      this.frameEarth(2, 1.5, 2); // default frame: Earth centred, ring around it
+    } else if (preset === "top") {
+      this.frameEarth(0.001, 1, 0); // plan view over Earth's centre (hair offset
+      // keeps OrbitControls off the pole singularity)
     } else {
-      this.camera.position.set(e * 2, e * 1.5, e * 2);
-      this.controls.target.set(0, 0, 0);
+      const target = new THREE.Vector3(0, 0, 0);
+      if (preset === "focus" && focusSat !== null) {
+        target.set(...lvlhToScene(focusSat.r));
+      }
+      this.controls.target.copy(target);
+      // Formation stays formation-tight; focus is the failed-sat follow-cam.
+      if (preset === "formation") {
+        this.camera.position.set(target.x + e * 1.6, e * 1.0, target.z + e * 1.2);
+      } else {
+        this.camera.position.set(target.x + e * 0.8, e * 0.7, target.z + e * 0.8);
+      }
     }
     // Every preset re-enables the managed view. "Focus failed" keeps auto-fit
-    // ON but tracks the failed satellite (follow-cam) — otherwise a
-    // formation-centred refit would undo the focus a second later.
+    // ON but tracks the failed satellite (follow-cam) — otherwise an
+    // Earth-centred refit would undo the focus a second later.
     this.fit.onPreset(preset);
     this.controls.update();
+  }
+
+  /** Jump to an Earth-centred frame (2026-10-04 bug 3): target = ring centre
+   * (= Earth's centre), distance = the managed fit for the whole ring plus
+   * the formation riding it. `dir` is the view offset direction from the
+   * centre — oblique for the default, ~straight up for the top view. */
+  private frameEarth(dirX: number, dirY: number, dirZ: number): void {
+    const f = this.environment.frame();
+    const d = fitDistance(
+      earthFitRadius(f, this.lastSats),
+      (this.camera.fov * Math.PI) / 180,
+      this.camera.aspect,
+      FIT_FILL,
+    );
+    this.controls.target.set(...f.center);
+    const len = Math.hypot(dirX, dirY, dirZ);
+    this.camera.position.set(
+      f.center[0] + (dirX / len) * d,
+      f.center[1] + (dirY / len) * d,
+      f.center[2] + (dirZ / len) * d,
+    );
   }
 
   dispose(): void {
@@ -341,7 +363,7 @@ export class SwarmSceneController {
     const elapsed = this.clock.elapsedTime;
     this.controls.update();
     this.camera.updateMatrixWorld(); // keep matrixWorldInverse fresh for projection
-    this.fit.update(this.camera, this.controls, dt, this.lastSats);
+    this.fit.update(this.camera, this.controls, dt, this.lastSats, this.environment.frame());
     this.environment.update(dt, this.reducedMotion);
     this.updateMarkers(elapsed);
     this.updateLabels();

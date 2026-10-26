@@ -22,6 +22,7 @@ import { postStart, type StartError } from "./runApi";
 import {
   POLICIES,
   buildScenario,
+  clampNumber,
   defaultRoles,
   sanitizeName,
   type FailureRow,
@@ -36,11 +37,6 @@ import styles from "./LivePage.module.css";
 const DEFAULT_FAILURE_T = 1200;
 
 type RunPhase = "idle" | "building" | "running" | "error";
-
-/** The integrator's store contract (see BuilderResult integrationNotes):
- * simStore gains `policy: string | null`, set from hello/sim_state. Until
- * that lands the tolerant read renders "unmeasured" — never a guess. */
-type SimStoreWithPolicy = { policy?: string | null };
 
 /** Form number defaults: data/scenarios/nominal.json + the backend's
  * StartRequest speed default (cubesat/wire.py:39). */
@@ -81,14 +77,19 @@ export default function ScenarioBuilder() {
   // Wire truth for the mission readout (§13.3 rows; "unmeasured" until frames).
   const wireScenario = useSimStore((s) => s.scenario);
   const wireSeed = useSimStore((s) => s.seed);
-  const wirePolicy = useSimStore((s) => (s as SimStoreWithPolicy).policy ?? null);
+  const wirePolicy = useSimStore((s) => s.policy);
   const mode = useSimStore((s) => s.mode);
 
   const building = phase === "building";
   const live = mode === "live";
 
   function setNumber(key: keyof NumberValues, v: number): void {
-    setNums((prev) => ({ ...prev, [key]: v }));
+    // The one funnel every NumberField commits through — clamp here and the
+    // form can never hold a value the validator would 422 (the reported
+    // demo-blocker: altitude 160 accepted by min="160", rejected by gt=160).
+    // NumberField snaps its text back to the committed value, so the field
+    // visibly lands inside the range.
+    setNums((prev) => ({ ...prev, [key]: clampNumber(key, v) }));
   }
 
   function changeSats(n: number): void {
@@ -152,10 +153,13 @@ export default function ScenarioBuilder() {
         await postStart({ scenario: filename, seed: nums.seed, speed: nums.speed, policy, predictor });
       } catch (startErr) {
         if ((startErr as StartError).status === 422) {
-          // The backend predates the policy field — start without it and say
-          // so honestly instead of silently dropping the selection (§13.6).
+          // The backend predates the policy/predictor fields — start without
+          // them and say so honestly instead of silently dropping the
+          // selection (§13.6).
           await postStart({ scenario: filename, seed: nums.seed, speed: nums.speed });
-          setPolicyNote("Policy selection not active on this backend — started without it.");
+          setPolicyNote(
+            "Policy and AI-risk options not accepted by this backend — started without them.",
+          );
         } else {
           throw startErr;
         }
@@ -284,6 +288,14 @@ export default function ScenarioBuilder() {
       </fieldset>
 
       <PhysicsSection values={nums} onNumber={setNumber} disabled={building} />
+
+      {/* Bounded inputs snap into these ranges on commit (clampNumber); the
+          per-field tooltips in the sections above carry the same limits. */}
+      <p className={chrome.hint}>
+        Clamped to the validator's ranges (cubesat/scenario.py): altitude 200–1999
+        km, dt 0.1–10 s, imager FOV 0.1–45 deg, seed ≥ 0; the remaining physics
+        fields must be positive.
+      </p>
 
       <fieldset className={styles.group} disabled={building}>
         <legend className={chrome.panelTitle}>Recovery policy</legend>

@@ -1,13 +1,14 @@
-// Stylized environment — Earth at NADIR below the formation + faint starfield
-// + the chief-orbit ring (2026-10-04 staging rework, user verdict: "satellites
-// should be ORBITING Earth - Earth is next to them and they look like they
-// orbit something else"). LVLH +x is radial AWAY from Earth (repo invariant 4)
-// and lvlhToScene maps LVLH x -> scene y (up), so nadir (-x LVLH) is scene -y:
-// Earth hangs BELOW the formation from every camera azimuth and the swarm
-// flies visibly above the limb — never a neighbor planet to the side. The
-// chief orbit is a dashed circle around Earth through the formation's frame
-// origin, in the orbital plane (scene x-y = along-track x radial; the chief's
-// cross-track is 0); its dashes drift along-track as the slow motion cue.
+// Stylized environment — Earth at the RING CENTRE + faint starfield + the
+// chief-orbit ring (2026-10-04 staging, user verdicts: "satellites should be
+// ORBITING Earth", then bug 3: "didn't even make Earth the middle"). LVLH +x
+// is radial AWAY from Earth (repo invariant 4) and lvlhToScene maps LVLH x ->
+// scene y (up), so nadir (-x LVLH) is scene -y: Earth hangs BELOW the
+// formation's frame origin from every camera azimuth, and the chief orbit is
+// a dashed circle CENTRED ON EARTH through that origin, in the orbital plane
+// (scene x-y = along-track x radial; the chief's cross-track is 0). The
+// camera treats the ring centre (= Earth centre, exposed via frame()) as the
+// orbited body it frames — Earth-centred fit in sceneCamera.ts; the ring's
+// dashes drift along-track as the slow motion cue.
 // The texture is seeded multi-octave value noise, bilinear-interpolated and
 // wrapping cleanly in longitude: smooth blended landmasses, no square blocks. Sizes
 // are stylized multiples of the measured swarm extent (caption: "not to
@@ -16,7 +17,8 @@ import * as THREE from "three";
 import { SCENE_TOKENS, tokenColor } from "./sceneColors";
 
 // Visual constants (multiples of the measured swarm extent).
-const EARTH_RADIUS_FACTOR = 2.6; // planet radius (large); the formation stays the focus
+const EARTH_RADIUS_FACTOR = 2.6; // planet radius; ring = a few extents out, so the
+// pulled-back Earth-centred frame still reads (caption: "not to scale")
 const LIMB_GAP_FACTOR = 0.9; // formation origin -> limb clearance
 const RING_DASH_FACTOR = 0.45; // orbit-ring dash length (world)
 const RING_GAP_FACTOR = 0.3;
@@ -226,11 +228,21 @@ function buildOrbitRing(): THREE.Line {
   return line;
 }
 
+/** The placement the camera frames: the chief-orbit ring centre (= Earth's
+ * centre) and the ring radius — the circle the formation rides. */
+export interface EnvFrame {
+  center: [number, number, number];
+  ringRadius: number;
+}
+
 export interface Environment {
   group: THREE.Group;
   /** Re-fit the faint reference grid + body scales when the measured swarm
    * extent leaves the current scale band; returns the tracked extent. */
   trackExtent(maxR: number): number;
+  /** The staging in effect: ring centre (= Earth) + ring radius — the fit
+   * subject of the Earth-centred camera (sceneCamera.ts). */
+  frame(): EnvFrame;
   update(dt: number, reducedMotion: boolean): void;
   dispose(): void;
 }
@@ -286,10 +298,13 @@ export function createEnvironment(): Environment {
   group.add(starGroup);
 
   /** One staging pass: Earth's top limb sits LIMB_GAP below the formation
-   * origin; the ring (radius = Earth-center distance) passes through it. */
+   * origin; the ring (radius = Earth-center distance, centred on Earth)
+   * passes through it. The placement is exposed via frame() for the camera. */
+  let envFrame: EnvFrame = { center: [0, 0, 0], ringRadius: 0 };
   function place(e: number): void {
     const radius = e * EARTH_RADIUS_FACTOR;
     const centerDist = radius + e * LIMB_GAP_FACTOR;
+    envFrame = { center: [0, -centerDist, 0], ringRadius: centerDist };
     earthGroup.scale.setScalar(radius);
     earthGroup.position.set(0, -centerDist, 0); // nadir = scene -y (lvlhToScene)
     ring.position.copy(earthGroup.position);
@@ -323,6 +338,9 @@ export function createEnvironment(): Environment {
       group.add(grid);
       place(Math.max(maxR, 1000));
       return maxR;
+    },
+    frame(): EnvFrame {
+      return envFrame;
     },
     update(dt: number, reducedMotion: boolean): void {
       // Prograde roll + ring dash drift (the 3D scene is the product; both

@@ -20,7 +20,7 @@ export const TRAIL_INTERVAL_MS = 150; // ~6.7 Hz, inside the 5-10 Hz window
 export const MARKER_TARGET_PX = 7.5;
 export const MARKER_MIN_PX = 3.5;
 export const MARKER_MAX_PX = 16;
-export const MARKER_WORLD_MAX = 0.08;
+export const MARKER_WORLD_MAX = 0.11;
 
 /** Outermost marker extent in disc-radius units — status ring 1.8, leader
  * ring 2.25, failed cross 2.3 (geometry in createSatelliteRecord). The label

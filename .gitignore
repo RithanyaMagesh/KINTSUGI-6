@@ -8,6 +8,8 @@ __pycache__/
 .pytest_cache/
 .pytest_tmp/
 .ruff_cache/
+*.log
+.*.log
 dist/
 frontend/node_modules/
 data/logs/*

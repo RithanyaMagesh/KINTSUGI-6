@@ -95,6 +95,13 @@ function alreadyRecorded(
   return entries.some((e) => e.kind === kind && e.t === t);
 }
 
+/** Drop-oldest cap per satellite. The store ingests at 30 Hz for the whole
+ * run; without a cap the history grows on every fail-flip/recovered-flip and
+ * the detail panel renders an ever-longer list (the "site crashed" beta
+ * report's only unbounded accumulator). 50 entries ≈ the whole story of a
+ * demo scenario with headroom. */
+const MAX_HISTORY_PER_SAT = 50;
+
 function appendEntry(
   history: Record<string, RoleHistoryEntry[]>,
   satId: string,
@@ -102,7 +109,8 @@ function appendEntry(
 ): Record<string, RoleHistoryEntry[]> {
   const existing = history[satId] ?? [];
   if (alreadyRecorded(existing, entry.kind, entry.t)) return history;
-  return { ...history, [satId]: [...existing, entry] };
+  const next = [...existing, entry].slice(-MAX_HISTORY_PER_SAT);
+  return { ...history, [satId]: next };
 }
 
 export const useRoleHistoryStore = create<RoleHistoryState>((set) => ({

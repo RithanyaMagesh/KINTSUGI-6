@@ -8,6 +8,7 @@ Backend (G5): docs/BACKEND_SPEC.md (v1.0 — FastAPI + WS + replay architecture,
 Any AI agent MUST understand the project before building. Do both, in order:
 1. Read `graphify-out/GRAPH_REPORT.md` (committed knowledge graph: 12 labeled communities, god nodes, module map, gate history).
 2. For any structural question ("what calls X?", "where does Y live?"), query `graphify-out/graph.json` before grepping the tree — it is the GraphRAG-ready map of the code and docs.
+3. Read `docs/HANDOFF.md` — the full project history: every decision, every measured result, every mistake, known open warts, and the future-improvements roadmap mapped to the code.
 Then read the spec sections relevant to your task. If the graph and the tree disagree, the tree wins — and re-run graphify (`/graphify .`) to fix the graph.
 
 ## Commands
