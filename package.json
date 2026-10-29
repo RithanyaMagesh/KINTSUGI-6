@@ -3,8 +3,8 @@
   "private": true,
   "version": "0.1.0",
   "scripts": {
-    "dev": ".venv/bin/uvicorn cubesat.api:app --host 0.0.0.0 --port 3000",
-    "build": "npm --prefix frontend run build",
+    "dev": "test -x .venv/bin/uvicorn || (curl -LsSf https://astral.sh/uv/install.sh | sh && $HOME/.local/bin/uv sync --locked); test -f frontend/dist/index.html || (test -d frontend/node_modules || npm --prefix frontend install && npm --prefix frontend run build); .venv/bin/uvicorn cubesat.api:app --host 0.0.0.0 --port 3000",
+    "build": "test -d frontend/node_modules || npm --prefix frontend install; npm --prefix frontend run build",
     "start": ".venv/bin/uvicorn cubesat.api:app --host 0.0.0.0 --port 3000",
     "lint": "npm --prefix frontend run build"
   }

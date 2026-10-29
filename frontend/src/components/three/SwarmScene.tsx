@@ -5,6 +5,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSimStore } from "../../stores/simStore";
 import { useUiStore } from "../../stores/uiStore";
+import { useSceneStore, type SceneViewMode } from "../../stores/sceneStore";
 import { backend } from "../../api/backend";
 import { SwarmSceneController, type CameraPreset } from "./swarmScene";
 import chrome from "../../styles/chrome.module.css";
@@ -16,12 +17,18 @@ export default function SwarmScene() {
   const lastBannerRef = useRef<string | null>(null);
   const presentation = useUiStore((s) => s.presentationMode);
   const viewMode = useUiStore((s) => s.viewMode);
-  const orbitViewMode = useUiStore((s) => s.orbitViewMode);
-  const setOrbitViewMode = useUiStore((s) => s.setOrbitViewMode);
+  const orbitViewMode = useSceneStore((s) => s.viewMode);
+  const setSceneViewMode = useSceneStore((s) => s.setViewMode);
+  const setUiOrbitViewMode = useUiStore((s) => s.setOrbitViewMode);
   const [notice, setNotice] = useState<{ title: string; body: string } | null>(null);
   const [banner, setBanner] = useState<{ text: string; token: string } | null>(null);
   const [replayError, setReplayError] = useState<string | null>(null);
   const [toggles, setToggles] = useState({ labels: true, trails: true, lines: true, slots: true });
+
+  function selectOrbitViewMode(mode: SceneViewMode): void {
+    setSceneViewMode(mode);
+    setUiOrbitViewMode(mode);
+  }
 
   // Connection + empty states (§20: never a blank screen).
   useEffect(() => {
@@ -61,9 +68,9 @@ export default function SwarmScene() {
       useUiStore.getState().selectSatellite(id);
     });
     sceneRef.current = controller;
-    controller.setOrbitViewMode(useUiStore.getState().orbitViewMode);
+    controller.setOrbitViewMode(useSceneStore.getState().viewMode);
 
-    let prevOrbitMode = useUiStore.getState().orbitViewMode;
+    let prevOrbitMode = useSceneStore.getState().viewMode;
     let prevTheme = useUiStore.getState().theme;
 
     const unsubSim = useSimStore.subscribe((s) => {
@@ -102,9 +109,17 @@ export default function SwarmScene() {
       });
     });
 
+    const unsubScene = useSceneStore.subscribe((s) => {
+      if (s.viewMode !== prevOrbitMode) {
+        prevOrbitMode = s.viewMode;
+        controller.setOrbitViewMode(s.viewMode);
+      }
+    });
+
     const unsubUi = useUiStore.subscribe((s) => {
       if (s.orbitViewMode !== prevOrbitMode) {
         prevOrbitMode = s.orbitViewMode;
+        useSceneStore.getState().setViewMode(s.orbitViewMode);
         controller.setOrbitViewMode(s.orbitViewMode);
       }
       if (s.theme !== prevTheme) {
@@ -121,6 +136,7 @@ export default function SwarmScene() {
 
     return () => {
       unsubSim();
+      unsubScene();
       unsubUi();
       controller.dispose();
       sceneRef.current = null;
@@ -171,7 +187,7 @@ export default function SwarmScene() {
             <button
               type="button"
               className={`${styles.viewBtn} ${orbitViewMode === "global" ? styles.viewBtnActive : ""}`}
-              onClick={() => setOrbitViewMode("global")}
+              onClick={() => selectOrbitViewMode("global")}
               aria-pressed={orbitViewMode === "global"}
             >
               Global Orbit
@@ -179,7 +195,7 @@ export default function SwarmScene() {
             <button
               type="button"
               className={`${styles.viewBtn} ${orbitViewMode === "local" ? styles.viewBtnActive : ""}`}
-              onClick={() => setOrbitViewMode("local")}
+              onClick={() => selectOrbitViewMode("local")}
               aria-pressed={orbitViewMode === "local"}
             >
               Formation Array

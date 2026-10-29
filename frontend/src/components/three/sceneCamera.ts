@@ -111,33 +111,36 @@ export class AutoFitController {
   ): void {
     this.cam = camera;
     this.controlsRef = controls;
-    if (!this.enabled || this.interacting || sats.length === 0) return;
+    if (!this.enabled || this.interacting) return;
     // The FORMATION is the fallback focus: flying satellites only.
     const flying = sats.filter((s) => s.status !== "failed");
     const pts = (flying.length > 0 ? flying : sats).map((s) => s.r);
-    const sphere = boundingSphere(pts);
-    if (sphere === null || sphere.radius <= 0) return;
+    const sphere = pts.length > 0 ? boundingSphere(pts) : null;
     let center: [number, number, number];
     let fitR: number;
+    let lift = 0;
     if (this.center === "earth") {
-      // Earth-centred (bug 3): the ring centre IS the target; the fit subject
+      // Earth-centred: the ring centre IS the target; the fit subject
       // is the whole ring plus the formation riding it.
       center = env.center;
       fitR = earthFitRadius(env, sats);
-    } else {
+    } else if (sphere !== null && sphere.radius > 0) {
       center =
         this.center === "failed"
           ? lvlhToScene(sats.find((s) => s.status === "failed")?.r ?? [sphere.cx, sphere.cy, sphere.cz])
           : ([sphere.cy, sphere.cx, sphere.cz] as [number, number, number]); // LVLH centroid -> scene
       fitR = sphere.radius;
+      lift = sphere.radius * FRAME_LIFT;
+    } else {
+      center = env.center;
+      fitR = env.ringRadius;
     }
     const dTarget = fitDistance(fitR, (camera.fov * Math.PI) / 180, camera.aspect, FIT_FILL);
-    const k = 1 - Math.exp(-FIT_RESPONSE * dt);
+    const k = 1 - Math.exp(-FIT_RESPONSE * 2.2 * dt);
     this.dir.copy(camera.position).sub(controls.target);
     const dist = this.dir.length();
     if (dist < 1e-6) return;
     this.dir.divideScalar(dist);
-    const lift = this.center === "earth" ? 0 : sphere.radius * FRAME_LIFT;
     this.target.set(center[0], center[1] - lift, center[2]);
     controls.target.lerp(this.target, k);
     camera.position.copy(controls.target).addScaledVector(this.dir, dist + (dTarget - dist) * k);
