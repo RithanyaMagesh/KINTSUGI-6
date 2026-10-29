@@ -1,4 +1,5 @@
-"""Scenario-zoo structural tests: single-failure N=4 and cascading N=8 runs.
+"""Scenario-zoo structural tests: single-failure N=4, cascading N=8, and the
+EPS_DEGRADE smoke scenario.
 
 Structural assertions only (detection counts, state-machine transitions, leader
 re-election, coasting hazards, min separation) -- the >= 15-point coverage drop
@@ -6,8 +7,10 @@ target stays pinned to data/scenarios/two_failure.json in tests/test_fault.py
 (research patch #2) and is deliberately not duplicated here.
 
 Run data comes from data/scenarios/single_failure_n4.json (leader sat 0 goes
-DEAD) and data/scenarios/cascading_n8.json (cascading failures: two DEAD fires
-drive two replanning cycles, and sat 7 goes THRUSTER_OUT at t = 2400 s) via
+DEAD), data/scenarios/cascading_n8.json (cascading failures: two DEAD fires
+drive two heartbeat replanning cycles, and sat 7 self-reports THRUSTER_OUT at
+t = 2400 s -- Addendum v1.2), and data/scenarios/eps_leader_6sat.json (the
+leader fades to DEGRADED from t = 600 and dies at t = 2400) via
 cubesat.sim.run_scenario -- no RNG, no wall clock (AGENTS.md 2), so the
 module-scoped fixtures are exact replays.
 """
@@ -23,6 +26,7 @@ from cubesat.sim import run_scenario
 ROOT = Path(__file__).resolve().parents[1]
 SINGLE_FAILURE_N4 = ROOT / "data" / "scenarios" / "single_failure_n4.json"
 CASCADING_N8 = ROOT / "data" / "scenarios" / "cascading_n8.json"
+EPS_LEADER_6SAT = ROOT / "data" / "scenarios" / "eps_leader_6sat.json"
 
 
 def _tick_lines(lines):
@@ -52,6 +56,11 @@ def n8_lines(n8_scenario):
     return run_scenario(n8_scenario)
 
 
+@pytest.fixture(scope="module")
+def eps_lines():
+    return run_scenario(load_scenario(EPS_LEADER_6SAT))
+
+
 def test_leader_death_reelects_leader_n4(n4_lines):
     """The leader (sat 0) is the only failure: one detection, at least one
     replan, RECOVERED reached, and exactly one surviving sat ends the run as
@@ -74,17 +83,37 @@ def test_leader_death_reelects_leader_n4(n4_lines):
 
 
 def test_cascading_n8_two_replan_cycles_one_recovery(n8_scenario, n8_lines):
-    """Two DEAD fires are caught by heartbeat monitoring and drive exactly two
-    replanning cycles into one final RECOVERED. The THRUSTER_OUT sat keeps
-    reporting its heartbeat, so heartbeat detection can never catch it -- the
-    count below is the honest detection count, not a missed failure. Sat 7
-    keeps coasting ballistically after t = 2400 s (never frozen, AGENTS.md 5)
-    and every sat stays a min-separation hazard throughout, including during
-    reconfiguration transfers."""
-    assert len(_events(n8_lines, "FAILURE_DETECTED")) == 2
-    assert len(_events(n8_lines, "ASSIGNMENT")) == 2
+    """Two DEAD fires are caught by heartbeat monitoring and sat 7 announces its
+    own THRUSTER_OUT (Addendum v1.2 self-report, zero detection latency), so it
+    triggers a third replan cycle at t = 2400 and its downlink role is
+    re-elected onto a healthy sat while its own status stays THRUSTER_OUT (its
+    stale role label on the log line is pre-existing behavior shared with DEAD
+    sats). The second reconfiguration is still in progress at 2400, so the
+    machine re-enters FAILURE_DETECTED from RECONFIGURING: two heartbeat cycles
+    + one self-report cycle drive three replanning cycles into one final
+    RECOVERED. Sat 7 keeps coasting ballistically after t = 2400 s (never
+    frozen, AGENTS.md 5) and every sat stays a min-separation hazard
+    throughout, including during reconfiguration transfers."""
+    detected = _events(n8_lines, "FAILURE_DETECTED")
+    assert len(detected) == 3
+    assert detected[-1] == (
+        2400.0,
+        {"sat_id": 7, "mode": "THRUSTER_OUT", "t_fail": 2400.0, "t_detect": 2400.0,
+         "self_report": True},
+    )
+    assignments = _events(n8_lines, "ASSIGNMENT")
+    assert len(assignments) == 3
     transitions = _events(n8_lines, "STATE")
     assert [p["to"] for _t, p in transitions].count("RECOVERED") == 1
+
+    # The self-report replan (t = 2402 recompute -> assignment at 2404):
+    # sat 7 is excluded from assignable and the downlink role it loses is
+    # re-elected onto a healthy sat.
+    third_t, third = assignments[2]
+    assert third_t == 2404.0
+    assert 7 not in [a["sat_id"] for a in third["assignments"]]
+    holder = next(a for a in third["assignments"] if a["role"] == "downlink")
+    assert holder["sat_id"] != 7
 
     ticks = _tick_lines(n8_lines)
     assert ticks[-1]["sats"][7]["status"] == "THRUSTER_OUT"
@@ -101,6 +130,33 @@ def test_cascading_n8_two_replan_cycles_one_recovery(n8_scenario, n8_lines):
         f"{len(seps)} ticks incl. reconfiguration transfers)"
     )
     assert worst >= threshold
+
+
+def test_eps_leader_6sat_smoke_parses_and_runs(eps_lines):
+    """Addendum v1.2 smoke: the committed EPS_DEGRADE scenario parses through
+    the real schema and runs end to end -- sat 0 enters DEGRADED at t = 600
+    (fade = 2400 - 1800, one DEGRADE_START event), keeps reporting and holding
+    its seat until it dies at t = 2400 exactly like DEAD, and the leader role
+    is re-elected onto a healthy sat by the recovery arc."""
+    assert eps_lines[0]["state"] == "INIT"
+    assert eps_lines[-1]["state"] == "SUMMARY"
+
+    starts = _events(eps_lines, "DEGRADE_START")
+    assert starts == [(600.0, {"sat_id": 0, "t_fail": 2400.0, "degrade_s": 1800.0})]
+
+    ticks = _tick_lines(eps_lines)
+    window = [line for line in ticks if 600.0 <= line["t"] < 2400.0]
+    assert window
+    assert all(line["sats"][0]["status"] == "DEGRADED" for line in window)
+    assert all(line["state"] == "NOMINAL" for line in window)  # still reporting
+    assert next(line for line in ticks if line["t"] == 2400.0)["sats"][0]["status"] == "DEAD"
+
+    assignments = _events(eps_lines, "ASSIGNMENT")
+    assert assignments
+    reelected = [a for a in assignments[-1][1]["assignments"] if a["role"] == "leader"]
+    assert len(reelected) == 1 and reelected[0]["sat_id"] != 0
+    assert all(a["sat_id"] != 0 for _t, p in assignments for a in p["assignments"])
+    assert "RECOVERED" in [line["state"] for line in ticks]
 
 
 @pytest.mark.slow

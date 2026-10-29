@@ -23,6 +23,15 @@ data/eval/benchmark/
 # P1 Pareto sweep per-run JSONL logs (ENDGAME_PLAN 4) -- same rule as P0
 data/eval/pareto/
 
+# Oracle sweep v2 per-run variant scenarios + JSONL logs (GATES.md 2026-10-26
+# pre-registration) -- the data/eval/oracle_sweep_v2.json report is committed
+data/eval/oracle_sweep_v2/
+
+# Monte Carlo per-run JSONL logs (cubesat/monte_carlo.py ensemble) -- same rule:
+# the results + manifest reports (data/eval/monte_carlo_results.json,
+# monte_carlo_manifest.json) are committed
+data/eval/monte_carlo/
+
 # Pitch-deck audit scratch (local only; ~1.3 GB of screenshots/logs)
 audit_out/
 

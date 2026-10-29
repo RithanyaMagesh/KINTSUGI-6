@@ -103,7 +103,7 @@ Source: `cubesat/scenario.py` (pydantic v2). Example files: `data/scenarios/nomi
 | `sensor.fov_half_angle_deg` | float, 0 < ≤ 45 — stores the **half** angle | — |
 | `sensor.grid_step_km` / `grid_extent_km` | float > 0 | — |
 | `roles` | list[str], ≥ 2; index = sat id | — |
-| `failures[]` | `{t ≥ 0, sat_id ≥ 0, mode: DEAD \| THRUSTER_OUT}` | `[]` |
+| `failures[]` | `{t ≥ 0, sat_id ≥ 0, mode: DEAD \| THRUSTER_OUT \| EPS_DEGRADE, degrade_s ≥ 0 (EPS_DEGRADE fade length, s — Addendum v1.2, 2026-10-26)}` | `[]` / `degrade_s: 0.0` |
 | `recovery_enabled` | bool — false = detect but never replan (no-recovery baseline) | true |
 | `detection.missed_ticks_k` | int ≥ 1 — missed heartbeats before declaring failure | 3 |
 | `allocation.w1/w2/w3` | cost weights (distance / distance-per-fuel / role mismatch) | 1.0 / 0.5 / 2.0 |
@@ -111,10 +111,15 @@ Source: `cubesat/scenario.py` (pydantic v2). Example files: `data/scenarios/nomi
 | `allocation.dv_budget_mps` | float > 0, per-transfer reachability budget | 100.0 |
 | `allocation.amp_sweep` / `phase_sweep_deg` | deterministic sweep grids (≥ 1 each) | `[1.0]` / `[0, 60, …, 300]` |
 | `allocation.method` | `hungarian` \| `greedy` (greedy = forced fallback demo toggle) | `hungarian` |
+| `safety.evasion_enabled` / `evade_radius_m` / `evade_ticks` | bounded evasive-burn block (Addendum v1.2, 2026-10-26): a sat inside the radius of another starts a discrete away-from-intruder burn — explicitly NOT potential fields; default-inert GEOMETRICALLY (1000 m < every measured clearance), so canonical runs stay byte-identical (`scenario.py:114-133`) | `true` / `1000.0` / `25` |
 
-Cross-field rule: every `failures[].sat_id` must be `< len(roles)` (`scenario.py:117-124`).
+Cross-field rule: every `failures[].sat_id` must be `< len(roles)` (`scenario.py:161-167`).
 `DEAD` = no comms, no thrust, coasts ballistically; `THRUSTER_OUT` = reports, cannot
-maneuver (`scenario.py:12-16`).
+maneuver (`scenario.py:12-19`). **(2026-10-26, Addendum v1.2):** `THRUSTER_OUT` now
+SELF-REPORTS on the firing tick (`self_report: true` — the same recovery path as
+silence, detection latency 0), and `EPS_DEGRADE` holds the sat in a `DEGRADED` fade
+for `degrade_s` seconds before it dies exactly like `DEAD` (`degrade_s = 0` is
+sudden: byte-identical to `DEAD` except the FAILURE_DETECTED mode label).
 
 ## JSONL log schema
 
@@ -137,9 +142,11 @@ One JSON object per line, `v = LOG_SCHEMA_VERSION = 1` (`sim.py:49`). Defined in
  "event": {…}}          // optional key, omitted when no event this tick
 ```
 
-- Per-sat `status`: `NOMINAL` / `DEAD` / `THRUSTER_OUT` (`sim.py:57-59`). DEAD and
-  THRUSTER_OUT sats coast ballistically — never frozen — and stay in the `min_sep`
-  pairwise loop as hazards (AGENTS.md invariant 5, `sim.py:286-293`).
+- Per-sat `status`: `NOMINAL` / `DEGRADED` / `DEAD` / `THRUSTER_OUT` (`sim.py:78-81`;
+  `DEGRADED` added 2026-10-26, Addendum v1.2 — an EPS_DEGRADE sat in its fade window:
+  keeps reporting and holding its seat but is excluded from replan assignment).
+  DEAD and THRUSTER_OUT sats coast ballistically — never frozen — and stay in the
+  `min_sep` pairwise loop as hazards (AGENTS.md invariant 5, `sim.py:263-289`).
 - Mission `state` machine (`sim.py:20-24`):
   `NOMINAL → FAILURE_DETECTED → REPLANNING → RECONFIGURING → RECOVERED`; a new failure
   re-enters `FAILURE_DETECTED` from any state; `recovery_enabled = false` stops at
@@ -148,13 +155,19 @@ One JSON object per line, `v = LOG_SCHEMA_VERSION = 1` (`sim.py:49`). Defined in
   one tick in the log, while `RECONFIGURING` spans the physical transfers until every
   survivor settles within tolerance (two_failure: 1208→3114 s) and `RECOVERED` holds to
   the end.
-- Event payloads (`sim.py:24-29`):
-  - `FAILURE_DETECTED`: `{sat_id, mode, t_fail, t_detect}`
+- Event payloads (`sim.py:25-40`):
+  - `FAILURE_DETECTED`: `{sat_id, mode, t_fail, t_detect, self_report?}` —
+    `self_report: true` marks a failure the sat announced itself (THRUSTER_OUT,
+    2026-10-26: t_detect == t_fail for tick-aligned failures)
+  - `DEGRADE_START`: `{sat_id, t_fail, degrade_s}` (EPS_DEGRADE fade onset, Addendum v1.2)
   - `STATE`: `{from, to}`
   - `ASSIGNMENT`: `{assignments: [{sat_id, slot_index, role}], method, cost_total,
     formation: {radial_amp_m, phase_offset_rad}, transfer_lower_bound_s}` —
     `transfer_lower_bound_s` is the bang-bang lower bound 2·√(d/a_max) for the largest
     assigned transfer, logged per reconfig (research patch #1).
+  - `EVASIVE_MANEUVER`: `{sat_id, other_id, range_m, t}` (Addendum v1.2, 2026-10-26 —
+    a bounded evasion episode started; never fires on canonical runs, whose measured
+    clearances all exceed the default 1000 m radius)
 
 **Last line — SUMMARY** (`sim.py:310-320`):
 
@@ -221,7 +234,12 @@ the Kepler cross-check and the byte-determinism hash (`pyproject.toml`
   Output: `2984.5 m` (matches the GATES.md value).
 - **Ideal comms and sensing.** Heartbeat detection is an abstraction: a sat that stops
   reporting is declared DEAD after `missed_ticks_k` misses; no link budget, latency, or
-  measurement noise is modeled (`sim.py:140-165`).
+  measurement noise is modeled (`sim.py:42-45`). **(2026-10-26, Addendum v1.2):**
+  detection is no longer silence-only — a `THRUSTER_OUT` sat self-reports on the firing
+  tick (latency 0) and `EPS_DEGRADE` announces a `DEGRADE_START` fade before death;
+  min separation is additionally defended by a bounded evasive burn (`Safety`,
+  `scenario.py:114-133`), geometrically inert on every canonical run (default 1000 m
+  radius below every measured clearance, e.g. P0 worst survivor-dead 1322.6 m).
 - **Centralized replanner.** One ground-side `replan` call; no distributed consensus, no
   CBBA (anti-goal, MASTER_PROMPT §8).
 - **Coverage definition is fixed by fiat.** Fraction of a square (y, z) grid inside the

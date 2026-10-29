@@ -1051,3 +1051,210 @@ Addressed every open item in `docs/FRONTEND_REDESIGN_PROMPT.md` §3.2–§8 with
   - Fixed `LandingPage.tsx` Pillar 3 (`"AI early warning (display-only)"`) to state honestly that the sealed LightGBM model is a display-only precursor score (`sats[].risk`) cut from the control loop by the pre-registered oracle sweep (`+0.0235` pp vs `0.5` pp threshold), and that reactive 4 s heartbeat detection drives recovery (`audit_out/AUDIT.md`, §1.6, §6).
   - Removed dormant `missionBriefOpen` and `sessionStorage` startup code from `uiStore.ts` (§3.2 #11).
 
+## Failure-semantics round (2026-10-26)
+
+Build notes for the post-deadline failure-semantics round; spec deltas in
+BACKEND_SPEC.md Addendum v1.2, decisions in GATES.md (2026-10-26 entries).
+All six items below have landed; numbers are quoted from the committed
+machine-written reports, each with its producing command.
+
+### EPS_DEGRADE
+
+Landed: `FailureMode.EPS_DEGRADE` + `Failure.degrade_s` (cubesat/scenario.py),
+fade schedule + `DEGRADED` status + `DEGRADE_START` event (cubesat/sim.py),
+wire row `DEGRADED → "degraded"` (cubesat/wire.py), FRONTEND_SPEC §15.1 note.
+`degrade_s = 0` is sudden: byte-identical to the same failure declared DEAD
+except the `FAILURE_DETECTED` mode label (pinned by
+`test_eps_degrade_zero_window_equals_dead`). Tests:
+tests/test_failure_modes.py.
+
+Commands + measured: the pre-change baseline probe (run_scenario on
+data/scenarios/two_failure.json, per-line sha256 of
+`json.dumps(line, sort_keys=True) + "\n"`) = `450d5371…` — matched BEFORE any
+diff (8517 lines), and the same pin is green after the core diffs
+(`uv run python -m pytest tests/test_failure_modes.py tests/test_wire.py
+tests/test_scenario_zoo.py tests/test_policy_selection.py tests/test_fault.py
+tests/test_cli.py -q` → 36 passed; fast loop `uv run python -m pytest -q
+-m 'not slow'` → 129 passed, 3 deselected; `uv run ruff check .` clean;
+tests-first red phase: 9 new/updated tests failed as expected — pydantic
+ValidationError on the unknown mode, cascading assert 2 == 3, wire mapping
+asserts — while the canonical sha pin already passed). eps_leader_6sat smoke
+(sat 0, degrade_s = 1800, t_f = 2400): DEGRADE_START at 600.0 s, sat 0
+DEGRADED on every tick in [600, 2400) with mission NOMINAL, DEAD at 2400,
+heartbeat-detected 2404, leader re-elected, RECOVERED at 4236.0 s, worst
+min_sep 3267.0 m (threshold 2000 m). Caveats: the zero-window pin asserts the
+honest `EPS_DEGRADE` mode label plus every other byte equal — a
+label-included byte-match would require falsifying the log's mode field, not
+done; DEGRADED sats stay in the replan obstacle list (the existing
+non-NOMINAL rule) — unreachable in committed scenarios, where no replan fires
+while a sat is DEGRADED; the sweep's ballistic preview of a seat-holding
+DEGRADED sat would be approximate for the same reason.
+
+### Self-report
+
+Landed: a THRUSTER_OUT sat announces its own failure (`self_report: true` on
+`FAILURE_DETECTED`, fired on the firing tick — no heartbeat misses) and drives
+the standard REPLANNING → RECONFIGURING → RECOVERED arc with role re-election
+(cubesat/sim.py). Consequence, ON PURPOSE (GATES.md 2026-10-26):
+data/scenarios/cascading_n8.json (sat-7 THRUSTER_OUT at t = 2400) gains a third
+detection + replan; `test_cascading_n8_two_replan_cycles_one_recovery` now
+expects 3 detections / 3 assignments. Tests: `test_self_report_*`.
+
+Measured: detection latency 0 by construction — cascading_n8 t_fail ==
+t_detect == 2400.0. cascading_n8 post-change: 3 FAILURE_DETECTED (1204/1504
+heartbeat DEAD + 2400 self-report), 3 ASSIGNMENTS (1208/1508/2404 — the third
+excludes sat 7 and re-elects the downlink role onto a healthy sat), RECOVERED
+once at 4280.0 s (pre-change 3672.0 s, so the extra cycle delays full recovery
+by ~608 s), worst min_sep 3410.6 m at t = 1586 s. Caveats: "loses its role" is
+asserted at the assignment level (the thruster-out sat appears in no
+ASSIGNMENT; the stale `role` label on its log lines is pre-existing behavior
+shared with DEAD sats — clearing it would move the canonical sha pin); the
+`/failure/inject` response echo stays exactly `{sat_id, mode}` (pinned by
+tests/test_api.py:241) — `degrade_s` is accepted and validated (ge=0 → 422 on
+negative) but not echoed; test_policy_selection.py needed no changes (its
+THRUSTER inject test only asserts `even_split` among ASSIGNMENT methods).
+
+### Evasion
+
+Landed: defaulted `Safety {evasion_enabled: true, evade_radius_m: 1000.0,
+evade_ticks: 25}` (cubesat/scenario.py) + bounded away-from-intruder burn and
+`EVASIVE_MANEUVER` event (cubesat/sim.py) — discrete maneuver, NOT potential
+fields; `min_sep` still logged every step. Default-inertness is geometric
+(1000 m < every measured clearance), so canonical runs never emit the event.
+Tests: tests/test_collision_avoidance.py.
+
+Measured (data/scenarios/proximity_stress.json, seed 7,
+`uv run python -m cubesat.run --scenario data/scenarios/proximity_stress.json
+--seed 7 --out $TEMP/proximity_smoke.jsonl` → 35 EVASIVE_MANEUVER lines,
+LF-only JSONL): the first episode starts at t = 0 at range 848.5281374 m
+(log payload `range_m: 848.5281374238571`, sat 0 vs sat 1; analytic 2·A·√2 for
+A = 300 m, two slots at phases 0/π) — inside the 1000 m radius; worst min_sep
+848.5 m at t = 0; after the t = 600 DEAD failure the surviving sat 0 evades
+the coasting corpse 29 more times (detection t = 604, 1-survivor ASSIGNMENT
+t = 608, the full recovery arc intact). Episode Δv cost = a_max · evade_ticks
+· dt = 0.01 · 25 · 2.0 = 0.500000 m/s per evading sat per episode
+(test-pinned, approx rel 1e-6, measured exact). Tests red-first:
+`uv run python -m pytest tests/test_collision_avoidance.py -q` → ImportError
+(cannot import name `Safety`), then 7 passed; byte-inertness is geometric —
+zero EVASIVE_MANEUVER events on the nominal and two_failure runs and all
+three golden SHA pins green
+(`uv run python -m pytest tests/test_collision_avoidance.py
+tests/test_failure_modes.py tests/test_cli.py -q` → 16 passed). Caveats:
+`PDController.apply_accel(state, u, dt, n)` is state-first —
+`propagate_controlled` needs the state, so the ask's `(u, dt, n)` signature
+summary was not functional as written; an rng == 0 guard was added (zero range
+has no away-direction and would produce NaN — inert in practice); the
+committed stress scenario's first firing is a symmetric NOMINAL–NOMINAL close
+pair on a tight 2-slot passive ellipse, not a dead-sat secular-drift crossing
+(that variant needs a mid-transfer death and was not tuned — live-vs-dead
+evasion is still exercised after t = 600); the wire renders the range in whole
+metres ("range 849 m"); the test FIFO pop-time assertion is pop ≥ detection +
+dt (one event pops per tick, per the ask's own "FIFO, one event pops per tick
+- fine").
+
+### Oracle sweep v2
+
+Pre-registration (GATES.md 2026-10-26, recorded before any number): proceed
+only if the max critical-seat health gain at L = 300 s on the new failure
+families is ≥ 0.5 pp. Measured (`uv run python files/oracle_sweep_v2.py`, report
+data/eval/oracle_sweep_v2.json; per-point scenarios + logs under
+data/eval/oracle_sweep_v2/, gitignored, per-row commands in the report):
+eps_leader_6sat +1.7968 pp and eps_downlink_6sat +1.7968 pp at L = 300 s
+(max +10.6048 pp at L = 1800 s); control eps_imager_6sat +0.0000 pp
+(structurally flat, as predicted); thruster_leader_6sat +0.0235 pp — the
+oracle's residual gain over the self-report path is negligible (detection
+latency is already 0 there). Verdict: CLEAR — above the 0.5 pp threshold on
+the leader/downlink EPS families; per the pre-registration, nothing integrates
+into the control loop without a further user decision.
+
+Report integrity + numbers: `uv run python -m pytest tests/test_oracle_sweep_v2.py -v`
+→ 3 passed — test_v2_report_schema_and_verdict RAN (did not skip) and verified
+every on-disk log sha256 against the report; the sweep re-run reproduces all
+20 log sha256s byte-identically, report sha256
+`58bec3099ced52aba68d747f063da090440f5becaba4633e70c80d87dba49fb9` before and
+after (`cmp` exit 0). Δv trend from the report rows: oracle-on costs more than
+the reactive baseline at every L > 0 in every family and is non-monotone in L
+— eps_leader totals 401.84 / 537.16 / 397.95 / 3210.31 / 710.64 m/s at
+L = 0/30/60/300/1800 s (L = 300 is ~8× baseline: the early replan re-phases
+the formation and a second replan still fires at the actual death;
+eps_downlink L300 is 409.52 m/s ≈ baseline — moving the downlink seat is
+geometrically cheaper than the leader seat); every Δv inherits the standing
+a_max = 0.1 over-thrust caveat (GATES.md open risks). Cap rule: t_settle =
+0.0 s (tick 0 of data/logs/nominal.jsonl is already inside the ±10 % band), so
+no grid point was capped (`capped: false` on all 20 rows). The reactive
+baseline (L = 0) has `oracle_enabled: false` — semantically identical, since
+the sim hook requires lead_s > 0, and that point IS the required reactive
+comparison. Caveats: all deliverables (4 scenarios, files/oracle_sweep_v2.py,
+tests, report + 20 point logs) pre-existed on disk from the building session
+(all untracked); that session verified each artifact against the spec, ran the
+named tests, re-ran the sweep fresh, and proved byte-identical regeneration —
+the tests-first red step was therefore not observable (with the report absent,
+test_v2_report_schema_and_verdict skips by design). eps_leader and
+eps_downlink report identical critical-seat fractions to 16 digits — genuine,
+not copy-paste: the seat-outage windows are arithmetically identical (fade
+600 s → death 2400 s + 2-tick detection on the same tick grid); their Δv
+totals and log shas all differ. The pre-registration entry is dated 2026-10-26
+(GATES.md decisions) and predates the sweep, as a pre-registration must.
+
+### Monte Carlo
+
+Robustness ensemble, zero core diff — the sim consumes no RNG, so the ensemble
+jitters scenario parameters deterministically outside the core (failure times
+±10 %, formation phase offset ±30°, radial amplitude ×[0.9, 1.1]; one PCG64
+stream, fixed draw order). Measured:
+`uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json
+--mode monte-carlo --report data/eval/monte_carlo_results.json` (base
+two_failure, 20 runs × {do_nothing, hungarian}, seed 42): hungarian mean
+last-orbit coverage 0.26915 vs do_nothing 0.22028 → +4.886 pts mean paired gain
+(min paired +4.545 pts); ensemble-wide survivor–dead min separation 1787.7 m
+(hungarian) / 10199.0 m (do_nothing). Per-run logs under data/eval/monte_carlo/
+(gitignored); per-log sha256 + full jitter spec pinned in
+data/eval/monte_carlo_manifest.json so the ensemble regenerates exactly.
+
+Full-ensemble numbers (report): worst-vs-worst +5.201 pts
+(`worst_case_coverage_gain_pts` 5.201337546489931); every one of the 20
+matched pairs positive, per-run gains in [+4.545, +5.201] pts — the committed
+P0 +4.93 headline sits inside the measured band; recovery is also less
+jitter-sensitive (hungarian std 0.0025 < do_nothing 0.0045). Cost side:
+hungarian total Δv mean 801.2 / max 2255.3 m/s; ensemble min survivor–dead
+separation 1787.7 m (do_nothing: Δv ~2.6e-10 m/s, min sep 10199.0 m) —
+clearance traded for coverage, consistent with the P0 pair sweep (worst
+survivor-dead 1322.6 m). Byte-reproducibility: a second invocation of the
+command of record, then `cmp` on report + manifest and `sha256sum -c` over
+all 40 JSONL logs → ALL BYTE-IDENTICAL. Tests red-first
+(`uv run python -m pytest tests/test_benchmark.py -q -k mc` → 3 FAILED,
+ModuleNotFoundError: cubesat.monte_carlo), then 10 passed; final fast loop
+`uv run python -m pytest -q -m 'not slow'` → 142 passed, 3 deselected;
+`uv run ruff check .` clean. Caveats: benchmark.py grew 415 → 473 lines
+(already above the ~300 style line before this round) — the mode body lives
+in the new 230-line cubesat/monte_carlo.py and benchmark.py gained only the
+dispatch + `--runs` (default 20) / `--seed` (default 42), the established
+pareto/cw-curve pattern; a mid-ask bug (paired_gain_pts first emitted as a raw
+fraction) was fixed and the command of record re-run to regenerate the
+artifacts, then the whole ensemble re-run and byte-compared; the JSON
+report/manifest are CRLF on this Windows host (same as the already-committed
+data/eval/benchmark_results.json) while the JSONL logs force LF
+(newline="\n") per the invariant; the 40 per-run logs under
+data/eval/monte_carlo/ may not be committable (data/eval gitignores JSONL) —
+report + manifest alone regenerate them byte-exactly via the recorded
+command.
+
+### Docker multi-stage
+
+Landed in the Dockerfile: stage 1 `node:22-slim` (`npm ci` + `npm run build`
+from manifests-first layers), stage 2 the pinned uv runtime with
+`COPY --from=build /build/dist ./frontend/dist` (api.py's static mount) and
+`CUBESAT_LOG_DIR=/app/data/logs`. Image build and `/health` check: not run in
+this round — build size and health evidence unmeasured.
+
+Why unmeasured (honest status, not faked): `docker version` → exit 1, daemon
+down ("failed to connect to the docker API at
+npipe:////./pipe/dockerDesktopLinuxEngine — The system cannot find the file
+specified"), so `docker build` was NOT RUN and the node:22-slim pull + npm ci
+network access are likewise unexercised. Also landed: `.dockerignore` gains
+`frontend/node_modules` and `frontend/dist` so stage 1's `COPY frontend/`
+cannot ship the host's node_modules (GBs, Windows binaries) or a stale
+host-built dist into the build context — without it the manifest-cached
+`npm ci` layer is defeated. Only files touched: Dockerfile, .dockerignore;
+no sim-core files.
+

@@ -229,6 +229,45 @@ def _policies_summary(rows: list[dict], policies: list[str]) -> dict[str, dict]:
     return summary
 
 
+def _run_monte_carlo(args) -> int:
+    """P4 dispatch: deterministic parameter-jitter Monte Carlo over the pure
+    core (cubesat/monte_carlo.py) -- MC_POLICIES x --runs jittered scenarios,
+    machine-writes the report + manifest with the full jitter spec (seed,
+    bounds) so the ensemble regenerates exactly from the command."""
+    from cubesat.monte_carlo import MC_POLICIES, run_monte_carlo
+
+    base = Scenario.model_validate_json(args.base.read_text(encoding="utf-8"))
+    command = "uv run python -m cubesat.benchmark " + " ".join(sys.argv[1:])
+    manifest_path = args.manifest or args.report.with_name("monte_carlo_manifest.json")
+    report = run_monte_carlo(
+        base=base,
+        runs=args.runs,
+        seed=args.seed,
+        out_dir=args.out,
+        report_path=args.report,
+        manifest_path=manifest_path,
+        command=command,
+    )
+    print(
+        f"wrote {args.report} ({report['runs']} jittered runs x {len(MC_POLICIES)} policies)"
+    )
+    print(f"wrote {manifest_path} ({len(report['rows'])} log sha256s)")
+    dn = report["policies_summary"]["do_nothing"]["coverage_mean_last_orbit"]
+    hung = report["policies_summary"]["hungarian"]["coverage_mean_last_orbit"]
+    print(
+        "coverage_mean_last_orbit over the ensemble: hungarian mean "
+        f"{hung['mean']:.4f} / worst {hung['min']:.4f} vs do_nothing mean "
+        f"{dn['mean']:.4f} / worst {dn['min']:.4f}"
+    )
+    comp = report["comparison"]
+    print(
+        f"worst-case protection {comp['worst_case_coverage_gain_pts']:+.2f} pts, "
+        f"mean {comp['mean_coverage_gain_pts']:+.2f} pts, "
+        f"paired mean {comp['paired_gain_pts']['mean']:+.2f} pts"
+    )
+    return 0
+
+
 def _run_keepout_report(args) -> int:
     """P2 dispatch (ENDGAME_PLAN 5): post-hoc analysis of written log bytes --
     no sim core involvement. Reads the logs named on the command line, writes
@@ -328,10 +367,11 @@ def main(argv: list[str] | None = None) -> int:
         prog="cubesat.benchmark", description="P0 exhaustive recovery benchmark"
     )
     parser.add_argument(
-        "--mode", choices=("benchmark", "keepout-report", "pareto", "cw-curve"),
+        "--mode", choices=("benchmark", "keepout-report", "pareto", "cw-curve", "monte-carlo"),
         default="benchmark",
         help="benchmark: run the P0 sweep; keepout-report: P2 post-hoc log analysis; "
-        "pareto: P1 w2 x dv_budget sweep; cw-curve: P3 CW-vs-Kepler error curves",
+        "pareto: P1 w2 x dv_budget sweep; cw-curve: P3 CW-vs-Kepler error curves; "
+        "monte-carlo: P4 deterministic parameter-jitter robustness ensemble",
     )
     parser.add_argument("--base", required=True, type=Path, help="base scenario JSON")
     parser.add_argument(
@@ -350,6 +390,18 @@ def main(argv: list[str] | None = None) -> int:
         "--policies",
         default=",".join(POLICY_ORDER),
         help="comma-separated subset of " + ",".join(POLICY_ORDER),
+    )
+    parser.add_argument(
+        "--runs",
+        type=int,
+        default=20,
+        help="monte-carlo mode: number of jittered scenario runs (each run x 2 policies)",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="monte-carlo mode: base seed for the deterministic jitter RNG",
     )
     parser.add_argument(
         "--keepout-logs",
@@ -378,6 +430,12 @@ def main(argv: list[str] | None = None) -> int:
         return _run_keepout_report(args)
     if args.mode == "cw-curve":
         return _run_cw_curve(args)
+    if args.mode == "monte-carlo":
+        # The 2-policy ensemble needs no --policies/--out gymnastics: fixed
+        # policy pair, logs default alongside the other eval artifacts.
+        if args.out is None:
+            args.out = Path("data/eval/monte_carlo")
+        return _run_monte_carlo(args)
     if args.mode == "pareto":
         if args.csv is None:
             args.csv = args.report.with_name("pareto_points.csv")

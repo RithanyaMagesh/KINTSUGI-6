@@ -75,3 +75,16 @@ class PDController:
         u = self.command(state[:3], state[3:], r_ref, v_ref)
         self.dv_used += float(np.linalg.norm(u)) * dt
         return propagate_controlled(state, u, dt, n), u
+
+    def apply_accel(self, state, u, dt: float, n: float) -> np.ndarray:
+        """One fixed-dt step under a RAW acceleration command (the evasion burn,
+        BACKEND_SPEC Addendum v1.2): saturate ||u|| <= a_max, account
+        dv_used += ||u||*dt, advance with STM + exact forcing. No error feedback
+        -- the caller owns the direction (sim.py points it away from the nearest
+        intruder); additive, no existing behavior changes. Returns state_next."""
+        a = np.asarray(u, dtype=float)
+        norm = float(np.linalg.norm(a))
+        if norm > self.a_max:
+            a = a * (self.a_max / norm)  # rebind: never mutate the caller's vector
+        self.dv_used += float(np.linalg.norm(a)) * dt
+        return propagate_controlled(np.asarray(state, dtype=float), a, dt, n)

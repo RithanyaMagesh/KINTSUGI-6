@@ -1,0 +1,226 @@
+{
+  "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
+  "jitter_spec": {
+    "base_scenario": "two_failure",
+    "draw_order_per_run": [
+      "per failure in base list order: t = t_base * (1 + FAILURE_TIME_REL_PM * U(-1, 1))",
+      "formation.phase_offset_deg = base + PHASE_OFFSET_ABS_PM_DEG * U(-1, 1)",
+      "formation.radial_amp_km = base * (1 + RADIAL_AMP_REL * U(-1, 1))"
+    ],
+    "failure_time_rel_pm": 0.1,
+    "fixed": [
+      "failure sat_ids and modes (comparability with the base scenario)",
+      "every other base-scenario field (duration, roles, allocation, gains, sensor)"
+    ],
+    "phase_offset_abs_pm_deg": 30.0,
+    "radial_amp_multiplier_range": [
+      0.9,
+      1.1
+    ],
+    "rng": "numpy.random.Generator(numpy.random.PCG64(numpy.random.SeedSequence(seed)))",
+    "seed": 42
+  },
+  "logs": {
+    "mc_run_000__do_nothing.jsonl": {
+      "policy": "do_nothing",
+      "run": 0,
+      "sha256": "3d3828f37910cb6db066fafce34c287ff277b7e768feabb198a21067ada9e6ed"
+    },
+    "mc_run_000__hungarian.jsonl": {
+      "policy": "hungarian",
+      "run": 0,
+      "sha256": "5acacf1f42ef0af1f2d46804c647e287650d547de3d5504ef6997ebb4457f140"
+    },
+    "mc_run_001__do_nothing.jsonl": {
+      "policy": "do_nothing",
+      "run": 1,
+      "sha256": "568c48a3534ad36efceaba2bcb0e8cc91e91485d564cc1d58d841883ea80dfff"
+    },
+    "mc_run_001__hungarian.jsonl": {
+      "policy": "hungarian",
+      "run": 1,
+      "sha256": "da8d7ff0ca871b6624a6aa88c2412bcb008396453f319c835b6846b7260217ac"
+    },
+    "mc_run_002__do_nothing.jsonl": {
+      "policy": "do_nothing",
+      "run": 2,
+      "sha256": "94f311539ef322ebc6ddaa885697e81b570208b5add01bdec84b984e68917bfb"
+    },
+    "mc_run_002__hungarian.jsonl": {
+      "policy": "hungarian",
+      "run": 2,
+      "sha256": "336cf2eda254b574874674439396e0d86aaaa92c64a851e1f3eefa8eae4adfe0"
+    },
+    "mc_run_003__do_nothing.jsonl": {
+      "policy": "do_nothing",
+      "run": 3,
+      "sha256": "2d92a8292ee4547b3abfed9f17bbfd88210f34984241ce7a6b0b9c84884b7dad"
+    },
+    "mc_run_003__hungarian.jsonl": {
+      "policy": "hungarian",
+      "run": 3,
+      "sha256": "6b31bc442eb85c15bdc9ffe40c621a3eece53be3bfb8dbb3d576b7ca2fc02e52"
+    },
+    "mc_run_004__do_nothing.jsonl": {
+      "policy": "do_nothing",
+      "run": 4,
+      "sha256": "1f18f2a603b78f75d82d72a9621cc817c65614b87e1a4c9488180ad770f2e541"
+    },
+    "mc_run_004__hungarian.jsonl": {
+      "policy": "hungarian",
+      "run": 4,
+      "sha256": "c69b92e4151c50eed5180baebc71af1c6f03b218c4197aaa04523b518c57212b"
+    },
+    "mc_run_005__do_nothing.jsonl": {
+      "policy": "do_nothing",
+      "run": 5,
+      "sha256": "546f23af15d790dd980471bd66431eb2e78262f5e9ca27e15ae2ee1e9b9242ea"
+    },
+    "mc_run_005__hungarian.jsonl": {
+      "policy": "hungarian",
+      "run": 5,
+      "sha256": "7ab62acd09af87231381ccc4d56731fcb55101ac97c173b9109d23ba101d53a0"
+    },
+    "mc_run_006__do_nothing.jsonl": {
+      "policy": "do_nothing",
+      "run": 6,
+      "sha256": "5fcf266aa4f95b3e43b084c0f2cd9e983257f1f60f1d1db1c0043ddeb694f355"
+    },
+    "mc_run_006__hungarian.jsonl": {
+      "policy": "hungarian",
+      "run": 6,
+      "sha256": "845b05c378b62a181cdd0c46978ea5f0fde38faf24658cf8a1c1fbd2441732d0"
+    },
+    "mc_run_007__do_nothing.jsonl": {
+      "policy": "do_nothing",
+      "run": 7,
+      "sha256": "2d02becb555ca437da3704cb8fefb7838a92c6cd5d8bb737deb04adf19839a81"
+    },
+    "mc_run_007__hungarian.jsonl": {
+      "policy": "hungarian",
+      "run": 7,
+      "sha256": "dae264f694358fc313b469268d36da123a137d09bfeda67761d5b1f2b6106de2"
+    },
+    "mc_run_008__do_nothing.jsonl": {
+      "policy": "do_nothing",
+      "run": 8,
+      "sha256": "77a7ac59afee325f24bed6c71fac6b762937bb36fd0cb00e66e43f89411d3539"
+    },
+    "mc_run_008__hungarian.jsonl": {
+      "policy": "hungarian",
+      "run": 8,
+      "sha256": "810b827ff9a971dc4f3ce933ee9024e87c472e395df1d2e85dd1162c361c4a56"
+    },
+    "mc_run_009__do_nothing.jsonl": {
+      "policy": "do_nothing",
+      "run": 9,
+      "sha256": "374f898aa8ac2d403a436aef324474c1c3f372d0f16272a3e19ba9a47aa40d2e"
+    },
+    "mc_run_009__hungarian.jsonl": {
+      "policy": "hungarian",
+      "run": 9,
+      "sha256": "e7c03b2cbfe096299ec126e9e14aec126f094f0e5af1fa8e4ab9d8bf57d1625d"
+    },
+    "mc_run_010__do_nothing.jsonl": {
+      "policy": "do_nothing",
+      "run": 10,
+      "sha256": "4bfbbb1fbf829aa6cdc911551b9638da503a297979dd8ea5ccee18464d3f9483"
+    },
+    "mc_run_010__hungarian.jsonl": {
+      "policy": "hungarian",
+      "run": 10,
+      "sha256": "7c24352a1bbcd474cab2b4fe901dc06e2a7e5476c4f20161caac26326914755c"
+    },
+    "mc_run_011__do_nothing.jsonl": {
+      "policy": "do_nothing",
+      "run": 11,
+      "sha256": "98d4f3aeda8ff9d93a662673cc1877d0773305bfa4f6f991a32e91e91984ee68"
+    },
+    "mc_run_011__hungarian.jsonl": {
+      "policy": "hungarian",
+      "run": 11,
+      "sha256": "5666bf0565d40374e006ade1b4280fae475437264384c23dca28497d05a3acdf"
+    },
+    "mc_run_012__do_nothing.jsonl": {
+      "policy": "do_nothing",
+      "run": 12,
+      "sha256": "796af9f6502f2fb8d924a4f0492d23d23b48d0474f8d9ac7713bb508718b012d"
+    },
+    "mc_run_012__hungarian.jsonl": {
+      "policy": "hungarian",
+      "run": 12,
+      "sha256": "0a88218ff3485b7cce66760d45ad27857cf80feef5921be99095fbde0f101f50"
+    },
+    "mc_run_013__do_nothing.jsonl": {
+      "policy": "do_nothing",
+      "run": 13,
+      "sha256": "af17f717564817808952eebb12f5baa71d7f9516c7d984e304ab190fb5cb1be2"
+    },
+    "mc_run_013__hungarian.jsonl": {
+      "policy": "hungarian",
+      "run": 13,
+      "sha256": "4c300d87e63273cd729873cd86641e1f6616c1fbd0e28730db7b7f6b07bb7cd8"
+    },
+    "mc_run_014__do_nothing.jsonl": {
+      "policy": "do_nothing",
+      "run": 14,
+      "sha256": "37492299da4a32d46c3cfad75d357647e61967dbb4fd11ae2036a53a457eb9ce"
+    },
+    "mc_run_014__hungarian.jsonl": {
+      "policy": "hungarian",
+      "run": 14,
+      "sha256": "47d0b76d518c08a7b6c96bd82053dfbdff6df6b9f5a56c169f744254d65d2436"
+    },
+    "mc_run_015__do_nothing.jsonl": {
+      "policy": "do_nothing",
+      "run": 15,
+      "sha256": "42e6db207c8c6aad250b0b29b7c1bc1e9ca59d269f74c8fe48733387d55ee0e6"
+    },
+    "mc_run_015__hungarian.jsonl": {
+      "policy": "hungarian",
+      "run": 15,
+      "sha256": "6a9c419edc3134f688508b9cfe7761d12c6cf291172af7d520aaadd7d672fe63"
+    },
+    "mc_run_016__do_nothing.jsonl": {
+      "policy": "do_nothing",
+      "run": 16,
+      "sha256": "6e11d1cf83a2eb2dd7142d2a39fdd82fa4ddbdaea5cff8e72fa6c034a310545e"
+    },
+    "mc_run_016__hungarian.jsonl": {
+      "policy": "hungarian",
+      "run": 16,
+      "sha256": "6f88c2d44a08b35000fe367ff04e904106ffe462f7befad95ed4c5b672720d64"
+    },
+    "mc_run_017__do_nothing.jsonl": {
+      "policy": "do_nothing",
+      "run": 17,
+      "sha256": "d0c38b5eae7a28d483ba7be316a0dedbf75dad79f4418b27bbc130db740d556a"
+    },
+    "mc_run_017__hungarian.jsonl": {
+      "policy": "hungarian",
+      "run": 17,
+      "sha256": "d17a9da664ed1734f347323bc45b1cecc9838fa92505cd5124605d0ccfb49dfe"
+    },
+    "mc_run_018__do_nothing.jsonl": {
+      "policy": "do_nothing",
+      "run": 18,
+      "sha256": "a5040cd48c05d73771b5ccdbc9ac7de5199bfe65d46c2876c5c8f36bc8c5be3f"
+    },
+    "mc_run_018__hungarian.jsonl": {
+      "policy": "hungarian",
+      "run": 18,
+      "sha256": "44d9ec38b7008170b4d1fb2e5f3aad2691356a2ca4478d23022cb1cb6c513255"
+    },
+    "mc_run_019__do_nothing.jsonl": {
+      "policy": "do_nothing",
+      "run": 19,
+      "sha256": "e058bbfaba372a21d5049eef6a3efb585bff3714508ae377904a3e8163e3f73d"
+    },
+    "mc_run_019__hungarian.jsonl": {
+      "policy": "hungarian",
+      "run": 19,
+      "sha256": "937df1efca1dce565f0627fc8fb455dc87921783406cb2b3fe28c3ba5f278257"
+    }
+  },
+  "mode": "monte-carlo"
+}

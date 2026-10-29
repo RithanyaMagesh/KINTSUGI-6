@@ -9,9 +9,15 @@ The seven required names:
     test_keepout_cost_never_negative
     test_benchmark_report_rows_carry_command_and_sha256
 
+Monte Carlo robustness mode (P4, appended):
+    test_mc_double_run_identical_report
+    test_mc_jitter_within_bounds
+    test_mc_report_rows_carry_command_and_sha
+
 Benchmark-side only: the replan seam override rebinds cubesat.sim.replan inside
 the process and MUST restore it (try/finally) -- asserted explicitly so sibling
-in-process sim tests are never polluted. No RNG, no wall clock (AGENTS.md 2).
+in-process sim tests are never polluted. No RNG, no wall clock (AGENTS.md 2) --
+except the MC driver's own seeded PCG64 jitter, which is asserted reproducible.
 """
 
 import hashlib
@@ -255,3 +261,140 @@ def test_benchmark_report_rows_carry_command_and_sha256(scenario, tmp_path):
         "pair_0-1__do_nothing.jsonl",
         "pair_0-1__even_split.jsonl",
     }
+
+
+# --- Monte Carlo robustness mode (P4) ----------------------------------------
+
+
+def _mc_base(scenario):
+    """Short two-failure base for fast MC tests: same shape as two_failure.json
+    but a 600 s horizon with failures at 100/150 s on sats 0/1 (the +-10% time
+    jitter cannot reorder them: [90, 110] vs [135, 165])."""
+    return scenario.model_copy(
+        update={
+            "name": "mc_short",
+            "duration_s": 600.0,
+            "failures": [
+                Failure(t=100.0, sat_id=0, mode=FailureMode.DEAD),
+                Failure(t=150.0, sat_id=1, mode=FailureMode.DEAD),
+            ],
+        }
+    )
+
+
+def test_mc_double_run_identical_report(scenario, tmp_path):
+    """AGENTS.md invariant 2 through the MC driver: two full run_monte_carlo
+    invocations with the same (base, runs, seed) give identical report dicts and
+    byte-identical report/manifest/log files -- seeded PCG64 jitter outside the
+    core, RNG-free core inside."""
+    from cubesat.monte_carlo import run_monte_carlo
+
+    first = run_monte_carlo(
+        base=_mc_base(scenario),
+        runs=2,
+        seed=7,
+        out_dir=tmp_path / "logs1",
+        report_path=tmp_path / "r1.json",
+        manifest_path=tmp_path / "m1.json",
+        command="uv run python -m cubesat.benchmark --test",
+    )
+    second = run_monte_carlo(
+        base=_mc_base(scenario),
+        runs=2,
+        seed=7,
+        out_dir=tmp_path / "logs2",
+        report_path=tmp_path / "r2.json",
+        manifest_path=tmp_path / "m2.json",
+        command="uv run python -m cubesat.benchmark --test",
+    )
+    assert first == second
+    assert (tmp_path / "r1.json").read_bytes() == (tmp_path / "r2.json").read_bytes()
+    assert (tmp_path / "m1.json").read_bytes() == (tmp_path / "m2.json").read_bytes()
+    for log_path in sorted((tmp_path / "logs1").iterdir()):
+        twin = tmp_path / "logs2" / log_path.name
+        assert twin.read_bytes() == log_path.read_bytes()
+
+
+def test_mc_jitter_within_bounds(scenario):
+    """Every generated scenario sits inside the declared jitter -- failure times
+    x (1 +- 0.10), formation phase_offset_deg +- 30, radial amplitude x [0.9,
+    1.1] -- and keeps the fixed fields fixed: failure sat ids/modes, everything
+    else byte-identical to the base scenario (comparability)."""
+    from cubesat.monte_carlo import (
+        FAILURE_TIME_REL_PM,
+        PHASE_OFFSET_ABS_PM_DEG,
+        RADIAL_AMP_REL,
+        jitter_spec,
+        jittered_scenario,
+        mc_rng,
+    )
+
+    base = scenario  # full two_failure.json: failures at 1200/1500 s on sats 1/2
+    spec = jitter_spec(123, base)
+    assert spec["seed"] == 123
+    assert spec["failure_time_rel_pm"] == 0.10
+    assert spec["phase_offset_abs_pm_deg"] == 30.0
+    assert spec["radial_amp_multiplier_range"] == [0.9, 1.1]
+    rng = mc_rng(123)
+    for i in range(40):
+        jittered, drawn = jittered_scenario(base, rng, i)
+        assert jittered.name == f"mc_run_{i:03d}"
+        for f_base, f_jit in zip(base.failures, jittered.failures, strict=True):
+            assert f_jit.sat_id == f_base.sat_id
+            assert f_jit.mode == f_base.mode
+            assert abs(f_jit.t / f_base.t - 1.0) <= FAILURE_TIME_REL_PM + 1e-12
+        phase_delta = jittered.formation.phase_offset_deg - base.formation.phase_offset_deg
+        assert abs(phase_delta) <= PHASE_OFFSET_ABS_PM_DEG + 1e-12
+        mult = jittered.formation.radial_amp_km / base.formation.radial_amp_km
+        assert 1.0 - RADIAL_AMP_REL - 1e-12 <= mult <= 1.0 + RADIAL_AMP_REL + 1e-12
+        # The row's drawn block agrees with the scenario it describes.
+        assert drawn["failure_times_s"] == [f.t for f in jittered.failures]
+        assert drawn["phase_offset_deg"] == jittered.formation.phase_offset_deg
+        assert drawn["radial_amp_multiplier"] == pytest.approx(mult, rel=0.0, abs=1e-15)
+        # Everything except the three jitter groups stays fixed.
+        assert jittered.duration_s == base.duration_s
+        assert jittered.dt_s == base.dt_s
+        assert jittered.roles == base.roles
+        assert jittered.allocation == base.allocation
+        assert jittered.gains == base.gains
+        assert jittered.sensor == base.sensor
+        assert jittered.seed == base.seed
+
+
+def test_mc_report_rows_carry_command_and_sha(scenario, tmp_path):
+    """Every MC report row carries the exact command string and a log_sha256
+    matching the written JSONL log; report and manifest both carry the jitter
+    spec (seed + bounds), so the whole ensemble regenerates from the command."""
+    from cubesat.monte_carlo import MC_POLICIES, run_monte_carlo
+
+    command = "uv run python -m cubesat.benchmark --mode monte-carlo --test"
+    report = run_monte_carlo(
+        base=_mc_base(scenario),
+        runs=2,
+        seed=42,
+        out_dir=tmp_path / "logs",
+        report_path=tmp_path / "results.json",
+        manifest_path=tmp_path / "manifest.json",
+        command=command,
+    )
+    assert (tmp_path / "results.json").exists()
+    assert (tmp_path / "manifest.json").exists()
+    assert len(report["rows"]) == 2 * len(MC_POLICIES)
+    for row in report["rows"]:
+        assert row["command"] == command
+        log_path = tmp_path / "logs" / row["log"]
+        assert row["log_sha256"] == hashlib.sha256(log_path.read_bytes()).hexdigest()
+        assert row["policy"] in MC_POLICIES
+        assert row["run"] in (0, 1)
+        assert math.isfinite(row["coverage_mean_last_orbit"])
+        assert math.isfinite(row["min_sep_survivor_dead_m"])
+    persisted = json.loads((tmp_path / "results.json").read_text(encoding="utf-8"))
+    manifest = json.loads((tmp_path / "manifest.json").read_text(encoding="utf-8"))
+    assert persisted == report
+    assert manifest["command"] == command
+    assert manifest["jitter_spec"] == report["jitter_spec"]
+    assert manifest["jitter_spec"]["seed"] == 42
+    assert manifest["jitter_spec"]["radial_amp_multiplier_range"] == [0.9, 1.1]
+    assert set(manifest["logs"]) == {row["log"] for row in report["rows"]}
+    for entry in manifest["logs"].values():
+        assert set(entry) == {"sha256", "run", "policy"}

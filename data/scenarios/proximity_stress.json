@@ -1,0 +1,24 @@
+{
+  "name": "proximity_stress",
+  "seed": 7,
+  "duration_s": 5680.0,
+  "dt_s": 2.0,
+  "chief": {"altitude_km": 500.0},
+  "formation": {"n_slots": 2, "radial_amp_km": 0.3, "phase_offset_deg": 0.0},
+  "a_max_mps2": 0.01,
+  "gains": {"wn": 0.01, "zeta": 1.0},
+  "sensor": {"fov_half_angle_deg": 1.5, "grid_step_km": 2.0, "grid_extent_km": 30.0},
+  "roles": ["leader", "imager"],
+  "failures": [
+    {"t": 600.0, "sat_id": 1, "mode": "DEAD"}
+  ],
+  "recovery_enabled": true,
+  "detection": {"missed_ticks_k": 3},
+  "allocation": {
+    "w1": 1.0,
+    "w2": 0.5,
+    "w3": 2.0,
+    "min_sep_km": 0.5,
+    "dv_budget_mps": 200.0
+  }
+}

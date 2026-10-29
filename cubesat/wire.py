@@ -52,7 +52,10 @@ class StartRequest(BaseModel):
 
 class InjectRequest(BaseModel):
     sat_id: str
-    mode: Literal["DEAD", "THRUSTER_OUT"] = "DEAD"
+    mode: Literal["DEAD", "THRUSTER_OUT", "EPS_DEGRADE"] = "DEAD"
+    degrade_s: float = Field(
+        default=600.0, ge=0, description="EPS_DEGRADE fade length, s (ignored otherwise)"
+    )
 
 
 class SeekRequest(BaseModel):
@@ -69,7 +72,14 @@ class ReplayLoadRequest(BaseModel):
     predictor: bool = False  # same display-only overlay, resolved via the log's scenario
 
 
-_STATUS_TO_WIRE = {"NOMINAL": "healthy", "DEAD": "failed", "THRUSTER_OUT": "failed"}
+# Addendum v1.2: DEGRADED (the EPS_DEGRADE fade) is additive -- old logs never
+# carry it, so the new row is unreachable for them.
+_STATUS_TO_WIRE = {
+    "NOMINAL": "healthy",
+    "DEGRADED": "degraded",
+    "DEAD": "failed",
+    "THRUSTER_OUT": "failed",
+}
 
 # Keys _sat_to_wire requires; id must be a 0-based int (display_sat_id does i + 1
 # and assignment_map needs a hashable key), status must be hashable.
@@ -203,6 +213,8 @@ def _failure_event(frame: dict, payload: dict, enrich: SessionEnrich) -> dict:
     who = display_sat_id(sat) if isinstance(sat, int) else sat
     mode = payload.get("mode")
     message = f"{who} {mode} failure detected" if mode else f"{who} failure detected"
+    if payload.get("self_report"):  # Addendum v1.2: additive key, old payloads unchanged
+        message += " (self-reported)"
     return to_event("critical", frame.get("t", 0.0), message)
 
 
@@ -227,6 +239,26 @@ def _role_reassignment(frame: dict, payload: dict, enrich: SessionEnrich) -> dic
     if "cost_total" in payload:
         msg["cost_total"] = payload["cost_total"]
     return msg
+
+
+def _evasive_event(frame: dict, payload: dict) -> dict:
+    """EVASIVE_MANEUVER -> info event 'SAT-x evasive maneuver (SAT-y, range Z m)'
+    (Addendum v1.2: additive; old logs never carry the type, so the branch is
+    unreachable for them). Graceful fallbacks follow _failure_event's style --
+    section 7.1: a malformed payload degrades the message, never the driver."""
+    who = payload.get("sat_id")
+    other = payload.get("other_id")
+    if isinstance(who, int):
+        who = display_sat_id(who)
+    if isinstance(other, int):
+        other = display_sat_id(other)
+    rng = payload.get("range_m")
+    rng_txt = f"{rng:.0f}" if isinstance(rng, (int, float)) else str(rng)
+    return to_event(
+        "info",
+        frame.get("t", 0.0),
+        f"{who} evasive maneuver ({other}, range {rng_txt} m)",
+    )
 
 
 def _plain_event(frame: dict, etype: str, payload: dict) -> dict:
@@ -260,6 +292,8 @@ def to_messages(frame: dict, enrich: SessionEnrich) -> list[dict]:
         payload = event.get("payload") or {}
         if etype == "FAILURE_DETECTED":
             event_msg = _failure_event(frame, payload, enrich)
+        elif etype == "EVASIVE_MANEUVER":
+            event_msg = _evasive_event(frame, payload)
         elif etype == "ASSIGNMENT":
             reassignment = _role_reassignment(frame, payload, enrich)
         else:

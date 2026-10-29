@@ -1,3 +1,20 @@
+# ---- Stage 1/2: frontend build (BACKEND_SPEC 8.2) --------------------------
+# node_modules and the host-built dist are .dockerignore'd: the container's
+# npm ci install is the only one that lands in the image.
+FROM node:22-slim AS build
+
+WORKDIR /build
+
+# Dependency layer: manifests only, so Docker caches the node_modules.
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+
+# Source layer (index.html, src/, public/, tsconfig, vite.config) -> /build/dist
+# (vite's default outDir; package.json build = tsc && vite build).
+COPY frontend/ ./
+RUN npm run build
+
+# ---- Stage 2/2: pinned uv runtime (unchanged from G0) ----------------------
 # uv image pinned by digest: the python3.12-bookworm-slim variant has no versioned tag (verified 2026-09-28).
 FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim@sha256:e5b65587bce7de595f299855d7385fe7fca39b8a74baa261ba1b7147afa78e58
 
@@ -19,7 +36,12 @@ RUN uv sync --locked --no-dev
 COPY data/scenarios ./data/scenarios
 COPY data/logs/nominal.jsonl data/logs/two_failure.jsonl ./data/logs/
 
-ENV PORT=8000
+# Built frontend from stage 1: api.py resolves the static mount to
+# _REPO_ROOT/frontend/dist, which is /app/frontend/dist in this image.
+COPY --from=build /build/dist ./frontend/dist
+
+ENV CUBESAT_LOG_DIR=/app/data/logs \
+    PORT=8000
 EXPOSE 8000
 
 RUN useradd --uid 1000 --no-create-home app

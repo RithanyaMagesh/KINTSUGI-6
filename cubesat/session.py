@@ -104,14 +104,27 @@ class LiveSource:
 
     @classmethod
     def with_failure(
-        cls, base: Scenario, sat_display_id: str, mode: str, t_now: float
+        cls, base: Scenario, sat_display_id: str, mode: str, t_now: float,
+        degrade_s: float = 0.0,
     ) -> LiveSource:
         """Failure injection = recompute (section 4, consequence 2): the only
-        change is one failure scheduled at t_now, so the recomputed prefix is
-        byte-identical (pinned by test_inject_prefix_byte_identical)."""
+        change is one failure scheduled at t_now, so for DEAD and THRUSTER_OUT
+        injections the recomputed prefix is byte-identical (pinned by
+        test_inject_prefix_byte_identical).
+        degrade_s only matters for EPS_DEGRADE (Addendum v1.2): the injected sat
+        then fades to DEGRADED over degrade_s before dying at t_now. With
+        degrade_s > 0 the fade fires at max(t_now - degrade_s, 0) -- inside the
+        prefix -- so that recomputed prefix carries DEGRADED status and a
+        DEGRADE_START event instead of matching byte for byte (self-consistent
+        recompute, same run_scenario output either way)."""
         idx = _parse_sat_id(sat_display_id)
         failures = sorted(
-            list(base.failures) + [Failure(t=t_now, sat_id=idx, mode=FailureMode(mode))],
+            list(base.failures)
+            + [
+                Failure(
+                    t=t_now, sat_id=idx, mode=FailureMode(mode), degrade_s=degrade_s
+                )
+            ],
             key=lambda f: (f.t, f.sat_id),
         )
         augmented = base.model_copy(update={"failures": failures})
@@ -353,11 +366,15 @@ class Session:
         if not self.paused:
             await self._spawn_driver()
 
-    async def inject_failure(self, sat_display_id: str, mode: str) -> None:
+    async def inject_failure(
+        self, sat_display_id: str, mode: str, degrade_s: float = 600.0
+    ) -> None:
         """Live only (section 5.3). 409: not live / run finished / unknown sat /
         already failed (section 7.1). The recompute (LiveSource.with_failure ->
         run_scenario) replans under the session's active policy: the replan
-        seam opened in _prepare is still installed across the live lifetime."""
+        seam opened in _prepare is still installed across the live lifetime.
+        degrade_s is the EPS_DEGRADE fade length (Addendum v1.2); other modes
+        ignore it."""
         if self.mode != "live":
             raise SessionError(409, "failure injection requires a live run")
         source = self._source
@@ -377,8 +394,10 @@ class Session:
         )
         try:
             new_source = await asyncio.wait_for(
-                asyncio.to_thread(LiveSource.with_failure, source.scenario,
-                                  sat_display_id, mode, t_now),
+                asyncio.to_thread(
+                    LiveSource.with_failure, source.scenario, sat_display_id,
+                    mode, t_now, degrade_s,
+                ),
                 self.run_timeout_s,
             )
         except TimeoutError:

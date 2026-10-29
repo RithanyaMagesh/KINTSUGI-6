@@ -10,10 +10,13 @@ from pydantic import BaseModel, Field, model_validator
 
 
 class FailureMode(StrEnum):
-    """DEAD: no comms, no thrust, coasts ballistically. THRUSTER_OUT: reports, cannot maneuver."""
+    """DEAD: no comms, no thrust, coasts ballistically. THRUSTER_OUT: reports, cannot
+    maneuver. EPS_DEGRADE: gradual power death -- with degrade_s > 0 the sat reports
+    DEGRADED for degrade_s before dying exactly like DEAD; degrade_s == 0 is sudden."""
 
     DEAD = "DEAD"
     THRUSTER_OUT = "THRUSTER_OUT"
+    EPS_DEGRADE = "EPS_DEGRADE"
 
 
 class ChiefOrbit(BaseModel):
@@ -49,6 +52,12 @@ class Failure(BaseModel):
     t: float = Field(ge=0, description="Failure time, sim seconds")
     sat_id: int = Field(ge=0)
     mode: FailureMode
+    degrade_s: float = Field(
+        default=0.0, ge=0,
+        description="EPS_DEGRADE fade length, s: the sat is DEGRADED from "
+        "max(t - degrade_s, 0) and dies at t; 0 = sudden (DEAD-equivalent "
+        "run; the FAILURE_DETECTED mode label stays EPS_DEGRADE)",
+    )
 
 
 class Detection(BaseModel):
@@ -102,6 +111,28 @@ class Oracle(BaseModel):
     )
 
 
+class Safety(BaseModel):
+    """Evasive collision avoidance (BACKEND_SPEC Addendum v1.2 item 5): a discrete
+    bounded evasion maneuver -- explicitly NOT potential fields (MASTER_PROMPT 2
+    lock preserved; min_sep stays logged every step). A sat inside evade_radius_m
+    of another burns straight away from it at a_max for evade_ticks ticks; while
+    the range is still inside the radius when the counter expires, a new episode
+    starts (continuous burn until clear). Default-inertness is GEOMETRIC, not
+    flag-off: at the 1000 m default radius the maneuver never fires on any
+    canonical run (P0 worst survivor-dead clearance 1322.6 m, G4 worst min_sep
+    3095.1 m -- GATES.md), so committed scenarios keep byte-identical logs."""
+
+    evasion_enabled: bool = Field(
+        default=True, description="True = evasive collision avoidance active"
+    )
+    evade_radius_m: float = Field(
+        default=1000.0, gt=0, description="Keep-out radius that triggers evasion, m"
+    )
+    evade_ticks: int = Field(
+        default=25, ge=1, description="Ticks per evasion episode (bounded burn length)"
+    )
+
+
 class Scenario(BaseModel):
     name: str = Field(min_length=1)
     seed: int = Field(ge=0)
@@ -121,6 +152,7 @@ class Scenario(BaseModel):
     detection: Detection = Field(default_factory=Detection)
     allocation: Allocation = Field(default_factory=Allocation)
     oracle: Oracle = Field(default_factory=Oracle)
+    safety: Safety = Field(default_factory=Safety)
 
     @property
     def n_sats(self) -> int:

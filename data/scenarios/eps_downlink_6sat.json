@@ -1,0 +1,27 @@
+{
+  "name": "eps_downlink_6sat",
+  "seed": 42,
+  "duration_s": 17028.0,
+  "dt_s": 2.0,
+  "chief": {"altitude_km": 500.0},
+  "formation": {"n_slots": 6, "radial_amp_km": 8.0, "phase_offset_deg": 0.0},
+  "a_max_mps2": 0.1,
+  "gains": {"wn": 0.01, "zeta": 1.0},
+  "sensor": {"fov_half_angle_deg": 1.5, "grid_step_km": 2.0, "grid_extent_km": 30.0},
+  "roles": ["leader", "imager", "imager", "imager", "imager", "downlink"],
+  "failures": [
+    {"t": 2400.0, "sat_id": 5, "mode": "EPS_DEGRADE", "degrade_s": 1800.0}
+  ],
+  "recovery_enabled": true,
+  "detection": {"missed_ticks_k": 3},
+  "allocation": {
+    "w1": 1.0,
+    "w2": 0.5,
+    "w3": 2.0,
+    "min_sep_km": 2.0,
+    "dv_budget_mps": 200.0,
+    "amp_sweep": [1.0],
+    "phase_sweep_deg": [0.0, 30.0, 60.0, 90.0, 120.0, 150.0, 180.0, 210.0, 240.0, 270.0, 300.0, 330.0],
+    "method": "hungarian"
+  }
+}

@@ -257,7 +257,7 @@ async def simulation_reset() -> dict:
 @app.post("/failure/inject")
 async def failure_inject(req: InjectRequest) -> dict:
     session = get_state().session
-    await _run(session.inject_failure(req.sat_id, req.mode))()
+    await _run(session.inject_failure(req.sat_id, req.mode, req.degrade_s))()
     return {"status": "injected", "mode": session.mode, "sim_time": session.sim_time,
             "injected": {"sat_id": req.sat_id, "mode": req.mode}}
 

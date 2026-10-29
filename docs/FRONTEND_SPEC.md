@@ -1205,10 +1205,17 @@ type MissionState =
 
 type SatelliteStatus =
   | "healthy"
+  | "degraded"                   // Addendum v1.2: EPS_DEGRADE fade in progress — new-family logs only
   | "failed"
   | "reconfiguring"
   | "recovered"
   | "inactive";
+
+// Addendum v1.2 note (BACKEND_SPEC §6.1 wire mapping): the wire emits `"degraded"`
+// for a log status of `DEGRADED` — a satellite fading from an EPS_DEGRADE failure
+// that still reports, still holds its seat, and counts for coverage until it dies
+// as `"failed"`. Old committed logs never carry `DEGRADED`, so replays are
+// unaffected; during the fade `failureType` is `"DEGRADED"` as well.
 
 interface Satellite {
   id: string;
@@ -1218,7 +1225,7 @@ interface Satellite {
   v: [number, number, number];   // velocity [m/s]
   dv_used: number;               // Δv consumed [m/s]
   targetSlot?: string;
-  failureType?: string;          // "DEAD" | "THRUSTER_OUT"
+  failureType?: string;          // "DEAD" | "THRUSTER_OUT" | "DEGRADED" (Addendum v1.2)
   risk?: number;                 // 0-1 failure-risk score — predictor-family frames only (Appendix D); omit when absent
 }
 

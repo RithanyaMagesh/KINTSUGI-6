@@ -221,3 +221,48 @@ def test_to_event_shape():
         "level": "critical",
         "message": "boom",
     }
+
+
+def test_wire_degraded_status_maps_to_degraded():
+    """Addendum v1.2: the new per-sat status DEGRADED maps to wire status
+    'degraded' with failure_type preserved; old statuses are untouched."""
+    line = _nominal_tick_line()
+    line["sats"][0]["status"] = "DEGRADED"
+    state = to_sim_state(line, SessionEnrich())
+    sat0, sat5 = state["sats"]
+    assert sat0["status"] == "degraded"
+    assert sat0["failure_type"] == "DEGRADED"  # preserved per section 6.1
+    assert sat5["status"] == "failed"  # existing rows unchanged
+    assert sat5["failure_type"] == "THRUSTER_OUT"
+
+
+def test_wire_self_report_failure_message():
+    """Addendum v1.2: a FAILURE_DETECTED payload with self_report: true appends
+    '(self-reported)' to the message; payloads without the key render exactly
+    as before (additive key, old logs unchanged)."""
+    enrich = SessionEnrich()
+
+    def _line(payload):
+        return {
+            "v": 1,
+            "t": 6.0,
+            "state": "FAILURE_DETECTED",
+            "coverage": 0.5,
+            "min_sep": 10.0,
+            "sats": [],
+            "event": {"type": "FAILURE_DETECTED", "payload": payload},
+        }
+
+    reported = to_messages(
+        _line({"sat_id": 3, "mode": "THRUSTER_OUT", "t_fail": 6.0, "t_detect": 6.0,
+               "self_report": True}),
+        enrich,
+    )
+    assert reported[1]["message"] == "SAT-4 THRUSTER_OUT failure detected (self-reported)"
+    assert enrich.detection_latency_s == 0.0  # t_detect == t_fail
+
+    plain = to_messages(
+        _line({"sat_id": 1, "mode": "DEAD", "t_fail": 2.0, "t_detect": 6.0}),
+        SessionEnrich(),
+    )
+    assert plain[1]["message"] == "SAT-2 DEAD failure detected"  # unchanged shape
