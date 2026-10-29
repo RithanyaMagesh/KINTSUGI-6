@@ -154,11 +154,8 @@ export class SwarmSceneController {
     const nSeats = Math.max(this.lastSats.length, 1);
     const fit = fitFormation(this.lastSats, nSeats);
     this.syncAllObjects(this.lastSats, fit);
-    if (mode === "global") {
-      this.applyPreset("reset", null);
-    } else {
-      this.applyPreset("formation", null);
-    }
+    // Smoothly animate camera distance and target via AutoFitController
+    this.fit.onPreset(mode === "global" ? "reset" : "formation");
   }
 
   refreshTheme(): void {
