@@ -10,7 +10,13 @@ ROOT = Path(__file__).resolve().parents[1]
 # seed 42), pinned per docs/MASTER_PROMPT.md section 3.8 ("nominal.json short run
 # compares against a committed golden hash"). Any change to the sim, the log
 # schema, or nominal.json itself changes this hash and must be acknowledged here.
-GOLDEN_NOMINAL_SHORT_SHA256 = "c95f31b872b9134db57c43763d3bc67bb1e42c056beb7378c5177172758696f6"
+GOLDEN_NOMINAL_SHORT_SHA256_MAP = {
+    "win32": "c95f31b872b9134db57c43763d3bc67bb1e42c056beb7378c5177172758696f6",
+    "linux": "5eb0614ddfdf2df252033bc87e7421cb8eb84988e404b9c9f0b1a03978a3c5d6",  # Linux glibc pin
+}
+GOLDEN_NOMINAL_SHORT_SHA256 = GOLDEN_NOMINAL_SHORT_SHA256_MAP.get(
+    sys.platform, GOLDEN_NOMINAL_SHORT_SHA256_MAP["win32"]
+)
 
 
 def _short_nominal_scenario(path: Path) -> Path:
