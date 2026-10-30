@@ -477,6 +477,9 @@ def run_scenario(
             if method == "do_no_harm_hold":
                 pairs = [(idx, idx) for idx in range(len(assignable))]
                 max_transfer = 0.0
+                for row, col in pairs:
+                    sat_id = assignable[row]
+                    roles[sat_id] = plan.seat_roles[col]
             else:
                 # DEGRADED sats are excluded from assignable (status != NOMINAL) but
                 # keep PD-holding their assigned seat (Addendum v1.2, module

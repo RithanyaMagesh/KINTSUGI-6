@@ -271,7 +271,7 @@ def replan(
         if plan.coverage < cov_curr:
             k = len(survivor_roles)
             hold = FormationPlan(
-                base_amp_m, 0.0, current_slots, list(survivor_roles), cov_curr, "do_no_harm_hold"
+                base_amp_m, 0.0, current_slots, seats, cov_curr, "do_no_harm_hold"
             )
             return hold, [(i, i) for i in range(k)], 0.0, "do_no_harm_hold", 0.0, np.zeros((k, k))
     surv_pos = np.array([np.asarray(s)[:3] for s in survivor_states])
