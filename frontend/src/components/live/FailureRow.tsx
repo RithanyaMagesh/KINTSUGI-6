@@ -18,6 +18,8 @@ interface Props {
 
 export default function FailureRowView({ row, maxSat, disabled, onChange, onRemove }: Props) {
   const [tText, setTText] = useState(String(row.t));
+  const [degradeText, setDegradeText] = useState(String(row.degrade_s ?? 600));
+
   // Sync from the row when the seat list shrinks or the row is edited elsewhere.
   const [seenT, setSeenT] = useState(row.t);
   if (seenT !== row.t) {
@@ -25,10 +27,24 @@ export default function FailureRowView({ row, maxSat, disabled, onChange, onRemo
     setTText(String(row.t));
   }
 
+  const [seenDegrade, setSeenDegrade] = useState(row.degrade_s);
+  if (seenDegrade !== row.degrade_s) {
+    setSeenDegrade(row.degrade_s);
+    setDegradeText(String(row.degrade_s ?? 600));
+  }
+
   function commitT(): void {
     const v = Number(tText);
     if (tText.trim() !== "" && Number.isFinite(v)) onChange({ t: Math.max(0, v) });
     setTText(String(row.t)); // junk snaps back to the committed value
+  }
+
+  function commitDegrade(): void {
+    const v = Number(degradeText);
+    if (degradeText.trim() !== "" && Number.isFinite(v)) {
+      onChange({ degrade_s: Math.max(0, v) });
+    }
+    setDegradeText(String(row.degrade_s ?? 600));
   }
 
   return (
@@ -67,7 +83,13 @@ export default function FailureRowView({ row, maxSat, disabled, onChange, onRemo
           aria-label={`Failure mode for SAT-${row.satId + 1}: ${MODE_DESCRIPTION[row.mode]}`}
           value={row.mode}
           disabled={disabled}
-          onChange={(e) => onChange({ mode: e.target.value as FailureMode })}
+          onChange={(e) => {
+            const nextMode = e.target.value as FailureMode;
+            onChange({
+              mode: nextMode,
+              degrade_s: nextMode === "EPS_DEGRADE" ? (row.degrade_s ?? 600) : undefined,
+            });
+          }}
         >
           {(Object.keys(MODE_DESCRIPTION) as FailureMode[]).map((m) => (
             <option key={m} value={m}>
@@ -75,6 +97,22 @@ export default function FailureRowView({ row, maxSat, disabled, onChange, onRemo
             </option>
           ))}
         </select>
+        {row.mode === "EPS_DEGRADE" && (
+          <input
+            className={`${chrome.input} ${styles.cellInput}`}
+            type="number"
+            min="0"
+            step="10"
+            value={degradeText}
+            disabled={disabled}
+            placeholder="Fade (s)"
+            title="Fade horizon in seconds"
+            aria-label={`Degrade horizon in seconds for SAT-${row.satId + 1}`}
+            onChange={(e) => setDegradeText(e.target.value)}
+            onBlur={commitDegrade}
+            style={{ marginTop: "4px" }}
+          />
+        )}
       </td>
       <td>
         <button

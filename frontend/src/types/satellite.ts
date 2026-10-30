@@ -14,7 +14,8 @@ export type SatelliteStatus =
   | "failed"
   | "reconfiguring"
   | "recovered"
-  | "inactive";
+  | "inactive"
+  | "degraded";
 
 export interface Satellite {
   id: string;
@@ -24,7 +25,7 @@ export interface Satellite {
   v: [number, number, number]; // velocity [m/s]
   dv_used: number; // Δv consumed [m/s]
   targetSlot?: string;
-  failureType?: string; // "DEAD" | "THRUSTER_OUT"
+  failureType?: string; // "DEAD" | "THRUSTER_OUT" | "EPS_DEGRADE"
   risk?: number; // 0-1 failure-risk score — predictor-family frames only; omit when absent
 }
 

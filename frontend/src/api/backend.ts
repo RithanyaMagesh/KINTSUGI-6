@@ -229,8 +229,8 @@ export const backend = {
   simulationPause: () => post("/simulation/pause"),
   simulationResume: () => post("/simulation/resume"),
   simulationReset: () => post("/simulation/reset"),
-  failureInject: (satId: string, mode: string) =>
-    post("/failure/inject", { sat_id: satId, mode }),
+  failureInject: (satId: string, mode: string, degrade_s: number = 0.0) =>
+    post("/failure/inject", { sat_id: satId, mode, degrade_s }),
 
   replayLoad: (filename: string, speed = 100) =>
     post("/replay/load", { filename, speed }),

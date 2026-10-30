@@ -8,13 +8,14 @@
 export const ROLES = ["leader", "imager", "downlink"] as const;
 export type Role = (typeof ROLES)[number];
 
-export const FAILURE_MODES = ["DEAD", "THRUSTER_OUT"] as const;
+export const FAILURE_MODES = ["DEAD", "THRUSTER_OUT", "EPS_DEGRADE"] as const;
 export type FailureMode = (typeof FAILURE_MODES)[number];
 
 /** One-line descriptions (cubesat/scenario.py FailureMode docstring). */
 export const MODE_DESCRIPTION: Record<string, string> = {
   DEAD: "goes silent and coasts ballistically as an obstacle",
   THRUSTER_OUT: "keeps reporting heartbeats but cannot maneuver",
+  EPS_DEGRADE: "fades to degraded power before complete failure",
 };
 
 /** Recovery policies sent as `policy` on /simulation/start (cubesat/wire.py). */
@@ -48,6 +49,7 @@ export interface FailureRow {
   /** Failure time, sim seconds (Failure.t, ge=0). */
   t: number;
   mode: FailureMode;
+  degrade_s?: number;
 }
 
 export interface BuilderNumbers {
@@ -78,7 +80,7 @@ export interface ScenarioPreset {
   nSats: number;
   roles: Role[];
   nums: NumberValues;
-  failures: Array<{ satId: number; t: number; mode: FailureMode }>;
+  failures: Array<{ satId: number; t: number; mode: FailureMode; degrade_s?: number }>;
 }
 
 /** Exact committed scenarios from data/scenarios/*.json — loading a preset
@@ -93,24 +95,27 @@ export const COMMITTED_PRESETS: ReadonlyArray<ScenarioPreset> = [
     nSats: 6,
     roles: ["leader", "imager", "imager", "imager", "imager", "downlink"],
     nums: {
-      seed: 42,
-      durationS: 17028,
-      dtS: 2,
-      altitudeKm: 500,
-      radialAmpKm: 8,
-      phaseOffsetDeg: 0,
-      aMax: 0.1,
-      wn: 0.01,
-      zeta: 1,
-      fovHalfAngleDeg: 1.5,
-      gridStepKm: 2,
-      gridExtentKm: 30,
-      speed: 20,
+      seed: 42, durationS: 17028, dtS: 2, altitudeKm: 500, radialAmpKm: 8,
+      phaseOffsetDeg: 0, aMax: 0.1, wn: 0.01, zeta: 1,
+      fovHalfAngleDeg: 1.5, gridStepKm: 2, gridExtentKm: 30, speed: 20,
     },
     failures: [
       { satId: 1, t: 1200, mode: "DEAD" },
       { satId: 2, t: 1500, mode: "DEAD" },
     ],
+  },
+  {
+    filename: "eps_leader_6sat.json",
+    label: "eps_leader_6sat.json — 6-sat leader EPS_DEGRADE demo",
+    summary: "6 sats, 8 km ellipse; SAT-1 (leader) EPS_DEGRADE at 2400 s (1800 s fade).",
+    nSats: 6,
+    roles: ["leader", "imager", "imager", "imager", "imager", "downlink"],
+    nums: {
+      seed: 42, durationS: 17028, dtS: 2, altitudeKm: 500, radialAmpKm: 8,
+      phaseOffsetDeg: 0, aMax: 0.1, wn: 0.01, zeta: 1,
+      fovHalfAngleDeg: 1.5, gridStepKm: 2, gridExtentKm: 30, speed: 20,
+    },
+    failures: [{ satId: 0, t: 2400, mode: "EPS_DEGRADE", degrade_s: 1800 }],
   },
   {
     filename: "firefly_swarm.json",
@@ -119,19 +124,9 @@ export const COMMITTED_PRESETS: ReadonlyArray<ScenarioPreset> = [
     nSats: 6,
     roles: ["leader", "imager", "imager", "imager", "imager", "downlink"],
     nums: {
-      seed: 42,
-      durationS: 17363.7,
-      dtS: 2,
-      altitudeKm: 589.309,
-      radialAmpKm: 8,
-      phaseOffsetDeg: 0,
-      aMax: 0.1,
-      wn: 0.01,
-      zeta: 1,
-      fovHalfAngleDeg: 1.5,
-      gridStepKm: 2,
-      gridExtentKm: 30,
-      speed: 20,
+      seed: 42, durationS: 17363.7, dtS: 2, altitudeKm: 589.309, radialAmpKm: 8,
+      phaseOffsetDeg: 0, aMax: 0.1, wn: 0.01, zeta: 1,
+      fovHalfAngleDeg: 1.5, gridStepKm: 2, gridExtentKm: 30, speed: 20,
     },
     failures: [
       { satId: 1, t: 1200, mode: "DEAD" },
@@ -145,19 +140,9 @@ export const COMMITTED_PRESETS: ReadonlyArray<ScenarioPreset> = [
     nSats: 8,
     roles: ["leader", "imager", "imager", "imager", "imager", "imager", "imager", "downlink"],
     nums: {
-      seed: 42,
-      durationS: 17028,
-      dtS: 2,
-      altitudeKm: 500,
-      radialAmpKm: 8.25,
-      phaseOffsetDeg: 0,
-      aMax: 0.1,
-      wn: 0.01,
-      zeta: 1,
-      fovHalfAngleDeg: 1.5,
-      gridStepKm: 2,
-      gridExtentKm: 30,
-      speed: 20,
+      seed: 42, durationS: 17028, dtS: 2, altitudeKm: 500, radialAmpKm: 8.25,
+      phaseOffsetDeg: 0, aMax: 0.1, wn: 0.01, zeta: 1,
+      fovHalfAngleDeg: 1.5, gridStepKm: 2, gridExtentKm: 30, speed: 20,
     },
     failures: [
       { satId: 1, t: 1200, mode: "DEAD" },
@@ -172,19 +157,9 @@ export const COMMITTED_PRESETS: ReadonlyArray<ScenarioPreset> = [
     nSats: 6,
     roles: ["leader", "imager", "imager", "imager", "imager", "downlink"],
     nums: {
-      seed: 42,
-      durationS: 17028,
-      dtS: 2,
-      altitudeKm: 500,
-      radialAmpKm: 8,
-      phaseOffsetDeg: 0,
-      aMax: 0.1,
-      wn: 0.01,
-      zeta: 1,
-      fovHalfAngleDeg: 1.5,
-      gridStepKm: 2,
-      gridExtentKm: 30,
-      speed: 20,
+      seed: 42, durationS: 17028, dtS: 2, altitudeKm: 500, radialAmpKm: 8,
+      phaseOffsetDeg: 0, aMax: 0.1, wn: 0.01, zeta: 1,
+      fovHalfAngleDeg: 1.5, gridStepKm: 2, gridExtentKm: 30, speed: 20,
     },
     failures: [
       { satId: 0, t: 2400, mode: "DEAD" },
@@ -198,19 +173,9 @@ export const COMMITTED_PRESETS: ReadonlyArray<ScenarioPreset> = [
     nSats: 4,
     roles: ["leader", "imager", "imager", "downlink"],
     nums: {
-      seed: 42,
-      durationS: 17028,
-      dtS: 2,
-      altitudeKm: 500,
-      radialAmpKm: 8,
-      phaseOffsetDeg: 0,
-      aMax: 0.1,
-      wn: 0.01,
-      zeta: 1,
-      fovHalfAngleDeg: 1.5,
-      gridStepKm: 2,
-      gridExtentKm: 30,
-      speed: 20,
+      seed: 42, durationS: 17028, dtS: 2, altitudeKm: 500, radialAmpKm: 8,
+      phaseOffsetDeg: 0, aMax: 0.1, wn: 0.01, zeta: 1,
+      fovHalfAngleDeg: 1.5, gridStepKm: 2, gridExtentKm: 30, speed: 20,
     },
     failures: [{ satId: 0, t: 1200, mode: "DEAD" }],
   },
@@ -221,19 +186,9 @@ export const COMMITTED_PRESETS: ReadonlyArray<ScenarioPreset> = [
     nSats: 6,
     roles: ["leader", "imager", "imager", "imager", "imager", "downlink"],
     nums: {
-      seed: 42,
-      durationS: 5676,
-      dtS: 2,
-      altitudeKm: 500,
-      radialAmpKm: 11,
-      phaseOffsetDeg: 0,
-      aMax: 0.01,
-      wn: 0.01,
-      zeta: 1,
-      fovHalfAngleDeg: 1.5,
-      gridStepKm: 2,
-      gridExtentKm: 30,
-      speed: 20,
+      seed: 42, durationS: 5676, dtS: 2, altitudeKm: 500, radialAmpKm: 11,
+      phaseOffsetDeg: 0, aMax: 0.01, wn: 0.01, zeta: 1,
+      fovHalfAngleDeg: 1.5, gridStepKm: 2, gridExtentKm: 30, speed: 20,
     },
     failures: [],
   },
@@ -306,11 +261,20 @@ export function buildScenario(
     roles: [...roles],
     failures: failures
       .filter((f) => Number.isInteger(f.satId) && f.satId >= 0 && f.satId < roles.length)
-      .map((f) => ({
-        t: Math.max(0, Number.isFinite(f.t) ? f.t : 0),
-        sat_id: f.satId,
-        mode: f.mode,
-      })),
+      .map((f) => {
+        const row: Record<string, unknown> = {
+          t: Math.max(0, Number.isFinite(f.t) ? f.t : 0),
+          sat_id: f.satId,
+          mode: f.mode,
+        };
+        if (f.mode === "EPS_DEGRADE") {
+          row.degrade_s =
+            f.degrade_s !== undefined && Number.isFinite(f.degrade_s)
+              ? Math.max(0, f.degrade_s)
+              : 600.0;
+        }
+        return row;
+      }),
   };
 }
 

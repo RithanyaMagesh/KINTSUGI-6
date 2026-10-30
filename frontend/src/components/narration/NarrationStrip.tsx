@@ -10,6 +10,8 @@ import {
   useRecoveryStore,
   selectLatestFailure,
   selectLatestAssignment,
+  selectDegradedSats,
+  selectDegradedInfo,
 } from "../../stores/recoveryStore";
 import type { FailureRecord, AssignmentEvent } from "../../stores/recoveryStore";
 import type { MissionState, Satellite } from "../../types/satellite";
@@ -57,9 +59,24 @@ function narrationFor(
   coverage: number | null,
   failure: FailureRecord | null,
   assignment: AssignmentEvent | null,
+  degradedSats: string[] = [],
+  degradedInfo: Record<string, { tDegraded: number; degrade_s?: number }> = {},
 ): ReactNode {
   const coverageNow = coverage ?? failure?.coverage.current ?? null;
   const { rows, movers } = moversOf(assignment);
+
+  const degradedSat = satellites.find((s) => s.status === "degraded");
+  const degradedId = degradedSat?.id ?? (degradedSats.length > 0 ? degradedSats[0] : null);
+  if (degradedId && (missionState === "NOMINAL" || missionState === "DEGRADED")) {
+    const dId = degradedId.startsWith("SAT-") ? degradedId : `SAT-${degradedId}`;
+    const fadeS = degradedInfo[degradedId]?.degrade_s ?? 600;
+    return (
+      <>
+        <Mono>{dId}</Mono> power degrading (<Mono>{fadeS}s</Mono> fade) - proactive role handoff in progress.
+      </>
+    );
+  }
+
   switch (missionState) {
     case "NOMINAL": {
       if (satellites.length === 0) return "Nominal — waiting for the first telemetry frame.";
@@ -216,21 +233,19 @@ export default function NarrationStrip() {
   const metricsCoverage = useSimStore((s) => s.metrics.coverage);
   const failure = useRecoveryStore(selectLatestFailure);
   const assignment = useRecoveryStore(selectLatestAssignment);
+  const degradedSats = useRecoveryStore(selectDegradedSats);
+  const degradedInfo = useRecoveryStore(selectDegradedInfo);
 
-  // Multiple provable movers on the latest role_reassignment (prevSlot ≠
-  // target measured on more than one row): the sentence names the first mover
-  // + a count, which still reads as "the vacated slot's neighbor moved".
-  // While that reassignment IS the story (REPLANNING / RECONFIGURING), mount
-  // the allocator's WHY line beneath it — the same constant RecoveryLog
-  // prints under every assignment episode (beta report: "satellite 5 failed
-  // — why did satellite 6 go?"). Never claimed from rows alone: prevSlot is
-  // required, so the bridge path (prevSlot null) never shows it.
   const { movers } = moversOf(assignment);
   const multiMovers =
     movers.length > 1 &&
     (missionState === "REPLANNING" || missionState === "RECONFIGURING");
 
-  const color = missionStateColor(missionState);
+  const isDegraded = satellites.some((s) => s.status === "degraded") || degradedSats.length > 0;
+  const color =
+    isDegraded && missionState === "NOMINAL"
+      ? "var(--status-caution)"
+      : missionStateColor(missionState);
 
   return (
     <section
@@ -245,7 +260,15 @@ export default function NarrationStrip() {
       ) : (
         <div role="status" aria-live="polite">
           <p className={styles.sentence}>
-            {narrationFor(missionState, satellites, metricsCoverage ?? null, failure, assignment)}
+            {narrationFor(
+              missionState,
+              satellites,
+              metricsCoverage ?? null,
+              failure,
+              assignment,
+              degradedSats,
+              degradedInfo,
+            )}
           </p>
           {multiMovers && (
             <p

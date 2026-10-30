@@ -11,9 +11,10 @@ import { useUiStore } from "../../stores/uiStore";
 import chrome from "../../styles/chrome.module.css";
 import styles from "./FailureInjectionPanel.module.css";
 
-const MODE_DESCRIPTIONS: Record<"DEAD" | "THRUSTER_OUT", string> = {
+const MODE_DESCRIPTIONS: Record<"DEAD" | "THRUSTER_OUT" | "EPS_DEGRADE", string> = {
   DEAD: "Stops heartbeats and thrust — triggers autonomous detection (4 s) and Hungarian slot recovery.",
   THRUSTER_OUT: "Keeps sending heartbeats but cannot maneuver (reactive heartbeat detector does not replan).",
+  EPS_DEGRADE: "Gradual power degradation — triggers proactive role handoff before complete failure.",
 };
 
 export default function FailureInjectionPanel() {
@@ -22,7 +23,8 @@ export default function FailureInjectionPanel() {
   const selectedSatelliteId = useUiStore((s) => s.selectedSatelliteId);
   const viewMode = useUiStore((s) => s.viewMode);
   const [satId, setSatId] = useState("");
-  const [failureMode, setFailureMode] = useState<"DEAD" | "THRUSTER_OUT">("DEAD");
+  const [failureMode, setFailureMode] = useState<"DEAD" | "THRUSTER_OUT" | "EPS_DEGRADE">("DEAD");
+  const [degradeS, setDegradeS] = useState(600.0);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -44,7 +46,11 @@ export default function FailureInjectionPanel() {
     setBusy(true);
     setError(null);
     try {
-      await backend.failureInject(satId, effectiveMode);
+      await backend.failureInject(
+        satId,
+        effectiveMode,
+        effectiveMode === "EPS_DEGRADE" ? degradeS : 0.0,
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Injection failed");
     } finally {
@@ -79,21 +85,43 @@ export default function FailureInjectionPanel() {
       </div>
 
       {viewMode === "advanced" && (
-        <div className={styles.row}>
-          <label className={chrome.fieldLabel} htmlFor="inject-mode">
-            Failure mode
-          </label>
-          <select
-            id="inject-mode"
-            className={chrome.select}
-            value={failureMode}
-            disabled={!live || busy}
-            onChange={(e) => setFailureMode(e.target.value as "DEAD" | "THRUSTER_OUT")}
-          >
-            <option value="DEAD">DEAD (triggers autonomous replanning)</option>
-            <option value="THRUSTER_OUT">THRUSTER_OUT (no thrust, keeps heartbeats)</option>
-          </select>
-        </div>
+        <>
+          <div className={styles.row}>
+            <label className={chrome.fieldLabel} htmlFor="inject-mode">
+              Failure mode
+            </label>
+            <select
+              id="inject-mode"
+              className={chrome.select}
+              value={failureMode}
+              disabled={!live || busy}
+              onChange={(e) =>
+                setFailureMode(e.target.value as "DEAD" | "THRUSTER_OUT" | "EPS_DEGRADE")
+              }
+            >
+              <option value="DEAD">DEAD (triggers autonomous replanning)</option>
+              <option value="THRUSTER_OUT">THRUSTER_OUT (no thrust, keeps heartbeats)</option>
+              <option value="EPS_DEGRADE">EPS_DEGRADE (gradual power death)</option>
+            </select>
+          </div>
+          {failureMode === "EPS_DEGRADE" && (
+            <div className={styles.row}>
+              <label className={chrome.fieldLabel} htmlFor="inject-degrade-s">
+                Fade horizon (seconds)
+              </label>
+              <input
+                id="inject-degrade-s"
+                className={chrome.input}
+                type="number"
+                min="0"
+                step="10"
+                value={degradeS}
+                disabled={!live || busy}
+                onChange={(e) => setDegradeS(Math.max(0, Number(e.target.value)))}
+              />
+            </div>
+          )}
+        </>
       )}
 
       <button

@@ -24,6 +24,8 @@ export function satelliteStatusColor(status: string): string {
   switch (status) {
     case "healthy":
       return "var(--status-nominal)";
+    case "degraded":
+      return "var(--status-caution)";
     case "failed":
       return "var(--status-failed)";
     case "reconfiguring":

@@ -26,6 +26,8 @@ export function statusToken(status: string): string {
   switch (status) {
     case "healthy":
       return "--status-nominal";
+    case "degraded":
+      return "--status-caution";
     case "failed":
       return "--status-failed";
     case "reconfiguring":
