@@ -8,6 +8,21 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
+# Resource bounds (audit: scenarios are uploaded through the API by an
+# unauthenticated console user, so every derived allocation must be bounded --
+# target_grid materializes (2*extent/step+1)^2 points per tick, the sweeps
+# multiply into the replan's candidate count, and duration/dt set the tick
+# count). Each cap sits ~5x above every committed scenario, benchmark and
+# sweep value (largest legit: 961 grid points, 12-entry phase sweep, 8 sats,
+# 8515 ticks), so canonical runs validate unchanged and logs stay
+# byte-identical (AGENTS.md invariant 2).
+MAX_GRID_POINTS = 10_000
+MAX_SWEEP_ENTRIES = 64
+MAX_SATS = 32
+MAX_FAILURES = 64
+MAX_DURATION_S = 86_400.0
+MAX_TICKS = 100_000
+
 
 class FailureMode(StrEnum):
     """DEAD: no comms, no thrust, coasts ballistically. THRUSTER_OUT: reports, cannot
@@ -27,7 +42,7 @@ class ChiefOrbit(BaseModel):
 
 class Formation(BaseModel):
     n_slots: int = Field(
-        ge=2, description="Number of phase-spaced passive-ellipse slots"
+        ge=2, le=MAX_SATS, description="Number of phase-spaced passive-ellipse slots"
     )
     radial_amp_km: float = Field(
         gt=0, description="Radial amplitude of each drift-free 2:1 ellipse, km"
@@ -46,6 +61,21 @@ class Sensor(BaseModel):
     fov_half_angle_deg: float = Field(gt=0, le=45, description="Imager half field of view, deg")
     grid_step_km: float = Field(gt=0, description="Target grid spacing in the (y, z) plane, km")
     grid_extent_km: float = Field(gt=0, description="Half-extent of the square target grid, km")
+
+    @model_validator(mode="after")
+    def _grid_fits_budget(self) -> Sensor:
+        # coverage.target_grid materializes (2*extent/step+1)^2 points per tick;
+        # only gt=0 bounds would let one uploaded scenario pin unbounded memory
+        # in the shared server process (audit, medium). Same point-count formula
+        # as cubesat/coverage.py:33-35.
+        n_per_axis = int(round(2.0 * self.grid_extent_km / self.grid_step_km)) + 1
+        if n_per_axis * n_per_axis > MAX_GRID_POINTS:
+            raise ValueError(
+                f"target grid is {n_per_axis}x{n_per_axis} = {n_per_axis ** 2} points, "
+                f"above the {MAX_GRID_POINTS}-point budget; raise grid_step_km or "
+                f"lower grid_extent_km"
+            )
+        return self
 
 
 class Failure(BaseModel):
@@ -87,11 +117,13 @@ class Allocation(BaseModel):
     amp_sweep: list[float] = Field(
         default_factory=lambda: [1.0],
         min_length=1,
+        max_length=MAX_SWEEP_ENTRIES,
         description="Radial-amplitude multipliers swept for the survivor formation",
     )
     phase_sweep_deg: list[float] = Field(
         default_factory=lambda: [0.0, 60.0, 120.0, 180.0, 240.0, 300.0],
         min_length=1,
+        max_length=MAX_SWEEP_ENTRIES,
         description="Formation phase offsets swept, deg",
     )
     method: Literal["hungarian", "greedy"] = Field(
@@ -136,18 +168,34 @@ class Safety(BaseModel):
 class Scenario(BaseModel):
     name: str = Field(min_length=1)
     seed: int = Field(ge=0)
-    duration_s: float = Field(gt=0, description="Simulated duration, seconds")
+    duration_s: float = Field(
+        gt=0, le=MAX_DURATION_S, description="Simulated duration, seconds"
+    )
     dt_s: float = Field(gt=0, le=10, description="Fixed integration step, seconds")
     chief: ChiefOrbit
     formation: Formation
     a_max_mps2: float = Field(gt=0, description="Thrust saturation, m/s^2")
     gains: Gains
     sensor: Sensor
-    roles: list[str] = Field(min_length=2, description="One role per satellite, index = sat id")
-    failures: list[Failure] = Field(default_factory=list)
+    roles: list[str] = Field(
+        min_length=2, max_length=MAX_SATS, description="One role per satellite, index = sat id"
+    )
+    failures: list[Failure] = Field(default_factory=list, max_length=MAX_FAILURES)
     recovery_enabled: bool = Field(
         default=True,
         description="False = detect failures but never replan (no-recovery baseline)",
+    )
+    reassign_on_degrade: bool = Field(
+        default=False,
+        description=(
+            "Degrade-trigger policy (GATES.md 2026-10-29 pre-registration): when a "
+            "satellite holding a critical role (leader/downlink) transitions "
+            "NOMINAL -> DEGRADED (the EPS_DEGRADE fade onset), proactively swap its "
+            "seat and role with the lowest-index healthy non-critical satellite -- "
+            "the oracle path's swap, logged as ORACLE_SWAP with payload mode "
+            "'degrade_trigger'. Default-off: canonical scenarios never set it and "
+            "stay byte-identical."
+        ),
     )
     detection: Detection = Field(default_factory=Detection)
     allocation: Allocation = Field(default_factory=Allocation)
@@ -175,6 +223,21 @@ class Scenario(BaseModel):
             raise ValueError(
                 f"formation.n_slots={self.formation.n_slots} must equal "
                 f"len(roles)={self.n_sats}"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _bounded_step_count(self) -> Scenario:
+        # The run length is duration/dt ticks (cubesat/sim.py:210); dt_s alone
+        # has no useful lower bound, so duration_s=1e9 / dt_s=1e-9 must be
+        # refused here, not discovered as an hour-long orphan compute thread
+        # after the server's 60 s timeout (audit, medium).
+        n_ticks = int(round(self.duration_s / self.dt_s)) + 1
+        if n_ticks > MAX_TICKS:
+            raise ValueError(
+                f"duration_s={self.duration_s} / dt_s={self.dt_s} implies "
+                f"{n_ticks} ticks, above the {MAX_TICKS}-tick budget; raise dt_s "
+                f"or lower duration_s"
             )
         return self
 

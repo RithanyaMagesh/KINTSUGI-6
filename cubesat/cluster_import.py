@@ -26,6 +26,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import sys
 from copy import deepcopy
 from pathlib import Path
@@ -35,6 +36,29 @@ from cubesat.hcw import MU, R_EARTH, mean_motion
 _ECC_GATE = 1e-3  # near-circular chief gate (see module docstring)
 _ALT_MIN_KM, _ALT_MAX_KM = 160.0, 2000.0  # mirrors ChiefOrbit in cubesat.scenario
 _REQUIRED_FIELDS = ("OBJECT_NAME", "NORAD_CAT_ID", "MEAN_MOTION", "ECCENTRICITY")
+
+
+def _confine_output_path(
+    parser: argparse.ArgumentParser, label: str, path: Path
+) -> None:
+    """Path-confinement guard, copied from cubesat/benchmark.py:366 (Mimosa
+    finding: the guard shipped there only). The CLI-provided output path must
+    resolve inside the repository (this file's parents[1]) before any write
+    uses it. Refusal is a clean argparse error (usage + message on stderr,
+    exit 2); nothing is read or written. Duplicated rather than imported so
+    this module stays stdlib-only (see its module docstring)."""
+    repo_root = Path(__file__).resolve().parents[1]
+    try:
+        resolved = Path(path).resolve()
+        confined = (
+            os.path.commonpath((str(resolved), str(repo_root))) == str(repo_root)
+        )
+    except ValueError:  # different drives on Windows
+        confined = False
+    if not confined:
+        parser.error(
+            f"refusing: {label} {str(path)!r} resolves outside the repository {repo_root}"
+        )
 
 # Reference blocks copied verbatim from data/scenarios/two_failure.json
 # (the tuned G4 scenario); the generated swarm must behave like it.
@@ -189,6 +213,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--n-failures", type=int, default=2, help="DEAD failures (1..n_sats-3)")
     parser.add_argument("--out", required=True, type=Path, help="path for the scenario JSON")
     args = parser.parse_args(argv)
+    # Path-confinement guard (mirrors cubesat/benchmark.py, Mimosa finding:
+    # command-line parameter -> path traversal): --out must resolve inside the
+    # repository before anything is read.
+    _confine_output_path(parser, "--out", args.out)
 
     try:
         records = load_omm_records(args.omm)

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import threading
 import time
 
 import pytest
@@ -237,7 +238,7 @@ def test_session_compute_timeout_504_and_stopped(tmp_path, monkeypatch):
         session.run_timeout_s = 0.05
         monkeypatch.setattr(
             "cubesat.session.run_scenario",
-            lambda scenario: time.sleep(0.5) or [],
+            lambda scenario, cancel_event=None: time.sleep(0.5) or [],
         )
         with pytest.raises(SessionError) as exc:
             await session.start_live("tiny.json", None, SPEED_MAX)
@@ -247,6 +248,90 @@ def test_session_compute_timeout_504_and_stopped(tmp_path, monkeypatch):
         assert hub._queues == [] or all(q.empty() for q in hub._queues)
 
     asyncio.run(main())
+
+
+def test_session_compute_timeout_cancels_compute_thread(tmp_path, monkeypatch):
+    """Audit regression (medium): the run timeout used to abandon a still-
+    running run_scenario thread, so one oversized scenario could pin CPU in
+    the shared server process after its own 504. Now start_live hands the run
+    a cancel event and SETS it on timeout; the thread exits at its next tick
+    (sim.run_scenario contract) instead of running to completion."""
+    observed = []
+
+    def fake_run(scenario, cancel_event=None):
+        observed.append(cancel_event)
+        # Block until the Session cancels (or 5 s: a real failure signal, far
+        # above the 0.05 s timeout, so the test fails by assertion, not hang).
+        assert cancel_event is not None and cancel_event.wait(5.0)
+        raise AssertionError("cancel event was set: the orphan thread must stop")
+
+    async def main():
+        hub, session = _make_session(tmp_path)
+        write_tiny_scenario(tmp_path / "scenarios")
+        session.run_timeout_s = 0.05
+        monkeypatch.setattr("cubesat.session.run_scenario", fake_run)
+        with pytest.raises(SessionError) as exc:
+            await session.start_live("tiny.json", None, SPEED_MAX)
+        assert exc.value.status_code == 504
+        assert observed and observed[0].is_set()
+
+    asyncio.run(main())
+
+
+def test_inject_timeout_cancels_recompute_thread(tmp_path, monkeypatch):
+    """Audit regression (medium), inject path: the same orphan-thread pattern
+    lived in inject_failure's recompute wait; its cancel event must be set on
+    timeout too."""
+    observed = []
+
+    def fake_with_failure(
+        cls, base, sat_display_id, mode, t_now, degrade_s=0.0, cancel_event=None
+    ):
+        observed.append(cancel_event)
+        assert cancel_event is not None and cancel_event.wait(5.0)
+        raise AssertionError("cancel event was set: the orphan recompute must stop")
+
+    async def main():
+        session = _make_session(tmp_path)[1]
+        write_tiny_scenario(tmp_path / "scenarios")
+        await session.start_live("tiny.json", None, SPEED_MAX)
+        await session.pause()  # hold the cursor mid-run so inject is allowed
+        session.run_timeout_s = 0.05
+        monkeypatch.setattr(
+            "cubesat.session.LiveSource.with_failure",
+            classmethod(fake_with_failure),
+        )
+        with pytest.raises(SessionError) as exc:
+            await session.inject_failure("SAT-2", "DEAD")  # SAT-1 already failed in tiny
+        assert exc.value.status_code == 504
+        assert observed and observed[0].is_set()
+
+    asyncio.run(main())
+
+
+def test_run_scenario_cancel_event_unset_is_byte_identical(tmp_path):
+    """The cancel hook is a pure read for every canonical caller: a run with a
+    never-set event must be byte-identical to a run without one (AGENTS.md
+    invariant 2 -- the golden pins depend on it)."""
+    scenario = load_scenario(write_tiny_scenario(tmp_path / "scenarios"))
+    without = [json.dumps(line, sort_keys=True) for line in run_scenario(scenario)]
+    with_event = [
+        json.dumps(line, sort_keys=True)
+        for line in run_scenario(scenario, threading.Event())
+    ]
+    assert with_event == without
+
+
+def test_run_scenario_cancelled_event_raises_no_partial_output(tmp_path):
+    """A pre-set cancel event stops the run at the first tick boundary with
+    RunCancelled -- never partial lines that could masquerade as a run."""
+    from cubesat.sim import RunCancelled
+
+    scenario = load_scenario(write_tiny_scenario(tmp_path / "scenarios"))
+    cancel = threading.Event()
+    cancel.set()
+    with pytest.raises(RunCancelled):
+        run_scenario(scenario, cancel)
 
 
 def test_session_driver_exception_never_silent(tmp_path, monkeypatch):

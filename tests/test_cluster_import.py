@@ -144,3 +144,20 @@ def test_generated_swarm_from_real_snapshot_recovers(firefly_run):
     assert len(_events(lines, "ASSIGNMENT")) == 2
     ticks = [line for line in lines if line["state"] not in ("INIT", "SUMMARY")]
     assert "RECOVERED" in [line["state"] for line in ticks]
+
+
+def test_cluster_import_cli_rejects_path_escaping_repo_root(capsys):
+    """--out used to write to any path on disk (audit, low); the same
+    confinement guard as cubesat/benchmark.py refuses with a clean argparse
+    error (exit 2) BEFORE the OMM snapshot is even read."""
+    from cubesat.cluster_import import main
+
+    escape = ROOT.parent / "cluster_import_escape_probe.json"
+    if escape.exists():
+        escape.unlink()  # stale-probe pre-clean only
+    with pytest.raises(SystemExit) as excinfo:
+        main(["--omm", str(FIREFLY_OMM), "--index", "1", "--out", str(escape)])
+    assert excinfo.value.code == 2
+    err = capsys.readouterr().err
+    assert "refusing" in err and "outside the repository" in err
+    assert not escape.exists()

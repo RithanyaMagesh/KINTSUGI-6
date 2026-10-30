@@ -27,6 +27,10 @@ data/eval/pareto/
 # pre-registration) -- the data/eval/oracle_sweep_v2.json report is committed
 data/eval/oracle_sweep_v2/
 
+# Oracle sweep v3 per-run variant scenarios + JSONL logs (GATES.md 2026-10-29
+# pre-registration) -- the data/eval/oracle_sweep_v3.json report is committed
+data/eval/oracle_sweep_v3/
+
 # Monte Carlo per-run JSONL logs (cubesat/monte_carlo.py ensemble) -- same rule:
 # the results + manifest reports (data/eval/monte_carlo_results.json,
 # monte_carlo_manifest.json) are committed

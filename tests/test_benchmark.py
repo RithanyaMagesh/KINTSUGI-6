@@ -23,6 +23,7 @@ except the MC driver's own seeded PCG64 jitter, which is asserted reproducible.
 import hashlib
 import json
 import math
+import shutil
 from pathlib import Path
 
 import numpy as np
@@ -30,7 +31,7 @@ import pytest
 
 import cubesat.allocate as allocate
 import cubesat.sim as sim_module
-from cubesat.benchmark import POLICY_ORDER, enumerate_pairs, run_benchmark
+from cubesat.benchmark import POLICY_ORDER, enumerate_pairs, main, run_benchmark
 from cubesat.benchmark_policies import (
     W4,
     even_split_replan,
@@ -398,3 +399,94 @@ def test_mc_report_rows_carry_command_and_sha(scenario, tmp_path):
     assert set(manifest["logs"]) == {row["log"] for row in report["rows"]}
     for entry in manifest["logs"].values():
         assert set(entry) == {"sha256", "run", "policy"}
+
+
+# --- CLI path-confinement guard (Mimosa medium: command-line parameter ->
+#     path traversal; mirrors files/predictor_pipeline.py) ---------------------
+
+
+def test_cli_rejects_path_escaping_repo_root(capsys):
+    """An --out (or --report) that resolves outside the repository root is
+    refused with a clean argparse-style error (exit 2, 'refusing ... outside
+    the repository' on stderr) BEFORE anything is read or written: the escape
+    probe paths are never created. --base names a missing probe file so the
+    guard must fire before even the base read (pre-guard this test fails with
+    FileNotFoundError, never writing anything)."""
+    escape_dir = ROOT.parent / "cubesat_escape_probe_out"
+    escape_report = ROOT.parent / "cubesat_escape_probe_report.json"
+    # Stale-probe pre-clean: only this cleanup may have created them; the test
+    # asserts the CLI itself creates nothing.
+    if escape_dir.exists():
+        shutil.rmtree(escape_dir)
+    if escape_report.exists():
+        escape_report.unlink()
+    missing_base = "data/scenarios/cli_probe_missing.json"
+    with pytest.raises(SystemExit) as excinfo:
+        main(
+            [
+                "--base", missing_base,
+                "--out", str(escape_dir),
+                "--report", "data/eval/benchmark_results.json",
+            ]
+        )
+    assert excinfo.value.code == 2
+    err = capsys.readouterr().err
+    assert "refusing" in err
+    assert "outside the repository" in err
+    assert not escape_dir.exists()
+    # The flagged sink chain (--mode pareto: benchmark.py run_pareto dispatch ->
+    # args.report write_text -> cubesat/pareto.py write_csv/write_svg): an
+    # escaping --report is refused too.
+    with pytest.raises(SystemExit) as excinfo:
+        main(
+            [
+                "--base", missing_base,
+                "--out", "data/eval/benchmark",
+                "--report", str(escape_report),
+            ]
+        )
+    assert excinfo.value.code == 2
+    assert "refusing" in capsys.readouterr().err
+    assert not escape_report.exists()
+
+
+def test_cli_accepts_documented_paths(capsys):
+    """Every documented GATES.md command's path shape still parses and passes
+    the confinement guard (zero behavior change; all write under data/eval/).
+    Each probe stops right after the guard -- benchmark mode on an unknown
+    policy (argparse error), the other modes on the missing --base
+    (FileNotFoundError) -- so no sim runs and nothing is written. Relative
+    shapes are the exact GATES.md ones, invoked from the repo root like the
+    documented commands."""
+    # P0 (GATES.md:17): guard accepts the documented paths, argparse then
+    # rejects the bogus policy -- the message must be about policies, not
+    # refusal.
+    with pytest.raises(SystemExit) as excinfo:
+        main(
+            [
+                "--base", "data/scenarios/two_failure.json",
+                "--out", "data/eval/benchmark",
+                "--report", "data/eval/benchmark_results.json",
+                "--policies", "do_nothing,not_a_policy",
+            ]
+        )
+    assert excinfo.value.code == 2
+    err = capsys.readouterr().err
+    assert "unknown policies" in err
+    assert "refusing" not in err
+    # P1-P4 (GATES.md:24,26,28,46): the guard accepts every documented shape;
+    # dispatch then fails fast on the missing --base before any write.
+    missing_base = "data/scenarios/cli_probe_missing.json"
+    for extra in (
+        ("--mode", "pareto", "--out", "data/eval/pareto",
+         "--report", "data/eval/pareto_results.json"),
+        ("--mode", "keepout-report", "--out", "data/eval/benchmark",
+         "--report", "data/eval/benchmark_results.json"),
+        ("--mode", "cw-curve", "--report", "data/eval/cw_error_report.json",
+         "--csv", "data/eval/cw_error_curve.csv",
+         "--svg", "data/eval/cw_error_curve.svg"),
+        ("--mode", "monte-carlo", "--report",
+         "data/eval/monte_carlo_results.json"),
+    ):
+        with pytest.raises(FileNotFoundError):
+            main(["--base", missing_base, *extra])

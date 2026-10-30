@@ -1258,3 +1258,265 @@ host-built dist into the build context — without it the manifest-cached
 `npm ci` layer is defeated. Only files touched: Dockerfile, .dockerignore;
 no sim-core files.
 
+## Oracle sweep v3 + reassign_on_degrade (2026-10-29)
+
+Build notes for the degrade-trigger round. Pre-registration + decision rule in
+GATES.md (2026-10-29 entries, recorded before any v3 number existed); report
+data/eval/oracle_sweep_v3.json (committed, machine-written), tool
+files/oracle_sweep_v3.py. Numbers are quoted from that report with their
+commands, never re-derived. Outcome per the pre-registered rule:
+**RECOMMENDED as an opt-in scenario field** (`recommend: true`); defaults
+never change canonical logs.
+
+### Implementation shape
+
+- Field: `reassign_on_degrade: bool = False` (cubesat/scenario.py:188-199) —
+  a defaulted-off Scenario field. No committed scenario sets it; the
+  default-False assert plus the stronger direction (the flag-ON two_failure
+  run, which has no EPS_DEGRADE and hence no DEGRADED transition, still
+  reproduces canonical sha `450d5371…`) are pinned by
+  tests/test_oracle_sweep_v3.py::test_reassign_on_degrade_defaults_false.
+- Hook: inside the EPS_DEGRADE fade-firing block (cubesat/sim.py:249-278).
+  When a satellite holding a critical role (`_CRITICAL_ROLES` = leader,
+  downlink — cubesat/sim.py:95) transitions NOMINAL → DEGRADED and the mission
+  is NOMINAL or RECOVERED and recovery_enabled, the sim fires the oracle
+  path's proactive critical-seat swap via
+  `_swap_critical_seat(..., "degrade_trigger")` (cubesat/sim.py:98-131 —
+  factored out of the oracle block at cubesat/sim.py:493 so there is no
+  duplicated logic; the oracle call passes mode_label=None and keeps its exact
+  committed payload shape). Event label: `ORACLE_SWAP` — same type as the
+  oracle path — with one additive payload key `mode: "degrade_trigger"`.
+  Test-pinned transient (eps_leader_6sat, fade t = 600.0, t_fail = 2400.0):
+  the event pops at t = 602.0 (FIFO, one event per tick line) with payload
+  `{role: "leader", from_sat: 0, to_sat: 1, t: 600.0, mode: "degrade_trigger"}`
+  (target = lowest-index healthy non-critical sat); the transition tick's line
+  already shows the moved seat (fading sat DEGRADED in a non-critical slot,
+  leader seat on a NOMINAL holder), positions byte-equal through the
+  transition tick and diverging at the first step after.
+- Semantics: the EPS_DEGRADE fade window IS the warning, so the trigger's
+  timing equals the oracle L = 1800 point on the eps families (degrade_s =
+  1800 there; the swap fires at max(t_fail − degrade_s, 0)) with NO oracle and
+  NO predictor — `oracle_enabled: false` on every degrade_trigger report row.
+  The fading satellite ends in a non-critical slot but stays NON-assignable
+  (status != NOMINAL — existing replan rules untouched), and the swap is
+  once-per-transition, event-driven, fully deterministic
+  (test_degrade_trigger_run_byte_deterministic).
+- Tests: tests/test_oracle_sweep_v3.py — 5 tests (swap transient, default-off
+  byte-inertness, imager-fade no-op, THRUSTER_OUT no-op, run-level byte
+  determinism).
+
+### Trigger vs oracle (eps families, report numbers)
+
+Sweep command (the report's own `command` field): `uv run python files/oracle_sweep_v3.py`;
+L grid {0, 30, 60, 300, 600, 900, 1200, 1800} s, t_settle = 0.0 s,
+`capped: false` on all 36 rows.
+
+- **eps_leader_6sat — the RECOMMENDED family** (best eps family on the pinned
+  metric; ties keep the first family in the fixed SCENARIOS order,
+  files/oracle_sweep_v3.py:322-327). Trigger (policy `degrade_trigger`):
+  pinned gain **10.616559013505578 pp**, functional **0.04697592483852153 pp**,
+  coverage **+0.15070424170359198 pp**, Δv **562.8040133364024 m/s** vs
+  reactive baseline **401.8444631108469 m/s** (log sha256 `1db789e9…`).
+  Oracle: needs L = 1800 s to match it on the pinned metric
+  (**10.604815032295944 pp**, Δv 710.639299795296 m/s) and at the
+  pre-registered L = 300 s checkpoint gains **1.7968291250733959 pp** for
+  **3210.3089538855684 m/s** — CW transfer-time scaling (the
+  maneuver must complete inside L; see the GATES.md 2026-10-29 evidence
+  block). The trigger reaches oracle-L=1800 timing with no oracle, no
+  predictor, and less Δv than the oracle point.
+- **eps_downlink_6sat — NOT recommended** (fails the pre-registered no-harm
+  arm): pinned gain ties at **10.616559013505578 pp** but coverage gain is
+  **-0.09142218879213404 pp**; Δv 707.7992440054265 vs baseline
+  387.82168138883605 m/s. The opt-in is family-scoped, not blanket.
+- **Controls**: eps_imager_6sat is structurally flat on both SEAT metrics —
+  pinned gain and functional gain are exactly **0.0 pp** at every oracle L —
+  but its mean-coverage column is small and NONZERO at every oracle L
+  (**+0.005511483377262927 pp** at L=30, +0.020640566350743628 at L=60,
+  +0.09672592224165277 at L=300, +0.0667121679743754 at L=600,
+  **+0.12154592831528088** at L=900, +0.01016752587555958 at L=1200,
+  +0.10216408211499162 at L=1800): the oracle's replan re-phases the
+  survivor formation (select_formation), which moves mission-level mean
+  coverage a little even where no critical seat is at stake. Its
+  degrade_trigger row IS byte-identical to the reactive row (same log sha256
+  `170cfec2…` — an imager fade is not a critical-role transition).
+  thruster_leader_6sat: its trigger row is likewise byte-identical to
+  reactive (sha256 `6e742851…` — THRUSTER_OUT has no DEGRADED transition; the
+  self-report path already reacts on the firing tick), but the 0.0 quantifier
+  does NOT extend to its oracle rows: those gain **+0.023487962419255215 pp**
+  pinned, and the same functionally, at every L > 0 — the 2-tick
+  self-report/detection window, matching the v2 note above.
+
+### Caveats
+
+- **Pinned-metric honesty (carried per the pre-registration):** the pinned
+  metric counts the still-functional 1800 s fade window as critical-seat
+  outage — reactive baseline 0.8938344098649442 pinned vs 0.9995302407516148
+  functional (the gap IS the fade window). Mission-level truth: functional
+  gain 0.04697592483852153 pp and coverage gain +0.15070424170359198 pp
+  (leader trigger).
+- **Δv cost is real:** the trigger spends more than the reactive baseline in
+  both eps families (leader 562.8040133364024 vs 401.8444631108469 m/s;
+  downlink 707.7992440054265 vs 387.82168138883605 m/s); every Δv inherits
+  the standing a_max = 0.1 over-thrust caveat (GATES.md open risks).
+- **Timing equivalence is degrade_s-dependent:** the trigger fires at
+  max(t_fail − degrade_s, 0); the "equals oracle L = 1800" statement holds for
+  the committed degrade_s = 1800 scenarios. A shorter window is an earlier,
+  more expensive transfer (same CW scaling as the oracle curve).
+- **Predictor boundary:** for gradual EPS deaths the 1800 s telemetry fade
+  dominates the sealed LightGBM predictor's measured 260 s paired median lead
+  (out2/results.json; GATES.md 2026-10-04) — the predictor stays
+  beside-heartbeat (display-only), cut from the control loop; the trigger
+  needs no prediction.
+- **Not covered by this round:** Docker build still unverified (daemon down,
+  `docker version` exit 1, re-verified first-hand 2026-10-29); browser render
+  pass pending; README/pitch wording left to the user (audit_out/AUDIT.md
+  MUST-NOT-claim list applies — no AI-in-the-loop claim: the trigger is a
+  deterministic rule).
+
+### Regenerate
+
+```
+uv sync --locked
+uv run python files/oracle_sweep_v3.py
+#   -> data/eval/oracle_sweep_v3.json (committed report) + the 36 per-point
+#      scenario variants and JSONL logs under data/eval/oracle_sweep_v3/
+#      (gitignored; each report row carries its own regeneration command, e.g.
+#      uv run python -m cubesat.run --scenario data/eval/oracle_sweep_v3/eps_leader_6sat__degrade_trigger.json --seed 42 --out data/eval/oracle_sweep_v3/eps_leader_6sat__degrade_trigger.jsonl)
+uv run python -m pytest tests/test_oracle_sweep_v3.py -v   # 5 passed
+```
+
+Write-time re-verification (2026-10-29, ledger session, first-hand): the sweep
+re-run reproduced the report byte-identically (sha256
+`cdd5a069c006c355a6655cc33093b0585332ef825df26b15c0f8ba2340f94b02` before and
+after, `cmp` exit 0); `uv run python -m pytest tests/test_oracle_sweep_v3.py
+-v` → 5 passed; golden pins (`uv run python -m pytest tests/test_failure_modes.py
+tests/test_cli.py -q`) → 9 passed, exit 0; fast loop `uv run python -m pytest
+-m "not slow"` → 168 passed, 3 deselected; `uv run ruff check .` → All checks
+passed.
+
+## Security round (2026-10-29)
+
+Build notes for the security round; decisions in GATES.md (2026-10-29 entries),
+evidence in GATES.md (Security round evidence, 2026-10-29). Three workstreams:
+the frontend dependency bump, the CLI output-path confinement, and a security
+audit followed by a same-round remediation pass ("security-fix pass"). Every
+number below carries its command or its code citation; remediation statuses are
+as measured in the working tree at ledger-write time (2026-10-29), first-hand.
+
+### Frontend dependency bump (vite 5.4 → 7.x) — what changed and why
+
+`frontend/package.json` devDependency `vite` bumped `^5.4.14` → `^7.3.7`
+(one line, frontend/package.json:24; lockfile regenerated) — the round's only
+frontend delta, authorized by the user's "fix them all" instruction on the 9
+open Dependabot alerts. Why: `npm audit` (before) reported 2 vulnerabilities —
+esbuild <= 0.24.2 (GHSA-67mh-4wv8-2f99, the moderate) reached through vite
+5.4.21, and the vite <= 6.4.3 advisory chain (the high; 8 GHSAs, enumerated in
+the GATES.md evidence row). After: vite 7.3.7 pulls esbuild 0.28.2 (patched
+>= 0.25) and `npm audit` reports found 0 vulnerabilities (re-run first-hand at
+write time). `@vitejs/plugin-react` stays on its `^4.3.4` pin — it resolves to
+4.7.0, whose peerDependencies (`npm view @vitejs/plugin-react@4.7.0
+peerDependencies` → `{ vite: '^4.2.0 || ^5.0.0 || ^6.0.0 || ^7.0.0' }`) already
+accept vite 7, so no plugin bump was needed. launch-editor disappeared from the
+lockfile (vite 7 dropped that dependency chain). `npm audit fix --force` was
+deliberately NOT run — npm's suggested fix was vite 8.3.5, an unrequested major
+jump. Node compatibility: vite 7.3.7 engines `^20.19.0 || >=22.12.0`; the dev
+machine (node v24.21.0) and the Docker build stage (`FROM node:22-slim`,
+Dockerfile:4) both satisfy it. `npm run build` exit 0 on the bumped tree
+(tsc + vite v7.3.7; only the pre-existing >500 kB chunk-size warning).
+FRONTEND_SPEC §13.7 gates: hex grep clean —
+`grep -rnE '#[0-9a-fA-F]{3,8}' src | grep -v 'tokens\.css'` exit 1 (all 44 hex
+literals live in src/styles/tokens.css, re-run first-hand); avoid-ai-design
+scanner exit 0 (run from a /tmp clone per the spec's own §13.7 two-line recipe
+— detect.mjs is not a repo file; 3 advisory P2 findings pre-exist in
+frontend/src files this diff does not touch, and frontend/src is off-limits to
+this round by workspace rule). react/typescript/zustand/recharts pins and
+vite.config.ts unchanged.
+
+### CLI output-path confinement — what changed and why
+
+Every CLI-provided OUTPUT path must resolve inside the repository root before
+anything is read or written; refusal is a clean argparse error (usage +
+`refusing: <label> <path> resolves outside the repository <root>` on stderr,
+exit 2), nothing written; differing Windows drives count as outside
+(os.path.commonpath ValueError). The rule mirrors the user-approved
+predictor-bundle hardening (files/predictor_pipeline.py:264-279, decisions
+2026-10-03) and closes the audit's "command-line parameter → path traversal"
+finding across all three CLIs:
+
+- `cubesat/benchmark.py` — `_confine_output_path()` (benchmark.py:366-385) +
+  a validation loop immediately after `parser.parse_args` (benchmark.py:458-466)
+  covering `--out`, `--report`, `--manifest`, `--csv`, `--svg`, before every
+  dispatch and before the `--base` read. Derived defaults stay confined by
+  construction (the monte-carlo `--out` default is the repo-relative literal
+  `data/eval/monte_carlo`; the pareto/cw-curve `--csv`/`--svg` defaults share
+  `--report`'s parent via `Path.with_name`).
+- `cubesat/dv_bound.py` — the same guard (dv_bound.py:55), applied to
+  `--report`/`--csv` (dv_bound.py:456-457) in the security-fix pass.
+- `cubesat/cluster_import.py` — the same guard (cluster_import.py:41), applied
+  to `--out` (cluster_import.py:219) in the security-fix pass.
+
+Tests first (the benchmark reject test was watched red pre-fix — the CLI
+sailed past an escaping `--out`): tests/test_benchmark.py:408
+`test_cli_rejects_path_escaping_repo_root` and :453
+`test_cli_accepts_documented_paths` (the no-over-rejection guard: the five
+documented GATES shapes all write under data/eval/ and pass unchanged);
+tests/test_dv_bound.py:142 and tests/test_cluster_import.py:149 rejection
+tests for the fix-pass guards. Subprocess evidence: `--out
+../cubesat_subproc_probe_out` → exit 2, probe dir never created; positive
+control with the documented shape proceeds to the (deliberately missing) base
+read — zero over-rejection. Write-time probe re-run first-hand
+(`--report ../outside_probe_ledger_check.json` → exit 2, no file). Scope
+caveats: input paths `--base`/`--p0-dir`/`--p0-manifest` remain unvalidated
+reads (the ask scoped confinement to output paths; a hostile `--p0-dir` can
+only source bytes copied INTO the confined out dir and hashed into the
+report); relative documented shapes resolve against CWD — documented commands
+run from the repo root, same trust model as before.
+
+### Security audit — checked surfaces and remediation status
+
+The audit probed the surfaces below against the pre-fix tree (probe evidence
+in the GATES.md evidence row); the same-round security-fix pass remediated
+them; every status was re-verified first-hand in the working tree at write
+time. Severity framing: medium = wedging the localhost single-user demo
+process; lows are hardening.
+
+| # | Surface (audit citation) | Finding | Status (first-hand) |
+|---|---|---|---|
+| 1 | cubesat/session.py:278 | MEDIUM — scenario resources unbounded (20,000,000-char upload accepted, 20,000,404 bytes written; `duration_s=1e9` passed the schema's bare gt=0; the coverage grid materializes (2·extent/step+1)² points) AND the 60 s run timeout abandoned the still-running compute thread (asyncio.wait_for cancels only the await; same pattern in inject_failure) | FIXED, both halves — schema caps (cubesat/scenario.py:11-24: MAX_GRID_POINTS 10 000 via the Sensor `_grid_fits_budget` validator scenario.py:65-78, sweeps max_length 64 scenario.py:117-128, MAX_SATS 32 on n_slots and roles scenario.py:45,180-182, MAX_FAILURES 64 scenario.py:183, MAX_DURATION_S 86 400 scenario.py:171-173, dt_s le 10 scenario.py:174; each ~5x above every committed value, canonical logs byte-identical) + cooperative cancellation (`run_scenario(scenario, cancel_event=None)` cubesat/sim.py:149-150, checked between ticks sim.py:223-224 raising RunCancelled; start_live sets it on timeout session.py:286-294, inject_failure ditto session.py:406-417); unset-hook byte-inertness pinned by `test_run_scenario_cancel_event_unset_is_byte_identical`; cap rejections pinned by tests/test_scenario_schema.py:58-118 |
+| 2 | cubesat/dv_bound.py:434 + cubesat/cluster_import.py:214-217 | LOW — the CLI confinement fix existed only in benchmark.py (probed: dv_bound wrote %TEMP%\outside_dv_report.json + .csv exit 0; cluster_import wrote outside the repo exit 0; benchmark refused exit 2) | FIXED — guards at dv_bound.py:55/:456-457 and cluster_import.py:41/:219 (see the confinement section above) |
+| 3 | cubesat/api.py:324 | LOW — a malformed WS frame raised json.JSONDecodeError out of read_loop (re-raised at api.py:340 pre-fix) as an unhandled server exception per bad frame instead of a graceful close | FIXED — read_loop catches it and closes with code 1003 unsupported-data (api.py:421-431); the finally block still unsubscribes |
+| 4 | cubesat/api.py:177 | LOW — attacker-controlled Scenario.name/roles[] echoed verbatim into /health, WS hello and sim_state (stored injection; inert while React escapes — grep for dangerouslySetInnerHTML/innerHTML/document.write/new Function in frontend/src = 0 matches; XSS the moment a non-escaping consumer renders these fields) | FIXED at the write edge — `_LABEL_UNSAFE` strips `<`, `>`, `&`, quotes and control characters from name and roles[] BEFORE validation and write (api.py:195-209, applied at api.py:263), so what is validated/stored/echoed is the inert payload; legitimate labels byte-untouched |
+| 5 | cubesat/api.py:181 | LOW — no request-size cap or file-count limit on POST /scenarios/upload (20 MB filler accepted and written; overwrites were already 409 with committed scenarios protected; the name sanitizer already stripped separators — only volume was open) | FIXED — MAX_UPLOAD_BYTES 262 144 (api.py:49) enforced as a Content-Length middleware returning 413 (api.py:99-119) AND as a serialized-size cap on the exact bytes written (api.py:264-269); MAX_SCENARIO_FILES 64 → 429 (api.py:247-259) |
+| 6 | Dockerfile:53 | LOW — no Host-header validation and no authentication anywhere; the container CMD binds 0.0.0.0 (Dockerfile:56); DNS rebinding defeats browser origin checks against a Host-agnostic app; local uvicorn serve binds 127.0.0.1 (the mitigating reality) | PARTIALLY FIXED — TrustedHostMiddleware allowlist, default localhost,127.0.0.1,testserver with a CUBESAT_ALLOWED_HOSTS override (api.py:82-96; Dockerfile:45-47 documents the publish-beyond-localhost caveat); authentication itself remains absent BY DESIGN — the localhost bind stays the demo's real boundary |
+| 7 | cubesat/api.py:201 | LOW — GET /replay/file/{filename} served ANY file in the log dir regardless of extension while /replay/files lists only .jsonl (traversal itself was solid: 6 encoded payloads + '..' all 404, positive control 200) | FIXED — a suffix filter mirrors list_logs (api.py:287-302): serve surface now equals listing surface |
+| 8 | pyproject.toml:18 | LOW — unused dev dependency httpx2 >= 2.13.1 (nothing imported it; a Pydantic-stewarded httpx fork, not malicious — pure supply-chain surface, dev-only, excluded from the image by uv sync --no-dev) | FIXED — removed from the dev group; docs/BACKEND_SPEC.md:72 and :409 mark it DONE (2026-10-29 security-fix pass, removed with user approval); no httpx2 references remain in pyproject.toml, uv.lock or any .py file (grep, first-hand) |
+
+### Unverified / not done in this round
+
+- **Dependabot alert clearing is EXPECTED-AFTER-PUSH, not observed.** The 9
+  alerts were still open at write time (read-only `gh api
+  repos/dptel22/Cubesat/dependabot/alerts?state=open` → 9); they close on
+  Dependabot's next scan of the pushed default branch, and the user commits
+  and pushes (agents never do). Local `npm audit` 0 against the same advisory
+  data is the verifiable proxy, and every one of the 9
+  vulnerable_version_ranges lies outside vite 7.3.7 / esbuild 0.28.2.
+- **The avoid-ai-design scanner was not re-run at ledger-write time** (it
+  needs the /tmp clone per the FRONTEND_SPEC §13.7 recipe); the round's
+  builder evidence (exit 0, 119 files scanned, 3 advisory P2 in untouched
+  files) stands, and the hex drift gate was re-run first-hand (clean).
+- **No Docker build was run against the regenerated lockfile this round** —
+  the node:22-slim compatibility is a static engines check, not a build
+  measurement; image size/health evidence remains as recorded in the
+  2026-10-26 section (unverified there, daemon down).
+- **The API is still unauthenticated by design** — the TrustedHost allowlist
+  is not auth; the localhost single-user bind remains the security boundary
+  for the demo, and publishing the container port beyond the operator's
+  machine remains the audit's medium-if-published caveat.
+- **Fast-suite count moved under the round's feet**: the backend-hardening
+  builder measured 144/147 collected; at write time the same command collects
+  168/171 (3 slow-deselected) because the concurrent sweep-v3 round
+  (files/oracle_sweep_v3.py + tests/test_oracle_sweep_v3.py + the
+  `reassign_on_degrade` scenario field, pre-registered in GATES.md
+  2026-10-29) and this round's security-fix tests landed in the same working
+  tree. Both runs exited 0; neither count is padded.
+

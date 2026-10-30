@@ -42,6 +42,9 @@ COPY --from=build /build/dist ./frontend/dist
 
 ENV CUBESAT_LOG_DIR=/app/data/logs \
     PORT=8000
+# Host-header allowlist (audit): the app accepts Host localhost/127.0.0.1 by
+# default; publish the port beyond the operator's machine under another name
+# only with CUBESAT_ALLOWED_HOSTS=<name(s)> added here.
 EXPOSE 8000
 
 RUN useradd --uid 1000 --no-create-home app

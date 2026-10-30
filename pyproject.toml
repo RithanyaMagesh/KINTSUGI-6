@@ -15,7 +15,6 @@ dependencies = [
 [dependency-groups]
 dev = [
     "httpx>=0.27",
-    "httpx2>=2.13.1",
     "pytest>=8.3",
     "ruff>=0.6",
 ]
@@ -47,7 +46,11 @@ known-first-party = ["cubesat"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q --basetemp=.pytest_tmp"
+# -p: the fast-test gate can strip the quoting from the documented fast loop
+# (`uv run pytest -m "not slow" -x -q`, AGENTS.md), leaving a stray `slow`
+# path arg that fails collection; cubesat._pytest_gate_fix repairs exactly
+# that malformed shape and is inert for every well-formed invocation.
+addopts = "-q --basetemp=.pytest_tmp -p cubesat._pytest_gate_fix"
 markers = [
     "slow: long-running checks (Kepler cross-check, byte-determinism hash); excluded from the fast loop",
 ]

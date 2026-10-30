@@ -136,6 +136,33 @@ def test_api_replay_file_traversal_guard(tmp_path, monkeypatch):
     assert client.get("/replay/file/two_failure.jsonl").status_code == 200
 
 
+def test_api_replay_file_suffix_guard(tmp_path, monkeypatch):
+    """Audit regression (low): /replay/file served ANY file in the log dir
+    while /replay/files lists only .jsonl. The serve surface must equal the
+    listing surface (matters when CUBESAT_LOG_DIR points at a broader dir)."""
+    import cubesat.api
+
+    log_dir = _log_dir(
+        tmp_path / "logs",
+        {"two_failure.jsonl": "{}\n", "notes.txt": "x\n", "two_failure.json": "{}\n"},
+    )
+    monkeypatch.setattr(cubesat.api, "log_dir", lambda: log_dir)
+    assert client.get("/replay/file/two_failure.jsonl").status_code == 200
+    for name in ("notes.txt", "two_failure.json"):
+        assert client.get(f"/replay/file/{name}").status_code == 404, name
+
+
+def test_host_header_allowlist():
+    """Audit regression (low): no Host-header validation anywhere. The
+    TrustedHost allowlist 400s a foreign Host (DNS-rebinding defense) while
+    localhost and the TestClient default keep working."""
+    assert client.get("/health").status_code == 200  # default Host: testserver
+    r = client.get("/health", headers={"Host": "evil.example.com"})
+    assert r.status_code == 400
+    assert client.get("/health", headers={"Host": "localhost:8000"}).status_code == 200
+    assert client.get("/health", headers={"Host": "127.0.0.1:8000"}).status_code == 200
+
+
 # --------------------------------------------------------------------------
 # H3/H4: /simulation/*, /failure/inject, /replay/load, WS /ws/state
 # --------------------------------------------------------------------------
@@ -256,6 +283,25 @@ def test_ws_hello_snapshot_ping_pong():
         ws.send_json({"type": "noise"})  # ignored, connection stays up
         ws.send_json({"type": "ping"})
         assert ws.receive_json() == {"type": "pong"}
+
+
+def test_ws_malformed_frame_closes_1003():
+    """Audit regression (low): a non-JSON frame used to escape read_loop as an
+    unhandled json.JSONDecodeError per bad frame; now the server closes
+    gracefully with 1003 (unsupported data), the finally-block unsubscribes,
+    and a later client connects normally."""
+    from starlette.websockets import WebSocketDisconnect
+
+    with client.websocket_connect("/ws/state") as ws:
+        assert ws.receive_json()["type"] == "hello"
+        ws.send_text("this is not json")
+        with pytest.raises(WebSocketDisconnect) as excinfo:
+            while True:
+                ws.receive_json()
+        assert excinfo.value.code == 1003
+    # the server process is unharmed: a fresh client gets a clean hello
+    with client.websocket_connect("/ws/state") as ws:
+        assert ws.receive_json()["type"] == "hello"
 
 
 def test_ws_two_clients(tmp_path, monkeypatch):

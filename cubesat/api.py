@@ -20,10 +20,11 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ValidationError
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from cubesat import __version__
 from cubesat.replay import list_logs
@@ -40,6 +41,13 @@ from cubesat.wire import (
 # WS emit-cadence cap (section 10); tests monkeypatch this to 0 to neutralize
 # decimation deterministically.
 _MIN_EMIT_INTERVAL = 1.0 / 30.0
+
+# Upload resource caps (audit: unbounded bodies + unbounded file count were a
+# disk-fill / memory-pressure vector on the shared process). The largest
+# committed scenario is ~1.2 KB, so 256 KB / 64 files sit far above any real
+# use; both are plain module globals so tests can shrink them.
+MAX_UPLOAD_BYTES = 262_144
+MAX_SCENARIO_FILES = 64
 
 _state: AppState | None = None
 
@@ -68,6 +76,47 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="cubesat-swarm", version=__version__, lifespan=lifespan)
+
+# Host-header allowlist (audit: no Host validation anywhere; DNS rebinding
+# defeats browser origin checks against a Host-agnostic app). Defaults cover
+# local serve (localhost / 127.0.0.1) and TestClient ("testserver"); a
+# deployment reached by other names sets CUBESAT_ALLOWED_HOSTS=a,b. Starlette
+# strips the port before matching. Token auth was considered and intentionally
+# NOT added: it would need frontend changes to stay usable, and frontend/src
+# is out of bounds -- the localhost bind remains the demo's real boundary.
+app.add_middleware(
+    TrustedHostMiddleware,
+    allowed_hosts=[
+        host.strip()
+        for host in os.environ.get(
+            "CUBESAT_ALLOWED_HOSTS", "localhost,127.0.0.1,testserver"
+        ).split(",")
+        if host.strip()
+    ],
+)
+
+
+@app.middleware("http")
+async def _cap_upload_body(request: Request, call_next):
+    """Reject an oversized POST /scenarios/upload from its Content-Length
+    before the body is parsed into Python objects (audit: 20 MB filler was
+    accepted and written verbatim). Chunked bodies without Content-Length fall
+    through to the endpoint's serialized-size cap, which always bounds what
+    reaches disk."""
+    if request.url.path == "/scenarios/upload":
+        content_length = request.headers.get("content-length")
+        if (
+            content_length is not None
+            and content_length.isdigit()
+            and int(content_length) > MAX_UPLOAD_BYTES
+        ):
+            return JSONResponse(
+                status_code=413,
+                content={
+                    "detail": f"scenario upload exceeds {MAX_UPLOAD_BYTES} bytes"
+                },
+            )
+    return await call_next(request)
 
 
 @dataclass
@@ -136,6 +185,30 @@ class UploadRequest(BaseModel):
     scenario: dict
 
 
+# Attacker-controlled label strings (audit: Scenario.name and roles[] are
+# stored via upload and echoed verbatim into /health, the WS hello and
+# sim_state). Stripping the HTML/script-significant characters makes the
+# stored strings inert for any consumer -- React escapes today, but a
+# non-escaping renderer (log viewer, export, docs) would turn them into
+# stored XSS. Legit labels ("leader", "imager", "two_failure") are untouched
+# byte for byte.
+_LABEL_UNSAFE = re.compile(r"[<>&\"'\x00-\x1f\x7f]")
+
+
+def _sanitize_scenario_labels(scenario: dict) -> dict:
+    """Return a copy of the uploaded scenario dict with hostile characters
+    stripped from its label strings ('name' and each roles[] entry)."""
+    cleaned = dict(scenario)
+    if isinstance(cleaned.get("name"), str):
+        cleaned["name"] = _LABEL_UNSAFE.sub("", cleaned["name"])
+    if isinstance(cleaned.get("roles"), list):
+        cleaned["roles"] = [
+            _LABEL_UNSAFE.sub("", role) if isinstance(role, str) else role
+            for role in cleaned["roles"]
+        ]
+    return cleaned
+
+
 def _sanitize_scenario_name(name: str | None) -> str:
     """Keep [A-Za-z0-9_-] only -- no path separators survive, so the upload is
     traversal-safe by construction. Absent -> "custom"; a name that sanitizes
@@ -171,18 +244,37 @@ def scenarios_upload(req: UploadRequest) -> dict:
             status_code=409,
             detail=f"scenario already exists: {candidate.name}; pick another name",
         )
+    # File-count cap (audit: unbounded uploads could fill the scenarios dir).
+    # Cheap listing before the payload work; the dir may not exist yet.
+    n_existing = (
+        sum(1 for p in directory.glob("*.json") if p.is_file())
+        if directory.is_dir()
+        else 0
+    )
+    if n_existing >= MAX_SCENARIO_FILES:
+        raise HTTPException(
+            status_code=429,
+            detail=f"scenarios directory is full ({MAX_SCENARIO_FILES} files); "
+            "remove one before uploading another",
+        )
+    # Label sanitization BEFORE validation, so what is validated (and then
+    # written) is exactly the inert payload. The size cap measures the exact
+    # serialization that will be written to disk.
+    payload = _sanitize_scenario_labels(req.scenario)
+    serialized = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+    if len(serialized) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"serialized scenario exceeds {MAX_UPLOAD_BYTES} bytes",
+        )
     try:
         # model_validate_json on exactly the bytes we are about to write, so
         # what was validated is what load_scenario will parse at start time.
-        Scenario.model_validate_json(json.dumps(req.scenario))
+        Scenario.model_validate_json(serialized)
     except ValidationError as exc:
         raise HTTPException(status_code=422, detail=f"invalid scenario: {exc}") from None
     directory.mkdir(parents=True, exist_ok=True)  # only after every check passed
-    candidate.write_text(
-        json.dumps(req.scenario, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-        newline="\n",
-    )
+    candidate.write_text(serialized, encoding="utf-8", newline="\n")
     return {"status": "saved", "filename": candidate.name,
             "scenarios": _scenario_listing(directory)}
 
@@ -195,10 +287,17 @@ def replay_files() -> dict:
 @app.get("/replay/file/{filename}")
 def replay_file(filename: str) -> FileResponse:
     """Section 7.2 traversal guard: strip to the basename, resolve inside the
-    log dir, else 404."""
+    log dir, else 404. The suffix filter mirrors list_logs (replay.py:70), so
+    the serve surface equals the listing surface (audit: any file in the dir
+    used to be servable, e.g. an operator-pointed CUBESAT_LOG_DIR with
+    non-log files in it)."""
     base = log_dir().resolve()
     candidate = (base / Path(filename).name).resolve()
-    if base not in candidate.parents or not candidate.is_file():
+    if (
+        base not in candidate.parents
+        or not candidate.is_file()
+        or candidate.suffix != ".jsonl"
+    ):
         raise HTTPException(status_code=404, detail="replay file not found")
     return FileResponse(candidate)
 
@@ -321,7 +420,15 @@ async def ws_state(ws: WebSocket) -> None:
 
         async def read_loop() -> None:
             while True:
-                msg = await ws.receive_json()
+                try:
+                    msg = await ws.receive_json()
+                except json.JSONDecodeError:
+                    # A malformed frame is a client error, not a server fault
+                    # (audit: it used to escape read_loop as an unhandled
+                    # exception per bad frame): close gracefully with 1003
+                    # unsupported-data. The finally block below unsubscribes.
+                    await ws.close(code=1003)
+                    return
                 if isinstance(msg, dict) and msg.get("type") == "ping":
                     await ws.send_json({"type": "pong"})
                 # anything else ignored (section 6.3)

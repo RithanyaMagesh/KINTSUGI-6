@@ -151,3 +151,60 @@ def test_upload_then_start_by_name_with_other_scenarios_present(scenarios):
     assert r.status_code == 200
     assert client.get("/health").json()["scenario"] == "uploaded"  # not tiny: by-name start
     assert client.post("/simulation/reset").status_code == 200
+
+
+def test_upload_rejects_oversized_payload(scenarios, monkeypatch):
+    """Audit regression (low): a 20 MB filler used to be accepted and written
+    verbatim (disk fill / memory pressure on the shared process). A body above
+    the cap is refused 413 from its Content-Length before parsing; nothing is
+    written."""
+    import cubesat.api
+
+    monkeypatch.setattr(cubesat.api, "MAX_UPLOAD_BYTES", 1000)
+    payload = dict(TINY_SCENARIO, filler="x" * 2000)
+    r = client.post("/scenarios/upload", json={"name": "big", "scenario": payload})
+    assert r.status_code == 413
+    assert "exceeds" in r.json()["detail"]
+    assert not scenarios.exists()  # nothing created or written
+
+
+def test_upload_file_count_cap(scenarios, monkeypatch):
+    """Audit regression (low): no limit on how many files uploads could
+    create; the scenarios dir now refuses to grow past the cap (429)."""
+    import cubesat.api
+
+    monkeypatch.setattr(cubesat.api, "MAX_SCENARIO_FILES", 2)
+    for name in ("a", "b"):
+        r = client.post("/scenarios/upload",
+                        json={"name": name, "scenario": dict(TINY_SCENARIO, name=name)})
+        assert r.status_code == 200, name
+    r = client.post("/scenarios/upload",
+                    json={"name": "c", "scenario": dict(TINY_SCENARIO, name="c")})
+    assert r.status_code == 429
+    assert "full" in r.json()["detail"]
+    assert client.get("/scenarios").json() == {"scenarios": ["a.json", "b.json"]}
+
+
+def test_upload_sanitizes_hostile_labels(scenarios):
+    """Audit regression (low): Scenario.name and roles[] were stored verbatim
+    and echoed into /health, the WS hello and sim_state (stored injection;
+    inert under React today, XSS under any non-escaping consumer). The upload
+    strips the HTML/script-significant characters, so every downstream echo
+    carries the sanitized string."""
+    payload = dict(
+        TINY_SCENARIO,
+        name="<script>alert(1)</script>",
+        roles=["leader", "<img src=x onerror=alert(1)>"],
+    )
+    r = client.post("/scenarios/upload", json={"name": "inj", "scenario": payload})
+    assert r.status_code == 200
+    saved = json.loads((scenarios / "inj.json").read_text(encoding="utf-8"))
+    assert saved["name"] == "scriptalert(1)/script"  # </script> keeps its harmless /
+    assert saved["roles"] == ["leader", "img src=x onerror=alert(1)"]
+    r = client.post("/simulation/start", json={"scenario": "inj.json", "speed": 1e6})
+    assert r.status_code == 200
+    assert r.json()["scenario"] == "scriptalert(1)/script"
+    assert client.get("/health").json()["scenario"] == "scriptalert(1)/script"
+    with client.websocket_connect("/ws/state") as ws:
+        assert ws.receive_json()["scenario"] == "scriptalert(1)/script"
+    assert client.post("/simulation/reset").status_code == 200

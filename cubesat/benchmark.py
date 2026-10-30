@@ -28,6 +28,7 @@ import hashlib
 import itertools
 import json
 import math
+import os
 import sys
 from pathlib import Path
 
@@ -362,6 +363,28 @@ def _run_cw_curve(args) -> int:
     return 0
 
 
+def _confine_output_path(
+    parser: argparse.ArgumentParser, label: str, path: Path
+) -> None:
+    """Path-confinement guard (mirrors files/predictor_pipeline.py, I/O edge
+    only): the CLI-provided output path must resolve inside the repository
+    (this file's parents[1]) before any write uses it. Refusal is a clean
+    argparse error (usage + message on stderr, exit 2); nothing is read or
+    written. Mimosa medium: command-line parameter -> path traversal."""
+    repo_root = Path(__file__).resolve().parents[1]
+    try:
+        resolved = Path(path).resolve()
+        confined = (
+            os.path.commonpath((str(resolved), str(repo_root))) == str(repo_root)
+        )
+    except ValueError:  # different drives on Windows
+        confined = False
+    if not confined:
+        parser.error(
+            f"refusing: {label} {str(path)!r} resolves outside the repository {repo_root}"
+        )
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="cubesat.benchmark", description="P0 exhaustive recovery benchmark"
@@ -426,6 +449,21 @@ def main(argv: list[str] | None = None) -> int:
         help="pareto/cw-curve mode: SVG curve path (default: alongside --report)",
     )
     args = parser.parse_args(argv)
+    # Path-confinement guard (mirrors files/predictor_pipeline.py, I/O edge
+    # only): every CLI-provided output path must resolve inside the repository
+    # before anything is read or written (Mimosa: command-line parameter ->
+    # path traversal). The later derived defaults stay confined by
+    # construction: the monte-carlo --out default is a repo-relative literal
+    # and the pareto/cw-curve --csv/--svg defaults share --report's parent.
+    for label, value in (
+        ("--out", args.out),
+        ("--report", args.report),
+        ("--manifest", args.manifest),
+        ("--csv", args.csv),
+        ("--svg", args.svg),
+    ):
+        if value is not None:
+            _confine_output_path(parser, label, value)
     if args.mode == "keepout-report":
         return _run_keepout_report(args)
     if args.mode == "cw-curve":

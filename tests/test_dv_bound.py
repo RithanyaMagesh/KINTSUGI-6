@@ -133,3 +133,48 @@ def test_dv_bound_g4_block_is_pair_1_2():
         ((1, 2), 0), ((1, 3), 0), ((1, 4), 0), ((1, 5), 0),
         ((3, 4), 0), ((3, 5), 0), ((4, 5), 0),
     }
+
+
+# --- CLI path-confinement guard (audit: the benchmark.py guard had not been
+#     rolled out here; mirrors tests/test_benchmark.py's guard tests) ---------
+
+
+def test_dv_bound_cli_rejects_path_escaping_repo_root(capsys):
+    """--report/--csv used to write to any path on disk (audit, low); the same
+    confinement guard as cubesat/benchmark.py refuses with a clean argparse
+    error (exit 2) BEFORE anything is read or written."""
+    import pytest
+
+    from cubesat.dv_bound import main
+
+    root = Path(__file__).resolve().parents[1]
+    escape_report = root.parent / "dv_bound_escape_probe_report.json"
+    escape_csv = root.parent / "dv_bound_escape_probe.csv"
+    for probe in (escape_report, escape_csv):
+        if probe.exists():
+            probe.unlink()  # stale-probe pre-clean only
+    with pytest.raises(SystemExit) as excinfo:
+        main(
+            [
+                "--base", "data/scenarios/two_failure.json",
+                "--p0-dir", "data/eval/missing_p0_probe",
+                "--report", str(escape_report),
+                "--csv", "data/eval/dv_lower_bounds.csv",
+            ]
+        )
+    assert excinfo.value.code == 2
+    err = capsys.readouterr().err
+    assert "refusing" in err and "outside the repository" in err
+    assert not escape_report.exists()
+    with pytest.raises(SystemExit) as excinfo:
+        main(
+            [
+                "--base", "data/scenarios/two_failure.json",
+                "--p0-dir", "data/eval/missing_p0_probe",
+                "--report", "data/eval/dv_lower_bounds.json",
+                "--csv", str(escape_csv),
+            ]
+        )
+    assert excinfo.value.code == 2
+    assert "refusing" in capsys.readouterr().err
+    assert not escape_csv.exists()

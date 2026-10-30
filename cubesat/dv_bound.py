@@ -40,6 +40,7 @@ import argparse
 import hashlib
 import json
 import math
+import os
 import sys
 from pathlib import Path
 
@@ -49,6 +50,30 @@ from cubesat.hcw import mean_motion, propagate, slot_initial_state, stm
 
 SIN_EPS = 1e-9  # |sin(n*dt)| below this => z-channel impulse ill-defined
 DET_EPS = 1e-12  # scaled Phi_rv xy-block determinant below this => singular
+
+
+def _confine_output_path(
+    parser: argparse.ArgumentParser, label: str, path: Path
+) -> None:
+    """Path-confinement guard, copied from cubesat/benchmark.py:366 (Mimosa
+    finding: the guard shipped there only). The CLI-provided output path must
+    resolve inside the repository (this file's parents[1]) before any write
+    uses it. Refusal is a clean argparse error (usage + message on stderr,
+    exit 2); nothing is read or written. Duplicated rather than imported so
+    this module keeps its zero-sim-core import graph (see
+    test_dv_bound_pure_log_analysis)."""
+    repo_root = Path(__file__).resolve().parents[1]
+    try:
+        resolved = Path(path).resolve()
+        confined = (
+            os.path.commonpath((str(resolved), str(repo_root))) == str(repo_root)
+        )
+    except ValueError:  # different drives on Windows
+        confined = False
+    if not confined:
+        parser.error(
+            f"refusing: {label} {str(path)!r} resolves outside the repository {repo_root}"
+        )
 
 
 def two_impulse_dv(
@@ -424,6 +449,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--report", type=Path, default=Path("data/eval/dv_lower_bounds.json"))
     parser.add_argument("--csv", type=Path, default=Path("data/eval/dv_lower_bounds.csv"))
     args = parser.parse_args(argv)
+    # Path-confinement guard (mirrors cubesat/benchmark.py, Mimosa finding:
+    # command-line parameter -> path traversal): both write paths must resolve
+    # inside the repository before anything is read. The defaults under
+    # data/eval/ are confined by construction.
+    _confine_output_path(parser, "--report", args.report)
+    _confine_output_path(parser, "--csv", args.csv)
     command = "uv run python -m cubesat.dv_bound " + " ".join(sys.argv[1:])
     base = json.loads(args.base.read_text(encoding="utf-8"))
     n = mean_motion(base["chief"]["altitude_km"] * 1000.0)

@@ -58,6 +58,7 @@ FIFO pops at most one event per tick) is fine and documented.
 from __future__ import annotations
 
 import math
+import threading
 
 import numpy as np
 
@@ -68,6 +69,12 @@ from cubesat.pd import PDController, bang_bang_time_lower_bound
 from cubesat.scenario import FailureMode, Scenario
 
 LOG_SCHEMA_VERSION = 1
+
+
+class RunCancelled(RuntimeError):
+    """Raised between ticks when run_scenario's optional cancel_event is set
+    (server-side compute timeout only, cubesat/session.py). Never raised on any
+    CLI/canonical path -- no partial output can ever be mistaken for a run."""
 STATE_INIT = "INIT"
 STATE_NOMINAL = "NOMINAL"
 STATE_FAILURE_DETECTED = "FAILURE_DETECTED"
@@ -82,6 +89,46 @@ STATUS_THRUSTER_OUT = "THRUSTER_OUT"
 
 # Recovery tolerance: fraction of the largest assigned transfer distance.
 _RECOVER_TOL_FRAC = 0.05
+
+# Critical roles whose seat the proactive swap protects (oracle path and the
+# degrade-trigger policy both target exactly these).
+_CRITICAL_ROLES = ("leader", "downlink")
+
+
+def _swap_critical_seat(
+    holder: int,
+    crit_role: str,
+    failing_soon: set[int],
+    assignable: list[int],
+    roles: list[str],
+    seat_of: list[int],
+    t: float,
+    mode_label: str | None,
+) -> dict | None:
+    """One proactive critical-seat swap: the failing holder exchanges seat AND
+    role with the lowest-index assignable satellite that is non-critical and not
+    failing soon (ties resolve to the lowest sat id, AGENTS.md 2). The oracle
+    path's block, factored so the degrade-trigger policy can fire the SAME swap
+    -- no duplicated logic. Returns the ORACLE_SWAP event to append, or None
+    when no swap applies. mode_label (degrade trigger only) adds one additive
+    payload key; oracle payloads keep their exact committed shape."""
+    if holder not in failing_soon:
+        return None
+    candidates = [
+        s
+        for s in assignable
+        if s not in failing_soon and roles[s] not in ("leader", "downlink")
+    ]
+    if not candidates:
+        return None
+    target = min(candidates)
+    h_seat, t_seat = seat_of[holder], seat_of[target]
+    seat_of[holder], seat_of[target] = t_seat, h_seat
+    roles[holder], roles[target] = roles[target], roles[holder]
+    payload: dict = {"role": crit_role, "from_sat": holder, "to_sat": target, "t": t}
+    if mode_label is not None:
+        payload["mode"] = mode_label
+    return {"type": "ORACLE_SWAP", "payload": payload}
 
 
 def build_slots(scenario: Scenario, n: float) -> list[np.ndarray]:
@@ -99,8 +146,16 @@ def build_slots(scenario: Scenario, n: float) -> list[np.ndarray]:
     ]
 
 
-def run_scenario(scenario: Scenario) -> list[dict]:
-    """Simulate the mission and return the JSONL lines: [INIT header, tick..., SUMMARY]."""
+def run_scenario(
+    scenario: Scenario, cancel_event: threading.Event | None = None
+) -> list[dict]:
+    """Simulate the mission and return the JSONL lines: [INIT header, tick..., SUMMARY].
+
+    cancel_event is a cooperative-cancellation hook for the API layer's compute
+    timeout (cubesat/session.py): checked once between ticks, set -> RunCancelled
+    with no partial output. It is never set by any CLI/canonical caller, so the
+    check is a pure read that leaves every log byte-identical (AGENTS.md
+    invariant 2); no wall clock enters the sim itself (section 9.2)."""
     altitude_m = scenario.chief.altitude_km * 1000.0
     n = mean_motion(altitude_m)
     dt = scenario.dt_s
@@ -165,6 +220,8 @@ def run_scenario(scenario: Scenario) -> list[dict]:
     ]
     coverage_by_tick: list[tuple[float, float]] = []
     for k in range(n_ticks):
+        if cancel_event is not None and cancel_event.is_set():
+            raise RunCancelled(f"run cancelled before tick {k}")
         t = k * dt
         # EPS_DEGRADE fades fire (before this tick's heartbeat), in scheduled
         # order: the sat turns DEGRADED (still reporting, still seat-holding)
@@ -189,6 +246,36 @@ def run_scenario(scenario: Scenario) -> list[dict]:
                         },
                     }
                 )
+                # Degrade-trigger policy (GATES.md 2026-10-29 pre-registration):
+                # the EPS_DEGRADE fade window is itself the warning, so a
+                # critical-role holder that just turned DEGRADED fires the
+                # oracle path's proactive critical-seat swap -- no oracle, no
+                # predictor, L=degrade_s timing for free. Once per transition
+                # (this block only runs on the NOMINAL -> DEGRADED flip),
+                # event-driven, fully deterministic. The fading satellite ends
+                # up in a non-critical slot but stays NON-assignable (status
+                # != NOMINAL -- existing replan rules untouched).
+                if (
+                    scenario.reassign_on_degrade
+                    and scenario.recovery_enabled
+                    and roles[i] in _CRITICAL_ROLES
+                    and mission in (STATE_NOMINAL, STATE_RECOVERED)
+                ):
+                    failing_soon = {
+                        f.sat_id for f in scenario.failures if f.t > t + 1e-9
+                    }
+                    event = _swap_critical_seat(
+                        i,
+                        roles[i],
+                        failing_soon,
+                        [s for s in range(n_sats) if status[s] == STATUS_NOMINAL],
+                        roles,
+                        seat_of,
+                        t,
+                        "degrade_trigger",
+                    )
+                    if event is not None:
+                        events.append(event)
         # Failures fire (before this tick's heartbeat), in scheduled order.
         while next_failure < len(failures) and failures[next_failure].t <= t + 1e-9:
             failure = failures[next_failure]
@@ -403,30 +490,18 @@ def run_scenario(scenario: Scenario) -> list[dict]:
                     holders = [s for s in assignable if roles[s] == crit_role]
                     if not holders:
                         continue
-                    holder = holders[0]
-                    if holder in failing_soon:
-                        candidates = [
-                            s
-                            for s in assignable
-                            if s not in failing_soon
-                            and roles[s] not in ("leader", "downlink")
-                        ]
-                        if candidates:
-                            target = min(candidates)
-                            h_seat, t_seat = seat_of[holder], seat_of[target]
-                            seat_of[holder], seat_of[target] = t_seat, h_seat
-                            roles[holder], roles[target] = roles[target], roles[holder]
-                            events.append(
-                                {
-                                    "type": "ORACLE_SWAP",
-                                    "payload": {
-                                        "role": crit_role,
-                                        "from_sat": holder,
-                                        "to_sat": target,
-                                        "t": t,
-                                    },
-                                }
-                            )
+                    event = _swap_critical_seat(
+                        holders[0],
+                        crit_role,
+                        failing_soon,
+                        assignable,
+                        roles,
+                        seat_of,
+                        t,
+                        None,
+                    )
+                    if event is not None:
+                        events.append(event)
             recover_tol = max(_RECOVER_TOL_FRAC * max_transfer, 1.0)
             assigned = True
             replan_due = False

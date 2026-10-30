@@ -200,7 +200,7 @@ The stack below is **locked** (user-approved, 2026-09-28). The repo rule "no new
 | Layer | Technology | Decision + reason |
 |---|---|---|
 | Framework | React 18 + TypeScript | User-approved change from the master prompt's plain-Three.js line |
-| Build Tool | Vite | Fast dev, simple static production build |
+| Build Tool | Vite 7 (v5.4 → v7.3.7, 2026-10-29 security round) | Fast dev, simple static production build. Version-only delta to the locked stack, user-authorized 2026-10-29 ("fix them all" re the 9 open Dependabot alerts — GATES.md decisions 2026-10-29): esbuild 0.21.5 → 0.28.2 clears GHSA-67mh-4wv8-2f99 plus the 8 vite <= 6.4.x advisories; @vitejs/plugin-react keeps its ^4.3.4 pin (resolves 4.7.0, peerDeps accept vite ^7); npm audit 0 vulnerabilities, npm run build exit 0; the GitHub alerts close on Dependabot's scan after the user pushes |
 | 3D Rendering | **Plain Three.js inside one React component** (imperative, `useEffect`-managed) | Decided: NOT React Three Fiber. The 3D module is isolated so it can be rewritten without touching dashboard code. React never re-renders the scene per frame — positions update through refs/mutable objects |
 | UI Styling | **CSS Modules + one `tokens.css`** | Decided: NOT Tailwind. Tailwind's default palette and class reflexes are the single biggest source of the AI-generated look (§13). Raw tokens give full control and add zero dependencies |
 | State Management | Zustand | Lightweight, per-subscription updates suit real-time telemetry |

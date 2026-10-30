@@ -10,6 +10,7 @@ the compute timeout, never inside message content. The server never writes logs
 from __future__ import annotations
 
 import asyncio
+import threading
 from bisect import bisect_right
 from pathlib import Path
 from typing import Literal
@@ -105,7 +106,7 @@ class LiveSource:
     @classmethod
     def with_failure(
         cls, base: Scenario, sat_display_id: str, mode: str, t_now: float,
-        degrade_s: float = 0.0,
+        degrade_s: float = 0.0, cancel_event: threading.Event | None = None,
     ) -> LiveSource:
         """Failure injection = recompute (section 4, consequence 2): the only
         change is one failure scheduled at t_now, so for DEAD and THRUSTER_OUT
@@ -116,7 +117,9 @@ class LiveSource:
         degrade_s > 0 the fade fires at max(t_now - degrade_s, 0) -- inside the
         prefix -- so that recomputed prefix carries DEGRADED status and a
         DEGRADE_START event instead of matching byte for byte (self-consistent
-        recompute, same run_scenario output either way)."""
+        recompute, same run_scenario output either way).
+        cancel_event passes through to run_scenario (compute-timeout
+        cooperative cancellation, same contract as start_live)."""
         idx = _parse_sat_id(sat_display_id)
         failures = sorted(
             list(base.failures)
@@ -128,7 +131,7 @@ class LiveSource:
             key=lambda f: (f.t, f.sat_id),
         )
         augmented = base.model_copy(update={"failures": failures})
-        return cls(augmented, run_scenario(augmented))
+        return cls(augmented, run_scenario(augmented, cancel_event))
 
 
 class ReplaySource:
@@ -274,11 +277,19 @@ class Session:
         self.mode = "live"
         self.speed = speed
         self._prepare(SessionEnrich(scenario=scenario.name, seed=scenario.seed, policy=policy))
+        # Cooperative cancellation for the timeout below: wait_for cancels only
+        # the await -- without the event the run_scenario thread would keep
+        # running to completion as an orphan, pinning CPU in the shared server
+        # process (audit, medium). The event is set on timeout and the thread
+        # exits at its next tick (sim.run_scenario contract, zero effect on any
+        # canonical run).
+        cancel = threading.Event()
         try:
             lines = await asyncio.wait_for(
-                asyncio.to_thread(run_scenario, scenario), self.run_timeout_s
+                asyncio.to_thread(run_scenario, scenario, cancel), self.run_timeout_s
             )
         except TimeoutError:
+            cancel.set()  # the abandoned thread stops at its next tick
             self._teardown()  # also closes the policy seam
             raise SessionError(504, "scenario computation timed out") from None
         except BaseException:
@@ -392,15 +403,17 @@ class Session:
                 f"{sat_display_id} {mode} failure injected; recomputing trajectory...",
             )
         )
+        cancel = threading.Event()  # same orphan-thread guard as start_live
         try:
             new_source = await asyncio.wait_for(
                 asyncio.to_thread(
                     LiveSource.with_failure, source.scenario, sat_display_id,
-                    mode, t_now, degrade_s,
+                    mode, t_now, degrade_s, cancel,
                 ),
                 self.run_timeout_s,
             )
         except TimeoutError:
+            cancel.set()  # the abandoned recompute thread stops at its next tick
             raise SessionError(504, "failure recomputation timed out") from None
         self._cancel_driver()
         self._source = new_source
