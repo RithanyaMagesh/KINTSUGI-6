@@ -27,6 +27,28 @@
 
   --focus-ring: #e8ecf2; /* 2px outline on :focus-visible */
 
+  /* -- Landing stage (dark-only on purpose: NOT overridden in light theme) */
+  --hero-bg: #030406; /* near-black stage */
+  --hero-ink: #f2f4f7;
+  --hero-ink-muted: #a3abb6;
+  --hero-ink-faint: #6b7480;
+  --hero-line: #1c2128;
+  --hero-line-strong: #3a424d;
+  --hero-accent: #3d6bff; /* single CTA blue */
+  --hero-accent-hover: #5c84ff;
+  --hero-gold: #d4a84b; /* kintsugi gold — means "repaired", nothing else */
+  --hero-gold-bright: #ffd27a; /* bloom core of the gold seams */
+  --hero-red: #e5484d; /* the broken satellite */
+  --hero-star: #c9d2de;
+  --hero-light-key: #ffffff;
+  --hero-light-rim: #6f9bff;
+  --cubesat-frame: #c3c8cf; /* anodized aluminium rails */
+  --cubesat-cap: #2a2f36;
+  --cubesat-panel: #1e4fd6; /* solar cells */
+  --cubesat-panel-line: #3d6cf2;
+  --cubesat-panel-gap: #0a1020;
+  --cubesat-gold: #c9a44a; /* tape antennas */
+
   /* -- 3D scene extras — read through components/three/sceneColors.ts */
   --scene-earth-ocean: #0c2b3f; /* natural deep ocean blue */
   --scene-earth-land: #24523f; /* natural continental green */

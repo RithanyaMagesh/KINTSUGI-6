@@ -1,233 +1,472 @@
-/* Landing page — §13 design law. Color only via tokens.css custom properties
-   (zero raw hex here); IBM Plex Sans for labels/body, IBM Plex Mono for tags;
-   radius ≤8px panels / 4px controls; spacing on the 4px scale. */
+/* KINTSUGI-6 landing — black 3D stage. Colours ONLY via tokens.css (§13.1):
+   the --hero-* / --cubesat-* tokens are dark-only on purpose. No raw hex. */
 
-.page {
-  min-height: 100%;
-  background: var(--bg);
-  color: var(--ink);
-  padding: var(--space-5) var(--space-4);
+.root {
+  position: relative;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: var(--radius-panel);
+  background: var(--hero-bg);
+  color: var(--hero-ink);
+  isolation: isolate;
+}
+
+.canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  z-index: 0;
+}
+
+/* Readability scrim — only in the story sections (copy sits left of the swarm). */
+.scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(90deg, var(--hero-bg) 0%, transparent 58%);
+  opacity: 0;
+  transition: opacity 600ms ease-out;
+}
+
+.scrim[data-story="true"] {
+  opacity: 0.9;
+}
+
+.scroller {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
   overflow-y: auto;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
 }
 
-.inner {
-  max-width: 1040px;
-  margin: 0 auto;
+.scroller::-webkit-scrollbar {
+  display: none;
+}
+
+.section {
+  position: relative;
+  min-height: 100%;
   display: flex;
-  flex-direction: column;
-  gap: var(--space-5);
+  align-items: center;
+  padding: 64px clamp(16px, 6vw, 112px);
+  box-sizing: border-box;
 }
 
-/* -- Hero Banner --------------------------------------------------------- */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* -- Hero ---------------------------------------------------------------- */
 
 .hero {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-panel);
-  padding: var(--space-5);
-}
-
-.heroContent {
-  max-width: 720px;
-  display: flex;
+  height: 100%;
   flex-direction: column;
-  gap: var(--space-3);
+  justify-content: center;
+  text-align: center;
+  gap: 18px;
 }
 
-.kicker {
+.kicker,
+.step {
+  margin: 0;
   font-family: var(--font-mono);
-  font-size: var(--text-event);
-  color: var(--status-info);
-  margin: 0;
+  font-size: 13px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--hero-gold);
 }
 
-.headline {
-  font-size: clamp(32px, 4.5vw, 48px);
-  font-weight: 600;
-  line-height: 1.12;
-  letter-spacing: -0.02em;
-  margin: 0;
-  color: var(--ink);
+.wordmarkSpace {
+  height: 22%;
+  min-height: 90px;
+  flex: none;
 }
 
-.subline {
-  font-size: var(--text-body);
-  line-height: 1.6;
-  color: var(--ink-muted);
+.tagline {
   margin: 0;
+  max-width: 640px;
+  font-size: clamp(17px, 1.6vw, 22px);
+  line-height: 1.5;
+  color: var(--hero-ink-muted);
 }
 
 .ctaRow {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-3);
-  margin-top: var(--space-2);
+  justify-content: center;
+  gap: 12px;
+  margin-top: 6px;
 }
 
-.cta {
+.ctaPrimary,
+.ctaGhost {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  padding: var(--space-2) var(--space-4);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-control);
-  font-family: var(--font-sans);
-  font-size: var(--text-body);
+  gap: 10px;
+  height: 48px;
+  padding: 0 24px;
+  border-radius: 999px;
+  font-size: 16px;
   font-weight: 500;
   text-decoration: none;
   transition:
     background-color var(--motion-duration) var(--motion-ease),
-    border-color var(--motion-duration) var(--motion-ease),
-    color var(--motion-duration) var(--motion-ease),
-    opacity var(--motion-duration) var(--motion-ease);
-}
-
-.cta:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 2px;
+    border-color var(--motion-duration) var(--motion-ease);
 }
 
 .ctaPrimary {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: var(--bg);
+  background: var(--hero-accent);
+  color: var(--hero-ink);
 }
 
 .ctaPrimary:hover {
-  opacity: 0.88;
+  background: var(--hero-accent-hover);
 }
 
-.ctaSecondary {
-  background: var(--panel-raised);
-  color: var(--ink);
+.ctaGhost {
+  border: 1px solid var(--hero-line-strong);
+  color: var(--hero-ink);
+  background: color-mix(in srgb, var(--hero-bg) 60%, transparent);
 }
 
-.ctaSecondary:hover {
-  border-color: var(--status-info);
+.ctaGhost:hover {
+  border-color: var(--hero-gold);
 }
 
-/* -- Workspace Modes Section --------------------------------------------- */
+.ctaPrimary:focus-visible,
+.ctaGhost:focus-visible,
+.dot:focus-visible,
+.scrollHint:focus-visible,
+.modeLink:focus-visible,
+.footer a:focus-visible {
+  outline: 2px solid var(--hero-ink);
+  outline-offset: 3px;
+}
 
-.modesSection {
+.scrollHint {
+  position: absolute;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--hero-ink-faint);
+  white-space: nowrap;
+}
+
+.scrollHint:hover {
+  color: var(--hero-ink);
+}
+
+.scrollLine {
+  position: relative;
+  width: 1px;
+  height: 32px;
+  overflow: hidden;
+  background: var(--hero-line);
+}
+
+.scrollLine::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: -12px;
+  width: 1px;
+  height: 12px;
+  background: var(--hero-gold);
+  animation: drip 1.8s ease-in-out infinite;
+}
+
+@keyframes drip {
+  to {
+    transform: translateY(44px);
+  }
+}
+
+/* -- Story beats --------------------------------------------------------- */
+
+.copy {
+  max-width: 560px;
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: 20px;
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 700ms ease-out,
+    transform 700ms ease-out;
 }
 
-.sectionTitle {
-  font-size: var(--text-panel-title);
-  font-weight: 600;
+.section[data-visible="true"] .copy,
+.section[data-visible="true"] .proofPanel {
+  opacity: 1;
+  transform: none;
+}
+
+.beatTitle {
   margin: 0;
-  color: var(--ink);
+  font-size: clamp(36px, 4.6vw, 68px);
+  font-weight: 600;
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+  color: var(--hero-ink);
 }
 
-.modesGrid {
+.lede {
+  margin: 0;
+  max-width: 500px;
+  font-size: 18px;
+  line-height: 1.6;
+  color: var(--hero-ink-muted);
+}
+
+/* -- Proof + original workspace content ----------------------------------- */
+
+.proof {
+  align-items: flex-start;
+  padding-top: 48px;
+}
+
+.proofPanel {
+  width: 100%;
+  max-width: 760px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 32px;
+  border: 1px solid var(--hero-line);
+  border-radius: var(--radius-panel);
+  background: color-mix(in srgb, var(--hero-bg) 82%, transparent);
+  backdrop-filter: blur(10px);
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 700ms ease-out,
+    transform 700ms ease-out;
+}
+
+.stats {
+  margin: 0;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-4);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 1px solid var(--hero-line);
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 20px 16px 0;
+  border-bottom: 1px solid var(--hero-line);
+}
+
+.stat:nth-child(even) {
+  padding-left: 20px;
+  border-left: 1px solid var(--hero-line);
+}
+
+.statLabel {
+  order: 2;
+  font-size: 14px;
+  color: var(--hero-ink-muted);
+}
+
+.statValue {
+  order: 1;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: clamp(28px, 3vw, 40px);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--hero-ink);
+}
+
+.statSource {
+  order: 3;
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--hero-ink-faint);
+}
+
+.modes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
 }
 
 .modeCard {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-panel);
-  padding: var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid var(--hero-line);
+  border-radius: var(--radius-panel);
+  background: color-mix(in srgb, var(--panel) 70%, transparent);
 }
 
 .modeHeader {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: baseline;
-  gap: var(--space-2);
-  border-bottom: 1px solid var(--border);
-  padding-bottom: var(--space-2);
+  gap: 8px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--hero-line);
 }
 
 .modeTitle {
-  font-size: var(--text-panel-title);
-  font-weight: 600;
-  color: var(--ink);
   margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--hero-ink);
 }
 
 .modeTag {
   font-family: var(--font-mono);
-  font-size: var(--text-tick);
-  color: var(--ink-muted);
-  border: 1px solid var(--border-strong);
+  font-size: 11px;
+  color: var(--hero-ink-faint);
+  border: 1px solid var(--hero-line-strong);
   border-radius: var(--radius-control);
-  padding: 2px var(--space-2);
-  white-space: nowrap;
+  padding: 2px 6px;
 }
 
 .modeDesc {
-  font-size: var(--text-body);
-  line-height: 1.55;
-  color: var(--ink-muted);
   margin: 0;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--hero-ink-muted);
 }
 
 .modeList {
   margin: 0;
-  padding-left: var(--space-4);
+  padding-left: 18px;
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
-  color: var(--ink);
-  font-size: var(--text-event);
+  gap: 4px;
+  font-size: 14px;
   line-height: 1.5;
+  color: var(--hero-ink);
 }
 
-.modeAction {
+.modeLink {
   margin-top: auto;
-  padding-top: var(--space-2);
+  color: var(--hero-gold);
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
 }
 
-/* -- Footer -------------------------------------------------------------- */
+.modeLink:hover {
+  color: var(--hero-gold-bright);
+}
 
 .footer {
-  border-top: 1px solid var(--border);
-  padding-top: var(--space-4);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
+  gap: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--hero-line);
+  font-size: 14px;
 }
 
-.footerText {
-  font-size: var(--text-event);
-  color: var(--ink-muted);
-  margin: 0;
+.footer a {
+  color: var(--hero-ink);
+  text-decoration: none;
 }
 
-.linkRow {
+.footer a:hover {
+  color: var(--hero-gold-bright);
+}
+
+.footerNote {
+  margin-left: auto;
+  color: var(--hero-ink-faint);
+}
+
+/* -- Section dots -------------------------------------------------------- */
+
+.dots {
+  position: absolute;
+  right: 24px;
+  top: 50%;
+  z-index: 3;
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-4);
+  flex-direction: column;
+  gap: 14px;
+  transform: translateY(-50%);
 }
 
-.link {
-  color: var(--ink);
-  font-size: var(--text-event);
-  text-decoration: underline;
-  text-underline-offset: 3px;
+.dot {
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border: 1px solid var(--hero-ink-faint);
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  transition:
+    background-color var(--motion-duration) var(--motion-ease),
+    border-color var(--motion-duration) var(--motion-ease);
 }
 
-.link:hover {
-  color: var(--status-info);
+.dot[data-active="true"] {
+  background: var(--hero-gold);
+  border-color: var(--hero-gold);
 }
+
+/* -- Narrow screens -------------------------------------------------------- */
 
 @media (max-width: 900px) {
-  .modesGrid {
-    grid-template-columns: 1fr;
+  .scrim {
+    background: linear-gradient(0deg, var(--hero-bg) 35%, transparent 70%);
   }
 
-  .footer {
-    flex-direction: column;
-    align-items: flex-start;
+  .section:not(.hero) {
+    align-items: flex-end;
+    padding-bottom: 88px;
+  }
+
+  .proof {
+    padding-top: 64px;
+  }
+
+  .modes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .footerNote {
+    margin-left: 0;
+  }
+
+  .dots {
+    right: 8px;
+  }
+
+  .scrollHint {
+    white-space: normal;
+    text-align: center;
+    width: 80%;
+    justify-content: center;
   }
 }
