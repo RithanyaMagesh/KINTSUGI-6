@@ -1,0 +1,73 @@
+{
+  "a_max_mps2": 0.1,
+  "allocation": {
+    "amp_sweep": [
+      1.0
+    ],
+    "dv_budget_mps": 200.0,
+    "method": "hungarian",
+    "min_sep_km": 2.0,
+    "phase_sweep_deg": [
+      0.0,
+      30.0,
+      60.0,
+      90.0,
+      120.0,
+      150.0,
+      180.0,
+      210.0,
+      240.0,
+      270.0,
+      300.0,
+      330.0
+    ],
+    "w1": 1.0,
+    "w2": 0.5,
+    "w3": 2.0
+  },
+  "chief": {
+    "altitude_km": 445.354
+  },
+  "detection": {
+    "missed_ticks_k": 3
+  },
+  "dt_s": 2.0,
+  "duration_s": 16828.37455937619,
+  "failures": [
+    {
+      "mode": "DEAD",
+      "sat_id": 1,
+      "t": 1200.0
+    },
+    {
+      "mode": "DEAD",
+      "sat_id": 2,
+      "t": 1500.0
+    }
+  ],
+  "formation": {
+    "n_slots": 6,
+    "phase_offset_deg": 0.0,
+    "radial_amp_km": 8.0
+  },
+  "gains": {
+    "wn": 0.01,
+    "zeta": 1.0
+  },
+  "name": "live-swarm-GRACE-FO-1",
+  "recovery_enabled": true,
+  "roles": [
+    "leader",
+    "imager",
+    "imager",
+    "imager",
+    "imager",
+    "downlink"
+  ],
+  "seed": 42,
+  "sensor": {
+    "fov_half_angle_deg": 1.5,
+    "grid_extent_km": 30.0,
+    "grid_step_km": 2.0
+  }
+}
