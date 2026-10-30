@@ -47,3 +47,7 @@ diagram.png
 graphify-out/.graphify_*
 graphify-out/_ast_log.txt
 graphify-out/cache/
+
+.agents
+
+
