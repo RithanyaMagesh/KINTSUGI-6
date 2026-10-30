@@ -70,7 +70,7 @@ def test_degrade_trigger_moves_critical_seat_to_nominal_holder():
     step, and the fading sat never holding a critical role again."""
     scenario = load_scenario(EPS_LEADER)
     on = scenario.model_copy(update={"duration_s": 2600.0, "reassign_on_degrade": True})
-    off = scenario.model_copy(update={"duration_s": 2600.0})
+    off = scenario.model_copy(update={"duration_s": 2600.0, "reassign_on_degrade": False})
     lines = run_scenario(on)
     ref_ticks = _tick_lines(run_scenario(off))
     ticks = _tick_lines(lines)

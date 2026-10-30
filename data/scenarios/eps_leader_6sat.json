@@ -3,6 +3,7 @@
   "seed": 42,
   "duration_s": 17028.0,
   "dt_s": 2.0,
+  "reassign_on_degrade": true,
   "chief": {"altitude_km": 500.0},
   "formation": {"n_slots": 6, "radial_amp_km": 8.0, "phase_offset_deg": 0.0},
   "a_max_mps2": 0.1,
