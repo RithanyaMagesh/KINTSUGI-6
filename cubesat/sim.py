@@ -436,72 +436,97 @@ def run_scenario(
         elif replan_due and mission == STATE_REPLANNING:
             assignable = [i for i in range(n_sats) if status[i] == STATUS_NOMINAL]
             obstacles = [states[i] for i in range(n_sats) if status[i] != STATUS_NOMINAL]
-            plan, pairs, cost_total, method, max_transfer, _cost = replan(
-                [states[i] for i in assignable],
-                [roles[i] for i in assignable],
-                [
-                    max(scenario.allocation.dv_budget_mps - controllers[i].dv_used, 1e-9)
-                    for i in assignable
-                ],
-                obstacles,
-                scenario.roles,
-                scenario.allocation,
-                scenario.formation.radial_amp_km * 1000.0,
-                r_f,
-                grid,
-                n,
-                scenario.a_max_mps2,
-                t,
-            )
-            # DEGRADED sats are excluded from assignable (status != NOMINAL) but
-            # keep PD-holding their assigned seat (Addendum v1.2, module
-            # docstring) -- so when a replan shrinks the formation to the
-            # survivors' k seats, each DEGRADED sat keeps its pre-replan seat:
-            # its formation entry is appended after plan.slots (ascending sat
-            # id, deterministic) and seat_of is re-pointed. Without this the
-            # stale seat index either crashes the step loop (index >= k, first
-            # hit by the v2 oracle sweep on eps_downlink_6sat) or silently
-            # double-books a survivor's seat (eps_leader_6sat, seat 0).
-            # Reached only when a replan fires while a sat is DEGRADED: via the
-            # oracle hook, or reactively when a DEAD sat's missed-heartbeat
-            # detection fires while another sat is mid-fade (mixed failures --
-            # the DEGRADED sat then lands in `preserved` below). No committed
-            # scenario does either (the EPS_DEGRADE ones are single-failure
-            # with the oracle off), so this block never fires on a canonical
-            # run and the golden pins stay byte-identical.
-            preserved: list[np.ndarray] = []
-            for i in range(n_sats):
-                if status[i] == STATUS_DEGRADED:
-                    preserved.append(formation[seat_of[i]])
-                    seat_of[i] = len(plan.slots) + len(preserved) - 1
-            formation = list(plan.slots) + preserved
-            for row, col in pairs:
-                sat_id = assignable[row]
-                seat_of[sat_id] = col
-                roles[sat_id] = plan.seat_roles[col]
-            if scenario.oracle.enabled and scenario.oracle.lead_s > 0:
-                lead = scenario.oracle.lead_s
-                failing_soon = {
-                    f.sat_id
-                    for f in scenario.failures
-                    if t <= f.t <= t + lead + 1e-9
-                }
-                for crit_role in ("leader", "downlink"):
-                    holders = [s for s in assignable if roles[s] == crit_role]
-                    if not holders:
-                        continue
-                    event = _swap_critical_seat(
-                        holders[0],
-                        crit_role,
-                        failing_soon,
-                        assignable,
-                        roles,
-                        seat_of,
-                        t,
-                        None,
-                    )
-                    if event is not None:
-                        events.append(event)
+            current_slots = [formation[seat_of[i]] for i in assignable]
+            try:
+                plan, pairs, cost_total, method, max_transfer, _cost = replan(
+                    [states[i] for i in assignable],
+                    [roles[i] for i in assignable],
+                    [
+                        max(scenario.allocation.dv_budget_mps - controllers[i].dv_used, 1e-9)
+                        for i in assignable
+                    ],
+                    obstacles,
+                    scenario.roles,
+                    scenario.allocation,
+                    scenario.formation.radial_amp_km * 1000.0,
+                    r_f,
+                    grid,
+                    n,
+                    scenario.a_max_mps2,
+                    t,
+                    current_slots=current_slots,
+                )
+            except TypeError:
+                plan, pairs, cost_total, method, max_transfer, _cost = replan(
+                    [states[i] for i in assignable],
+                    [roles[i] for i in assignable],
+                    [
+                        max(scenario.allocation.dv_budget_mps - controllers[i].dv_used, 1e-9)
+                        for i in assignable
+                    ],
+                    obstacles,
+                    scenario.roles,
+                    scenario.allocation,
+                    scenario.formation.radial_amp_km * 1000.0,
+                    r_f,
+                    grid,
+                    n,
+                    scenario.a_max_mps2,
+                    t,
+                )
+            if method == "do_no_harm_hold":
+                pairs = [(idx, idx) for idx in range(len(assignable))]
+                max_transfer = 0.0
+            else:
+                # DEGRADED sats are excluded from assignable (status != NOMINAL) but
+                # keep PD-holding their assigned seat (Addendum v1.2, module
+                # docstring) -- so when a replan shrinks the formation to the
+                # survivors' k seats, each DEGRADED sat keeps its pre-replan seat:
+                # its formation entry is appended after plan.slots (ascending sat
+                # id, deterministic) and seat_of is re-pointed. Without this the
+                # stale seat index either crashes the step loop (index >= k, first
+                # hit by the v2 oracle sweep on eps_downlink_6sat) or silently
+                # double-books a survivor's seat (eps_leader_6sat, seat 0).
+                # Reached only when a replan fires while a sat is DEGRADED: via the
+                # oracle hook, or reactively when a DEAD sat's missed-heartbeat
+                # detection fires while another sat is mid-fade (mixed failures --
+                # the DEGRADED sat then lands in `preserved` below). No committed
+                # scenario does either (the EPS_DEGRADE ones are single-failure
+                # with the oracle off), so this block never fires on a canonical
+                # run and the golden pins stay byte-identical.
+                preserved: list[np.ndarray] = []
+                for i in range(n_sats):
+                    if status[i] == STATUS_DEGRADED:
+                        preserved.append(formation[seat_of[i]])
+                        seat_of[i] = len(plan.slots) + len(preserved) - 1
+                formation = list(plan.slots) + preserved
+                for row, col in pairs:
+                    sat_id = assignable[row]
+                    seat_of[sat_id] = col
+                    roles[sat_id] = plan.seat_roles[col]
+                if scenario.oracle.enabled and scenario.oracle.lead_s > 0:
+                    lead = scenario.oracle.lead_s
+                    failing_soon = {
+                        f.sat_id
+                        for f in scenario.failures
+                        if t <= f.t <= t + lead + 1e-9
+                    }
+                    for crit_role in ("leader", "downlink"):
+                        holders = [s for s in assignable if roles[s] == crit_role]
+                        if not holders:
+                            continue
+                        event = _swap_critical_seat(
+                            holders[0],
+                            crit_role,
+                            failing_soon,
+                            assignable,
+                            roles,
+                            seat_of,
+                            t,
+                            None,
+                        )
+                        if event is not None:
+                            events.append(event)
             recover_tol = max(_RECOVER_TOL_FRAC * max_transfer, 1.0)
             assigned = True
             replan_due = False

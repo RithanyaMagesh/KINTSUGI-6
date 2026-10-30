@@ -54,6 +54,7 @@ class FormationPlan:
     slots: list  # list[np.ndarray], one 6-D state per seat
     seat_roles: list[str]
     coverage: float
+    method: str = ""
 
 
 def seat_roles_for(survivor_roles: list[str], original_roles: list[str]) -> list[str]:
@@ -243,6 +244,7 @@ def replan(
     n: float,
     a_max: float,
     t_replan: float,
+    current_slots: list | None = None,
 ) -> tuple[FormationPlan, list[tuple[int, int]], float, str, float, np.ndarray]:
     """Full two-step allocation at t_replan; returns (plan, pairs, cost_total,
     method, max_transfer_m, cost_matrix). pairs index the GIVEN survivor order."""
@@ -262,6 +264,16 @@ def replan(
         n=n,
         t_replan=t_replan,
     )
+    if current_slots is not None:
+        cov_curr = _coverage_estimate(
+            current_slots, survivor_roles, r_f=r_f, grid=grid, n=n, t_replan=t_replan
+        )
+        if plan.coverage < cov_curr:
+            k = len(survivor_roles)
+            hold = FormationPlan(
+                base_amp_m, 0.0, current_slots, list(survivor_roles), cov_curr, "do_no_harm_hold"
+            )
+            return hold, [(i, i) for i in range(k)], 0.0, "do_no_harm_hold", 0.0, np.zeros((k, k))
     surv_pos = np.array([np.asarray(s)[:3] for s in survivor_states])
     seat_pos = np.array([propagate(s, t_replan, n)[:3] for s in plan.slots])
     cost = build_cost_matrix(
