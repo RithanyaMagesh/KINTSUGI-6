@@ -283,18 +283,20 @@ def test_inject_timeout_cancels_recompute_thread(tmp_path, monkeypatch):
     lived in inject_failure's recompute wait; its cancel event must be set on
     timeout too."""
     observed = []
+    started = threading.Event()
 
     def fake_with_failure(
         cls, base, sat_display_id, mode, t_now, degrade_s=0.0, cancel_event=None
     ):
         observed.append(cancel_event)
+        started.set()
         assert cancel_event is not None and cancel_event.wait(5.0)
         raise AssertionError("cancel event was set: the orphan recompute must stop")
 
     async def main():
         session = _make_session(tmp_path)[1]
         write_tiny_scenario(tmp_path / "scenarios")
-        await session.start_live("tiny.json", None, SPEED_MAX)
+        await session.start_live("tiny.json", None, speed=1.0)
         await session.pause()  # hold the cursor mid-run so inject is allowed
         session.run_timeout_s = 0.05
         monkeypatch.setattr(
@@ -304,6 +306,7 @@ def test_inject_timeout_cancels_recompute_thread(tmp_path, monkeypatch):
         with pytest.raises(SessionError) as exc:
             await session.inject_failure("SAT-2", "DEAD")  # SAT-1 already failed in tiny
         assert exc.value.status_code == 504
+        assert started.wait(5.0), "Worker thread never started"
         assert observed and observed[0].is_set()
 
     asyncio.run(main())
