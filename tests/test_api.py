@@ -67,6 +67,17 @@ def test_api_scenarios_listing(tmp_path, monkeypatch):
     assert response.json() == {"scenarios": ["nominal.json", "two_failure.json"]}
 
 
+def test_api_scenarios_listing_skips_meta_sidecars(tmp_path, monkeypatch):
+    import cubesat.api
+
+    scenarios = tmp_path / "scenarios"
+    scenarios.mkdir()
+    (scenarios / "x.json").write_text("{}", encoding="utf-8")
+    (scenarios / "x.meta.json").write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(cubesat.api, "scenarios_dir", lambda: scenarios)
+    assert client.get("/scenarios").json() == {"scenarios": ["x.json"]}
+
+
 def test_api_scenarios_listing_empty_dir_never_500(tmp_path, monkeypatch):
     import cubesat.api
 

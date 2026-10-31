@@ -162,10 +162,15 @@ def health() -> dict:
 
 
 def _scenario_listing(directory: Path) -> list[str]:
-    """Sorted .json names in a scenarios dir; [] never 500 (section 7.1)."""
+    """Sorted scenario .json names (provenance *.meta.json sidecars excluded: starting one
+    is a 500, audit B-18) in a scenarios dir; [] never 500 (section 7.1)."""
     if not directory.is_dir():
         return []
-    return sorted(p.name for p in directory.iterdir() if p.is_file() and p.suffix == ".json")
+    return sorted(
+        p.name
+        for p in directory.iterdir()
+        if p.is_file() and p.suffix == ".json" and not p.name.endswith(".meta.json")
+    )
 
 
 @app.get("/scenarios")
