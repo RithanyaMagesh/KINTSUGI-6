@@ -185,6 +185,14 @@ class Scenario(BaseModel):
         default=True,
         description="False = detect failures but never replan (no-recovery baseline)",
     )
+    recovery_delay_s: float = Field(
+        default=0.0,
+        ge=0.0,
+        description=(
+            "Delay in seconds from first failure detection before triggering recovery "
+            "replanning (0.0 = autonomous onboard recovery; 5400.0 = wait-for-ground baseline)"
+        ),
+    )
     reassign_on_degrade: bool = Field(
         default=False,
         description=(

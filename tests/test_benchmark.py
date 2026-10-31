@@ -490,3 +490,37 @@ def test_cli_accepts_documented_paths(capsys):
     ):
         with pytest.raises(FileNotFoundError):
             main(["--base", missing_base, *extra])
+
+
+def test_scenario_recovery_delay_default_zero():
+    """recovery_delay_s defaults to 0.0, preserving immediate autonomous recovery."""
+    sc = load_scenario(TWO_FAILURE)
+    assert hasattr(sc, "recovery_delay_s")
+    assert sc.recovery_delay_s == 0.0
+
+
+def test_delayed_recovery_timing():
+    """When recovery_delay_s=5400.0, sim stays in STATE_FAILURE_DETECTED until delay elapses."""
+    sc = load_scenario(TWO_FAILURE)
+    sc_delayed = sc.model_copy(update={"recovery_delay_s": 5400.0})
+    lines = sim_module.run_scenario(sc_delayed)
+    ticks = [line for line in lines if line["state"] not in ("INIT", "SUMMARY")]
+    first_detect_tick = next(t for t in ticks if t["state"] == "FAILURE_DETECTED")
+    replan_tick = next(t for t in ticks if t["state"] == "REPLANNING")
+    t_detect = first_detect_tick["t"]
+    t_replan = replan_tick["t"]
+    assert t_replan >= t_detect + 5400.0 - 1e-9
+
+
+def test_self_report_thruster_out_recovery_delay():
+    """Self-reported THRUSTER_OUT failure initializes t_first_detect and honors recovery_delay_s."""
+    sc = load_scenario(TWO_FAILURE)
+    thruster_fail = Failure(t=1000.0, sat_id=1, mode=FailureMode.THRUSTER_OUT)
+    sc_delayed = sc.model_copy(update={"failures": [thruster_fail], "recovery_delay_s": 5400.0})
+    lines = sim_module.run_scenario(sc_delayed)
+    ticks = [line for line in lines if line["state"] not in ("INIT", "SUMMARY")]
+    first_detect_tick = next(t for t in ticks if t["state"] == "FAILURE_DETECTED")
+    replan_tick = next(t for t in ticks if t["state"] == "REPLANNING")
+    assert first_detect_tick["t"] == 1000.0
+    assert replan_tick["t"] >= 1000.0 + 5400.0 - 1e-9
+

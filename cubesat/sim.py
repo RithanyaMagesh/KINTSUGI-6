@@ -206,6 +206,7 @@ def run_scenario(
     # All-zero init keeps the default path byte-identical (see the evasion block).
     evade_ticks_left = [0] * n_sats
     u_evade = [np.zeros(3) for _ in range(n_sats)]
+    t_first_detect: float | None = None
 
     n_ticks = int(round(scenario.duration_s / dt)) + 1
     lines = [
@@ -300,6 +301,8 @@ def run_scenario(
                     # runs unchanged (non-NOMINAL sats are already excluded
                     # from assignable and seat_roles_for re-elects the role).
                     mission = STATE_FAILURE_DETECTED
+                    if t_first_detect is None:
+                        t_first_detect = t
                     events.append(
                         {
                             "type": "FAILURE_DETECTED",
@@ -327,6 +330,8 @@ def run_scenario(
             ):
                 declared[i] = True
                 mission = STATE_FAILURE_DETECTED
+                if t_first_detect is None:
+                    t_first_detect = t
                 events.append(
                     {
                         "type": "FAILURE_DETECTED",
@@ -424,6 +429,10 @@ def run_scenario(
             mission == STATE_FAILURE_DETECTED
             and scenario.recovery_enabled
             and any(s == STATUS_NOMINAL for s in status)
+            and (
+                t_first_detect is not None
+                and t >= t_first_detect + scenario.recovery_delay_s - 1e-9
+            )
         ):
             mission = STATE_REPLANNING
             events.append(
@@ -433,6 +442,7 @@ def run_scenario(
                 }
             )
             replan_due = True
+            t_first_detect = None
         elif replan_due and mission == STATE_REPLANNING:
             assignable = [i for i in range(n_sats) if status[i] == STATUS_NOMINAL]
             obstacles = [states[i] for i in range(n_sats) if status[i] != STATUS_NOMINAL]
