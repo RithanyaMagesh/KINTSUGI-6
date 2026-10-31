@@ -11,6 +11,7 @@ are frontend-derived -- the backend only reports what the log carries.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from typing import Annotated, Literal
 
@@ -32,6 +33,9 @@ class SessionEnrich:
     assignment_map: dict[int, str] = field(default_factory=dict)  # log sat id -> "slot_i"
     detection_latency_s: float | None = None
     replanning_latency_ms: float | None = None  # stays None in G5 (section 6.1 cut)
+    prev_roles: dict[int, str] = field(default_factory=dict)  # log sat id -> role, last frame
+    role_holder: dict[str, int] = field(default_factory=dict)  # role -> last sole live holder
+    last_t: float = -1.0  # previous frame time; a backwards step (seek) restarts role tracking
 
 
 # Live-selectable recovery policies (the benchmark's seam policies + the shipped
@@ -213,6 +217,28 @@ def to_sim_state(frame: dict, enrich: SessionEnrich) -> dict:
     }
 
 
+def _sat_label(sat: object) -> str | None:
+    """Raw log sat id -> display id; an already-display str passes; junk -> None."""
+    if isinstance(sat, int) and not isinstance(sat, bool):
+        return display_sat_id(sat)
+    return sat if isinstance(sat, str) else None
+
+
+def _with_sat(ev: dict, sat: object) -> dict:
+    """Optional additive sat_id ('SAT-n') on events about one satellite."""
+    label = _sat_label(sat)
+    if label is not None:
+        ev["sat_id"] = label
+    return ev
+
+
+def _mmss(seconds: object) -> str | None:
+    if not isinstance(seconds, (int, float)) or not math.isfinite(seconds):
+        return None
+    m, s = divmod(int(round(max(seconds, 0.0))), 60)
+    return f"{m:02d}:{s:02d}"
+
+
 def _failure_event(frame: dict, payload: dict, enrich: SessionEnrich) -> dict:
     if isinstance(payload.get("t_fail"), (int, float)) and isinstance(
         payload.get("t_detect"), (int, float)
@@ -224,7 +250,7 @@ def _failure_event(frame: dict, payload: dict, enrich: SessionEnrich) -> dict:
     message = f"{who} {mode} failure detected" if mode else f"{who} failure detected"
     if payload.get("self_report"):  # Addendum v1.2: additive key, old payloads unchanged
         message += " (self-reported)"
-    return to_event("critical", frame.get("t", 0.0), message)
+    return _with_sat(to_event("critical", frame.get("t", 0.0), message), who)
 
 
 def _role_reassignment(frame: dict, payload: dict, enrich: SessionEnrich) -> dict:
@@ -247,7 +273,47 @@ def _role_reassignment(frame: dict, payload: dict, enrich: SessionEnrich) -> dic
     }
     if "cost_total" in payload:
         msg["cost_total"] = payload["cost_total"]
+    for key in ("method", "formation", "transfer_lower_bound_s"):  # additive passthrough
+        if key in payload:
+            msg[key] = payload[key]
+    if "method" in payload:
+        msg["kept_formation"] = payload["method"] == "do_no_harm_hold"
     return msg
+
+
+def _track_roles(frame: dict, enrich: SessionEnrich) -> tuple[dict[int, str], list[dict]]:
+    """Per-frame role diff, then advance enrich: ({sat id: old role} for sats whose
+    role changed since the previous frame, role_handoffs). A handoff is only
+    well-defined for a role with ONE live holder (leader/downlink); the from_sat
+    is that last sole live holder, which survives the holder's death because the
+    log keeps a dead sat's role label. No previous frame -> nothing to diff."""
+    sats = frame.get("sats", [])
+    t = frame.get("t", 0.0)
+    if isinstance(t, (int, float)):
+        if t < enrich.last_t:
+            enrich.prev_roles, enrich.role_holder = {}, {}
+        enrich.last_t = t
+    old = {
+        s["id"]: enrich.prev_roles[s["id"]]
+        for s in sats
+        if s["id"] in enrich.prev_roles and enrich.prev_roles[s["id"]] != s["role"]
+    }
+    handoffs = [
+        {
+            "role": s["role"],
+            "from_sat": display_sat_id(enrich.role_holder[s["role"]]),
+            "to_sat": display_sat_id(s["id"]),
+        }
+        for s in sats
+        if s["id"] in old and enrich.role_holder.get(s["role"], s["id"]) != s["id"]
+    ]
+    enrich.prev_roles = {s["id"]: s["role"] for s in sats}
+    live: dict[str, list[int]] = {}
+    for s in sats:
+        if s["status"] in ("NOMINAL", "DEGRADED"):
+            live.setdefault(s["role"], []).append(s["id"])
+    enrich.role_holder.update({r: ids[0] for r, ids in live.items() if len(ids) == 1})
+    return old, handoffs
 
 
 def _evasive_event(frame: dict, payload: dict) -> dict:
@@ -263,21 +329,59 @@ def _evasive_event(frame: dict, payload: dict) -> dict:
         other = display_sat_id(other)
     rng = payload.get("range_m")
     rng_txt = f"{rng:.0f}" if isinstance(rng, (int, float)) else str(rng)
-    return to_event(
-        "info",
-        frame.get("t", 0.0),
-        f"{who} evasive maneuver ({other}, range {rng_txt} m)",
+    return _with_sat(
+        to_event(
+            "info",
+            frame.get("t", 0.0),
+            f"{who} evasive maneuver ({other}, range {rng_txt} m)",
+        ),
+        who,
     )
+
+
+# Plain-wording labels for the transitions the UI narrates; others keep text only.
+_STATE_LABELS = {
+    ("FAILURE_DETECTED", "REPLANNING"): "Planning recovery",
+    ("REPLANNING", "RECONFIGURING"): "Moving to new positions",
+    ("RECONFIGURING", "RECOVERED"): "Recovered",
+}
 
 
 def _plain_event(frame: dict, etype: str, payload: dict) -> dict:
     if etype == "STATE":  # plain transitions: {from, to}
-        return to_event(
-            "info",
-            frame.get("t", 0.0),
-            f"State {payload.get('from')} -> {payload.get('to')}",
-        )
-    return to_event("info", frame.get("t", 0.0), etype)  # unknown types: pass the type
+        frm, to = payload.get("from"), payload.get("to")
+        ev = to_event("info", frame.get("t", 0.0), f"State {frm} -> {to}")
+        ok = isinstance(frm, str) and isinstance(to, str)  # junk payloads: text only
+        label = _STATE_LABELS.get((frm, to)) if ok else None
+        if label is not None:  # additive structured fields
+            ev.update({"from": frm, "to": to, "label": label})
+        return ev
+    t = frame.get("t", 0.0)
+    if etype == "DEGRADE_START":  # {sat_id, t_fail, degrade_s}
+        who = _sat_label(payload.get("sat_id"))
+        msg = f"{who or 'A satellite'} battery fading"
+        left = _mmss(payload["t_fail"] - t) if isinstance(payload.get("t_fail"), (int, float)) \
+            and isinstance(t, (int, float)) else None
+        if left is not None:
+            msg += f"; failure expected at T+{left}"
+        return _with_sat(to_event("warning", t, msg), who)
+    if etype == "ORACLE_SWAP":  # {role, from_sat, to_sat, t, mode?}
+        a, b = _sat_label(payload.get("from_sat")), _sat_label(payload.get("to_sat"))
+        if payload.get("mode") == "degrade_trigger":
+            why = " because its battery is fading"
+        else:
+            why = f" before {a} fails" if a else ""
+        role = payload.get("role") or "critical"
+        msg = f"{a or 'A satellite'} {role} role handed to {b or 'another satellite'}{why}"
+        return _with_sat(to_event("info", t, msg), a)
+    if etype == "ORACLE_ALERT":  # {sat_id, lead_s, t_fail, t_warn}
+        who = _sat_label(payload.get("sat_id"))
+        lead = _mmss(payload.get("lead_s"))
+        msg = f"Early warning: {who or 'a satellite'} expected to fail"
+        if lead is not None:
+            msg += f" in {lead}"
+        return _with_sat(to_event("info", t, msg + "; replanning early"), who)
+    return to_event("info", t, etype)  # unknown types: pass the type
 
 
 def to_messages(frame: dict, enrich: SessionEnrich) -> list[dict]:
@@ -290,8 +394,19 @@ def to_messages(frame: dict, enrich: SessionEnrich) -> list[dict]:
     if state == "INIT":
         return [to_sim_state(frame, enrich)]
     if state == "SUMMARY":
-        # SUMMARY is never sent as a sim_state (section 6.1)
-        return [to_event("info", frame.get("t", 0.0), "Run complete")]
+        # SUMMARY is never sent as a sim_state (section 6.1). run_summary goes FIRST:
+        # the "Run complete" event stays the stream's last message (clients and tests
+        # treat it as the terminator).
+        return [
+            {
+                "type": "run_summary",
+                "coverage_mean_last_orbit": frame.get("coverage_mean_last_orbit"),
+                "sim_time": frame.get("t", 0.0),
+                "scenario": enrich.scenario,
+                "seed": enrich.seed,
+            },
+            to_event("info", frame.get("t", 0.0), "Run complete"),
+        ]
 
     event = frame.get("event")
     reassignment: dict | None = None
@@ -308,7 +423,13 @@ def to_messages(frame: dict, enrich: SessionEnrich) -> list[dict]:
         else:
             event_msg = _plain_event(frame, etype, payload)
 
+    old_roles, handoffs = _track_roles(frame, enrich)
     msgs = [to_sim_state(frame, enrich)]
+    for row, sat in zip(msgs[0]["sats"], frame.get("sats", []), strict=True):
+        if sat["id"] in old_roles:
+            row["old_role"] = old_roles[sat["id"]]
+    if reassignment is not None and handoffs:
+        reassignment["role_handoffs"] = handoffs
     if event_msg is not None:
         msgs.append(event_msg)
     if reassignment is not None:
