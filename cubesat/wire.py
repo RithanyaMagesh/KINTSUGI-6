@@ -203,7 +203,7 @@ def to_sim_state(frame: dict, enrich: SessionEnrich) -> dict:
             "min_sep": None,
             "metrics": _metrics(enrich),
         }
-    return {
+    msg = {
         "type": "sim_state",
         "sim_time": frame["t"],
         "state": frame["state"],
@@ -215,6 +215,10 @@ def to_sim_state(frame: dict, enrich: SessionEnrich) -> dict:
         "min_sep": frame.get("min_sep"),
         "metrics": _metrics(enrich),
     }
+    for key in ("chief", "station"):  # v2 Earth view: optional passthrough
+        if key in frame:
+            msg[key] = frame[key]
+    return msg
 
 
 def _sat_label(sat: object) -> str | None:

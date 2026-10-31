@@ -1,9 +1,10 @@
 """Engine v2: stepper-native truth-dynamics loop (ECI two-body + J2 + drag, RK4).
 
-Log schema = cubesat/sim.py (v1) plus optional keys: `events` (every event of the tick) and INIT
-`engine`. Consumers that read only `frame["event"]` (wire.py, dv_bound.py) see just the FIRST of
-several simultaneous events; `events` carries all of them. Phase 1 scope: truth propagation,
-v1 PDController seat holding on the LVLH state (until Phase 5), failures coast in the truth model
+Log schema = cubesat/sim.py (v1) plus optional keys: `chief` + `station` on every tick (Earth
+view, cubesat/geo_v2.py), `events` (every event of the tick) and INIT `engine`. Consumers that
+read only `frame["event"]` (wire.py, dv_bound.py) see just the FIRST of several simultaneous
+events; `events` carries all of them. Phase 1 scope: truth propagation, v1 PDController seat
+holding on the LVLH state (until Phase 5), failures coast in the truth model
 (cubesat/faults_v2.py), a re-entry guard, NO recovery.
 
 Contract: EngineV2(scenario, injections) replayed from t=0 gives the identical log; the
@@ -20,7 +21,7 @@ from collections.abc import Iterator
 
 import numpy as np
 
-from cubesat import truth
+from cubesat import geo_v2, truth
 from cubesat.coverage import coverage_fraction, footprint_radius, target_grid
 from cubesat.faults_v2 import STATUS_REENTERED, Faults
 from cubesat.hcw import mean_motion, stm
@@ -143,6 +144,7 @@ class EngineV2:
             ],
             "coverage": cov,
             "min_sep": self._min_sep(lvlh[:, :3]),
+            **geo_v2.tick_fields(c[:3], self.scenario.chief.epoch_utc, t),  # Earth view (v2 only)
         }
         if events:
             line["event"], line["events"] = events[0], events
