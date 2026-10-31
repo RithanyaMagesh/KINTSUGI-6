@@ -191,7 +191,7 @@ def certify(
     seats_t0 = [propagate(seats_now[i], -state.t_s, n) for i in range(scenario.n_sats)]
     movers = {i: it.transfer for i, it in items.items() if it.transfer is not None}
     for i, it in items.items():
-        if cmd_ok[i] and it.transfer is None or i in movers and cmd_ok[i]:
+        if cmd_ok[i]:  # a sat that cannot be commanded keeps flying its old seat
             seats_now[i] = propagate(it.seat, plan.t_start_s, n)
             seats_t0[i] = np.asarray(it.seat, dtype=float)
     steps = max(1, round(horizon_orbits * 2.0 * math.pi / n / scenario.dt_s))
@@ -206,9 +206,21 @@ def certify(
             f"separation: sats {a} and {b} come within {res.min_sep_m:.1f} m at t = "
             f"{res.min_sep_t_s:.0f} s, below the {d_safe_m:.1f} m limit"
         )
-
-    worst, worst_sat, vacant, roles_ok = 0.0, None, [], True
-    coverage = hold_cov = landing = 0.0
+    worst, worst_sat = _check_fuel(movers, state, cmd_ok, fuel_reserve, reasons)
+    final_roles = [
+        list(items[i].roles) if i in items else list(r) for i, r in enumerate(state.roles)
+    ]
+    vacant, roles_ok = _check_roles(final_roles, state, scenario, reasons)
+    coverage, hold_cov = _check_coverage(
+        seats_now, final_roles, state, scenario, coverage_floor, reasons
+    )
+    landing = max(res.landing_m.values(), default=0.0)  # 5 landing
+    for i, err in sorted(res.landing_m.items()):
+        if err > landing_tol_m:
+            reasons.append(
+                f"landing: sat {i} ends {err:.1f} m from its seat in the truth model "
+                f"(limit {landing_tol_m:.1f} m)"
+            )
 
     return Certificate(
         passed=not reasons,
@@ -226,3 +238,68 @@ def certify(
         landing_error_m=landing,
         horizon_s=res.n_steps * scenario.dt_s,
     )
+
+
+def _check_fuel(movers, state, cmd_ok, fuel_reserve, reasons):
+    """Check 2. Returns (worst margin, its sat); (0.0, None) when nothing moves."""
+    worst, worst_sat = math.inf, None
+    for i, tr in movers.items():
+        sat, planned = state.sats[i], float(np.linalg.norm(np.asarray(tr.dv), axis=1).sum())
+        if not cmd_ok[i] or sat.k <= 0.0 or sat.depleted:
+            why = "no radio link" if not cmd_ok[i] else "empty tank" if sat.depleted else "k = 0"
+            reasons.append(f"fuel: sat {i} cannot move ({why}, status {state.status[i]})")
+            margin = -planned
+        else:
+            margin = sat.fuel_mps_left * (1.0 - fuel_reserve) - planned
+            if margin < 0.0:
+                reasons.append(
+                    f"fuel: sat {i} needs {planned:.3f} m/s but only {sat.fuel_mps_left:.3f} m/s "
+                    f"is left with a {100.0 * fuel_reserve:.0f}% reserve (margin {margin:.3f} m/s)"
+                )
+        if margin < worst:
+            worst, worst_sat = margin, i
+    return (0.0 if worst_sat is None else worst), worst_sat
+
+
+def _check_roles(final_roles, state, scenario, reasons):
+    """Check 3. Returns (vacant required roles, roles_ok); capability is judged on the TRUE
+    status and flags, never on what the swarm believes."""
+
+    def can(i, role):
+        s = state.sats[i]
+        return capability(state.status[i], s.payload_ok, s.radio_ok, role)
+
+    vacant = []
+    for role in (r for r in REQUIRED_ROLES if r in scenario.roles):
+        holders = [i for i, rs in enumerate(final_roles) if role in rs]
+        if not any(can(i, role) for i in holders):
+            vacant.append(role)
+    bad = [(i, r) for i, rs in enumerate(final_roles) for r in rs if not can(i, r)]
+    if vacant:
+        reasons.append("roles: no capable sat holds " + ", ".join(vacant))
+    if bad:
+        held = ", ".join(f"{r} on sat {i} ({state.status[i]})" for i, r in bad)
+        reasons.append("roles: incapable sats hold roles: " + held)
+    return vacant, not vacant and not bad
+
+
+def _check_coverage(seats_now, final_roles, state, scenario, floor, reasons):
+    """Check 4, via allocate._coverage_estimate (same footprint radius, target grid and 72-sample
+    average over one orbit as the allocator). Returns (plan coverage, hold coverage)."""
+    n = mean_motion(scenario.chief.altitude_km * 1000.0)
+    fov = math.radians(scenario.sensor.fov_half_angle_deg)
+    r_f = footprint_radius(scenario.chief.altitude_km * 1000.0, fov)
+    sn = scenario.sensor
+    grid = target_grid(sn.grid_step_km * 1000.0, sn.grid_extent_km * 1000.0)
+
+    def cover(seats, roles):
+        img = set(imaging_sats(roles, state.status, state.sats))
+        labels = ["imager" if i in img else "-" for i in range(len(roles))]
+        return _coverage_estimate(list(seats), labels, r_f=r_f, grid=grid, n=n, t_replan=0.0)
+
+    coverage, hold_cov = cover(seats_now, final_roles), cover(state.refs, state.roles)
+    need = hold_cov - 1e-9 if floor is None else float(floor)
+    if coverage < need:
+        what = "the coverage floor" if floor is not None else "holding position"
+        reasons.append(f"coverage: {coverage:.4f} is below {need:.4f} ({what})")
+    return coverage, hold_cov
