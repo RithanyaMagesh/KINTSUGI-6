@@ -228,7 +228,7 @@ function buildSun(): {
   const glow = sprite(glowTex, 14.5, 0.8);
   const rays = sprite(raysTex, 13, 0.6);
   const raysB = sprite(raysTex, 9.5, 0.35);
-  const core = sprite(coreTex, 2.4, 2.05);
+  const core = sprite(coreTex, 2.1, 1.15); // softer centre spot
   group.add(glow, rays, raysB, core);
   return {
     group,
