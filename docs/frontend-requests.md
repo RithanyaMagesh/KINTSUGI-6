@@ -149,3 +149,9 @@ Backend fields arrive with plan steps C2–C6 (`docs/superpowers/plans/2026-11-0
 3. **Leader functions as chips.** Six chips (detection, time sync, formation reference, collision arbitration, scheduling, ground relay) sit on their holder. On `FUNCTION_HANDOFF` they fly to the new holder (same idea as the role batons). Show `consensus_rounds` as a count, not seconds.
 4. **Formation picker.** Dropdown: cartwheel / PCO / GCO / helix / string (`formation.shape`). Show ghost target slots plus the one-orbit relative path, and the Δv to switch per sat against the tank, from `data/eval/formations_report.json` (C3).
 5. **Side-by-side demo.** Central (star) vs decentral (mesh) on the same leader kill. The vacancy and split-brain numbers come only from `data/eval/comms_results.json` (C5).
+
+### Track C — C3 additions (2026-11-01, branch `formations`; backend only, build later)
+- `formation.shape` is a scenario field now (`cartwheel` default; `pco`, `gco`, `helix`, `string` need `engine: "v2"`, v1 returns 422). The picker (item 4 above) can write it straight into the uploaded scenario. Ready-made examples: `data/scenarios/formation_<shape>_6sat.json`.
+- Per-shape numbers for the picker come only from `data/eval/formations_report.json` (`shapes.<shape>`): `cw_min_sep_m`, `cw_worst_sep_any_along_track_drift_m`, `cw_coverage`, `hold_dv_per_orbit_max_sat_mps`, `switch_from_cartwheel.per_sat[].dv_l1_mps` (bar per sat against the 20.12 m/s tank; label "planning model (CW), L1 upper bound").
+- Show the drift hazard honestly: only `helix` keeps a non-zero separation under any along-track drift of a dead sat; every other shape shows 0 m there ("a drifting dead sat can reach a neighbour").
+- Coverage loss badge for `helix` and `string` (lower than cartwheel in the report).

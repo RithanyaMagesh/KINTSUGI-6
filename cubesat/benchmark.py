@@ -503,13 +503,15 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--mode", choices=("benchmark", "keepout-report", "pareto", "cw-curve", "monte-carlo",
-                 "ground-passes", "baselines"),
+                 "ground-passes", "baselines", "formations"),
         default="benchmark",
         help="benchmark: run the P0 sweep; keepout-report: P2 post-hoc log analysis; "
         "pareto: P1 w2 x dv_budget sweep; cw-curve: P3 CW-vs-Kepler error curves; "
         "monte-carlo: P4 deterministic parameter-jitter robustness ensemble; "
         "ground-passes: single-station pass statistics (cubesat/ground.py); "
-        "baselines: 15 pairs x do_nothing,role_swap_only,wait_for_ground,hungarian",
+        "baselines: 15 pairs x do_nothing,role_swap_only,wait_for_ground,hungarian; "
+        "formations: formation-shape report (cubesat/formations_bench.py; --base = "
+        "data/scenarios/formation_cartwheel_6sat.json)",
     )
     parser.add_argument("--base", required=True, type=Path, help="base scenario JSON")
     parser.add_argument(
@@ -584,6 +586,11 @@ def main(argv: list[str] | None = None) -> int:
     ):
         if value is not None:
             _confine_output_path(parser, label, value)
+    if args.mode == "formations":
+        from cubesat.formations_bench import run as run_formations
+
+        args.argv = argv if argv is not None else sys.argv[1:]
+        return run_formations(args)
     if args.mode == "ground-passes":
         return _run_ground_passes(args)
     if args.mode == "keepout-report":

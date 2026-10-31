@@ -150,6 +150,15 @@ class Formation(BaseModel):
         description="Cross-track phase psi of the slots, deg: z = B cos(theta + psi). "
         "v2 only; 0 reproduces v1 slots",
     )
+    # exclude_if: the default is left out of model_dump, so every existing scenario keeps its
+    # sha256 fingerprint (sim_v2._fingerprint); a non-default shape is dumped and fingerprinted.
+    shape: Literal["cartwheel", "pco", "gco", "helix", "string"] = Field(
+        default="cartwheel",
+        exclude_if=lambda v: v == "cartwheel",
+        description="Formation shape (cubesat/formations.py). 'cartwheel' = the v1 slots; "
+        "pco/gco/helix/string are engine v2 only. For 'string', radial_amp_km is the "
+        "along-track spacing",
+    )
 
 
 class Gains(BaseModel):
