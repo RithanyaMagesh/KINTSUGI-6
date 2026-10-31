@@ -207,3 +207,38 @@ Source: docs/superpowers/specs/KINTSUGI-6_replan_and_judge_kit.md §2.5 and §6.
 - **PR-3 (baselines reported side by side).** `critical_vacancy_s` (mean and worst over the 15 pairs) is reported for `do_nothing`, `wait_for_ground`, `role_swap_only`, `hungarian` and v2, from one committed artifact with its command. `wait_for_ground`'s delay comes from the ground-pass model (cubesat/ground.py; station Bengaluru 13.03 N 77.51 E, elevation ≥ 10°), not a constant.
 - **Baseline definitions fixed now.** `role_swap_only`: re-elect the lost critical roles in place among surviving sats (zero Δv, no seat change, no formation sweep). `wait_for_ground`: autonomous recovery (hungarian) is held until the first ground pass after detection (`recovery_delay_s` from the pass model).
 - **Out of scope for these claims:** coverage is secondary; no coverage-hours headline (measured: wait-for-ground ≥ autonomous in 10-11 of 15 pairs, docs/audit/2026-10-31-c.md C-8).
+
+
+## 2026-10-31 — Baselines measured: role_swap_only, wait_for_ground, ground-pass model (branch `backend-ground`)
+
+**This is a BASELINE measurement, not the pre-registered v2 claim.** PR-1..PR-3 above are untouched; no v2 policy exists yet. Every number below is in a committed artifact; the command is in the artifact's `command` field.
+
+**Ground-pass statistics** — `data/eval/ground_pass_stats.json`, command `uv run python -m cubesat.benchmark --mode ground-passes --base data/scenarios/two_failure.json --report data/eval/ground_pass_stats.json` (model: cubesat/ground.py; simplifications listed in its docstring; 48 starts × 865 failure instants = 41520 waits; one station, illustrative).
+
+| statistic | measured | user's script (compare only) | difference |
+|---|---|---|---|
+| passes/day | 2.488 | 2.5 | -0.5% |
+| mean wait | 20034.7 s = 5.565 h | 5.7 h | -2.4% |
+| median wait | 19850 s = 5.514 h | 5.6 h | -1.5% |
+| p90 wait | 37130 s = 10.314 h | 10.4 h | -0.8% |
+| max gap | 47440 s = 13.178 h | 13.2 h | -0.2% |
+
+All five are within 5% of the user's numbers. The model was not adjusted to match. The difference is plausibly the edge handling (failure instants drawn from the first 6 of 7 days; pass edges on the 10 s grid), not verified.
+
+**Four-policy vacancy table** — `data/eval/baselines_results.json` (+ `baselines_manifest.json`), command `uv run python -m cubesat.benchmark --mode baselines --base data/scenarios/two_failure.json --out data/eval/baselines --report data/eval/baselines_results.json`; 15 pairs, DEAD at 1200 s / 1500 s.
+
+| policy | critical roles held (end) | mean vacancy s | worst vacancy s | mean coverage | worst per-sat Δv m/s | pairs within scenario budget (200 m/s) | pairs within illustrative tank (20.12 m/s) |
+|---|---|---|---|---|---|---|---|
+| do_nothing | 6/15 | 9418.0 | 15830.0 | 0.2911 | 0.0 | 15/15 | 15/15 |
+| role_swap_only | 15/15 | 5.9 | 16.0 | 0.2350 | 0.0 | 15/15 | 15/15 |
+| wait_for_ground | 15/15 | 14276.8 | 23928.0 | 0.2698 | 237.1 | 10/15 | 0/15 |
+| hungarian | 15/15 | 5.9 | 16.0 | 0.2698 | 251.2 | 14/15 | 0/15 |
+
+- Tank = `40*9.80665*ln(4/3.8)` = 20.12 m/s, illustrative (4 kg, 0.2 kg propellant, Isp 40 s); not a hardware claim.
+- `wait_for_ground`: delay = `ground.wait_to_next_pass(1200 s)` at the default start (RAAN 0, phase 0) = 23920 s (6.64 h), the same for every row (`recovery_delay_s`; `truncated: false`). That is one start, not the 48-start mean above. Vacancy is 23628-23928 s on the 9 pairs that lose a critical role and 0 on the 6 pairs that do not (nothing to re-elect), so its mean (14276.8 s) mixes both. The sim counts the delay from detection (about 4 s after failure), a documented offset.
+- `role_swap_only` and `hungarian` have identical vacancy (5.9 s mean, 16.0 s worst): the mission metric does not separate them; they differ in coverage and Δv.
+- The P0 report `data/eval/benchmark_results.json` was regenerated with its command of record: 60 rows, same four policies, all pre-existing numbers identical, plus the new `dv_*` fields (hungarian: 14/15 pairs within the scenario budget, 0/15 within the tank; manifest unchanged).
+
+**role_swap_only vs hungarian, coverage (`coverage_mean_last_orbit`)**: `role_swap_only >= hungarian - 1e-4` on **1 of 15** pairs (only (2,3)); mean 0.2350 vs 0.2698. The audit (docs/audit/2026-10-31-c.md C-4) measured 6/15 and 0.2570 vs 0.2698, but with an oracle-best promotee in a scratch script (its own stated upper bound); the committed policy uses the pre-registered deterministic rule (lowest-id surviving non-critical sat, duplicated roles first), which promotes an imager and so costs imaging. The audit figure is therefore not reproduced by this policy. Under this rule `role_swap_only` is also below `do_nothing` on mean coverage (0.2350 vs 0.2911).
+
+**Not claimed:** no v2 number; no coverage-hours result; the ground model describes one station and is illustrative.
