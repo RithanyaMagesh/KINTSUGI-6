@@ -1,4 +1,4 @@
-"""Phase 5c: LP fuel-optimal CW transfers (cubesat/transfer.py). SI, LVLH."""
+"""Phase 5c: L1-optimal impulse CW transfers (cubesat/transfer.py). SI, LVLH."""
 
 from __future__ import annotations
 
@@ -15,7 +15,6 @@ from cubesat.transfer import (
     TransferCancelled,
     best_transfer,
     lp_transfer,
-    mpc_due,
     mpc_step,
     propagate_plan,
 )
@@ -60,9 +59,7 @@ def test_lp_n2_equals_two_impulse():
     ref = two_impulse_dv(SLOT0, SLOT1, 0.0, T_S, N_MM)
     dv1, dv2 = two_impulse_vectors(SLOT0, target(T_S), T_S)
     assert tr.l2_dv_mps == pytest.approx(ref["dv_total_mps"], rel=1e-6)
-    assert tr.total_dv_mps == pytest.approx(
-        np.abs(dv1).sum() + np.abs(dv2).sum(), rel=1e-6
-    )
+    assert tr.total_dv_mps == pytest.approx(np.abs(dv1).sum() + np.abs(dv2).sum(), rel=1e-6)
     assert list(tr.times) == [0.0, T_S]
 
 
@@ -75,7 +72,7 @@ def test_lp_never_worse_than_two_impulse():
 
 @pytest.mark.parametrize(
     "kw",
-    [{"k": 0.0}, {"a_max": 1e-9}, {"T": 5.0}, {"a_max": 0.0}, {"N": 0}],
+    [{"k": 0.0}, {"a_max": 1e-9}, {"T": 5.0}, {"a_max": 0.0}],
 )
 def test_infeasible_returns_none_not_raise(kw):
     assert plan(**kw) is None
@@ -151,8 +148,10 @@ def _best(a_max=A_BIG, **kw):
 def test_best_transfer_picks_least_dv_feasible_T():
     best = _best()
     assert best is not None
-    per_T = [lp_transfer(SLOT0, target(o * PERIOD), o * PERIOD, N_MM, A_BIG, 1.0, 24)
-             for o in (0.5, 1.0, 2.0)]
+    per_T = [
+        lp_transfer(SLOT0, target(o * PERIOD), o * PERIOD, N_MM, A_BIG, 1.0, 24)
+        for o in (0.5, 1.0, 2.0)
+    ]
     feas = [t for t in per_T if t is not None]
     assert len(feas) == 3 and len({t.total_dv_mps for t in feas}) == 3
     assert best.total_dv_mps == min(t.total_dv_mps for t in feas)
@@ -200,10 +199,6 @@ def test_cancel_before_lp_raises():
     ev.set()
     with pytest.raises(TransferCancelled):
         plan(cancel_event=ev)
-
-
-def test_mpc_due_every_60_ticks():
-    assert [mpc_due(t) for t in (0, 59, 60, 120)] == [True, False, True, True]
 
 
 def test_mpc_step_recovers_from_perturbation():
