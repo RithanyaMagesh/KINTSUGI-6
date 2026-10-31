@@ -93,6 +93,25 @@ class Truth(BaseModel):
     j2_enabled: bool = Field(default=True, description="False = two-body gravity only (validation)")
 
 
+class Spacecraft(BaseModel):
+    """Propulsion resources (engine v2 only). ALL defaults are illustrative, not measured
+    hardware: a 3U cold-gas CubeSat. The wet mass is truth.mass_kg (4.0 kg); dry mass =
+    wet - m_prop_kg. Tank delta-v = Isp g0 ln(wet/dry) = 20.12 m/s with the defaults."""
+
+    m_prop_kg: float = Field(
+        default=0.2, ge=0, le=1e3, allow_inf_nan=False,
+        description="Propellant mass at t=0, kg, included in truth.mass_kg (illustrative)",
+    )
+    isp_s: float = Field(
+        default=40.0, gt=0, le=1e4, allow_inf_nan=False,
+        description="Specific impulse, s (cold gas class, illustrative)",
+    )
+    f_max_n: float = Field(
+        default=0.04, gt=0, le=1e4, allow_inf_nan=False,
+        description="Maximum thrust, N: 0.04 N / 4 kg = 0.01 m/s^2 (illustrative)",
+    )
+
+
 class Formation(BaseModel):
     n_slots: int = Field(
         ge=2, le=MAX_SATS, description="Number of phase-spaced passive-ellipse slots"
@@ -263,6 +282,7 @@ class Scenario(BaseModel):
     oracle: Oracle = Field(default_factory=Oracle)
     safety: Safety = Field(default_factory=Safety)
     truth: Truth = Field(default_factory=Truth)
+    spacecraft: Spacecraft = Field(default_factory=Spacecraft)
     engine: Literal["v1", "v2"] = Field(
         default="v1",
         description="'v1' = frozen linear-CW engine (every committed log); "
@@ -280,6 +300,16 @@ class Scenario(BaseModel):
                 raise ValueError(
                     f"failure references sat_id={failure.sat_id}, but only {self.n_sats} sats exist"
                 )
+        return self
+
+    @model_validator(mode="after")
+    def _propellant_fits_in_wet_mass(self) -> Scenario:
+        # v2 only: v1 never reads the block, and a v1 scenario with a tiny truth.mass_kg stays valid
+        if self.engine == "v2" and self.spacecraft.m_prop_kg >= self.truth.mass_kg:
+            raise ValueError(
+                f"spacecraft.m_prop_kg={self.spacecraft.m_prop_kg} must be below the wet mass "
+                f"truth.mass_kg={self.truth.mass_kg}"
+            )
         return self
 
     @model_validator(mode="after")
