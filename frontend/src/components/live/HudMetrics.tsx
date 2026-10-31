@@ -6,7 +6,6 @@ import { useRecoveryStore, selectLatestFailure } from "../../stores/recoveryStor
 import { km } from "./hudFormat";
 import styles from "./ImmersiveLive.module.css";
 
-const KEEP_OUT_M = 2000; // separation floor the planner must hold (README)
 
 interface ReadoutProps {
   label: string;
@@ -48,7 +47,8 @@ export default function HudMetrics() {
   }
 
   const sep = metrics.minSep ?? null;
-  const sepTone = sep !== null && sep < KEEP_OUT_M ? "var(--status-failed)" : undefined;
+  const keepOut = useSimStore((s) => s.minSepM); // scenario's floor; null = unknown
+  const sepTone = sep !== null && keepOut !== null && sep < keepOut ? "var(--status-failed)" : undefined;
 
   return (
     <section className={styles.metrics} aria-label="Key mission readouts">
@@ -62,7 +62,7 @@ export default function HudMetrics() {
         label="Closest approach"
         value={sep === null ? "–" : km(sep, 1)}
         unit="km"
-        note={`Keep-out ${km(KEEP_OUT_M, 0)} km`}
+        note={keepOut === null ? undefined : `Keep-out ${km(keepOut, keepOut % 1000 === 0 ? 0 : 1)} km`}
         tone={sepTone}
       />
       <Readout

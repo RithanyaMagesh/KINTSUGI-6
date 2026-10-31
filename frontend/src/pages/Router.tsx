@@ -8,21 +8,12 @@
 // with a default export and the Vite glob below picks it up on the next
 // build. ../components/pages/*Page.tsx is scanned too (the docs/FAQ/tutorial
 // agents landed there first; src/pages/ stays the documented home and wins
-// if a name exists in both). Until a page lands, its route renders the
-// fallback below:
-//   #/live and #/replay -> today's working console layout (never ship a
-//   broken build — the demo must run even if the page agents are late),
-//   the document pages -> a minimal "Page under construction" panel.
+// if a name exists in both). A route without a page renders "Page under construction".
 import { useEffect } from "react";
 import type { ComponentType } from "react";
 import { useUiStore, routeFromHash } from "../stores/uiStore";
 import type { Route } from "../stores/uiStore";
 import PageShell from "./PageShell";
-import LeftPanel from "../components/layout/LeftPanel";
-import CenterPanel from "../components/layout/CenterPanel";
-import RightPanel from "../components/layout/RightPanel";
-import BottomPanel from "../components/layout/BottomPanel";
-import appStyles from "../App.module.css";
 
 const pageModules = import.meta.glob(["./*Page.tsx", "../components/pages/*Page.tsx"], {
   eager: true,
@@ -44,27 +35,11 @@ function slot(name: string): ComponentType | null {
   return null;
 }
 
-// Bridge: #/live and #/replay keep today's console until the live/replay page
-// components land (this is also what makes the router run standalone).
-function ConsoleFallback() {
-  return (
-    <div className={appStyles.console}>
-      <div className={appStyles.main}>
-        <LeftPanel />
-        <CenterPanel />
-        <RightPanel />
-      </div>
-      <BottomPanel />
-    </div>
-  );
-}
-
 function PageUnderConstruction() {
   return (
     <PageShell title="Page under construction">
       <p>
-        This page is not built yet. Open <a href="#/live">Live simulation</a> for the swarm
-        console.
+        This page is not built yet. Open <a href="#/live">Live simulation</a> to run the swarm.
       </p>
     </PageShell>
   );
@@ -73,16 +48,15 @@ function PageUnderConstruction() {
 interface RouteEntry {
   route: Route;
   page: string;
-  fallback: ComponentType;
 }
 
 const ROUTES: RouteEntry[] = [
-  { route: "landing", page: "LandingPage", fallback: PageUnderConstruction },
-  { route: "live", page: "LivePage", fallback: ConsoleFallback },
-  { route: "replay", page: "ReplayPage", fallback: ConsoleFallback },
-  { route: "tutorial", page: "TutorialPage", fallback: PageUnderConstruction },
-  { route: "faq", page: "FaqPage", fallback: PageUnderConstruction },
-  { route: "docs", page: "DocsPage", fallback: PageUnderConstruction },
+  { route: "landing", page: "LandingPage" },
+  { route: "live", page: "LivePage" },
+  { route: "replay", page: "ReplayPage" },
+  { route: "tutorial", page: "TutorialPage" },
+  { route: "faq", page: "FaqPage" },
+  { route: "docs", page: "DocsPage" },
 ];
 
 export default function Router() {
@@ -98,6 +72,6 @@ export default function Router() {
   }, [setRoute]);
 
   const entry = ROUTES.find((r) => r.route === route) ?? ROUTES[0];
-  const Page = slot(entry.page) ?? entry.fallback;
+  const Page = slot(entry.page) ?? PageUnderConstruction;
   return <Page />;
 }

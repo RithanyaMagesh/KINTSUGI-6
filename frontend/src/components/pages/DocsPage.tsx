@@ -1,30 +1,15 @@
 // Docs — the reference page: architecture, physics, wire contract, recovery
-// policies, AI model status, reproducibility. Reference tone; every claim
-// names its source (docs/MASTER_PROMPT.md, docs/FRONTEND_SPEC.md, docs/
-// IMPLEMENTATION_NOTES.md, docs/ENDGAME_PLAN.md §7, GATES.md decisions,
-// AGENTS.md commands). Commands and state literals render mono (§13.2);
-// definition-list rows, not cards (§13.3). Route names and file names are
-// taken from the tree (cubesat/api.py routes verified 2026-10-04).
+// policies, AI model status, reproducibility, and where each headline number
+// comes from. Technical prose is fine here; file paths and spec numbers are not.
 import PageShell from "../../pages/PageShell";
 import styles from "./pages.module.css";
-
-// The serve/run commands of record — AGENTS.md "Commands" section, verbatim.
-const COMMANDS = `uv sync --locked
-uv run ruff check .
-uv run pytest -q
-uv run python -m cubesat.run --scenario data/scenarios/two_failure.json --seed 42 --out data/logs/two_failure.jsonl
-uv run uvicorn cubesat.api:app --port 8000`;
-
-// The sealed pipeline's repro of record (GATES.md, P4 Gate 0).
-const PREDICTOR_COMMAND = `uv run python files/predictor_pipeline.py run --out out2`;
 
 export default function DocsPage() {
   return (
     <PageShell title="Docs">
       <p className={styles.lede}>
-        The system behind the console, in reference form. Sources: docs/MASTER_PROMPT.md,
-        docs/FRONTEND_SPEC.md, docs/IMPLEMENTATION_NOTES.md, docs/ENDGAME_PLAN.md, and the
-        GATES.md decision ledger.
+        The system behind KINTSUGI-6, in reference form, and where every number on the
+        overview page comes from.
       </p>
 
       <section className={styles.section} aria-labelledby="docs-arch">
@@ -40,22 +25,17 @@ export default function DocsPage() {
           <div className={styles.dlRow}>
             <span className={styles.dt}>Scenario</span>
             <p className={styles.dd}>
-              <span className={styles.lit}>data/scenarios/*.json</span> — pydantic-validated:
-              chief orbit, formation slots, roles, failure schedule, controller gains,
-              allocation settings. The console&apos;s{" "}
-              <span className={styles.lit}>Add your own scenario…</span> uploads here (POST{" "}
-              <span className={styles.lit}>/scenarios/upload</span>, server-side validation).
+              A validated JSON file: chief orbit, formation slots, roles, failure schedule,
+              controller gains and allocation settings. The live page builds one from your
+              setup choices and the server validates it before running.
             </p>
           </div>
           <div className={styles.dlRow}>
             <span className={styles.dt}>Sim core</span>
             <p className={styles.dd}>
-              <span className={styles.lit}>cubesat/sim.py</span> — a pure step function
-              (deterministic; the replanner runs between steps). Failure schedule, heartbeat
-              detection, the mission state machine, and the two-step allocation live here with{" "}
-              <span className={styles.lit}>cubesat/hcw.py</span>,{" "}
-              <span className={styles.lit}>cubesat/pd.py</span> and{" "}
-              <span className={styles.lit}>cubesat/allocate.py</span>.
+              A pure, deterministic step function; the replanner runs between steps. It holds
+              the failure schedule, heartbeat detection, the mission state machine, the orbit
+              dynamics, the slot controller and the two-step allocation.
             </p>
           </div>
           <div className={styles.dlRow}>
@@ -72,8 +52,7 @@ export default function DocsPage() {
           <div className={styles.dlRow}>
             <span className={styles.dt}>Wire</span>
             <p className={styles.dd}>
-              One FastAPI service (<span className={styles.lit}>cubesat/api.py</span>) serves
-              REST control, the <span className={styles.lit}>/ws/state</span> stream, and the
+              One FastAPI service serves REST control, the <span className={styles.lit}>/ws/state</span> stream, and the
               built console as static files. Replay playback is backend-owned and streams over
               the same socket.
             </p>
@@ -81,10 +60,9 @@ export default function DocsPage() {
           <div className={styles.dlRow}>
             <span className={styles.dt}>Console</span>
             <p className={styles.dd}>
-              React 18 + TypeScript + Zustand + Recharts + plain Three.js. One deserializer (
-              <span className={styles.lit}>src/api/deserializer.ts</span>) serves live WS and
-              replay alike; every displayed value traces to it, otherwise the UI renders{" "}
-              <span className={styles.lit}>unmeasured</span>.
+              React 18 + TypeScript + Zustand + Recharts + plain Three.js. One deserializer
+              serves live and replay alike; every displayed value traces to it, otherwise the
+              UI says &quot;unmeasured&quot;.
             </p>
           </div>
         </div>
@@ -119,9 +97,9 @@ z'' + n²z          = az`}</pre>
           to 193.68 m/s per satellite, is shown as measured rather than tuned away.
         </p>
         <p className={`${styles.p} ${styles.muted}`}>
-          Verification behind these numbers: STM vs numerical integration, ellipse closure,
-          CW-vs-Kepler cross-checks, saturation and determinism tests — the commands are in
-          docs/IMPLEMENTATION_NOTES.md.
+          Verification behind these numbers: state-transition matrix vs numerical
+          integration, ellipse closure, CW-vs-Kepler cross-checks, saturation and determinism
+          tests, all in the automated test suite.
         </p>
       </section>
 
@@ -152,8 +130,7 @@ z'' + n²z          = az`}</pre>
               , <span className={styles.lit}>POST /failure/inject</span>,{" "}
               <span className={styles.lit}>GET /replay/files</span>,{" "}
               <span className={styles.lit}>{"GET /replay/file/{filename}"}</span>,{" "}
-              <span className={styles.lit}>POST /replay/load|pause|resume|seek|speed|stop</span>{" "}
-              (routes as implemented in cubesat/api.py).
+              <span className={styles.lit}>POST /replay/load|pause|resume|seek|speed|stop</span>.
             </p>
           </div>
         </div>
@@ -166,46 +143,42 @@ z'' + n²z          = az`}</pre>
         <p className={styles.p}>
           The engine&apos;s default is the two-step allocation: choose the survivors&apos;
           formation (feasible in separation and delta-v, maximizing coverage), then assign
-          survivors to slots by Hungarian assignment on the cost matrix —{" "}
-          <span className={styles.lit}>cubesat/allocate.py</span>.
+          survivors to slots by Hungarian assignment on the cost matrix (the cheapest overall
+          matching of survivors to slots).
         </p>
         <p className={styles.p}>
           Four benchmark policies exist for comparison — the measurement benchmark runs all 15
-          possible two-failure pairs of the 6-satellite formation against each of them (
-          <span className={styles.lit}>cubesat/benchmark.py</span>, policy order{" "}
-          <span className={styles.lit}>do_nothing, even_split, greedy, hungarian,
-          hungarian_keepout</span>):
+          possible two-failure pairs of the 6-satellite formation against each of them and
+          the shipped Hungarian policy, 75 runs in all:
         </p>
         <div className={styles.dl}>
           <div className={styles.dlRow}>
-            <span className={styles.dt}>do_nothing</span>
+            <span className={styles.dt}>Do nothing</span>
             <p className={styles.dd}>
               Detection only — survivors hold their original slots. The baseline every
               recovery is measured against.
             </p>
           </div>
           <div className={styles.dlRow}>
-            <span className={styles.dt}>even_split</span>
+            <span className={styles.dt}>Even split</span>
             <p className={styles.dd}>
               Even redistribution — the naive rule from the RL-retasking literature,
-              re-implemented as a benchmark and adapted to formation slots (
-              <span className={styles.lit}>cubesat/benchmark_policies.py</span>). Cited, not
-              claimed as ours.
+              re-implemented as a benchmark and adapted to formation slots. Cited, not claimed
+              as ours.
             </p>
           </div>
           <div className={styles.dlRow}>
-            <span className={styles.dt}>greedy</span>
+            <span className={styles.dt}>Greedy</span>
             <p className={styles.dd}>
               Nearest-seat fallback — survivors in order take their cheapest available slot;
               the engine&apos;s graceful-degradation toggle.
             </p>
           </div>
           <div className={styles.dlRow}>
-            <span className={styles.dt}>hungarian_keepout</span>
+            <span className={styles.dt}>Hungarian with keep-out</span>
             <p className={styles.dd}>
               The shipped Hungarian path plus one extra cost term: a per-seat keep-out penalty
-              pushing assignments away from coasting dead satellites (
-              <span className={styles.lit}>cubesat/benchmark_policies.py</span>).
+              pushing assignments away from coasting dead satellites.
             </p>
           </div>
         </div>
@@ -226,12 +199,8 @@ z'' + n²z          = az`}</pre>
           A LightGBM failure-risk model was trained as a proof of concept on synthetic
           degradation telemetry (bus voltage, state of charge, thrust duty, heartbeat latency
           and jitter) generated around the simulator&apos;s own deterministic failure
-          schedule. The pipeline and the model artifact are sealed and hash-pinned —{" "}
-          <span className={styles.lit}>files/predictor_pipeline.py</span> (source sha256
-          self-enforced by <span className={styles.lit}>out2/test_manifest.json</span>) and{" "}
-          <span className={styles.lit}>models/predictor.txt</span> (
-          <span className={styles.lit}>models/predictor_manifest.json</span>, LightGBM 4.7.0).
-          CI verifies the hashes; it never retrains.
+          schedule. The pipeline and the model are sealed and pinned by SHA-256 hashes
+          (LightGBM 4.7.0); CI verifies the hashes and never retrains.
         </p>
         <p className={styles.p}>
           Offline, on the held-out test runs, the model detects every slow-failure precursor
@@ -246,15 +215,12 @@ z'' + n²z          = az`}</pre>
           It is not wired into the swarm. Before any integration, a pre-registered kill switch
           ran an oracle sweep — an idealized trigger that knows each failure time exactly,
           sweeping warning lead times — asking whether warning is worth anything to the
-          mission. Maximum measured gain: 0.0235 percentage points of critical-seat health,
-          far below the pre-declared 0.5 point threshold, so the verdict was CUT: the demo
+          mission. Even a perfect warning improved the mission score the test used (how well
+          the critical roles stay covered) by at most 0.0235 percentage points, far below the
+          0.5-point bar set before the test, so the verdict was CUT: the demo
           ships reactive-only, plus the measured value-of-warning curve. The Suspect
           annotation in the satellite detail is a rule-based drift detector, not this model.
         </p>
-        <p className={`${styles.p} ${styles.muted}`}>
-          Reproduce the sealed results (the outputs must stay byte-identical afterward):
-        </p>
-        <pre className={styles.cmd}>{PREDICTOR_COMMAND}</pre>
       </section>
 
       <section className={styles.section} aria-labelledby="docs-repro">
@@ -268,12 +234,46 @@ z'' + n²z          = az`}</pre>
           replay is frozen evidence, and any run anyone reproduces matches the run that
           produced every number on this page.
         </p>
-        <p className={styles.p}>The commands of record:</p>
-        <pre className={styles.cmd}>{COMMANDS}</pre>
-        <p className={`${styles.p} ${styles.muted}`}>
-          The fourth command writes the demo log the console replays; the fifth serves the
-          API, the WebSocket and the console on port 8000.
+        <p className={styles.p}>
+          The repository README lists the exact commands that regenerate every log and
+          benchmark.
         </p>
+      </section>
+
+      <section className={styles.section} aria-labelledby="docs-numbers">
+        <h2 className={styles.sectionTitle} id="docs-numbers">
+          Where the overview numbers come from
+        </h2>
+        <div className={styles.dl}>
+          <div className={styles.dlRow}>
+            <span className={styles.dt}>4 s detection</span>
+            <p className={styles.dd}>
+              Measured on the recorded two-failure demo run (seed 42): each failure is flagged
+              4 seconds after it happens, once three heartbeats in a row are missed.
+            </p>
+          </div>
+          <div className={styles.dlRow}>
+            <span className={styles.dt}>27.0% vs 22.1%</span>
+            <p className={styles.dd}>
+              Mean ground coverage over the last orbit of that same run with recovery (0.2698)
+              versus the identical run with recovery switched off (0.2205), a 4.93-point gain.
+            </p>
+          </div>
+          <div className={styles.dlRow}>
+            <span className={styles.dt}>75 runs</span>
+            <p className={styles.dd}>
+              The benchmark: all 15 two-failure pairs of the 6-satellite formation, each run
+              under the 5 recovery policies above.
+            </p>
+          </div>
+          <div className={styles.dlRow}>
+            <span className={styles.dt}>Byte-identical</span>
+            <p className={styles.dd}>
+              Re-running the same scenario with the same seed on the same machine reproduces
+              the log exactly, checked against a committed SHA-256 hash in the test suite.
+            </p>
+          </div>
+        </div>
       </section>
     </PageShell>
   );

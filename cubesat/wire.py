@@ -32,6 +32,7 @@ class SessionEnrich:
     assignment_map: dict[int, str] = field(default_factory=dict)  # log sat id -> "slot_i"
     detection_latency_s: float | None = None
     replanning_latency_ms: float | None = None  # stays None in G5 (section 6.1 cut)
+    min_sep_m: float | None = None  # scenario keep-out floor; None = unknown (replay)
 
 
 # Live-selectable recovery policies (the benchmark's seam policies + the shipped
@@ -268,7 +269,25 @@ def _plain_event(frame: dict, etype: str, payload: dict) -> dict:
             frame.get("t", 0.0),
             f"State {payload.get('from')} -> {payload.get('to')}",
         )
-    return to_event("info", frame.get("t", 0.0), etype)  # unknown types: pass the type
+    t = frame.get("t", 0.0)
+    sid = payload.get("sat_id")
+    who = display_sat_id(sid) if isinstance(sid, int) else "a satellite"
+    if etype == "DEGRADE_START":  # carry the measured fade length, not just the type
+        fade = payload.get("degrade_s")
+        fade_txt = f" over {fade:.0f} s" if isinstance(fade, (int, float)) else ""
+        return to_event("warning", t, f"{who} battery fading{fade_txt}")
+    if etype == "ORACLE_SWAP":
+        a, b = payload.get("from_sat"), payload.get("to_sat")
+        if isinstance(a, int) and isinstance(b, int):
+            role = payload.get("role", "role")
+            return to_event(
+                "info", t, f"{role} handed from {display_sat_id(a)} to {display_sat_id(b)}"
+            )
+    if etype == "ORACLE_ALERT":
+        lead = payload.get("lead_s")
+        lead_txt = f" {lead:.0f} s ahead" if isinstance(lead, (int, float)) else ""
+        return to_event("warning", t, f"{who} predicted to fail{lead_txt}")
+    return to_event("info", t, etype)  # unknown types: pass the type
 
 
 def to_messages(frame: dict, enrich: SessionEnrich) -> list[dict]:

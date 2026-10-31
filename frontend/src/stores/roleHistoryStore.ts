@@ -1,6 +1,5 @@
-// Per-satellite role & task history + suspect verdicts — the store behind the
-// SelectedSatellitePanel "role and task history" timeline and the SatelliteList
-// SUSPECT annotation (Appendix D).
+// Per-satellite role & task history — the store behind the
+// SelectedSatellitePanel "role and task history" timeline.
 //
 // Parsing uses the ONE shared deserializer (src/api/deserializer.ts) that also
 // serves simStore — live and replay parse identical bytes, schema drift is
@@ -27,11 +26,6 @@
 import { create } from "zustand";
 import { deserializeMessage } from "../api/deserializer";
 import type { Satellite } from "../types/satellite";
-import {
-  assessSuspects,
-  type SuspectTrackerState,
-  type SuspectVerdict,
-} from "../utils/suspect";
 
 /** One timeline entry for one satellite. role/targetSlot describe the state
  * AFTER the entry; oldRole/oldTargetSlot the measured state BEFORE (null when
@@ -55,8 +49,6 @@ const EMPTY_HISTORY: RoleHistoryEntry[] = [];
 interface RoleHistoryState {
   /** Per-satellite append-only history, keyed by satellite id. */
   history: Record<string, RoleHistoryEntry[]>;
-  /** Latest suspect verdict per satellite id (utils/suspect.ts fold). */
-  suspects: Record<string, SuspectVerdict>;
   ingest(raw: unknown): void;
   resetForNewRun(): void;
 
@@ -67,7 +59,6 @@ interface RoleHistoryState {
   _lastSimTime: number | null;
   _missionState: string | null;
   _lastCritical: { simTime: number; message: string } | null;
-  _suspectState: SuspectTrackerState | null;
 }
 
 const initialInternal = {
@@ -76,7 +67,6 @@ const initialInternal = {
   _lastSimTime: null,
   _missionState: null,
   _lastCritical: null,
-  _suspectState: null,
 };
 
 function satMap(sats: Satellite[]): Record<string, Satellite> {
@@ -114,7 +104,6 @@ function appendEntry(
 
 export const useRoleHistoryStore = create<RoleHistoryState>((set) => ({
   history: {},
-  suspects: {},
   ...initialInternal,
 
   ingest: (raw) => {
@@ -127,7 +116,7 @@ export const useRoleHistoryStore = create<RoleHistoryState>((set) => ({
           // INIT-derived empty state: a new run started — reset everything
           // (mirrors simStore's INIT handling).
           if (frame.satellites.length === 0 && frame.simTime === 0) {
-            return { history: {}, suspects: {}, ...initialInternal };
+            return { history: {}, ...initialInternal };
           }
 
           let history = state.history;
@@ -177,23 +166,13 @@ export const useRoleHistoryStore = create<RoleHistoryState>((set) => ({
             }
           }
 
-          // Suspect fold (utils/suspect.ts) — pure, restarts on rewind/gap.
-          const suspectResult = assessSuspects(
-            frame.satellites,
-            frame.missionState,
-            frame.simTime,
-            state._suspectState,
-          );
-
           return {
             history,
-            suspects: suspectResult.verdicts,
             _lastFrameSats: satMap(frame.satellites),
             _prevFrameSats: state._lastFrameSats,
             _lastSimTime: frame.simTime,
             _missionState: frame.missionState,
             _lastCritical: state._lastCritical,
-            _suspectState: suspectResult.state,
           };
         }
         case "event": {
@@ -240,7 +219,7 @@ export const useRoleHistoryStore = create<RoleHistoryState>((set) => ({
     });
   },
 
-  resetForNewRun: () => set({ history: {}, suspects: {}, ...initialInternal }),
+  resetForNewRun: () => set({ history: {}, ...initialInternal }),
 }));
 
 /** Reactive selector: this satellite's role/task history, oldest first.
@@ -250,11 +229,4 @@ export function historyFor(satId: string | null): RoleHistoryEntry[] {
   return useRoleHistoryStore((s) =>
     satId === null ? EMPTY_HISTORY : (s.history[satId] ?? EMPTY_HISTORY),
   );
-}
-
-/** Reactive selector: this satellite's suspect verdict, or null when no frame
- * has been assessed yet (the UI renders "unmeasured"). Hook — call inside a
- * component. */
-export function suspectFor(satId: string | null): SuspectVerdict | null {
-  return useRoleHistoryStore((s) => (satId === null ? null : (s.suspects[satId] ?? null)));
 }

@@ -236,6 +236,10 @@ class Session:
         # omitted otherwise, so predictor-off hellos keep their byte shape.
         if self.predictor_active:
             msg["predictor"] = True
+        # Keep-out floor of the running scenario, known-only (live runs), so
+        # the UI never assumes the 2 km default.
+        if self.enrich.min_sep_m is not None:
+            msg["min_sep_m"] = self.enrich.min_sep_m
         return msg
 
     def snapshot(self) -> dict:
@@ -276,7 +280,14 @@ class Session:
             scenario = scenario.model_copy(update={"seed": seed})
         self.mode = "live"
         self.speed = speed
-        self._prepare(SessionEnrich(scenario=scenario.name, seed=scenario.seed, policy=policy))
+        self._prepare(
+            SessionEnrich(
+                scenario=scenario.name,
+                seed=scenario.seed,
+                policy=policy,
+                min_sep_m=scenario.allocation.min_sep_km * 1000.0,
+            )
+        )
         # Cooperative cancellation for the timeout below: wait_for cancels only
         # the await -- without the event the run_scenario thread would keep
         # running to completion as an orphan, pinning CPU in the shared server

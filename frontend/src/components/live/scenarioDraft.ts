@@ -13,24 +13,24 @@ export type FailureMode = (typeof FAILURE_MODES)[number];
 
 /** One-line descriptions (cubesat/scenario.py FailureMode docstring). */
 export const MODE_DESCRIPTION: Record<string, string> = {
-  DEAD: "goes silent and coasts ballistically as an obstacle",
-  THRUSTER_OUT: "keeps reporting heartbeats but cannot maneuver",
-  EPS_DEGRADE: "fades to degraded power before complete failure",
+  DEAD: "goes silent and drifts",
+  THRUSTER_OUT: "can't move any more; it reports the fault and the swarm replans",
+  EPS_DEGRADE: "power fades, then it goes silent",
 };
 
 /** Recovery policies sent as `policy` on /simulation/start (cubesat/wire.py). */
 export const POLICIES = [
   {
     id: "hungarian",
-    label: "Hungarian two-step assignment — the engine allocator",
+    label: "Best-fit reassignment (default)",
   },
   {
     id: "even_split",
-    label: "Even redistribution — benchmark policy, adapted from the RL paper baseline",
+    label: "Even spacing (comparison)",
   },
   {
     id: "hungarian_keepout",
-    label: "Hungarian + dead-sat keep-out — benchmark policy",
+    label: "Best-fit, avoiding the dead satellite (comparison)",
   },
 ] as const;
 export type PolicyId = (typeof POLICIES)[number]["id"];
@@ -72,127 +72,6 @@ export interface BuilderNumbers {
  * run) plus the start-time speed multiplier (cubesat/wire.py StartRequest,
  * default 100). */
 export type NumberValues = Omit<BuilderNumbers, "name"> & { speed: number };
-
-export interface ScenarioPreset {
-  filename: string;
-  label: string;
-  summary: string;
-  nSats: number;
-  roles: Role[];
-  nums: NumberValues;
-  failures: Array<{ satId: number; t: number; mode: FailureMode; degrade_s?: number }>;
-}
-
-/** Exact committed scenarios from data/scenarios/*.json — loading a preset
- * populates the builder form with the committed numbers and lets the operator
- * either run the committed file directly or tweak any field to upload a custom
- * variant. */
-export const COMMITTED_PRESETS: ReadonlyArray<ScenarioPreset> = [
-  {
-    filename: "two_failure.json",
-    label: "two_failure.json — Primary 6-sat two-failure demo",
-    summary: "6 sats, 8 km ellipse, a_max 0.1 m/s²; SAT-2 DEAD at 1200 s, SAT-3 DEAD at 1500 s.",
-    nSats: 6,
-    roles: ["leader", "imager", "imager", "imager", "imager", "downlink"],
-    nums: {
-      seed: 42, durationS: 17028, dtS: 2, altitudeKm: 500, radialAmpKm: 8,
-      phaseOffsetDeg: 0, aMax: 0.1, wn: 0.01, zeta: 1,
-      fovHalfAngleDeg: 1.5, gridStepKm: 2, gridExtentKm: 30, speed: 20,
-    },
-    failures: [
-      { satId: 1, t: 1200, mode: "DEAD" },
-      { satId: 2, t: 1500, mode: "DEAD" },
-    ],
-  },
-  {
-    filename: "eps_leader_6sat.json",
-    label: "eps_leader_6sat.json — 6-sat leader EPS_DEGRADE demo",
-    summary: "6 sats, 8 km ellipse; SAT-1 (leader) EPS_DEGRADE at 2400 s (1800 s fade).",
-    nSats: 6,
-    roles: ["leader", "imager", "imager", "imager", "imager", "downlink"],
-    nums: {
-      seed: 42, durationS: 17028, dtS: 2, altitudeKm: 500, radialAmpKm: 8,
-      phaseOffsetDeg: 0, aMax: 0.1, wn: 0.01, zeta: 1,
-      fovHalfAngleDeg: 1.5, gridStepKm: 2, gridExtentKm: 30, speed: 20,
-    },
-    failures: [{ satId: 0, t: 2400, mode: "EPS_DEGRADE", degrade_s: 1800 }],
-  },
-  {
-    filename: "firefly_swarm.json",
-    label: "firefly_swarm.json — Hypothetical swarm on FIREFLY-1 orbit",
-    summary: "6 sats on chief FIREFLY-1 (589.309 km, NORAD 62701); two DEAD imagers at 1200 s & 1500 s.",
-    nSats: 6,
-    roles: ["leader", "imager", "imager", "imager", "imager", "downlink"],
-    nums: {
-      seed: 42, durationS: 17363.7, dtS: 2, altitudeKm: 589.309, radialAmpKm: 8,
-      phaseOffsetDeg: 0, aMax: 0.1, wn: 0.01, zeta: 1,
-      fovHalfAngleDeg: 1.5, gridStepKm: 2, gridExtentKm: 30, speed: 20,
-    },
-    failures: [
-      { satId: 1, t: 1200, mode: "DEAD" },
-      { satId: 2, t: 1500, mode: "DEAD" },
-    ],
-  },
-  {
-    filename: "cascading_n8.json",
-    label: "cascading_n8.json — 8-sat cascading DEAD + THRUSTER_OUT",
-    summary: "8 sats, 8.25 km ellipse; SAT-2 & SAT-3 DEAD (1200 s, 1500 s) + SAT-8 THRUSTER_OUT at 2400 s.",
-    nSats: 8,
-    roles: ["leader", "imager", "imager", "imager", "imager", "imager", "imager", "downlink"],
-    nums: {
-      seed: 42, durationS: 17028, dtS: 2, altitudeKm: 500, radialAmpKm: 8.25,
-      phaseOffsetDeg: 0, aMax: 0.1, wn: 0.01, zeta: 1,
-      fovHalfAngleDeg: 1.5, gridStepKm: 2, gridExtentKm: 30, speed: 20,
-    },
-    failures: [
-      { satId: 1, t: 1200, mode: "DEAD" },
-      { satId: 2, t: 1500, mode: "DEAD" },
-      { satId: 7, t: 2400, mode: "THRUSTER_OUT" },
-    ],
-  },
-  {
-    filename: "leader_failure_6sat.json",
-    label: "leader_failure_6sat.json — 6-sat leader death + imager death",
-    summary: "6 sats; SAT-1 (leader) DEAD at 2400 s forcing leader re-election, SAT-3 DEAD at 3000 s.",
-    nSats: 6,
-    roles: ["leader", "imager", "imager", "imager", "imager", "downlink"],
-    nums: {
-      seed: 42, durationS: 17028, dtS: 2, altitudeKm: 500, radialAmpKm: 8,
-      phaseOffsetDeg: 0, aMax: 0.1, wn: 0.01, zeta: 1,
-      fovHalfAngleDeg: 1.5, gridStepKm: 2, gridExtentKm: 30, speed: 20,
-    },
-    failures: [
-      { satId: 0, t: 2400, mode: "DEAD" },
-      { satId: 2, t: 3000, mode: "DEAD" },
-    ],
-  },
-  {
-    filename: "single_failure_n4.json",
-    label: "single_failure_n4.json — 4-sat minimal swarm leader failure",
-    summary: "4 sats (leader, 2 imagers, downlink); SAT-1 (leader) DEAD at 1200 s.",
-    nSats: 4,
-    roles: ["leader", "imager", "imager", "downlink"],
-    nums: {
-      seed: 42, durationS: 17028, dtS: 2, altitudeKm: 500, radialAmpKm: 8,
-      phaseOffsetDeg: 0, aMax: 0.1, wn: 0.01, zeta: 1,
-      fovHalfAngleDeg: 1.5, gridStepKm: 2, gridExtentKm: 30, speed: 20,
-    },
-    failures: [{ satId: 0, t: 1200, mode: "DEAD" }],
-  },
-  {
-    filename: "nominal.json",
-    label: "nominal.json — 6-sat healthy baseline (no failures)",
-    summary: "6 sats, 11 km ellipse, a_max 0.01 m/s², 1 orbit (5676 s), zero failures.",
-    nSats: 6,
-    roles: ["leader", "imager", "imager", "imager", "imager", "downlink"],
-    nums: {
-      seed: 42, durationS: 5676, dtS: 2, altitudeKm: 500, radialAmpKm: 11,
-      phaseOffsetDeg: 0, aMax: 0.01, wn: 0.01, zeta: 1,
-      fovHalfAngleDeg: 1.5, gridStepKm: 2, gridExtentKm: 30, speed: 20,
-    },
-    failures: [],
-  },
-];
 
 /** Per-field clamp ranges, one entry per NumberValues key. Every range
  * satisfies the pydantic model in cubesat/scenario.py WITH margin. */

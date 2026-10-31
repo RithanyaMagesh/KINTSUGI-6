@@ -322,7 +322,8 @@ async def simulation_start(req: StartRequest) -> dict:
     # not the requested flag: requested-but-failed -> False + the warning event.
     return {"status": "started", "mode": session.mode, "scenario": session.enrich.scenario,
             "seed": session.enrich.seed, "speed": session.speed,
-            "policy": session.enrich.policy, "predictor": session.predictor_active}
+            "policy": session.enrich.policy, "predictor": session.predictor_active,
+            "min_sep_m": session.enrich.min_sep_m}
 
 
 @app.post("/simulation/pause")

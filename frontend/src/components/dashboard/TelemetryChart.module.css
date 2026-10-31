@@ -1,7 +1,7 @@
-/* Chart panel styles — §13.4. One module serves every telemetry chart. */
+/* Chart panel styles. One module serves every telemetry chart. */
 
 .chart {
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--glass-line);
   padding-top: var(--space-2);
 }
 

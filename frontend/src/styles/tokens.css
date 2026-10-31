@@ -22,8 +22,8 @@
   --status-nominal: #2fbf71; /* healthy / active imager / nominal curve */
   --status-caution: #e0a020; /* reconfiguring / Hungarian transfer / warnings */
   --status-failed: #e05252; /* failure / critical / ballistic keep-out hazard */
-  --status-info: #5b9bf0; /* recovered / informational / active selection */
-  --status-leader: #f5cc4d; /* leader marker & crown — always paired with text */
+  --status-info: #5b9bf0; /* informational / active selection — never "recovered" (that is gold) */
+  --status-leader: #b9a8ff; /* leader marker & crown — violet so gold stays "repaired" only */
   --status-repaired: #d4a84b; /* kintsugi gold — "recovered/repaired" and nothing else */
 
   /* -- Immersive live view: glass HUD over the full-bleed 3D stage */
@@ -112,7 +112,7 @@
   --status-caution: #b87800;
   --status-failed: #c82828;
   --status-info: #1d64c8;
-  --status-leader: #a87600;
+  --status-leader: #6b55c9;
   --status-repaired: #95701f;
 
   --glass: rgba(255, 255, 255, 0.7);
@@ -130,4 +130,29 @@
   --scene-cw-ellipse: #168045;
   --scene-cone: #168045;
   --scene-star: #64748b;
+}
+
+/* The live view is space: it keeps the dark palette even in light mode, so
+   the glass HUD and labels stay readable over the black stage. */
+:root[data-theme="light"] [data-stage="space"] {
+  --bg: #0b0d10;
+  --panel: #11151b;
+  --panel-raised: #181e26;
+  --border: #222933;
+  --border-strong: #343f4e;
+  --ink: #e8ecf2;
+  --ink-muted: #98a2b0;
+  --ink-faint: #5e6875;
+  --status-nominal: #2fbf71;
+  --status-caution: #e0a020;
+  --status-failed: #e05252;
+  --status-info: #5b9bf0;
+  --status-leader: #b9a8ff;
+  --status-repaired: #d4a84b;
+  --glass: rgba(8, 11, 15, 0.62);
+  --glass-strong: rgba(8, 11, 15, 0.86);
+  --glass-line: rgba(232, 236, 242, 0.1);
+  --glass-line-strong: rgba(232, 236, 242, 0.22);
+  --focus-ring: #e8ecf2;
+  color-scheme: dark;
 }

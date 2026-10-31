@@ -36,7 +36,7 @@ export function useWebSocket(): void {
     }
 
     function connect(): void {
-      setConnection(attempt === 0 ? "connected" : "reconnecting");
+      setConnection("reconnecting"); // "connected" only once onopen fires
       try {
         socket = new WebSocket(stateSocketUrl());
       } catch {

@@ -24,8 +24,11 @@ import styles from "./ImmersiveLive.module.css";
 
 function typingTarget(el: EventTarget | null): boolean {
   if (!(el instanceof HTMLElement)) return false;
-  const tag = el.tagName;
-  return tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA" || el.isContentEditable;
+  if (el instanceof HTMLInputElement) {
+    // checkboxes, radios and sliders don't take typed text: shortcuts still work
+    return !["checkbox", "radio", "range", "button", "submit"].includes(el.type);
+  }
+  return el.tagName === "TEXTAREA" || el.isContentEditable;
 }
 
 export default function LivePage() {
@@ -73,13 +76,16 @@ export default function LivePage() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey || typingTarget(e.target)) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
       const k = e.key.toLowerCase();
+      if (k === "escape" && e.target instanceof HTMLElement) e.target.blur();
+      else if (typingTarget(e.target)) return;
       if (k === "escape") {
-        if (setupOpen || telemetryOpen) {
+        if (hudHidden) setHudHidden(false);
+        else if (setupOpen || telemetryOpen) {
           setSetupOpen(false);
           setTelemetryOpen(false);
-        } else if (hudHidden) setHudHidden(false);
+        }
         else if (spectating) exitSpectate();
         else useUiStore.getState().selectSatellite(null);
         return;
@@ -88,11 +94,11 @@ export default function LivePage() {
         if (spectating) exitSpectate();
         else enterSpectate();
       } else if (k === "arrowright" || k === "arrowleft") {
-        if (!spectating) enterSpectate();
-        spectateStep(k === "arrowright" ? 1 : -1);
+        if (!spectating) enterSpectate(); // first press lands on the leader
+        else spectateStep(k === "arrowright" ? 1 : -1);
       } else if (k === "h") setHudHidden((v) => !v);
-      else if (k === "s") setSetupOpen((v) => !v);
-      else if (k === "t") setTelemetryOpen((v) => !v);
+      else if (k === "s" && !hudHidden) setSetupOpen((v) => !v);
+      else if (k === "t" && !hudHidden) setTelemetryOpen((v) => !v);
       else if (k === "f") toggleFullscreen();
       else if (k === "1" || k === "2") {
         const v = k === "1" ? "global" : "local";
@@ -110,6 +116,7 @@ export default function LivePage() {
   return (
     <div
       className={styles.stage}
+      data-stage="space"
       data-state={missionState ?? undefined}
       data-drawer={setupOpen || telemetryOpen || undefined}
     >

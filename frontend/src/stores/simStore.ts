@@ -25,6 +25,9 @@ interface SimStore {
    * unmeasured: the Recovery-mode readout renders "unmeasured", never a
    * guessed default (repo invariant 1). */
   policy: string | null;
+  /** Keep-out floor of the running scenario [m] (hello / start response);
+   * null = unknown, the UI then shows no floor rather than a guessed 2 km. */
+  minSepM: number | null;
   satellites: Satellite[];
   metrics: Partial<Metrics>;
   events: SimEvent[];
@@ -51,6 +54,7 @@ interface SimStore {
     scenario?: string | null;
     seed?: number | null;
     policy?: string | null;
+    minSepM?: number | null;
   }): void;
   applyMessage(raw: unknown): void;
   reset(): void;
@@ -64,6 +68,7 @@ const initial = {
   scenario: null,
   seed: null,
   policy: null as string | null,
+  minSepM: null as number | null,
   satellites: [] as Satellite[],
   metrics: {} as Partial<Metrics>,
   events: [] as SimEvent[],
@@ -81,6 +86,7 @@ export const useSimStore = create<SimStore>((set, get) => ({
       scenario: meta.scenario !== undefined ? meta.scenario : state.scenario,
       seed: meta.seed !== undefined ? meta.seed : state.seed,
       policy: meta.policy !== undefined ? meta.policy : state.policy,
+      minSepM: meta.minSepM !== undefined ? meta.minSepM : state.minSepM,
     })),
 
   applyMessage: (raw) => {
@@ -95,10 +101,11 @@ export const useSimStore = create<SimStore>((set, get) => ({
           // always carry the active policy; stopped/replay omit it (unknown),
           // so absence keeps whatever was measured rather than clobbering.
           return {
-            mode: msg.mode === "stopped" ? state.mode : msg.mode,
+            mode: msg.mode,
             scenario: msg.scenario ?? state.scenario,
             seed: msg.seed ?? state.seed,
             policy: msg.policy ?? state.policy,
+            minSepM: msg.minSepM ?? state.minSepM,
           };
         case "frame": {
           // INIT-derived empty state (cubesat/wire.py to_sim_state): resets the

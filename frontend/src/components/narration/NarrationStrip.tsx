@@ -2,8 +2,8 @@
 // "we are doing what, how we are recovering — nothing is explainable").
 // Derived ONLY from recoveryStore + simStore (both fed by the ONE shared
 // deserializer). Zero invention: a clause whose value is missing on the wire
-// is dropped, never guessed (repo invariant 1). Severity-colored left border;
-// 16px sans; values/times in mono (§13.2).
+// is dropped, never guessed. Severity-colored left border; 16px sans,
+// numbers tabular.
 import type { ReactNode } from "react";
 import { useSimStore } from "../../stores/simStore";
 import {
@@ -17,15 +17,16 @@ import type { FailureRecord, AssignmentEvent } from "../../stores/recoveryStore"
 import type { MissionState, Satellite } from "../../types/satellite";
 import { missionStateColor } from "../../utils/colors";
 import { formatSeconds } from "../../utils/format";
-import { WHY_LINE } from "../recovery/RecoveryLog";
+import { WHY_LINE, slotLabel } from "../recovery/RecoveryLog";
+import { faultLabel, stateLabel } from "../live/hudFormat";
 import styles from "./NarrationStrip.module.css";
 
 function Mono({ children }: { children: ReactNode }) {
-  return <span className={styles.mono}>{children}</span>;
+  return <span className={styles.num}>{children}</span>;
 }
 
 function Pct({ value }: { value: number }) {
-  return <Mono>{(value * 100).toFixed(0)} %</Mono>;
+  return <Mono>{(value * 100).toFixed(0)}%</Mono>;
 }
 
 function activeCount(satellites: Satellite[]): number {
@@ -69,17 +70,23 @@ function narrationFor(
   const degradedId = degradedSat?.id ?? (degradedSats.length > 0 ? degradedSats[0] : null);
   if (degradedId && (missionState === "NOMINAL" || missionState === "DEGRADED")) {
     const dId = degradedId.startsWith("SAT-") ? degradedId : `SAT-${degradedId}`;
-    const fadeS = degradedInfo[degradedId]?.degrade_s ?? 600;
+    const fadeS = degradedInfo[degradedId]?.degrade_s;
     return (
       <>
-        <Mono>{dId}</Mono> power degrading (<Mono>{fadeS}s</Mono> fade) - proactive role handoff in progress.
+        {dId} power is fading
+        {fadeS !== undefined && (
+          <>
+            {" "}over <Mono>{fadeS} s</Mono>
+          </>
+        )}
+        .
       </>
     );
   }
 
   switch (missionState) {
     case "NOMINAL": {
-      if (satellites.length === 0) return "Nominal — waiting for the first telemetry frame.";
+      if (satellites.length === 0) return "Nominal. Waiting for the first telemetry frame.";
       return (
         <>
           Nominal: <Mono>{activeCount(satellites)} of {satellites.length}</Mono> satellites
@@ -97,12 +104,8 @@ function narrationFor(
       if (failure === null) return "Failure detected.";
       return (
         <>
-          Failure detected: <Mono>{failure.satId}</Mono>
-          {failure.mode !== null && (
-            <>
-              {" "}— mode <Mono>{failure.mode}</Mono>
-            </>
-          )}
+          Failure detected: {failure.satId}
+          {failure.mode !== null && <> ({faultLabel(failure.mode).toLowerCase()})</>}
           {failure.detectionLatencyS !== null && (
             <>
               , detected <Mono>{formatSeconds(failure.detectionLatencyS)}</Mono> after onset
@@ -120,21 +123,11 @@ function narrationFor(
     case "REPLANNING": {
       return (
         <>
-          Replanning
-          {failure !== null && (
-            <>
-              : reassigning roles after the <Mono>{failure.satId}</Mono> failure
-            </>
-          )}
+          {stateLabel(missionState)}
+          {failure !== null && <>: reassigning roles after the {failure.satId} failure</>}
           {movers.length > 0 && (
             <>
-              {" "}— <Mono>{movers.length}</Mono> of <Mono>{rows.length}</Mono> slots
-              reassigned
-              {assignment !== null && assignment.costTotal !== null && (
-                <>
-                  , total cost <Mono>{assignment.costTotal.toFixed(2)}</Mono>
-                </>
-              )}
+              ; <Mono>{movers.length}</Mono> of <Mono>{rows.length}</Mono> slots reassigned
             </>
           )}
           .
@@ -158,15 +151,11 @@ function narrationFor(
         movers.some((r) => r.targetSlot === failure.vacatedSlot);
       return (
         <>
-          Reconfiguring
+          {stateLabel(missionState)}
           {first !== null ? (
             <>
-              : <Mono>{first.satelliteId}</Mono> moving to <Mono>{first.targetSlot}</Mono>
-              {vacatedByFailure && (
-                <>
-                  , vacated by <Mono>{failure.satId}</Mono>
-                </>
-              )}
+              : {first.satelliteId} moving to {slotLabel(first.targetSlot ?? "")}
+              {vacatedByFailure && <>, left empty by {failure.satId}</>}
               {movers.length > 1 && <> + {movers.length - 1} more</>}
             </>
           ) : allKeepers ? (
@@ -182,7 +171,7 @@ function narrationFor(
             failure.coverage.current !== null &&
             failure.coverage.pre !== null && (
               <>
-                {" "}— coverage <Pct value={failure.coverage.current} /> vs{" "}
+                ; coverage <Pct value={failure.coverage.current} />, was{" "}
                 <Pct value={failure.coverage.pre} /> before the failure
               </>
             )}
@@ -193,14 +182,13 @@ function narrationFor(
     case "RECOVERED": {
       return (
         <>
-          Recovered
+          {stateLabel(missionState)}
           {failure !== null &&
             failure.coverage.current !== null &&
             failure.coverage.pre !== null && (
               <>
-                : coverage <Pct value={failure.coverage.current} /> vs{" "}
-                <Pct value={failure.coverage.pre} /> before the{" "}
-                <Mono>{failure.satId}</Mono> failure
+                : coverage <Pct value={failure.coverage.current} />, was{" "}
+                <Pct value={failure.coverage.pre} /> before the {failure.satId} failure
               </>
             )}
           .
@@ -223,7 +211,7 @@ function narrationFor(
       );
     }
     default:
-      return `${missionState}.`;
+      return `${stateLabel(missionState)}.`;
   }
 }
 
@@ -255,7 +243,7 @@ export default function NarrationStrip() {
     >
       {missionState === null ? (
         <p className={styles.sentence} role="status" aria-live="polite">
-          The recovery story starts when a simulation runs — start one or load a replay.
+          The recovery story starts when a simulation runs. Start one or load a replay.
         </p>
       ) : (
         <div role="status" aria-live="polite">

@@ -18,7 +18,7 @@ import RoleTable from "../dashboard/RoleTable";
 import RecoveryLog from "../recovery/RecoveryLog";
 import EventLog from "../events/EventLog";
 import FleetTable from "./FleetTable";
-import { clock, faultLabel, km, stateLabel } from "./hudFormat";
+import { clock, faultLabel, km, slotLabel, stateLabel } from "./hudFormat";
 import styles from "./ImmersiveLive.module.css";
 
 const TABS = [
@@ -40,7 +40,12 @@ const CHARTS = [
 type ChartId = (typeof CHARTS)[number]["id"];
 
 const DASH = "–";
-const pct = (v: number | null | undefined) => (v == null ? DASH : `${(v * 100).toFixed(1)} %`);
+const POLICY_NAME: Record<string, string> = {
+  hungarian: "Best-fit reassignment",
+  even_split: "Even spacing",
+  hungarian_keepout: "Best-fit, avoiding the dead satellite",
+};
+const pct = (v: number | null | undefined) => (v == null ? DASH : `${(v * 100).toFixed(1)}%`);
 const meters = (v: number | null | undefined) => (v == null ? DASH : v >= 1000 ? `${km(v)} km` : `${v.toFixed(0)} m`);
 
 function Row({ label, value, tone }: { label: string; value: string; tone?: string }) {
@@ -58,7 +63,6 @@ function MissionTab() {
   const failures = useRecoveryStore((r) => r.failures.length);
   const sats = s.satellites;
   const lost = sats.filter((x) => x.status === "failed").length;
-  const moving = sats.filter((x) => x.status === "reconfiguring").length;
   const dv = sats.reduce((a, x) => a + x.dv_used, 0);
   const maxDv = sats.reduce((a, x) => Math.max(a, x.dv_used), 0);
   const holder = (role: string) => sats.find((x) => x.role === role && x.status !== "failed")?.id ?? "Vacant";
@@ -89,18 +93,15 @@ function MissionTab() {
         <Row label="Simulation time" value={s.simTime === null ? DASH : `${clock(s.simTime)}  (${s.simTime.toFixed(0)} s)`} />
         <Row label="Ground coverage" value={pct(s.metrics.coverage)} />
         <Row label="Coverage vs before the fault" value={covVsPre} />
-        <Row label="Coverage, orbit average" value={pct(s.metrics.coverageAvg)} />
         <Row label="Closest approach" value={meters(s.metrics.minSep)} />
-        <Row label="Keep-out floor" value="2.00 km" />
+        <Row label="Keep-out floor" value={meters(s.minSepM)} />
         <Row label="Closest approach at start" value={meters(sepRef)} />
-        <Row label="Formation error" value={meters(s.metrics.formationDeviation)} />
       </dl>
 
       <h3 className={styles.groupTitle}>Swarm</h3>
       <dl className={styles.params}>
         <Row label="Satellites" value={sats.length === 0 ? DASH : `${sats.length - lost} flying, ${lost} lost`} />
         <Row label="Flying, by role" value={sats.length === 0 ? DASH : rolesText || DASH} />
-        <Row label="Moving to new slots" value={sats.length === 0 ? DASH : String(moving)} />
         <Row label="Leader" value={sats.length === 0 ? DASH : holder("leader")} />
         <Row label="Downlink" value={sats.length === 0 ? DASH : holder("downlink")} />
         <Row label="Fuel spent, total" value={sats.length === 0 ? DASH : `${dv.toFixed(2)} m/s`} />
@@ -116,7 +117,7 @@ function MissionTab() {
           <Row label="Fault" value={faultLabel(failure.mode ?? undefined) || DASH} />
           <Row label="Failed at" value={clock(failure.tFail)} />
           <Row label="Detected after" value={latency === null ? DASH : `${latency.toFixed(1)} s`} />
-          <Row label="Slot left empty" value={failure.vacatedSlot?.replace("slot_", "") ?? DASH} />
+          <Row label="Slot left empty" value={failure.vacatedSlot ? slotLabel(failure.vacatedSlot) : DASH} />
           <Row label="Coverage before" value={pct(failure.coverage.pre)} />
           <Row label="Coverage low point" value={pct(failure.coverage.min)} />
           <Row
@@ -132,7 +133,7 @@ function MissionTab() {
       <dl className={styles.params}>
         <Row label="Scenario" value={s.scenario ?? DASH} />
         <Row label="Seed" value={s.seed === null ? DASH : String(s.seed)} />
-        <Row label="Recovery method" value={s.policy ?? DASH} />
+        <Row label="Recovery method" value={s.policy === null ? DASH : (POLICY_NAME[s.policy] ?? s.policy)} />
         <Row label="Mode" value={s.mode === "live" ? "Live" : s.mode === "replay" ? "Replay" : "Stopped"} />
         <Row
           label="Backend"

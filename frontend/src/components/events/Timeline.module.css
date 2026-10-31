@@ -45,7 +45,7 @@
   background: var(--panel-raised);
 }
 
-/* State literals are backend enum data — uppercase is data, not styling. */
+/* Keyed on the backend state literal; recovered is gold, never blue. */
 .reached[data-state="NOMINAL"] {
   border-color: var(--status-nominal);
 }
@@ -57,7 +57,8 @@
   border-color: var(--status-caution);
 }
 .reached[data-state="RECOVERED"] {
-  border-color: var(--status-info);
+  border-color: var(--status-repaired);
+  background: var(--status-repaired);
 }
 
 .active {
@@ -79,7 +80,6 @@
 }
 
 .nodeLabel {
-  font-family: var(--font-mono);
   font-size: var(--text-tick);
   color: var(--ink-faint);
   transition: color var(--motion-duration) var(--motion-ease);
@@ -104,7 +104,6 @@
 
 .stamp,
 .stampBtn {
-  font-family: var(--font-mono);
   font-size: var(--text-tick);
   color: var(--ink-muted);
   overflow-wrap: anywhere;

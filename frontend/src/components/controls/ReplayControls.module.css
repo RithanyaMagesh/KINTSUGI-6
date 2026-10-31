@@ -45,9 +45,9 @@
   margin-bottom: 0;
 }
 
-/* Current / total time — telemetry value, mono per §13.2. */
+/* Current / total time: tabular figures so the clock doesn't jitter. */
 .timeMono {
-  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   font-size: var(--text-body);
   color: var(--ink);
   margin-left: auto;
@@ -55,7 +55,6 @@
 }
 
 .fileMono {
-  font-family: var(--font-mono);
   font-size: var(--text-event);
   color: var(--ink-muted);
   overflow: hidden;

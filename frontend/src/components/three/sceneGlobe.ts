@@ -176,28 +176,34 @@ export function buildGlobe(fallbackDay: THREE.Texture, atmo: THREE.Color): Globe
   group.add(new THREE.Mesh(atmoGeo, atmoMat));
 
   const loaded: THREE.Texture[] = [];
+  let disposed = false; // a texture that finishes loading after dispose is freed at once
   let usingFallback = true;
   const loader = new THREE.TextureLoader();
   load(loader, "earth-day.jpg", true, (t) => {
+    if (disposed) { t.dispose(); return; }
     loaded.push(t);
     usingFallback = false;
     earthMat.uniforms.uDay.value = t;
   });
   load(loader, "earth-night.jpg", true, (t) => {
+    if (disposed) { t.dispose(); return; }
     loaded.push(t);
     earthMat.uniforms.uNight.value = t;
     earthMat.uniforms.uHasNight.value = 1;
   });
   load(loader, "earth-water.jpg", false, (t) => {
+    if (disposed) { t.dispose(); return; }
     loaded.push(t);
     earthMat.uniforms.uWater.value = t;
   });
   load(loader, "earth-topology.jpg", false, (t) => {
+    if (disposed) { t.dispose(); return; }
     loaded.push(t);
     earthMat.uniforms.uTopo.value = t;
     earthMat.uniforms.uBump.value = 2.2; // exaggerated relief strength
   });
   load(loader, "earth-clouds.jpg", false, (t) => {
+    if (disposed) { t.dispose(); return; }
     loaded.push(t);
     t.wrapS = THREE.RepeatWrapping;
     earthMat.uniforms.uClouds.value = t;
@@ -223,6 +229,7 @@ export function buildGlobe(fallbackDay: THREE.Texture, atmo: THREE.Color): Globe
       earthMat.uniforms.uCloudShift.value = cloudSpin % 1;
     },
     dispose() {
+      disposed = true;
       for (const t of loaded) t.dispose();
       black.dispose();
       earthGeo.dispose();

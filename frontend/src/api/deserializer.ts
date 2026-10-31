@@ -28,6 +28,8 @@ export type Deserialized =
       /** Recovery policy the session reports (additive `policy` field). null
        * while the backend predates the field — never guessed (invariant 1). */
       policy: string | null;
+      /** Scenario keep-out floor [m]; null = unknown (replay / stopped). */
+      minSepM: number | null;
     };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -155,6 +157,7 @@ export function deserializeMessage(raw: unknown): Deserialized | null {
         scenario: typeof raw.scenario === "string" ? raw.scenario : null,
         seed: typeof raw.seed === "number" ? raw.seed : null,
         policy: readPolicy(raw),
+        minSepM: typeof raw.min_sep_m === "number" ? raw.min_sep_m : null,
       };
     }
     default:

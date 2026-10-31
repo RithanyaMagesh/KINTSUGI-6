@@ -1,7 +1,7 @@
 /* Recovery log — numbered, timestamped episode chains (user demand: show HOW
    it recovered). Bare section: the host supplies panel chrome (no card inside
-   a card, §13.3). Prose 16px sans, times/ids/slots 14px mono (§13.2); color
-   appears only as the episode-outcome semantics of §13.1. */
+   a card). Sans throughout, numbers tabular; color appears only as the
+   episode-outcome semantics. */
 
 .log {
   min-width: 0;
@@ -16,9 +16,9 @@
 }
 
 .title {
-  font-size: var(--text-panel-title);
+  font-size: 13px;
   font-weight: 600;
-  color: var(--ink);
+  color: var(--ink-muted);
 }
 
 .policy {
@@ -39,16 +39,16 @@
   gap: var(--space-3);
 }
 
-/* Outcome on the left rail: recovered = info, in progress = caution,
+/* Outcome on the left rail: recovered = gold, in progress = caution,
    superseded = quiet border. Always paired with the text step that says so
    (§22: never color alone). */
 .episode {
-  border-left: 2px solid var(--border-strong);
+  border-left: 2px solid var(--glass-line-strong);
   padding-left: var(--space-3);
 }
 
 .episodeRecovered {
-  border-left-color: var(--status-info);
+  border-left-color: var(--status-repaired);
 }
 
 .episodeActive {
@@ -56,7 +56,7 @@
 }
 
 .episodeSuperseded {
-  border-left-color: var(--border);
+  border-left-color: var(--glass-line);
 }
 
 .episodeTitle {
@@ -83,7 +83,6 @@
 
 .stepTime {
   flex: 0 0 108px; /* same time column as the event log rows */
-  font-family: var(--font-mono);
   font-size: var(--text-event);
   color: var(--ink-muted);
   font-variant-numeric: tabular-nums;
@@ -100,8 +99,7 @@
   color: var(--ink-muted);
 }
 
-.mono {
-  font-family: var(--font-mono);
+.num {
   font-variant-numeric: tabular-nums;
 }
 
@@ -112,9 +110,8 @@
   margin-top: var(--space-1);
 }
 
-/* Telemetry values: 14px mono rows (§13.2 event-log scale). */
+/* Telemetry values: 14px rows, tabular numbers. */
 .burn {
-  font-family: var(--font-mono);
   font-size: var(--text-event);
   color: var(--ink);
   font-variant-numeric: tabular-nums;

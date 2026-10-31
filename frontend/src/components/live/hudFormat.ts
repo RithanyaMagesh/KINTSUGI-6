@@ -16,7 +16,7 @@ export const PHASES: ReadonlyArray<{ state: MissionState; label: string }> = [
   { state: "NOMINAL", label: "Nominal" },
   { state: "FAILURE_DETECTED", label: "Failure detected" },
   { state: "REPLANNING", label: "Replanning" },
-  { state: "RECONFIGURING", label: "Moving to slots" },
+  { state: "RECONFIGURING", label: "Moving to new slots" },
   { state: "RECOVERED", label: "Recovered" },
 ];
 
@@ -39,9 +39,9 @@ export function statusLabel(status: string): string {
     case "reconfiguring":
       return "Moving";
     case "recovered":
-      return "Repaired";
+      return "Recovered";
     case "degraded":
-      return "Degraded";
+      return "Battery fading";
     case "inactive":
       return "Inactive";
     default:
@@ -53,8 +53,15 @@ export function faultLabel(f: string | undefined): string {
   if (f === undefined) return "";
   if (f === "DEAD") return "Dead";
   if (f === "THRUSTER_OUT") return "Thruster out";
-  if (f === "EPS_DEGRADE") return "Battery fade";
+  if (f === "EPS_DEGRADE" || f === "DEGRADED") return "Battery fade"; // wire sends the status
   return f;
+}
+
+/** Wire slot id "slot_2" -> "Slot 3" (slots are 0-based on the wire). */
+export function slotLabel(slot: string | undefined | null): string {
+  if (slot === undefined || slot === null) return "–";
+  const n = Number(slot.replace("slot_", ""));
+  return Number.isFinite(n) ? `Slot ${n + 1}` : slot;
 }
 
 /** Sim clock as h:mm:ss (or m:ss under an hour). */
