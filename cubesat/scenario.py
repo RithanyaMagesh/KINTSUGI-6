@@ -33,6 +33,23 @@ class FailureMode(StrEnum):
     DEAD = "DEAD"
     THRUSTER_OUT = "THRUSTER_OUT"
     EPS_DEGRADE = "EPS_DEGRADE"
+    # Engine v2 only (resource damage, cubesat/spacecraft.py): PAYLOAD_FAIL = no imaging,
+    # PARTIAL_THRUST = thrust health 0.5, THRUSTER_STUCK_OPEN = constant thrust along a fixed
+    # ECI vector until the propellant is empty, RADIO_FAIL = alive and flying but silent.
+    PAYLOAD_FAIL = "PAYLOAD_FAIL"
+    PARTIAL_THRUST = "PARTIAL_THRUST"
+    THRUSTER_STUCK_OPEN = "THRUSTER_STUCK_OPEN"
+    RADIO_FAIL = "RADIO_FAIL"
+
+
+V2_ONLY_MODES = frozenset(
+    {
+        FailureMode.PAYLOAD_FAIL,
+        FailureMode.PARTIAL_THRUST,
+        FailureMode.THRUSTER_STUCK_OPEN,
+        FailureMode.RADIO_FAIL,
+    }
+)
 
 
 class ChiefOrbit(BaseModel):
@@ -300,6 +317,18 @@ class Scenario(BaseModel):
                 raise ValueError(
                     f"failure references sat_id={failure.sat_id}, but only {self.n_sats} sats exist"
                 )
+        return self
+
+    @model_validator(mode="after")
+    def _v2_only_failure_modes(self) -> Scenario:
+        # the frozen v1 engine treats every unknown mode as DEAD; refuse instead of misreading
+        if self.engine != "v2":
+            for f in self.failures:
+                if f.mode in V2_ONLY_MODES:
+                    raise ValueError(
+                        f'failure mode {f.mode.value} (sat {f.sat_id}) requires engine "v2"; '
+                        f'this scenario uses engine "{self.engine}"'
+                    )
         return self
 
     @model_validator(mode="after")

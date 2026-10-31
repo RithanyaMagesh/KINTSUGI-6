@@ -1,11 +1,16 @@
 """Failure scheduling, per-sat status and heartbeat detection for EngineV2.
 
-Phase 1 scope: failures fire at their tick and coast in the truth model; detection is the v1
-heartbeat rule (K missed ticks); there is no recovery, so the mission state stays
-FAILURE_DETECTED once anything is detected.
+Failures fire at their tick and act as resource damage on the per-sat SatState
+(cubesat/spacecraft.py); detection is the v1 heartbeat rule (K missed ticks) for every silent
+sat; there is no recovery, so the mission state stays FAILURE_DETECTED once anything is
+detected. Self-reported (THRUSTER_OUT, PAYLOAD_FAIL): the sat tells ground at once if its radio
+works. PARTIAL_THRUST and THRUSTER_STUCK_OPEN are silent faults (status DEGRADED, no event):
+only a motion residual can see them (Phase 4).
 """
 
 from __future__ import annotations
+
+import numpy as np
 
 from cubesat.scenario import Failure, FailureMode, Scenario
 from cubesat.sim import (
@@ -16,10 +21,31 @@ from cubesat.sim import (
     STATUS_NOMINAL,
     STATUS_THRUSTER_OUT,
 )
+from cubesat.spacecraft import SatState, apply_failure
 
 STATUS_REENTERED = "REENTERED"
-_SILENT = (STATUS_DEAD, STATUS_REENTERED)  # no heartbeat
+STATUS_PAYLOAD_FAILED = "PAYLOAD_FAILED"  # still flies, no imaging
+STATUS_RADIO_SILENT = "RADIO_SILENT"  # flies, silent heartbeat
 _EPS = 1e-9
+# A new failure only ever raises the label; DEAD and REENTERED are terminal.
+_RANK = {
+    STATUS_NOMINAL: 0,
+    STATUS_DEGRADED: 1,
+    STATUS_PAYLOAD_FAILED: 2,
+    STATUS_THRUSTER_OUT: 3,
+    STATUS_RADIO_SILENT: 5,
+    STATUS_DEAD: 6,
+    STATUS_REENTERED: 7,
+}
+_TERMINAL = (STATUS_DEAD, STATUS_REENTERED)
+_MODE_STATUS = {
+    FailureMode.THRUSTER_OUT: STATUS_THRUSTER_OUT,
+    FailureMode.PARTIAL_THRUST: STATUS_DEGRADED,
+    FailureMode.THRUSTER_STUCK_OPEN: STATUS_DEGRADED,
+    FailureMode.PAYLOAD_FAIL: STATUS_PAYLOAD_FAILED,
+    FailureMode.RADIO_FAIL: STATUS_RADIO_SILENT,
+}  # DEAD and EPS_DEGRADE map to STATUS_DEAD
+_PROGRADE = np.array([0.0, 1.0, 0.0])  # stuck direction when no velocity is given
 
 
 def _order(f: Failure) -> tuple[float, int]:
@@ -41,6 +67,7 @@ class Faults:
         self.pending = sorted(scenario.failures, key=_order)
         self.fired = 0
         self.injections: list[Failure] = []
+        self.sats = [SatState.from_scenario(scenario) for _ in range(n)]
 
     def inject(self, failure: Failure, now: float) -> None:
         """Resolve `failure` against `now` and record the RESOLVED failure.
@@ -67,8 +94,10 @@ class Faults:
             self.t_fail[i], self.fail_mode[i] = t, "REENTRY"
         return {"type": "REENTRY", "payload": {"sat_id": i, "t": t, "altitude_m": altitude_m}}
 
-    def tick(self, t: float) -> list[dict]:
-        """Fade onsets, failures due at t, heartbeats and detection; returns this tick's events."""
+    def tick(self, t: float, vel_eci: np.ndarray | None = None) -> list[dict]:
+        """Fade onsets, failures due at t, heartbeats and detection; returns this tick's events.
+        vel_eci (N, 3): sat ECI velocities now; a stuck-open thruster fires along the failing
+        sat's velocity direction at that instant (fixed in ECI afterwards)."""
         events: list[dict] = []
         for f in [*self.scenario.failures, *self.injections]:
             fades = f.mode == FailureMode.EPS_DEGRADE and f.degrade_s > 0
@@ -85,22 +114,31 @@ class Faults:
             f = self.pending[self.fired]
             self.fired += 1
             i = f.sat_id
-            thruster_out = f.mode == FailureMode.THRUSTER_OUT
-            new = STATUS_THRUSTER_OUT if thruster_out else STATUS_DEAD
-            if self.status[i] in (STATUS_DEAD, STATUS_REENTERED) or self.status[i] == new:
+            sat = self.sats[i]
+            if self.status[i] in _TERMINAL:
                 continue
-            self.status[i] = new
-            self.t_fail[i], self.fail_mode[i] = f.t, f.mode.value
-            if thruster_out:  # self-reported, like v1: no heartbeat misses needed
+            was_ok = (sat.k > 0.0, sat.payload_ok)
+            vec = _PROGRADE if vel_eci is None else vel_eci[i]
+            apply_failure(sat, f.mode, vec)
+            new = _MODE_STATUS.get(f.mode, STATUS_DEAD)
+            raised = _RANK[new] > _RANK[self.status[i]]
+            if raised:
+                self.status[i] = new
+            if raised or not self.fail_mode[i]:
+                self.t_fail[i], self.fail_mode[i] = f.t, f.mode.value
+            thruster_lost = f.mode == FailureMode.THRUSTER_OUT and was_ok[0]
+            payload_lost = f.mode == FailureMode.PAYLOAD_FAIL and was_ok[1]
+            if sat.radio_ok and (thruster_lost or payload_lost):  # self-reported, like v1
                 self.declared[i] = True
                 self.mission = STATE_FAILURE_DETECTED
                 payload = {"sat_id": i, "mode": f.mode.value, "t_fail": f.t, "t_detect": t}
                 payload["self_report"] = True
                 events.append({"type": "FAILURE_DETECTED", "payload": payload})
         for i, status in enumerate(self.status):
-            self.missed[i] = self.missed[i] + 1 if status in _SILENT else 0
+            silent = status == STATUS_REENTERED or not self.sats[i].radio_ok
+            self.missed[i] = self.missed[i] + 1 if silent else 0
             if (
-                status in _SILENT
+                silent
                 and not self.declared[i]
                 and self.missed[i] >= self.scenario.detection.missed_ticks_k
             ):
@@ -123,6 +161,7 @@ class Faults:
             "pending": dump(self.pending),
             "fired": self.fired,
             "injections": dump(self.injections),
+            "sats": [sat.to_dict() for sat in self.sats],
         }
 
     def load(self, state: dict) -> None:
@@ -130,3 +169,4 @@ class Faults:
             setattr(self, name, state[name])
         self.pending = [Failure.model_validate(f) for f in state["pending"]]
         self.injections = [Failure.model_validate(f) for f in state["injections"]]
+        self.sats = [SatState.from_dict(d) for d in state["sats"]]

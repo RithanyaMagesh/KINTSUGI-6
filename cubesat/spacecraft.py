@@ -17,7 +17,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from cubesat.scenario import Scenario
+from cubesat.scenario import FailureMode, Scenario
 
 G0 = 9.80665  # m/s^2
 PARTIAL_K = 0.5  # PARTIAL_THRUST health
@@ -92,3 +92,26 @@ def thrust_limited(sat: SatState, a_cmd: np.ndarray, dt: float) -> tuple[np.ndar
     sat.m_kg -= dm
     sat.m_prop_kg = 0.0 if dm == sat.m_prop_kg else sat.m_prop_kg - dm
     return a, dm
+
+
+def apply_failure(sat: SatState, mode: FailureMode, stuck_vec: np.ndarray | None = None) -> None:
+    """Failure mode as resource damage (mutates sat). DEAD and EPS_DEGRADE (a fade that ends in
+    a death, Phase-1 behaviour): all off. THRUSTER_OUT: k = 0. PARTIAL_THRUST: k = 0.5.
+    THRUSTER_STUCK_OPEN: fires stuck_k F_max along the fixed ECI direction stuck_vec (stored as
+    a unit vector; required). PAYLOAD_FAIL: payload_ok = False. RADIO_FAIL: radio_ok = False."""
+    if mode in (FailureMode.DEAD, FailureMode.EPS_DEGRADE):
+        sat.k, sat.stuck_vec, sat.stuck_k = 0.0, None, 0.0
+        sat.payload_ok = sat.radio_ok = False
+    elif mode == FailureMode.THRUSTER_OUT:
+        sat.k = 0.0
+    elif mode == FailureMode.PARTIAL_THRUST:
+        sat.k = min(sat.k, PARTIAL_K)
+    elif mode == FailureMode.THRUSTER_STUCK_OPEN:
+        if stuck_vec is None or not np.linalg.norm(stuck_vec) > 0:
+            raise ValueError("THRUSTER_STUCK_OPEN needs a non-zero stuck_vec (ECI direction)")
+        sat.stuck_vec = np.asarray(stuck_vec, dtype=float) / np.linalg.norm(stuck_vec)
+        sat.stuck_k = STUCK_K
+    elif mode == FailureMode.PAYLOAD_FAIL:
+        sat.payload_ok = False
+    elif mode == FailureMode.RADIO_FAIL:
+        sat.radio_ok = False
