@@ -29,6 +29,7 @@ CASES = {
                 {"t": 0.0, "sat_id": 3, "mode": "THRUSTER_OUT"},
                 {"t": 0.0, "sat_id": 2, "mode": "RADIO_FAIL"},
                 {"t": 0.0, "sat_id": 4, "mode": "PARTIAL_THRUST"},
+                {"t": 0.0, "sat_id": 5, "mode": "THRUSTER_STUCK_OPEN"},
             ],
             truth={"density_factor": 50},
         ),

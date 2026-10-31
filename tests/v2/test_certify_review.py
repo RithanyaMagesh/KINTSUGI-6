@@ -174,3 +174,33 @@ def test_swarm_state_is_a_copy_of_the_engine():
     assert np.array_equal(state.sat_eci, x0) and state.sats[0].m_prop_kg == p0
     assert "spare" not in state.roles[0]
     assert state.t_s == 3 * eng.dt
+
+
+def _brute_min_pair(eci, ids):
+    best = (np.inf, None)
+    for a in ids:
+        for b in ids:
+            if a < b:
+                best = min(best, (float(np.linalg.norm(eci[a, :3] - eci[b, :3])), (a, b)))
+    return best
+
+
+def test_pair_indices_are_sat_ids_when_a_reentered_sat_is_excluded():
+    from cubesat.certify_sim import simulate
+
+    sc, state = _base()
+    state.status[0] = "REENTERED"  # excluded from the separation, so ids must not shift
+    res = simulate(sc, state, state.refs, {}, 0)
+    want, pair = _brute_min_pair(state.sat_eci, range(1, 6))
+    assert res.min_sep_pair == pair and 0 not in pair
+    assert res.min_sep_m == pytest.approx(want, abs=1e-6)
+
+
+def test_with_fewer_than_two_flying_sats_the_separation_uses_every_sat_at_its_frozen_state():
+    from cubesat.certify_sim import simulate
+
+    sc, state = _base()
+    state.status = ["REENTERED"] * 5 + ["NOMINAL"]  # engine rule: <2 flying -> all sats count
+    res = simulate(sc, state, state.refs, {}, 0)
+    want, pair = _brute_min_pair(state.sat_eci, range(6))
+    assert res.min_sep_pair == pair and res.min_sep_m == pytest.approx(want, abs=1e-6)

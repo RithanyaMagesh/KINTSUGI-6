@@ -188,12 +188,10 @@ def certify(
     # commandable = a reporting sat (roles_v2: only those can hold the radio roles)
     cmd_ok = [capability(s, True, True, "leader") for s in state.status]
     seats_now = np.array(state.refs, dtype=float)
-    seats_t0 = [propagate(seats_now[i], -state.t_s, n) for i in range(scenario.n_sats)]
     movers = {i: it.transfer for i, it in items.items() if it.transfer is not None}
     for i, it in items.items():
         if cmd_ok[i]:  # a sat that cannot be commanded keeps flying its old seat
             seats_now[i] = propagate(it.seat, plan.t_start_s, n)
-            seats_t0[i] = np.asarray(it.seat, dtype=float)
     steps = max(1, round(horizon_orbits * 2.0 * math.pi / n / scenario.dt_s))
     live = {i: tr for i, tr in movers.items() if cmd_ok[i]}
     res = simulate(scenario, state, seats_now, live, steps, cancel_event)

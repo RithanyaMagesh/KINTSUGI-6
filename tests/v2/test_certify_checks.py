@@ -169,6 +169,7 @@ def test_dead_or_silent_sat_cannot_be_a_mover(mode):
     cert = certify(Plan((mover(4, burn([0.01, 0, 0])),), "x", state.t_s), state, sc,
                    d_safe_m=0.0, **FAST)
     assert any("sat 4 cannot move" in r for r in reasons_of(cert, "fuel"))
+    assert cert.landing_error_m == 0.0  # its burn is not flown: it cannot be commanded
 
 
 def test_zero_fuel_start():
@@ -370,3 +371,35 @@ def test_cancel_event_raises():
     with pytest.raises(CertificateCancelled):
         certify(hold(state), state, sc, d_safe_m=500.0, cancel_event=mid)
     assert mid.calls == 41  # stopped at the very next step
+
+
+def test_item_seats_are_propagated_to_the_plan_start():
+    """At t = 40 s an item whose seat is the formation slot (t = 0 convention) is the same plan as
+    holding: the certificate must propagate it to the plan start, as the engine's `refs` are."""
+    sc = scn(2.0)
+    state = swarm_state_from_engine(engine_at(sc, 20))
+    seats = slots(2.0)
+    items = tuple(PlanItem(i, None, seats[i], tuple(state.roles[i])) for i in range(6))
+    same = certify(Plan(items, "same", state.t_s), state, sc, d_safe_m=500.0, horizon_orbits=0.5)
+    base = certify(hold(state), state, sc, d_safe_m=500.0, horizon_orbits=0.5)
+    assert same.min_sep_m == pytest.approx(base.min_sep_m, abs=1e-3)
+    assert same.coverage == pytest.approx(base.coverage, abs=1e-9)
+    assert same.passed and base.passed
+
+
+def test_dropping_an_imager_role_is_worse_than_holding_the_current_roles():
+    sc = scn(2.0)
+    state = swarm_state_from_engine(engine_at(sc, 0))
+    items = (PlanItem(4, None, slots(2.0)[4], ("spare",)),)  # same seat, imager role dropped
+    cert = certify(Plan(items, "drop", 0.0), state, sc, d_safe_m=0.0, **FAST)
+    assert cert.coverage < cert.hold_coverage - 1e-3 and reasons_of(cert, "coverage")
+
+
+def test_a_silent_sat_keeps_its_old_seat_whatever_the_plan_says():
+    sc = scn(2.0, failures=[{"t": 0.0, "sat_id": 5, "mode": "RADIO_FAIL"}])
+    state = swarm_state_from_engine(engine_at(sc, 20))
+    items = (PlanItem(5, None, slots(2.0)[0], tuple(state.roles[5])),)  # "go to sat 0's slot"
+    plan = Plan(items, "x", state.t_s)
+    cert = certify(plan, state, sc, d_safe_m=0.0, horizon_orbits=0.5)
+    base = certify(hold(state), state, sc, d_safe_m=0.0, horizon_orbits=0.5)
+    assert cert.min_sep_m == pytest.approx(base.min_sep_m, abs=1e-3)

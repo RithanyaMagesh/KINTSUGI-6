@@ -138,7 +138,8 @@ def simulate(
         lvlh = truth.eci_to_lvlh(X[1:, :3], X[1:, 3:], c[:3], c[3:])
         alt = np.linalg.norm(X[1:, :3], axis=1) - truth.RE
         for i in range(count):
-            if alt[i] < REENTRY_ALTITUDE_M and status[i] != STATUS_REENTERED:
+            fresh = alt[i] < REENTRY_ALTITUDE_M and status[i] != STATUS_REENTERED
+            if fresh or (j == 0 and status[i] == STATUS_REENTERED):  # frozen state, as the engine
                 hold[i], status[i] = lvlh[i], STATUS_REENTERED
         gone = np.array([s == STATUS_REENTERED for s in status])
         lvlh[gone] = hold[gone]
