@@ -1,0 +1,43 @@
+{
+  "a_max_mps2": 0.1,
+  "chief": {
+    "altitude_km": 500
+  },
+  "dt_s": 2,
+  "duration_s": 17028,
+  "failures": [],
+  "formation": {
+    "n_slots": 16,
+    "phase_offset_deg": 0,
+    "radial_amp_km": 12
+  },
+  "gains": {
+    "wn": 0.01,
+    "zeta": 1
+  },
+  "name": "live_16sat",
+  "roles": [
+    "leader",
+    "imager",
+    "imager",
+    "imager",
+    "imager",
+    "downlink",
+    "imager",
+    "imager",
+    "imager",
+    "imager",
+    "imager",
+    "imager",
+    "imager",
+    "imager",
+    "imager",
+    "downlink"
+  ],
+  "seed": 42,
+  "sensor": {
+    "fov_half_angle_deg": 1.5,
+    "grid_extent_km": 30,
+    "grid_step_km": 2
+  }
+}
