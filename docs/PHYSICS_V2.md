@@ -314,3 +314,51 @@ Drag is not what the survivors pay for: drag-only differs from two-body-only by 
 | stuck-open treated as nominal | `test_failure_modes_v2.py::test_mode_THRUSTER_STUCK_OPEN_semantics` |
 | v2-only mode validator off | `test_failure_modes_v2.py::test_v1_scenarios_with_v2_modes_are_rejected_with_a_plain_message[PAYLOAD_FAIL]` |
 | survivor (equivalent): `Faults.load` catches `(TypeError, ValueError)` only | none: `EngineV2.restore` also catches KeyError and re-raises ValueError, so the observable behaviour is identical |
+
+## Phase 5a: capability roles (2026-10-31; `cubesat/roles_v2.py`, `sim_v2.py`, `scenario.role_priority`)
+
+Engine v2 only; v1 keeps its labels and logs byte for byte. **Power is NOT modelled** (no battery, Task 2.2 unbuilt): the "power" need of the master-map role table is treated as always satisfied. Roles are a pure function of the live statuses (plus the incumbents); this phase moves no one: motion is unchanged, nothing is replanned, so the numbers below measure the assignment rule, not a recovery planner.
+
+**`capability(status, payload_ok, radio_ok, role) -> bool`.** `ROLE_SPECS` (critical, stackable, needs): leader (True, True, radio), downlink (True, False, radio), imager (False, False, payload), relay (False, True, radio), spare (False, True, none). Reporting statuses = NOMINAL, DEGRADED, FUEL_DEPLETED, THRUSTER_OUT, PAYLOAD_FAILED (no role here needs thrust, so a dry or thruster-dead sat still images and talks). imager: `payload_ok` and a reporting sat (a dead payload takes no images; an image that cannot be reported is not coverage). downlink / leader / relay: `radio_ok` and a reporting sat. RADIO_SILENT flies but nothing it does reaches ground: it holds only `spare`. DEAD and REENTERED hold nothing whatever their (stale) flags say. Unknown role: ValueError.
+
+**`assign_roles(sats, priority=("downlink","imager","leader")) -> list[list[str]]`.** Each sat dict: `status`, `payload_ok`, `radio_ok`, `roles` (the incumbents). Roles are filled in priority order; per role `linear_sum_assignment` on rows = sats, columns = seats (1 for a critical role, max(1, capable incumbents) otherwise, so a lost imager is not replaced). Cost: incapable `1e6` (finite, never inf), incumbent 0, otherwise 1 + 2 per non-stackable role the sat already holds or critical role it holds now (a role stacks onto a busy sat only when no free capable sat exists; leader on an imager when two sats survive; downlink avoids the leader's sat), plus the `1e-9` row-major index epsilon (ties go to the lowest id). A seat that lands on an incapable sat stays VACANT (`vacant_roles`). A capable sat with nothing holds `["spare"]`; an incapable or dead one `[]`. Deterministic, no RNG, input not mutated.
+
+**Engine log (v2 only).** Per sat: `roles` (list, priority order), `role` (primary = `roles[0]`, `"none"` when empty; a stacked leader on an imager therefore shows `imager`), `original_role` (the scenario label). Coverage counts sats whose `roles` contain `imager`: a PAYLOAD_FAILED or RADIO_SILENT imager is excluded (RADIO_SILENT is new: Phase 2 still counted it), and with no failure the numbers equal the Phase-2 rule (`test_coverage_reproduces_the_phase2_rule`). Event `ROLE_HANDOFF {role, from_sat, to_sat, reason}` is emitted, appended to the tick's `events`, ONLY when leader or downlink changes holder (`to_sat` null = vacant, `from_sat` null = was vacant; `reason` = the old holder's status, `VACANT` if none). Incumbent role state is in the engine snapshot (`state.roles`); a snapshot without it is refused (ValueError, engine untouched). `Scenario.role_priority` (default `["downlink","imager","leader"]`, unique known names, engine v2 only).
+
+**Measured (command: `uv run python -m pytest tests/v2/test_roles_demo.py -s -m slow`, two_failure.json as engine v2, a_max 0.01, default 0.2 kg spacecraft block, sat i DEAD at 1200 s and sat j at 1500 s, last tick t = 17028 s; 2 min 48 s):**
+
+| pair (i,j) | leader | downlink | imagers | coverage at last tick |
+|---|---|---|---|---|
+| (0,1) | 2 | 5 | 3 | 0.3319 |
+| (0,2) | 1 | 5 | 3 | 0.3528 |
+| (0,3) | 1 | 5 | 3 | 0.3392 |
+| (0,4) | 1 | 5 | 3 | 0.2893 |
+| (0,5) | 1 | 2 | 4 | 0.3840 |
+| (1,2) | 0 | 5 | 2 | 0.2373 |
+| (1,3) | 0 | 5 | 2 | 0.2851 |
+| (1,4) | 0 | 5 | 2 | 0.2373 |
+| (1,5) | 0 | 2 | 3 | 0.3319 |
+| (2,3) | 0 | 5 | 2 | 0.2851 |
+| (2,4) | 0 | 5 | 2 | 0.2581 |
+| (2,5) | 0 | 1 | 3 | 0.3528 |
+| (3,4) | 0 | 5 | 2 | 0.1967 |
+| (3,5) | 0 | 1 | 3 | 0.3392 |
+| (4,5) | 0 | 1 | 3 | 0.2893 |
+
+Leader and downlink each held by exactly one capable sat in **15/15** pairs (expected: it is a pure assignment, so this is a consistency check, not a recovery result). 4 of 6 dead (all 15 subsets, failures at 1200/1300/1400/1500 s): leader + downlink + at least one imager held in **15/15**; 5 of 6 dead (6 subsets): **6/6** (the survivor holds all three). v1 benchmark numbers are not comparable (different engine, a_max 0.1, recovery on). Not claimed: delivered coverage (needs a downlink path, Phase 6); that a role hand-off is free (it is a label change, no handover time); any power constraint.
+
+**Mutation check (copy of the tree under /tmp, tests/v2/test_roles_{capability,assign,engine}.py, first failing test shown):**
+
+| Mutant | Killed by |
+|---|---|
+| drop the capability gate | `test_four_of_six_dead_keeps_imager` |
+| incapable cost 0.5 instead of 1e6 | `test_four_of_six_dead_keeps_imager` |
+| ignore incumbents | `test_v1_roles_map_onto_same_initial_holders` |
+| reverse the priority order | `test_four_dead_with_the_critical_holders_among_the_dead` |
+| a RADIO_SILENT sat may hold the leader | `test_radio_silent_holds_nothing_that_needs_radio` |
+| two downlink seats | `test_v1_roles_map_onto_same_initial_holders` |
+| ROLE_HANDOFF for non-critical roles | `test_no_handoff_without_a_critical_change` (this test was first too weak: it did not move the first imager; strengthened) |
+| roles not restored from the snapshot | `test_snapshot_carries_role_state` |
+| dead sat keeps its role label | `test_four_of_six_dead_keeps_imager` |
+| critical-role pile-up allowed | `test_a_lost_critical_role_avoids_the_sat_that_already_holds_the_other_one` (found by the demo: pair (0,5) first stacked downlink + leader + imager on sat 1; fixed with a red test) |
+| stacking penalty removed | `test_four_dead_with_the_critical_holders_among_the_dead` |

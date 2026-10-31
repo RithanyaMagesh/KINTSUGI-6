@@ -112,8 +112,8 @@ def test_handoff_event_is_the_tick_event_when_alone():
 def test_no_handoff_without_a_critical_change():
     scn = _scn(
         [
-            {"t": 100.0, "sat_id": 2, "mode": "DEAD"},
-            {"t": 150.0, "sat_id": 3, "mode": "PAYLOAD_FAIL"},
+            {"t": 100.0, "sat_id": 1, "mode": "DEAD"},  # the first imager: its role changes holder
+            {"t": 150.0, "sat_id": 2, "mode": "PAYLOAD_FAIL"},
         ]
     )
     assert _handoffs(run_scenario_v2(scn)) == []

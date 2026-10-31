@@ -62,10 +62,11 @@ def assign_roles(sats: list[dict], priority: Sequence[str] = DEFAULT_PRIORITY) -
     max(1, capable incumbents) otherwise (an imager never multiplies, a lost imager is not
     replaced: this phase does not replan). Rows = sats, columns = seats,
     scipy linear_sum_assignment; cost = INCAPABLE (1e6) if the sat cannot hold the role, else
-    0 for an incumbent, else 1 + 2 per non-stackable role it already holds (so a role stacks on
-    a busy sat only when no free capable sat exists), plus a 1e-9 row-major index epsilon
-    (ties go to the lowest id). A seat that lands on an incapable sat stays VACANT: see
-    vacant_roles. A capable sat left with nothing holds ["spare"]; an incapable or dead one []."""
+    0 for an incumbent, else 1 + 2 per non-stackable role it already holds or critical role it
+    holds now (so a role stacks on a busy sat only when no free capable sat exists), plus a
+    1e-9 row-major index epsilon (ties go to the lowest id). A seat that lands on an incapable
+    sat stays VACANT: see vacant_roles. A capable sat left with nothing holds ["spare"]; an
+    incapable or dead one []."""
     priority = tuple(dict.fromkeys(r for r in priority if r != "spare"))
     for role in priority:
         capability("NOMINAL", True, True, role)  # raises ValueError for an unknown role
@@ -78,6 +79,11 @@ def assign_roles(sats: list[dict], priority: Sequence[str] = DEFAULT_PRIORITY) -
         cost = np.empty((n, seats))
         for i in range(n):
             busy = sum(not ROLE_SPECS[r]["stackable"] for r in held[i])
+            # a critical role the sat holds now also makes it busy (no leader+downlink pile-up)
+            busy += sum(
+                ROLE_SPECS[r]["critical"] and r != role and r not in held[i]
+                for r in sats[i].get("roles", ())
+            )
             cost[i] = INCAPABLE if not ok[i] else 0.0 if inc[i] else 1.0 + _STACK_PENALTY * busy
         cost += _EPS * (np.arange(n)[:, None] * seats + np.arange(seats)[None, :])
         for i, _ in zip(*linear_sum_assignment(cost), strict=True):

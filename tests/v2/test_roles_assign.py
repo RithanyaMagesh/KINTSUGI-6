@@ -148,3 +148,13 @@ def test_cost_matrices_are_finite_and_incapable_is_1e6(monkeypatch):
 def test_unknown_priority_role_is_a_value_error():
     with pytest.raises(ValueError, match="unknown role"):
         assign_roles(sats([OK] * 6), ("pilot",))
+
+
+def test_a_lost_critical_role_avoids_the_sat_that_already_holds_the_other_one():
+    # downlink holder (sat 0) died; sat 1 is the leader, sats 2-3 are free imagers
+    inc = [["downlink"], ["imager", "leader"], ["imager"], ["imager"]]
+    s = sats([DEAD, OK, OK, OK], [None] * 4)
+    for d, r in zip(s, inc, strict=True):
+        d["roles"] = r
+    out = assign_roles(s)
+    assert holders(out, "downlink") == [2] and holders(out, "leader") == [1]
