@@ -318,8 +318,19 @@ def to_messages(frame: dict, enrich: SessionEnrich) -> list[dict]:
     if state == "INIT":
         return [to_sim_state(frame, enrich)]
     if state == "SUMMARY":
-        # SUMMARY is never sent as a sim_state (section 6.1)
-        return [to_event("info", frame.get("t", 0.0), "Run complete")]
+        # SUMMARY is never sent as a sim_state (section 6.1). run_summary goes FIRST:
+        # the "Run complete" event stays the stream's last message (clients and tests
+        # treat it as the terminator).
+        return [
+            {
+                "type": "run_summary",
+                "coverage_mean_last_orbit": frame.get("coverage_mean_last_orbit"),
+                "sim_time": frame.get("t", 0.0),
+                "scenario": enrich.scenario,
+                "seed": enrich.seed,
+            },
+            to_event("info", frame.get("t", 0.0), "Run complete"),
+        ]
 
     event = frame.get("event")
     reassignment: dict | None = None

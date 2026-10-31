@@ -116,7 +116,8 @@ def test_session_replay_stream_and_seek(tmp_path):
         assert session.mode == "replay"
         msgs = await _drain_until_run_complete(q, session)
         assert msgs == expected  # exact wire sequence, in order
-        assert session.snapshot() == msgs[-2]  # holds the last sim_state
+        last_state = [m for m in msgs if m["type"] == "sim_state"][-1]
+        assert session.snapshot() == last_state  # holds the last sim_state
 
         # backwards seek: first frame with t >= 1.0 is t=2.0 (no INIT resend)
         await session.seek(1.0)
@@ -189,7 +190,8 @@ def test_live_equals_replay_frames(tmp_path):
 
         assert live_msgs == replay_msgs
         # and the stream really covers the arc (failure + reassignment + summary)
-        assert {m["type"] for m in live_msgs} == {"sim_state", "event", "role_reassignment"}
+        assert {m["type"] for m in live_msgs} == {
+            "sim_state", "event", "role_reassignment", "run_summary"}
 
     asyncio.run(main())
 

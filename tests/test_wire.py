@@ -207,9 +207,8 @@ def test_wire_init_header_maps_to_empty_state_and_summary_to_final_event():
     summary = {"v": 1, "t": 17028.0, "state": "SUMMARY",
                "coverage_mean_last_orbit": 0.26979718716450923}
     messages = to_messages(summary, enrich)
-    assert len(messages) == 1
-    assert messages[0]["type"] == "event"
-    assert messages[0]["message"] == "Run complete"
+    assert [m["type"] for m in messages] == ["run_summary", "event"]
+    assert messages[-1]["message"] == "Run complete"
     # SUMMARY is never sent as a sim_state
     assert all(m["type"] != "sim_state" for m in messages)
 
@@ -349,3 +348,15 @@ def test_no_handoff_when_roles_unchanged():
     msgs = to_messages(_tick(2.0, live, ev), enrich)
     assert "role_handoffs" not in msgs[1]
     assert all("old_role" not in s for s in msgs[0]["sats"])
+
+
+def test_run_summary_message_precedes_run_complete_event():
+    enrich = SessionEnrich(scenario="two_failure.json", seed=42)
+    summary = {"v": 1, "t": 17028.0, "state": "SUMMARY", "coverage_mean_last_orbit": 0.27}
+    msgs = to_messages(summary, enrich)
+    assert [m["type"] for m in msgs] == ["run_summary", "event"]
+    assert msgs[1]["message"] == "Run complete"  # existing event kept, still the last message
+    assert msgs[0] == {"type": "run_summary", "coverage_mean_last_orbit": 0.27,
+                       "sim_time": 17028.0, "scenario": "two_failure.json", "seed": 42}
+    bare = to_messages({"v": 1, "t": 5.0, "state": "SUMMARY"}, SessionEnrich())
+    assert bare[0]["coverage_mean_last_orbit"] is None  # truncated line never raises
