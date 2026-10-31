@@ -31,7 +31,7 @@ function cubeSatKit(): { geoms: Geoms; live: SatMaterials; dark: SatMaterials } 
     const dark = makeMaterials(panel);
     for (const m of Object.values(dark)) {
       m.color.multiplyScalar(0.28);
-      m.emissive.copy(tokenColor(statusToken("failed"))).multiplyScalar(0.18);
+      m.emissive.copy(tokenColor(statusToken("failed"))).multiplyScalar(0.45);
     }
     kit = { geoms: makeGeoms(), live: makeMaterials(panel), dark };
   }
@@ -41,6 +41,10 @@ function cubeSatKit(): { geoms: Geoms; live: SatMaterials; dark: SatMaterials } 
 /** Model size relative to the marker's world radius (the status ring sits at
  * 1.55-1.82 marker units; the 3U body is 3 units tall). */
 const MODEL_SCALE = 0.72;
+/** Physical model size as a fraction of the scene extent: when the camera
+ * flies in close, the CubeSat grows past its screen-size floor and fills the
+ * view (the 3U body is 3 units tall). */
+const MODEL_PHYS = 0.012;
 
 export const TRAIL_MAX = 220;
 export const TRAIL_INTERVAL_MS = 150;
@@ -347,10 +351,13 @@ export function syncSatellite(
     });
   }
   const ringMat = rec.ring.material as THREE.MeshBasicMaterial;
-  ringMat.color = selected ? tokenColor(SCENE_TOKENS.focus) : statusCol;
-  ringMat.opacity = failed ? 0.65 : selected ? 0.98 : 0.62;
-  rec.leaderRing.visible = sat.role === "leader" && !failed;
-  rec.cross.visible = failed;
+  // The 3D CubeSat is the satellite now — no flat badges around it. Only the
+  // selected one gets a thin focus ring; status lives in the model tint and
+  // the label colour.
+  ringMat.color = tokenColor(SCENE_TOKENS.focus);
+  ringMat.opacity = selected ? 0.85 : 0;
+  rec.leaderRing.visible = false;
+  rec.cross.visible = false;
   rec.trail.visible = opts.showTrails;
   rec.status = sat.status;
   rec.role = sat.role;
@@ -400,7 +407,7 @@ export function updateMarkerView(
   );
   const pulse = status === "failed" && !reducedMotion ? 1 + 0.22 * Math.sin(elapsed * 5) : 1;
   rec.marker.scale.setScalar(size.world * pulse);
-  rec.model.scale.setScalar(size.world * MODEL_SCALE);
+  rec.model.scale.setScalar(Math.max(size.world * MODEL_SCALE, extent * MODEL_PHYS));
   if (!reducedMotion) {
     // Slow roll so the panels catch the sun; dead satellites tumble faster.
     rec.model.rotation.y = elapsed * (status === "failed" ? 0.9 : 0.25);
