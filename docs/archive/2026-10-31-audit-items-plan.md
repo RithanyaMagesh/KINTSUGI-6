@@ -1,3 +1,4 @@
+SUPERSEDED by docs/superpowers/plans/2026-10-31-v2-plan.md; its coverage-hours expectation was contradicted by measurement (docs/audit/2026-10-31-c.md C-8).
 # Implementation Plan: Cubesat Self-Healing Swarm Audit Items (#7, #8, #10) & Technical Evaluations (#11, ML Coupling)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
