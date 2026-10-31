@@ -92,6 +92,11 @@ _STATUS_TO_WIRE = {
     "DEGRADED": "degraded",
     "DEAD": "failed",
     "THRUSTER_OUT": "failed",
+    # engine v2 (faults_v2): the sat still flies in all but REENTERED, so the UI shows amber
+    "REENTERED": "failed",
+    "FUEL_DEPLETED": "degraded",  # flies, cannot maneuver
+    "PAYLOAD_FAILED": "degraded",  # flies, cannot image
+    "RADIO_SILENT": "degraded",  # flies, silent
 }
 
 # Keys _sat_to_wire requires; id must be a 0-based int (display_sat_id does i + 1
