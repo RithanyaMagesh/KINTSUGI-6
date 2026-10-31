@@ -8,8 +8,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from cubesat import cw_curve, hcw, truth
-from cubesat.scenario import Failure, Formation, Scenario
+from cubesat import cw_curve, cw_truth, hcw, truth
+from cubesat.scenario import Failure, Scenario
 from cubesat.sim import RunCancelled, build_slots, run_scenario
 from cubesat.sim_v2 import EngineV2, run_scenario_v2
 
@@ -28,77 +28,41 @@ def _scn(**kw) -> Scenario:
     return Scenario.model_validate(base)
 
 
-def _passive(radial_km, orbits, *, j2, drag) -> Scenario:
-    """No effective control (a_max 1e-12): the v1 path is then pure CW (hcw.propagate)."""
-    return _scn(
-        duration_s=orbits * PERIOD_500KM,
-        a_max_mps2=1e-12,
-        formation={"n_slots": 6, "radial_amp_km": radial_km, "phase_offset_deg": 0.0},
-        truth={"j2_enabled": j2, "density_factor": 1.0 if drag else 0.0},
-    )
-
-
-def _max_diff_vs_cw(s: Scenario, start: np.ndarray | None = None) -> float:
-    """Max |r_v2 - r_CW| over all sats and ticks; CW = hcw.propagate (the v1 passive path)."""
-    eng = EngineV2(s, initial_lvlh=start)
-    start = np.array(build_slots(s, eng.n)) if start is None else start
-    worst = 0.0
-    for _ in range(eng.n_ticks):
-        t = eng.k * eng.dt
-        line = eng.step()
-        cw = start @ hcw.stm(t, eng.n).T
-        r = np.array([sat["r"] for sat in line["sats"]])
-        worst = max(worst, float(np.linalg.norm(r - cw[:, :3], axis=1).max()))
-    return worst
-
-
-def _g1_scenario(orbits, *, j2, drag) -> tuple[Scenario, np.ndarray]:
-    """Two sats on the G1 evidence state (1 km radial, 500 m cross-track) and its negative."""
-    g1 = cw_curve.state_1km_passive_ellipse()
-    s = _passive(1.0, orbits, j2=j2, drag=drag).model_copy(
-        update={
-            "roles": ["leader", "imager"],
-            "formation": Formation(n_slots=2, radial_amp_km=1.0, phase_offset_deg=0.0),
-        }
-    )
-    return s, np.array([g1, -g1])
-
-
 def test_v2_no_drag_1km_matches_cw_within_3p1_m_1orbit():
     """Fast version of the 3-orbit test below (same scenario, 1 orbit)."""
-    s, start = _g1_scenario(1, j2=False, drag=False)
-    d = _max_diff_vs_cw(s, start)
+    s, start = cw_truth.g1_case(1, j2=False, drag=False)
+    d = cw_truth.max_diff_vs_cw(s, start)
     print(f"G1 1 km state, J2 off, drag off, 1 orbit: max |v2 - CW| = {d:.4f} m")
     assert d <= CW_VS_KEPLER_1KM_M * 1.10
 
 
 @pytest.mark.slow
 def test_v2_no_drag_1km_matches_cw_within_3p1_m():
-    s, start = _g1_scenario(3, j2=False, drag=False)
-    d = _max_diff_vs_cw(s, start)
+    s, start = cw_truth.g1_case(3, j2=False, drag=False)
+    d = cw_truth.max_diff_vs_cw(s, start)
     print(f"G1 1 km state, J2 off, drag off, 3 orbits: max |v2 - CW| = {d:.4f} m")
     assert d <= CW_VS_KEPLER_1KM_M * 1.10
 
 
 def test_v2_j2_on_difference_is_reported():
-    s, start = _g1_scenario(1, j2=True, drag=False)
-    d = _max_diff_vs_cw(s, start)
+    s, start = cw_truth.g1_case(1, j2=True, drag=False)
+    d = cw_truth.max_diff_vs_cw(s, start)
     print(f"G1 1 km state, J2 on, drag off, 1 orbit: max |v2 - CW| = {d:.4f} m")
-    assert math.isfinite(d) and d > CW_VS_KEPLER_1KM_M * 0.0
+    assert math.isfinite(d) and d > CW_VS_KEPLER_1KM_M
 
 
 def test_slot_formation_cw_error_matches_independent_kepler_reference():
     """The planar 1 km ring slots have a larger CW-vs-Kepler error than the G1 state (it is the
     state, not the engine): v2 equals the independent two-body RK45 reference of cw_curve."""
-    s = _passive(1.0, 1, j2=False, drag=False)
-    d = _max_diff_vs_cw(s)
+    d = cw_truth.max_diff_vs_cw(cw_truth.passive_scenario(1.0, PERIOD_500KM, j2=False, drag=False))
     t1 = cw_curve.T_GRID[cw_curve.T_GRID <= cw_curve.PERIOD]
+    chief_y = cw_curve.chief_states(t1)
     ref = max(
         cw_curve.cw_vs_kepler_errors(
             hcw.slot_initial_state(1000.0, 1000.0, 2 * math.pi * p / 6, cw_curve.N),
             t_grid=t1,
             n=cw_curve.N,
-            chief_y=cw_curve.chief_states(t1),
+            chief_y=chief_y,
         ).max()
         for p in range(6)
     )
@@ -221,3 +185,42 @@ def test_run_scenario_dispatches_v2_and_inject_validates_sat():
     assert run_scenario(s)[-1]["state"] == "SUMMARY"
     with pytest.raises(ValueError):
         EngineV2(s).inject(Failure(t=0.0, sat_id=9, mode="DEAD"))
+
+
+def _max_velocity_inconsistency(j2: bool) -> float:
+    """max |logged LVLH v - central-difference d(r_logged)/dt| over sats and one orbit (8 km)."""
+    s = cw_truth.passive_scenario(8.0, PERIOD_500KM, j2=j2, drag=False)
+    lines = [x for x in EngineV2(s).run() if "sats" in x]
+    r = np.array([[sat["r"] for sat in x["sats"]] for x in lines])
+    v = np.array([[sat["v"] for sat in x["sats"]] for x in lines])
+    fd = (r[2:] - r[:-2]) / (2.0 * s.dt_s)
+    return float(np.abs(v[1:-1] - fd).max())
+
+
+def test_logged_lvlh_velocity_vs_position_derivative_with_j2():
+    """Known limit (docs/PHYSICS_V2.md): the logged velocity uses omega = (0,0,|h|/r^2) per the
+    brief; with J2 the chief frame is not exactly that rotation, so v != d(rho)/dt."""
+    off, on = _max_velocity_inconsistency(False), _max_velocity_inconsistency(True)
+    print(f"8 km, 1 orbit: max |v - d(rho)/dt| J2 off {off:.3e} m/s, J2 on {on:.3e} m/s")
+    assert off < 1e-3
+    assert off < on < 5e-2
+
+
+@pytest.mark.slow
+def test_drag_shifts_every_deputy_along_track_against_the_undragged_chief():
+    """The 'drag on' CW-vs-truth metric is the formation sinking relative to the UNDRAGGED
+    virtual chief: the same ~49-50 m along-track shift at 1 km and 8 km after 3 orbits."""
+    shifts = {}
+    for km in (1.0, 8.0):
+        end = {}
+        for drag in (False, True):
+            s = cw_truth.passive_scenario(km, 3 * PERIOD_500KM, j2=False, drag=drag)
+            *_, line = (x for x in EngineV2(s).run() if "sats" in x)
+            end[drag] = np.array([sat["r"] for sat in line["sats"]])
+        shifts[km] = (end[True] - end[False])[:, 1]  # along-track shift per sat
+    print(
+        f"drag-induced along-track shift after 3 orbits: 1 km {shifts[1.0].round(1)} m, "
+        f"8 km {shifts[8.0].round(1)} m"
+    )
+    for dy in shifts.values():
+        assert np.all((dy > 45.0) & (dy < 55.0))
