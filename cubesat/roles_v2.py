@@ -111,8 +111,11 @@ def believe(believed: list[list], statuses: list[str], sats: list, declared: lis
 def imaging_sats(roles: list[list[str]], statuses: list[str], sats: list) -> list[int]:
     """Ids that hold the imager role AND can physically image now (roles are believed, imaging
     is not: a dead payload takes no images even before the death is declared)."""
-    can = [capability(st, s.payload_ok, s.radio_ok, "imager") for st, s in zip(statuses, sats, strict=True)]
-    return [i for i, rs in enumerate(roles) if "imager" in rs and can[i]]
+    return [
+        i
+        for i, (rs, st, s) in enumerate(zip(roles, statuses, sats, strict=True))
+        if "imager" in rs and capability(st, s.payload_ok, s.radio_ok, "imager")
+    ]
 
 
 def handoff_events(
