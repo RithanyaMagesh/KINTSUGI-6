@@ -51,6 +51,8 @@ POLICY_ORDER = ("do_nothing", "even_split", "greedy", "hungarian", "hungarian_ke
 # --policies and run by --mode baselines.
 BASELINE_POLICIES = ("role_swap_only", "wait_for_ground")
 ALL_POLICIES = POLICY_ORDER + BASELINE_POLICIES
+# `--mode baselines`: the four-policy vacancy comparison (PR-3), fixed order.
+BASELINES_MODE_POLICIES = ("do_nothing", "role_swap_only", "wait_for_ground", "hungarian")
 
 # The demo's own failure times (two_failure.json:12-15) -- every pair is
 # directly comparable to the committed G4 numbers (ENDGAME_PLAN 3.1).
@@ -497,12 +499,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--mode", choices=("benchmark", "keepout-report", "pareto", "cw-curve", "monte-carlo",
-                 "ground-passes"),
+                 "ground-passes", "baselines"),
         default="benchmark",
         help="benchmark: run the P0 sweep; keepout-report: P2 post-hoc log analysis; "
         "pareto: P1 w2 x dv_budget sweep; cw-curve: P3 CW-vs-Kepler error curves; "
         "monte-carlo: P4 deterministic parameter-jitter robustness ensemble; "
-        "ground-passes: single-station pass statistics (cubesat/ground.py)",
+        "ground-passes: single-station pass statistics (cubesat/ground.py); "
+        "baselines: 15 pairs x do_nothing,role_swap_only,wait_for_ground,hungarian",
     )
     parser.add_argument("--base", required=True, type=Path, help="base scenario JSON")
     parser.add_argument(
@@ -521,6 +524,11 @@ def main(argv: list[str] | None = None) -> int:
         "--policies",
         default=",".join(POLICY_ORDER),
         help="comma-separated subset of " + ",".join(ALL_POLICIES),
+    )
+    parser.add_argument(
+        "--pairs", default=None,
+        help="benchmark/baselines mode: comma-separated failure pairs like 0-5,1-2 "
+        "(default: all C(n,2) pairs)",
     )
     parser.add_argument(
         "--runs",
@@ -590,16 +598,30 @@ def main(argv: list[str] | None = None) -> int:
         if args.svg is None:
             args.svg = args.report.with_name("pareto_curve.svg")
         return _run_pareto(args)
+    if args.mode == "baselines" and args.out is None:
+        args.out = Path("data/eval/baselines")
     if args.mode == "benchmark" and args.out is None:
         parser.error("--out is required for benchmark mode")
     policies = [p for p in args.policies.split(",") if p]
+    if args.mode == "baselines":
+        policies = list(BASELINES_MODE_POLICIES)
     unknown = [p for p in policies if p not in ALL_POLICIES]
     if unknown:
         parser.error(f"unknown policies: {unknown}")
-    command = "uv run python -m cubesat.benchmark " + " ".join(sys.argv[1:])
+    # argv when called programmatically (tests), else the real command line.
+    command = "uv run python -m cubesat.benchmark " + " ".join(
+        argv if argv is not None else sys.argv[1:]
+    )
     base = Scenario.model_validate_json(args.base.read_text(encoding="utf-8"))
     pairs = enumerate_pairs(base.n_sats)
-    manifest_path = args.manifest or args.report.with_name("benchmark_manifest.json")
+    if args.pairs:
+        pairs = [tuple(int(x) for x in spec.split("-")) for spec in args.pairs.split(",")]
+        if any(len(pr) != 2 or not all(0 <= i < base.n_sats for i in pr) for pr in pairs):
+            parser.error(f"--pairs must be a-b ids below {base.n_sats}: {args.pairs!r}")
+    manifest_name = (
+        "baselines_manifest.json" if args.mode == "baselines" else "benchmark_manifest.json"
+    )
+    manifest_path = args.manifest or args.report.with_name(manifest_name)
     report = run_benchmark(
         base=base,
         pairs=pairs,

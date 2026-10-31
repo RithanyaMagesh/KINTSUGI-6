@@ -3,6 +3,7 @@
 (hungarian held until the first ground pass), plus the Δv budget fields.
 """
 
+import json
 import math
 from pathlib import Path
 
@@ -13,11 +14,13 @@ import cubesat.allocate as allocate
 import cubesat.sim as sim_module
 from cubesat import ground
 from cubesat.benchmark import (
+    BASELINES_MODE_POLICIES,
     CUBESAT_TANK_DV_MPS,
     _policies_summary,
     _scenario_for_policy,
     _write_log,
     enumerate_pairs,
+    main,
     metrics_from_log,
     run_one,
     scenario_for_pair,
@@ -240,3 +243,31 @@ def test_dv_summary_rollups():
     s = _policies_summary(rows, ["hungarian"])["hungarian"]
     assert s["pairs_within_scenario_budget"] == 2
     assert s["pairs_within_cubesat_tank"] == 1
+
+
+# --- --mode baselines --------------------------------------------------------
+
+def test_baselines_mode_two_pairs(tmp_path):
+    report_path = tmp_path / "baselines_results.json"
+    rc = main([
+        "--mode", "baselines", "--base", str(TWO_FAILURE), "--out", str(tmp_path / "logs"),
+        "--report", str(report_path), "--pairs", "0-5,1-2",
+    ])
+    assert rc == 0
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert BASELINES_MODE_POLICIES == (
+        "do_nothing", "role_swap_only", "wait_for_ground", "hungarian"
+    )
+    assert report["policies"] == list(BASELINES_MODE_POLICIES)
+    assert "--mode baselines" in report["command"]
+    assert len(report["rows"]) == 8 and report["n_pairs"] == 2
+    assert set(report["policies_summary"]) == set(BASELINES_MODE_POLICIES)
+    for key in ("pairs_critical_roles_held", "mean_critical_vacancy_s",
+                "worst_critical_vacancy_s", "mean_coverage_retained",
+                "worst_per_sat_dv_mps", "pairs_within_cubesat_tank"):
+        assert key in report["policies_summary"]["role_swap_only"]
+    wfg = [r for r in report["rows"] if r["policy"] == "wait_for_ground"]
+    assert all(r["recovery_delay_s"] == ground.wait_to_next_pass(1200.0) for r in wfg)
+    assert all(r["command"] == report["command"] and len(r["log_sha256"]) == 64
+               for r in report["rows"])
+    assert (tmp_path / "baselines_manifest.json").exists()
