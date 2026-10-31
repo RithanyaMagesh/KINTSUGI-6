@@ -206,3 +206,4 @@ def test_station_threshold_matches_ground_module():
         out = geo_v2.station_pass(r, g)
         assert out["elevation_deg"] == pytest.approx(float(ground.elevation_deg(r, r_gs)))
         assert out["visible"] == (out["elevation_deg"] >= ground.MIN_ELEVATION_DEG)
+

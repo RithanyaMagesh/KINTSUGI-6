@@ -12,10 +12,12 @@ from __future__ import annotations
 import asyncio
 import threading
 from bisect import bisect_right
+from functools import cached_property
 from pathlib import Path
 from typing import Literal
 
 import cubesat.sim as sim_module
+from cubesat import geo_v2
 from cubesat.benchmark_policies import even_split_replan, hungarian_keepout_replan
 from cubesat.replay import ReplayLog, index_at, load_jsonl
 from cubesat.scenario import Failure, FailureMode, Scenario, load_scenario
@@ -94,6 +96,11 @@ class LiveSource:
         self.frames = [line for line in lines if line.get("state") not in ("INIT", "SUMMARY")]
         self.times = [float(frame["t"]) for frame in self.frames]
         self.skipped = 0
+
+    @cached_property
+    def earth_view(self) -> dict:
+        """Run-constant v2 hello keys (ring, ground track, sun); {} for engine v1."""
+        return geo_v2.hello_fields(self.scenario) if self.scenario.engine == "v2" else {}
 
     @property
     def scenario_name(self) -> str | None:
@@ -243,6 +250,8 @@ class Session:
         # omitted otherwise, so predictor-off hellos keep their byte shape.
         if self.predictor_active:
             msg["predictor"] = True
+        # Earth view (engine v2 live runs only; v1 and replay hellos keep their byte shape).
+        msg.update(getattr(self._source, "earth_view", {}))
         return msg
 
     def snapshot(self) -> dict:

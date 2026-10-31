@@ -152,3 +152,23 @@ def tick_fields(r_eci, epoch_utc: str, t_s: float) -> dict:
         "station": station_pass(r_eci, g),
     }
 
+
+def hello_fields(scenario: Scenario) -> dict:
+    """Run-constant Earth-view keys of the v2 hello (ring in m, 3 decimals; track in deg, 4;
+    sun unit vector at the epoch, 6). Compute once per run, not per tick."""
+    cfg = scenario.chief
+    return {
+        "epoch_utc": cfg.epoch_utc,
+        "inclination_deg": cfg.inclination_deg,
+        "raan_deg": cfg.raan_deg,
+        "orbit_ring": [[round(c, 3) for c in p] for p in orbit_ring(scenario)],
+        "ground_track": [[round(c, 4) for c in p] for p in ground_track(scenario)],
+        "sun_vector_eci": [round(c, 6) for c in sun_direction_eci(cfg.epoch_utc)],
+        "ground_station": {
+            "name": STATION_NAME,
+            "lat_deg": ground.STATION_LAT_DEG,
+            "lon_deg": ground.STATION_LON_DEG,
+            "min_elevation_deg": ground.MIN_ELEVATION_DEG,
+        },
+    }
+
