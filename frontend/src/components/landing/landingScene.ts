@@ -225,10 +225,10 @@ function buildSun(): {
     return sp;
   };
   const group = new THREE.Group();
-  const glow = sprite(glowTex, 16, 1.0);
-  const rays = sprite(raysTex, 15, 0.8);
-  const raysB = sprite(raysTex, 11, 0.45);
-  const core = sprite(coreTex, 2.6, 2.4);
+  const glow = sprite(glowTex, 13, 0.6);
+  const rays = sprite(raysTex, 11, 0.42);
+  const raysB = sprite(raysTex, 8, 0.25);
+  const core = sprite(coreTex, 2.2, 1.7);
   group.add(glow, rays, raysB, core);
   return {
     group,
@@ -278,7 +278,7 @@ export function createLandingScene(
   // satellite readable without adding glints away from the sun.
   scene.add(new THREE.HemisphereLight(col("--hero-ink-muted"), col("--hero-bg"), 1.3));
   scene.add(new THREE.AmbientLight(col("--hero-light-rim"), 0.2));
-  const sunLight = new THREE.PointLight(col("--hero-sun"), 95, 15, 2);
+  const sunLight = new THREE.PointLight(col("--hero-sun"), 60, 15, 2);
   camera.add(sunLight);
   const sun = buildSun();
   camera.add(sun.group);
@@ -365,6 +365,10 @@ export function createLandingScene(
     mats.frame.metalness = 0.45;
     mats.frame.roughness = 0.4;
     mats.cap.metalness = 0.3;
+    // Tape antennas: dull gold, so they don't flare into bright lines.
+    mats.gold.metalness = 0.2;
+    mats.gold.roughness = 0.75;
+    mats.gold.color.multiplyScalar(0.55);
     const group = buildCubeSat(geoms, mats);
     scene.add(group);
     const halo = new THREE.Mesh(
@@ -642,9 +646,9 @@ export function createLandingScene(
     if (!reduceMotion) sun.update(t);
     // The sun belongs to the hero: it fades out as you scroll to the next
     // section (and back in on the way up), its light with it.
-    const sunFade = 1 - smooth(0.02, 0.16, p);
+    const sunFade = (1 - smooth(0.02, 0.16, p)) * smooth(0.2, 1.8, t); // eases in on load
     sun.setFade(sunFade);
-    sunLight.intensity = 95 * sunFade;
+    sunLight.intensity = 60 * sunFade;
     storyLight.intensity = 2.6 * (1 - sunFade);
     composer.render();
   }
