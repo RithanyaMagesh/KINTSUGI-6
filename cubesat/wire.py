@@ -113,6 +113,7 @@ _SAT_REQUIRED_KEYS = ("role", "r", "v", "dv_used")
 # Engine-v2 per-sat resource keys: optional passthrough, only when the log carries them.
 _SAT_V2_KEYS = (
     "fuel_kg", "fuel_mps_left", "k", "payload_ok", "radio_ok", "stuck", "roles", "original_role",
+    "functions",
 )
 
 
@@ -493,8 +494,8 @@ def _plain_event(frame: dict, etype: str, payload: dict) -> dict:
         if lead is not None:
             msg += f" in {lead}"
         return _with_sat(to_event("info", t, msg + "; replanning early"), who)
-    link = wire_comms.link_event(t, etype, payload)  # LINK_LOCKED / LINK_LOST / PARTITION
-    return link if link is not None else to_event("info", t, etype)  # unknown: pass the type
+    comms = wire_comms.comms_event(t, etype, payload)  # LINK_* / PARTITION / FUNCTION_HANDOFF
+    return comms if comms is not None else to_event("info", t, etype)  # unknown: pass the type
 
 
 def to_messages(frame: dict, enrich: SessionEnrich) -> list[dict]:

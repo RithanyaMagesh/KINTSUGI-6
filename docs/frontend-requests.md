@@ -195,3 +195,22 @@ Source: `cubesat/wire_comms.py` (hooks in `cubesat/wire.py`), `cubesat/geo_v2.py
 - **`hello.formation_shape`** (`cartwheel | pco | gco | helix | string`): v2 LIVE hellos only (all v2 live runs, laser or not). v1 hellos never carry it (v1 is cartwheel-only). **Replay hellos do not carry it yet** (the key rides on the live source; replay needs a session-side hook, owned by the perf track): until then treat a missing key as unknown, and keep the ghost/deviation layer off when unknown on a v2 replay.
 - Size: mean `sim_state` on a 600 s 6-sat laser run (nominal, DEAD sat 0 at 100 s) grows 2694.6 → 3055.1 bytes/frame (mesh, +13.4 %) and 2694.6 → 2995.3 (star, +11.2 %).
 - C4 fields (`functions`, `consensus_rounds`, `split_brain`, `FUNCTION_HANDOFF`) are NOT on the wire yet; they come with C4.
+
+### Track C — C6 wire part 2: decentral authority (2026-11-01, branch `evidence`; backend only, build later)
+Only with `recovery.authority = "decentral"` (requires laser comms). Central and v1 streams are byte-identical.
+- **`sats[].functions`**: the leader functions this sat holds (`failure_detection`, `time_sync`, `formation_reference`, `collision_arbitration`, `task_scheduling`, `ground_relay`); `[]` for a sat holding none. No sat holds the `leader` role in this mode, so draw the six chips (item 3 above) instead of a leader baton.
+- **`sim_state.consensus_rounds`**: rounds of the most recent consensus auction. It is a count, not seconds: show it as "N rounds". Seconds = rounds × one 2 s tick is an engine assumption; label it if shown.
+- **`sim_state.split_brain`**: functions with more than one holder (one per disconnected group); warn when non-empty. **`sim_state.functions_vacant`**: functions nobody holds; show an empty chip slot.
+- **Event `FUNCTION_HANDOFF`** (extras `function`, `from`, `to`, display-id lists):
+  | case | level | message |
+  |---|---|---|
+  | one holder to another | info | `Consensus auction: time sync moved from SAT-1 to SAT-3` |
+  | no previous holder | info | `Consensus auction: SAT-2 took over failure detection` |
+  | nobody left | warning | `ground relay is vacant: no satellite holds it (was SAT-1)` |
+  | several new holders | warning | `Consensus auction: time sync moved from SAT-1 to SAT-2, SAT-4 (split-brain: one holder per group)` |
+  | split heals (several holders to one) | info | `Consensus auction: time sync moved from SAT-1, SAT-4 to SAT-1` |
+  | malformed payload | info | `Consensus auction: a leader function changed holder` |
+  UI text says "consensus auction", never "CBBA".
+- Expect bursts: one death reshuffles several functions (8 handoffs in C4's 300 s ring test). Animate them together, not one by one.
+- Size: mean `sim_state` on the 600 s 6-sat laser run with decentral authority grows 3047.2 → 3304.0 bytes/frame (mesh, +8.4 %) and 2989.6 → 3288.9 (star, +10.0 %).
+- Comparison numbers (vacancy, split-brain, rounds per cell) come only from `data/eval/comms_report.json` (C5). The decentral-vs-central vacancy depends on the one-round-per-tick assumption: show the round-time sensitivity rows with it, never a bare ranking.
