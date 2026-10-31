@@ -64,7 +64,11 @@ class StartRequest(BaseModel):
 
 class InjectRequest(BaseModel):
     sat_id: str
-    mode: Literal["DEAD", "THRUSTER_OUT", "EPS_DEGRADE"] = "DEAD"
+    # the four engine-v2 modes are refused (422) by the session unless the run uses engine "v2"
+    mode: Literal[
+        "DEAD", "THRUSTER_OUT", "EPS_DEGRADE",
+        "PAYLOAD_FAIL", "PARTIAL_THRUST", "THRUSTER_STUCK_OPEN", "RADIO_FAIL",
+    ] = "DEAD"
     degrade_s: float = Field(
         default=600.0, ge=0, allow_inf_nan=False,
         description="EPS_DEGRADE fade length, s (ignored otherwise)",
