@@ -136,8 +136,13 @@ def test_payload_failed_sat_excluded_from_coverage_but_still_seat_holds():
     yz = {i: first["sats"][i]["r"][1:] for i in range(6)}
     without = coverage_fraction([yz[i] for i in (2, 3, 4)], grid, r_f)
     with_it = coverage_fraction([yz[i] for i in (1, 2, 3, 4)], grid, r_f)
+    refilled = coverage_fraction([yz[i] for i in (0, 2, 3, 4)], grid, r_f)
     assert without < with_it  # the failed imager's footprint matters in this geometry
-    assert first["coverage"] == without  # payload failed: no imaging
+    # Phase 5a: the lost seat is refilled by the leader-only sat 0 (label change, no motion);
+    # the failed payload itself still takes no images and sat 1 no longer holds the role
+    assert "imager" not in first["sats"][1]["roles"]
+    assert first["sats"][0]["roles"] == ["imager", "leader"]
+    assert first["coverage"] == refilled
     assert first["sats"][1]["status"] == "PAYLOAD_FAILED"
     base = list(
         EngineV2(

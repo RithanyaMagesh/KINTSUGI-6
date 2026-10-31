@@ -362,3 +362,64 @@ Leader and downlink each held by exactly one capable sat in **15/15** pairs (exp
 | dead sat keeps its role label | `test_four_of_six_dead_keeps_imager` |
 | critical-role pile-up allowed | `test_a_lost_critical_role_avoids_the_sat_that_already_holds_the_other_one` (found by the demo: pair (0,5) first stacked downlink + leader + imager on sat 1; fixed with a red test) |
 | stacking penalty removed | `test_four_dead_with_the_critical_holders_among_the_dead` |
+
+## Phase 5a fix round (2026-10-31, after the adversarial review; supersedes the 5a section above where they differ)
+
+Roles still move nobody: v2 motion (r, v, dv_used) is unchanged (sha256 prefixes of four scenarios below). All numbers below are printed by the quoted commands.
+
+**What changed, and why.**
+- **Roles follow what the swarm believes (`roles_v2.believe`).** A silent failure (DEAD, dead radio, REENTERED) keeps the sat's roles until the heartbeat rule declares it; a self-reported failure (PAYLOAD_FAIL, FUEL_DEPLETED, THRUSTER_OUT, from a sat whose radio works) is believed at once. So `ROLE_HANDOFF` is emitted in the SAME tick as the `FAILURE_DETECTED` of the dead holder: DEAD at t = 100 s: both at t = 104 s ((K - 1) dt, K = 3, dt = 2 s); RADIO_FAIL at 200 s: both at 204 s. A radio-silent sat cannot announce a payload failure: its true state is believed only once declared. Coverage stays physical (a dead payload takes no images at the failure tick even while its role is kept). Believed state is in the engine snapshot (`state.believed`).
+- **`role` is a display label in a fixed order** (leader, downlink, imager, then spare; `none` when empty); `roles` is the truth. A stacked leader shows `leader`. `benchmark.metrics_from_log` and the wire read `roles` when the log has it and fall back to `role` (v1). Measured (`uv run python -m pytest tests/v2/test_roles_demo.py -s -m slow -k vacancy`): v2 nominal, leader dead at t = 100: critical roles held at the end True, `critical_vacancy_s` **4.0** (= detection latency: ticks 100 and 102 have a dead, undeclared holder), imagers_end 4; downlink dead: True / 4.0 / 4; both dead: True / 4.0 / 3.
+- **Imager seats = min(original imager count, imager-eligible survivors).** Eligible = capable (payload ok, flying, reporting) and not holding the downlink, which does not image; when nobody else is capable the downlink holder images (a lone survivor keeps every role). Incumbent imagers keep their seats; a leader-only or spare sat with a working payload is re-roled to imager up to the original count (a label change, zero fuel; no motion). `imager_seats` is an argument of `assign_roles` (the engine passes the scenario's imager count).
+- **`role_priority` must be a permutation of downlink, imager, leader** (plain error otherwise); `relay` is deleted; `spare` is only an output label. The engine fills only roles the scenario labels: a scenario with no downlink (live_2sat) has it vacant from the start, and no `ROLE_HANDOFF` is emitted at t = 0 (live_2sat, live_8sat, live_12sat tested). A second sat labelled `downlink` (live_8sat, live_12sat) keeps `original_role: "downlink"`, is not assigned the role (the lowest id holds it) and shows `["spare"]`.
+- **Order dependence of the guards (documented, pinned).** The "no leader + downlink on one sat" guard is greedy in priority order. Sats [NOMINAL leader, NOMINAL empty, DEAD downlink]: with (imager, leader, downlink) and (leader, imager, downlink) the downlink lands on the leader's sat (both pile up) while the other sat images; with the default (downlink, imager, leader) and the other three orders it does not. The reviewer's original repro (priority (leader, downlink, imager)) no longer piles up since the guard also counts the critical roles a sat already holds. All six orders on two and three capable survivors are pinned in `tests/v2/test_roles_assign.py` (`PIN_A`, `PIN_C`), and a test sweeps every 2-capable-of-3 incumbent layout under the default order for no pile-up. Not claimed: any guarantee under a non-default priority.
+- **Plumbing.** `handoff_events(old, new, statuses, priority)` and `primary_role` live in `roles_v2.py` (pure, unit-tested); `sim_v2.py` is 297 lines. `cubesat/scenario.py` no longer imports `roles_v2` (it hard-codes `ROLE_PRIORITY`, pinned equal to `roles_v2.DEFAULT_PRIORITY`): `import cubesat.scenario` takes 102-131 ms here and does not import `scipy.optimize` (test `test_importing_scenario_does_not_import_scipy_optimize`). The exactly-one-leader/downlink invariant is checked by tests only (`tests/v2/test_roles_engine.py::test_one_leader_and_one_downlink_whenever_a_capable_sat_exists`): an engine-side check costs a pass over every tick and the assignment already guarantees it.
+
+**Re-measured (command: `uv run python -m pytest tests/v2/test_roles_demo.py -s -m slow`, two_failure.json as engine v2, a_max 0.01, sat i DEAD at 1200 s and sat j at 1500 s, last tick t = 17028 s). Coverage is a pure function of the surviving positions and roles (nobody moves, nothing is replanned): it is NOT a recovery result and NOT the pre-registered PR-1 comparison.**
+
+| pair | leader | downlink | imagers before / after | coverage before | coverage after |
+|---|---|---|---|---|---|
+| (0,1) | 2 | 5 | 3 / 3 | 0.3319 | 0.3319 |
+| (0,2) | 1 | 5 | 3 / 3 | 0.3528 | 0.3528 |
+| (0,3) | 1 | 5 | 3 / 3 | 0.3392 | 0.3392 |
+| (0,4) | 1 | 5 | 3 / 3 | 0.2893 | 0.2893 |
+| (0,5) | 1 | 2 | 4 / 3 | 0.3840 | 0.3528 |
+| (1,2) | 0 | 5 | 2 / 3 | 0.2373 | 0.3278 |
+| (1,3) | 0 | 5 | 2 / 3 | 0.2851 | 0.3736 |
+| (1,4) | 0 | 5 | 2 / 3 | 0.2373 | 0.3278 |
+| (1,5) | 0 | 2 | 3 / 3 | 0.3319 | 0.3278 |
+| (2,3) | 0 | 5 | 2 / 3 | 0.2851 | 0.3528 |
+| (2,4) | 0 | 5 | 2 / 3 | 0.2581 | 0.3278 |
+| (2,5) | 0 | 1 | 3 / 3 | 0.3528 | 0.3278 |
+| (3,4) | 0 | 5 | 2 / 3 | 0.1967 | 0.2893 |
+| (3,5) | 0 | 1 | 3 / 3 | 0.3392 | 0.3736 |
+| (4,5) | 0 | 1 | 3 / 3 | 0.2893 | 0.3278 |
+
+Leader and downlink each held by one capable sat in **15/15** pairs (a consistency check of a pure assignment). Mean last-tick coverage over the 15 pairs **0.3348** after vs **0.3007** before (the reviewer's all-alive-sats-image variant reads 0.3940: here the downlink holder does not image, so the number is lower, and it can be lower than before for a pair that loses an imager to the downlink, e.g. (0,5)). 4 of 6 dead (15 subsets, failures at 1200/1300/1400/1500 s, last tick t = 2000 s): leader + downlink + imager held **15/15**, imagers min 1 mean 1.00, coverage min 0.1374 mean 0.1395; 5 of 6 dead (6 subsets): **6/6**, imagers 1, coverage min 0.1374 mean 0.1398 (the lone survivor holds all three roles).
+
+**Mutation check (a COPY of the tree under /tmp/rolesmut_*, the 5 roles test files, first failing test shown; 20 mutants, 19 killed, 1 equivalent):**
+
+| Mutant | Killed by |
+|---|---|
+| M1 drop the capability gate | `test_four_of_six_dead_keeps_imager` |
+| M2 incapable cost 0.5 | `test_four_of_six_dead_keeps_imager` |
+| M3 ignore incumbents | `test_v1_roles_map_onto_same_initial_holders` |
+| M4 reverse priority | `test_four_of_six_dead_keeps_imager` |
+| M5 silent sat holds leader | `test_radio_silent_holds_nothing_that_needs_radio_but_is_still_a_spare` |
+| M6 two downlink seats | `test_v1_roles_map_onto_same_initial_holders` |
+| M7 handoff for non-critical roles | `test_no_handoff_without_a_critical_change` |
+| M8 roles not restored from the snapshot | `test_snapshot_carries_role_state` |
+| M9 dead sat keeps its label | `test_four_of_six_dead_keeps_imager` |
+| M21 drop `r not in held[i]` (pile-up guard) | `test_two_capable_survivors_pinned_for_every_priority_order[perm3]` |
+| M23 coverage counts only `roles[0] == "imager"` | `test_a_lone_survivor_images_and_counts_toward_coverage_with_every_role_stacked` |
+| M25 restore skips the roles-length check | `test_restore_refuses_a_state_list_of_the_wrong_length[roles]` |
+| M40 handoff reason `DEAD` instead of `VACANT` | `test_handoff_events_vacant_both_ways` |
+| M41 roles follow truth, not belief | `test_handoff_when_the_leader_dies_and_not_for_imager_changes` |
+| M42 downlink holder may image | `test_four_of_six_dead_keeps_imager` |
+| M43 stacking penalty removed | `test_four_dead_with_the_critical_holders_among_the_dead` |
+| M44 display role = `roles[0]` | `test_dead_sat_shows_no_role_but_keeps_original_role` |
+| M45 wire ignores `roles` | `test_track_roles_sees_a_stacked_downlink_gained_by_the_leader_sat` |
+| M46 benchmark ignores `roles` | `test_stacked_leader_on_an_imager_counts_as_both` |
+| M47 seats not capped by `min(want, eligible)` | SURVIVED: equivalent (ineligible rows cost 1e6 and are dropped, so the cap changes nothing); the `min` stays as documentation of the rule |
+
+**Honest limits.** M40's `VACANT` reason cannot occur in the engine (a role is only ever vacated by a death, never refilled from vacancy, and roles the scenario does not label are not assigned); it is tested on `handoff_events` directly. The believed-state rule models the heartbeat declaration only, not a detector (Phase 4).

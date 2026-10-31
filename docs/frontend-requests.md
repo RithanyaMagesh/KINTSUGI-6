@@ -125,3 +125,19 @@ The v1 modes (`DEAD`, `THRUSTER_OUT`, `EPS_DEGRADE`) keep their wording and `cri
 **Several events on one tick (v2 only).** A v2 log line carries `events` (a list) beside `event` (its first entry). When `events` has more than one entry the wire emits one `event` message per entry, in order, then any `role_reassignment`; with one entry, or only `event`, nothing changes. v1 lines never carry `events`, so the rule never applies to them. Every `event` message needs to be shown, not just the first per `sim_time`.
 
 **`POST /failure/inject` modes.** `mode` also accepts `PAYLOAD_FAIL`, `PARTIAL_THRUST`, `THRUSTER_STUCK_OPEN`, `RADIO_FAIL`, only while the running scenario uses engine `v2`; otherwise 422 `failure mode X requires engine "v2"; the running scenario uses engine "v1"`. On v2 a satellite that lost only a resource (camera, radio, thrust) can take another injection; 409 `SAT-n is already dead` / `already scheduled to die` / `has already re-entered` for a dead or re-entered one. The v1 rule (one failure per satellite) is unchanged. A v2 injection takes effect on the next tick, so its event appears in the first message after the one already streamed.
+
+## Roles (2026-10-31, engine v2 only; v1 sats are unchanged)
+
+Source: `cubesat/roles_v2.py`, `cubesat/sim_v2.py`, `cubesat/wire.py`. All additions are optional and additive: v1 logs and v1 wire fixtures are byte-identical.
+
+**Per-sat keys on `sim_state.sats[]` (only when the log carries them):**
+- `roles` (list of strings, truth): every role the sat holds, in fill order (`downlink`, `imager`, `leader`), or `["spare"]` for a capable sat with nothing to do, or `[]` for a dead or incapable sat. A sat may hold several (the leader stacks on an imager; a lone survivor holds all three).
+- `role` (string, display label, unchanged key): the first of `roles` in the FIXED display order `leader`, `downlink`, `imager`, then `spare`; `"none"` when `roles` is empty. A stacked leader therefore shows `leader`. Read `roles` when you need to know whether a sat images: a sat labelled `leader` may also be an imager.
+- `original_role` (string): the scenario label, for display ("was imager"). A second sat labelled `downlink` in a scenario keeps `original_role: "downlink"` and shows `spare`.
+- Labels the UI must now render: `"none"` (grey "no role") and `"spare"` ("spare"). v1 never sends them.
+
+**A dead or radio-silent sat keeps its `roles` for a few ticks** (until the heartbeat declares it, 4 s with K = 3 and dt = 2 s) and then shows `[]` / `"none"`; `status` is already `failed` during that window.
+
+**Event `ROLE_HANDOFF` (level `info`, optional `sat_id` = the old holder):** emitted only when the leader or the downlink changes holder, in the same tick as the `FAILURE_DETECTED` that caused it. Sentences: `SAT-1 leader role handed to SAT-2 because SAT-1 failed` (other reasons: `lost its radio`, `re-entered the atmosphere`, `lost its camera`, `lost its thruster`, `ran out of propellant`; an unknown reason drops the clause); `SAT-1 failed; the leader role is now vacant (no capable satellite is left)`; `SAT-4 took over the vacant leader role`. The wire's `role_handoffs` (inside `role_reassignment`) now also fires for a role gained by a sat whose display label did not change.
+
+**Frontend files that read `sat.role` (found by the reviewer; none needs a change to keep working, each should decide whether it means "display label" or "holds imager"):** `sceneSatellites.ts:245,289,293`, `LeftPanel.tsx:66`, `SelectedSatellitePanel.tsx:19,117,169,228,251`, `SatelliteList.tsx:83`, `AllocationFan.tsx:75,212,216`, `sceneSlots.ts:144`, `roleHistoryStore.ts:147,215`, `simStore.ts:133`, `types/satellite.ts:22`, `events.ts:36,71`.
