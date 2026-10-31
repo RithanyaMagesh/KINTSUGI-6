@@ -341,20 +341,48 @@ Drag-only minus two-body-only is at most 1.12e-5 m/s: drag is not what the survi
 
 **Review-fix round (2026-10-31, same branch).** A1: a self-report no longer latches `declared`, so a later death or radio loss on the same sat is declared by the heartbeat rule. A2: FUEL_DEPLETED behaves like THRUSTER_OUT (self-report FAILURE_DETECTED mode FUEL_DEPLETED, k = 0, mission state FAILURE_DETECTED); the `FUEL_DEPLETED` event is still emitted. B3-B7: DEGRADE_START after earlier damage, `stuck` log key, dry mass at least half the wet mass (v2), atomic restore (ValueError, engine unchanged), re-entry silence labelled REENTRY. Red tests and fixes: `tests/v2/test_failure_modes_v2.py` (A1), `tests/v2/test_sim_v2_resources.py` (A2), `tests/v2/test_p2_review_fixes.py` (B3-B7).
 
-## 2026-10-31 — v2 Physics Phase 5c: LP fuel-optimal transfers + MPC (branch `backend-lp`; planner library only, not wired into the engine, v1 untouched)
+## 2026-10-31 — v2 Physics Phase 5c: L1-optimal impulse plans + MPC (branch `backend-lp`; planner library only, not wired into the engine, v1 untouched; fix round after independent review)
 
-Formulation, caps, defaults, mutation table: `docs/PHYSICS_V2.md` "Phase 5c". Measured on macOS arm64. Command of record: `uv run python -m cubesat.transfer_report --report data/eval/lp_vs_pd_dv_table.json` (artifact carries the command, definitions, N, solver status, machine-dependent wall time). Reference case: sat 0, v1 `two_failure.json`, state at t = 1208 s to slot 1 of 5 (amp 8 km). LP N = 48, k = 1. "LP L1" is the LP objective; "L2" the sum of impulse magnitudes (equal here except 2 km / 0.002 / 1 orbit: 4.55 vs 4.15). "2-imp @ PD T" = `dv_bound.two_impulse_dv` over the PD's own settle time; the fixed-time two-impulse solve at the swept T (0.5, 1, 2 orbits) is singular (`T = k pi/n`) in every row. PD = the real v1 `PDController` (wn 0.01, zeta 1, saturation a_max), settle = position error stays within 5 percent of the transfer distance; "diverged" = not settled in 4 orbits (residual after 4 orbits).
+Formulation, caps, verified keep-out, MPC schedule, validation and the corrected claims: `docs/PHYSICS_V2.md` "Phase 5c". Measured on macOS arm64. Commands of record: `uv run python -m cubesat.transfer_report --report data/eval/lp_vs_pd_dv_table.json`, `... --landing-fuzz data/eval/lp_landing_fuzz.json`, `... --keepout-fuzz data/eval/lp_keepout_fuzz.json` (each artifact carries its command; wall time is labelled machine-dependent). Reference case: sat 0, v1 `two_failure.json`, slot 1 of 5 (amp 8 km), starting from the FIRST post-assignment PD step (t = 1208 s, 0.2 m/s already spent); the pure planning state is t = 1206 s (`alt` column). LP N = 48, k = 1, box cap. L1 = LP objective (per-axis impulse sum), L2 = sum of impulse magnitudes (same plan); "2-imp @ PD T" is `dv_bound.two_impulse_dv` (L2) over the PD's own settle time; the fixed-time two-impulse solve at the swept T is singular (T = k pi/n) in every row; PD = real v1 `PDController` (wn 0.01, zeta 1), its delta-v is an L2 figure (integral of ||u|| dt), "diverged" = not settled within 4 orbits.
 
-| Case | a_max | T (orbits) | LP feasible | LP L1 (m/s) | 2-imp @ PD T | PD |
-|---|---|---|---|---|---|---|
-| 8 km ref | 0.1 | 0.5 / 1 / 2 | yes | 24.84 / 15.71 / 15.56 | 35.92 | settled, 93.8 m/s, 1038 s |
-| 8 km ref | 0.01 | 0.5 / 1 / 2 | no / yes / yes | - / 16.31 / 15.69 | - | diverged, 227.1 m/s spent, residual 7.07e6 m |
-| 8 km ref | 0.002 | 0.5 / 1 / 2 | no / no / no | - | - | diverged, residual 1.39e6 m |
-| 2 km | 0.1 | 0.5 / 1 / 2 | yes | 5.04 / 4.18 / 3.91 | 14.59 | settled, 27.6 m/s, 542 s |
-| 2 km | 0.01 | 0.5 / 1 / 2 | yes | 5.31 / 4.18 / 3.91 | 24.01 | settled, 27.3 m/s, 2732 s |
-| 2 km | 0.002 | 0.5 / 1 / 2 | no / yes / yes | - / 4.55 / 3.96 | - | diverged, residual 9.06e5 m |
+| Case | a_max | T (orbits) | LP L1 (m/s) | LP L2 (m/s) | LP L1 from t=1206 s | 2-imp @ PD T (L2) | PD (L2) |
+|---|---|---|---|---|---|---|---|
+| 8 km | 0.1 | 0.5 / 1 / 2 | 24.84 / 15.71 / 15.56 | same | 25.00 / 15.78 / 15.63 | 35.92 | settled, 93.8 m/s, 1038 s |
+| 8 km | 0.01 | 0.5 / 1 / 2 | no plan / 16.31 / 15.69 | same | - / 16.40 / 15.77 | - | diverged, 227.1 m/s, residual 7.07e6 m |
+| 8 km | 0.002 | 0.5 / 1 / 2 | no plan | - | - | - | diverged, residual 1.39e6 m |
+| 2 km | 0.1 | 0.5 / 1 / 2 | 5.04 / 4.18 / 3.91 | same | n/a | 14.59 | settled, 27.6 m/s, 542 s |
+| 2 km | 0.01 | 0.5 / 1 / 2 | 5.31 / 4.18 / 3.91 | same | n/a | 24.01 | settled, 27.3 m/s, 2732 s |
+| 2 km | 0.002 | 0.5 / 1 / 2 | no plan / 4.55 / 3.96 | 4.15 at T = 1 | n/a | - | diverged, residual 9.06e5 m |
 
-- LP vs PD where PD settles: 8 km @ 0.1: 15.71 vs 93.8 m/s (6.0x); 2 km @ 0.1: 4.18 vs 27.6 (6.6x); 2 km @ 0.01: 4.18 vs 27.3 (6.5x). Where PD diverges (8 km @ 0.01, both cases @ 0.002) the LP is feasible at 1 orbit for 8 km @ 0.01 (16.31) and 2 km @ 0.002 (4.55).
-- **Brief's prototype claims (disagreement reported, nothing tuned):** 16.4 m/s at 0.01 / 1 orbit / 8 km: measured 16.31 L1 (-0.09); 16.40 with the REPLANNING-tick (t = 1206 s) state, so the claim reproduces to 0.1 m/s under either definition. "~4 m/s" at 0.002 / 2 km: measured 4.55 L1 / 4.15 L2 at T = 1 orbit (+0.55 / +0.15); 3.96 at T = 2 orbits; the claim is within 14 percent (L1) of the 1-orbit value, not exact. The brief's PD 155 m/s is the second replan episode (replan t = 1506 s), not the first episode used here: not reproduced.
-- Convergence in N (L1 at N = 12/24/48/96, relative change on halving): 8 km @ 0.01: 16.494 / 16.264 / 16.310 / 16.333 (1.4, 0.28, 0.15 percent); 8 km @ 0.1: 15.844 / 15.746 / 15.707 / 15.700 (0.6, 0.24, 0.05 percent); 2 km @ 0.002: 4.496 / 4.533 / 4.546 / 4.559 (0.8, 0.29, 0.29 percent). Default N = 48 is converged to under 0.3 percent on the last halving. Solver runtime 2.6-50 ms per solve (machine-dependent wall time, report only).
-- Tests: `uv run python -m pytest tests/v2/test_transfer.py tests/v2/test_transfer_report.py -p no:cacheprovider` (exactness 1e-6 m / 1e-9 m/s, N = 2 equals two-impulse, LP <= two-impulse, caps, determinism, keep-out, infeasible -> None, best_transfer sweep, cancel mid-sweep, MPC re-solve lands within 1e-3 m after a seeded perturbation). Mutation check: 10 mutants killed, 1 equivalent mutant (row scaling) removed; table in PHYSICS_V2.md.
+- LP vs PD where PD settles (L2 vs L2): 8 km @ 0.1: 15.71 vs 93.8 m/s (6.0x); 2 km @ 0.1: 4.18 vs 27.6 (6.6x); 2 km @ 0.01: 4.18 vs 27.3 (6.5x). Where PD diverges the LP is feasible at 1 orbit for 8 km @ 0.01 (16.31) and 2 km @ 0.002 (4.55 L1 / 4.15 L2).
+- **Brief's prototype claims (disagreements reported, nothing tuned):** 16.4 m/s at 0.01 / 1 orbit / 8 km: 16.31 L1 from the 1208 s state (-0.09), **16.40 from the 1206 s state** (the brief's definition). "~4 m/s" at 0.002 / 2 km: 4.55 L1 / 4.15 L2 at T = 1 orbit (+0.55 / +0.15); 3.96 at T = 2 orbits. The brief's PD 155 m/s is the second replan episode (replan t = 1506 s), not reproduced here.
+- **L1 is not the L2 optimum:** SLSQP minimum of sum ||dv||_2 on the 8 km reference, T = 1 orbit, N = 48: 14.1426 m/s at a_max 0.1 and 0.01 (neither the box nor the spherical cap binds), equal to the dual lower bound (14.1426); the LP's L2 is 15.707 (+11.1 percent) and 16.310 (+15.3 percent). Cap shapes at a_max 0.01: minimum feasible a_max box 0.005050 / octahedron 0.003378 / sphere (SLSQP) 0.003066; box costs +2.7 percent L1 vs octahedron (16.31 vs 15.88). The default stays `box`; `cap_shape="octahedron"` is optional. Using cap interval T/(N-1) instead of T/N lowers the box minimum feasible a_max to 0.004944 (-2.1 percent).
+- Convergence in N (L1 at N = 12/24/48/96, relative change on halving): 8 km @ 0.01: 16.494 / 16.264 / 16.310 / 16.333 (1.4, 0.28, 0.15 percent); 8 km @ 0.1: 15.844 / 15.746 / 15.707 / 15.700 (0.6, 0.24, 0.05 percent); 2 km @ 0.002: 4.496 / 4.533 / 4.546 / 4.559 (0.8, 0.29, 0.29 percent). Solver runtime 1.3-9 ms per solve (machine-dependent).
+- **Fix-round numbers.** Keep-out fuzz (100 seeded crossings, obstacle between widely spaced samples): free plan collided 100/100; 96 planned, 4 None; worst grid shortfall 0 m; TRUE min distance (0.05 s grid) above d_safe in all 96 (worst margin 43.3 m); bound between 1 s grid points: v_rel * 0.5 s. Landing fuzz (300 seeded cases): 259 shipped, worst residual 1.7e-7 m / 3.5e-11 m/s (relative 1.3e-11), post-check tolerance 1e-6 max(1, |x_target|). MPC closed loop (a_max 0.01, N = 48, T = 1 orbit, re-solve every 120 s): zero noise 0 None, L1 17.6846 = open loop 17.6846; noise 1 m / 1e-3 m/s: 0 None, L1 17.7215, final error 5e-12 m. The reviewer's reproduced defects (sampled-only keep-out, shrinking MPC cap, unvalidated k > 1 / N = 2.7, status-0-only solver gate) each have a red-first test in `tests/v2/test_transfer_hardening.py`.
+- Tests: `uv run python -m pytest tests/v2/test_transfer.py tests/v2/test_transfer_hardening.py tests/v2/test_transfer_report.py -p no:cacheprovider`. Mutation check, copy in /tmp, 23 mutants, 23 killed (a first round found two survivors that were fixed: an equivalent row-scaling mutant, whose code was deleted, and a redundant cancel check, removed; the second round's survivors, a dense-grid coincidence, a status check that only the landing check masked, an assembly cancel check masked by the verification checks, a redundant T guard and the octahedron rows, each got a sharper test or the redundant guard was removed):
+
+| Mutant | Killed by |
+|---|---|
+| KILLED   guard k==0 dropped | `test_transfer_hardening.py::test_zero_burn_transfer_with_no_fuel_or_thrust_is_none[kw0]` |
+| KILLED   guard a_max==0 dropped | `test_transfer_hardening.py::test_zero_burn_transfer_with_no_fuel_or_thrust_is_none[kw1]` |
+| KILLED   guard n>0 dropped | `test_transfer_hardening.py::test_malformed_n_and_target_and_keepout_raise` |
+| KILLED   status==0 check dropped | `test_transfer_hardening.py::test_nonzero_status_is_none_even_when_x_is_a_valid_landing_plan[1]` |
+| KILLED   cancel not forwarded in mpc_step | `test_transfer_hardening.py::test_mpc_cancel_is_forwarded_to_the_solve` |
+| KILLED   keep-out times not shifted in mpc_step | `test_transfer_hardening.py::test_mpc_keepout_times_are_shifted_by_elapsed_time` |
+| KILLED   tie tolerance dropped in best_transfer | `test_transfer_hardening.py::test_best_transfer_ties_within_tolerance_prefer_the_shorter_T` |
+| KILLED   entry cancel check dropped | `test_transfer.py::test_cancel_mid_sweep_raises_without_partial_result` |
+| KILLED   verification cancel check dropped | `test_transfer_hardening.py::test_cancel_inside_a_large_keepout_build_is_prompt` |
+| KILLED   assembly cancel check dropped | `test_transfer_hardening.py::test_keepout_assembly_loop_checks_cancel_between_chunks` |
+| KILLED   min_clearance always None | `test_transfer_hardening.py::test_obstacle_crossing_between_widely_spaced_samples_is_avoided` |
+| KILLED   verification grid 1000 s instead of 1 s | `test_transfer_hardening.py::test_obstacle_crossing_between_widely_spaced_samples_is_avoided` |
+| KILLED   cap clip dropped | `test_transfer_hardening.py::test_overshoot_of_the_cap_is_clipped_and_relanded` |
+| KILLED   landing tolerance infinite | `test_transfer_hardening.py::test_status0_with_garbage_solution_is_rejected_by_the_landing_check` |
+| KILLED   MPC cap interval shrinks with horizon | `test_transfer_hardening.py::test_mpc_on_plan_state_stays_feasible_at_every_resolve_time` |
+| KILLED   k upper bound dropped | `test_transfer_hardening.py::test_malformed_input_raises_valueerror[kw0]` |
+| KILLED   N integer check dropped | `test_transfer_hardening.py::test_malformed_input_raises_valueerror[kw8]` |
+| KILLED   no refinement rounds | `test_transfer.py::test_keepout_avoids_obstacle_on_straight_path` |
+| KILLED   octahedron cap rows dropped | `test_transfer_hardening.py::test_octahedron_cap_rejects_a_node_whose_l1_exceeds_it` |
+| KILLED   T>0 check dropped | `test_transfer_hardening.py::test_malformed_input_raises_valueerror[kw14]` |
+| KILLED   mpc negative t_elapsed allowed | `test_transfer_hardening.py::test_best_transfer_and_mpc_validate_the_same_way` |
+| KILLED   box cap loses 1/sqrt(3) | `test_transfer.py::test_per_component_cap_respected_and_binding` |
+| KILLED   velocity STM columns -> position columns | `test_transfer.py::test_lp_lands_on_target_exactly` |
