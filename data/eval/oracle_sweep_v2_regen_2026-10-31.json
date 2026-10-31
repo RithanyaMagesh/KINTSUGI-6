@@ -1,0 +1,319 @@
+{
+  "tool": "files/oracle_sweep_v2.py",
+  "command": "uv run python files/oracle_sweep_v2.py",
+  "pre_registered_threshold_pp": 0.5,
+  "pre_registration": "GATES.md decisions log 2026-10-26, recorded before any sweep number existed: CLEAR iff the max critical-seat health gain at L=300 s across these families is >= 0.5 pp; below 0.5 pp on every scenario => the Gate-2 CUT verdict (2026-10-04) STANDS, re-measured on fair families. EITHER WAY nothing integrates into the control loop without a further user decision.",
+  "t_settle_s": 0.0,
+  "t_settle_rule": "first tick of data/logs/nominal.jsonl whose coverage is within +/-10% (relative) of that log's mean tick coverage; fallback = v1's t_settle=0.0 (files/oracle_sweep.py:93)",
+  "cap_rule": "L_effective = max(0, t_f_min - t_settle) when below the nominal L (ENDGAME_PLAN 7; v1 logic, files/oracle_sweep.py:102-107); every v2 scenario schedules exactly one failure, so per-failure capping and t_f_min capping coincide",
+  "metric": "critical_seat_frac = fraction of tick lines where BOTH unique critical seats (leader, downlink) are held by a status-NOMINAL satellite; gain_pp = (frac - reactive_baseline_frac) * 100, the reactive baseline being the L=0 point with oracle disabled",
+  "l_grid_s": [
+    0.0,
+    30.0,
+    60.0,
+    300.0,
+    1800.0
+  ],
+  "scenarios": {
+    "eps_leader_6sat": {
+      "scenario_path": "data/scenarios/eps_leader_6sat.json",
+      "t_fail_s": 2400.0,
+      "reactive_baseline_frac": 1.0,
+      "rows": [
+        {
+          "scenario": "eps_leader_6sat",
+          "L_nominal_s": 0.0,
+          "L_effective_s": 0.0,
+          "capped": false,
+          "oracle_enabled": false,
+          "critical_seat_frac": 1.0,
+          "gain_pp": 0.0,
+          "total_dv_mps": 562.8040133363951,
+          "log": "data/eval/oracle_sweep_v2/eps_leader_6sat__L0.jsonl",
+          "log_sha256": "f140f00d976a71ad1e312e94868f64398cfe1f84af6266b89edadb44e86b51a1",
+          "command": "uv run python -m cubesat.run --scenario data/eval/oracle_sweep_v2/eps_leader_6sat__L0.json --seed 42 --out data/eval/oracle_sweep_v2/eps_leader_6sat__L0.jsonl"
+        },
+        {
+          "scenario": "eps_leader_6sat",
+          "L_nominal_s": 30.0,
+          "L_effective_s": 30.0,
+          "capped": false,
+          "oracle_enabled": true,
+          "critical_seat_frac": 1.0,
+          "gain_pp": 0.0,
+          "total_dv_mps": 581.8235172061122,
+          "log": "data/eval/oracle_sweep_v2/eps_leader_6sat__L30.jsonl",
+          "log_sha256": "23ee980611fd0aa7dd5aba2a9cc81593f9a68b3a9ab72035159132da0a26f0c1",
+          "command": "uv run python -m cubesat.run --scenario data/eval/oracle_sweep_v2/eps_leader_6sat__L30.json --seed 42 --out data/eval/oracle_sweep_v2/eps_leader_6sat__L30.jsonl"
+        },
+        {
+          "scenario": "eps_leader_6sat",
+          "L_nominal_s": 60.0,
+          "L_effective_s": 60.0,
+          "capped": false,
+          "oracle_enabled": true,
+          "critical_seat_frac": 1.0,
+          "gain_pp": 0.0,
+          "total_dv_mps": 577.4395910127267,
+          "log": "data/eval/oracle_sweep_v2/eps_leader_6sat__L60.jsonl",
+          "log_sha256": "bedd519afc6e25e63c354306a9a1dea1b150c36340a3a3f33ff642b7c549c70f",
+          "command": "uv run python -m cubesat.run --scenario data/eval/oracle_sweep_v2/eps_leader_6sat__L60.json --seed 42 --out data/eval/oracle_sweep_v2/eps_leader_6sat__L60.jsonl"
+        },
+        {
+          "scenario": "eps_leader_6sat",
+          "L_nominal_s": 300.0,
+          "L_effective_s": 300.0,
+          "capped": false,
+          "oracle_enabled": true,
+          "critical_seat_frac": 1.0,
+          "gain_pp": 0.0,
+          "total_dv_mps": 629.6325454506452,
+          "log": "data/eval/oracle_sweep_v2/eps_leader_6sat__L300.jsonl",
+          "log_sha256": "d8e9317507f235ee4536ad594b805b7604845db5658ae53498538f0fb4c9a0ec",
+          "command": "uv run python -m cubesat.run --scenario data/eval/oracle_sweep_v2/eps_leader_6sat__L300.json --seed 42 --out data/eval/oracle_sweep_v2/eps_leader_6sat__L300.jsonl"
+        },
+        {
+          "scenario": "eps_leader_6sat",
+          "L_nominal_s": 1800.0,
+          "L_effective_s": 1800.0,
+          "capped": false,
+          "oracle_enabled": true,
+          "critical_seat_frac": 1.0,
+          "gain_pp": 0.0,
+          "total_dv_mps": 922.5936767922175,
+          "log": "data/eval/oracle_sweep_v2/eps_leader_6sat__L1800.jsonl",
+          "log_sha256": "b08904c6dd8d7d9edf4d17e3e832560de256d441cbb4d33979f6a893cb80c810",
+          "command": "uv run python -m cubesat.run --scenario data/eval/oracle_sweep_v2/eps_leader_6sat__L1800.json --seed 42 --out data/eval/oracle_sweep_v2/eps_leader_6sat__L1800.jsonl"
+        }
+      ]
+    },
+    "eps_downlink_6sat": {
+      "scenario_path": "data/scenarios/eps_downlink_6sat.json",
+      "t_fail_s": 2400.0,
+      "reactive_baseline_frac": 0.8938344098649442,
+      "rows": [
+        {
+          "scenario": "eps_downlink_6sat",
+          "L_nominal_s": 0.0,
+          "L_effective_s": 0.0,
+          "capped": false,
+          "oracle_enabled": false,
+          "critical_seat_frac": 0.8938344098649442,
+          "gain_pp": 0.0,
+          "total_dv_mps": 3.0068299806888323e-10,
+          "log": "data/eval/oracle_sweep_v2/eps_downlink_6sat__L0.jsonl",
+          "log_sha256": "d8ffdbce187d0e4ab9338523cbcef6294dfe325f7471ee7a3f6b924004a49896",
+          "command": "uv run python -m cubesat.run --scenario data/eval/oracle_sweep_v2/eps_downlink_6sat__L0.json --seed 42 --out data/eval/oracle_sweep_v2/eps_downlink_6sat__L0.jsonl"
+        },
+        {
+          "scenario": "eps_downlink_6sat",
+          "L_nominal_s": 30.0,
+          "L_effective_s": 30.0,
+          "capped": false,
+          "oracle_enabled": true,
+          "critical_seat_frac": 0.8959483264826776,
+          "gain_pp": 0.21139166177334134,
+          "total_dv_mps": 3.0068299806888323e-10,
+          "log": "data/eval/oracle_sweep_v2/eps_downlink_6sat__L30.jsonl",
+          "log_sha256": "51d11aa8716cfb88402634be65282e0a327e632b2b754a0a23840850234477c6",
+          "command": "uv run python -m cubesat.run --scenario data/eval/oracle_sweep_v2/eps_downlink_6sat__L30.json --seed 42 --out data/eval/oracle_sweep_v2/eps_downlink_6sat__L30.jsonl"
+        },
+        {
+          "scenario": "eps_downlink_6sat",
+          "L_nominal_s": 60.0,
+          "L_effective_s": 60.0,
+          "capped": false,
+          "oracle_enabled": true,
+          "critical_seat_frac": 0.8977099236641222,
+          "gain_pp": 0.3875513799177943,
+          "total_dv_mps": 3.0068299806888323e-10,
+          "log": "data/eval/oracle_sweep_v2/eps_downlink_6sat__L60.jsonl",
+          "log_sha256": "f0dff9f6f9abafd0ec48e02a57670d69aab8d5965d1ff45737fde792d3055c84",
+          "command": "uv run python -m cubesat.run --scenario data/eval/oracle_sweep_v2/eps_downlink_6sat__L60.json --seed 42 --out data/eval/oracle_sweep_v2/eps_downlink_6sat__L60.jsonl"
+        },
+        {
+          "scenario": "eps_downlink_6sat",
+          "L_nominal_s": 300.0,
+          "L_effective_s": 300.0,
+          "capped": false,
+          "oracle_enabled": true,
+          "critical_seat_frac": 0.9118027011156782,
+          "gain_pp": 1.7968291250733959,
+          "total_dv_mps": 3.0068299806888323e-10,
+          "log": "data/eval/oracle_sweep_v2/eps_downlink_6sat__L300.jsonl",
+          "log_sha256": "0b3f2109ae715a3c41c5a7294a33ba3b11e112f4181a8aceb1299f867b8d3f99",
+          "command": "uv run python -m cubesat.run --scenario data/eval/oracle_sweep_v2/eps_downlink_6sat__L300.json --seed 42 --out data/eval/oracle_sweep_v2/eps_downlink_6sat__L300.jsonl"
+        },
+        {
+          "scenario": "eps_downlink_6sat",
+          "L_nominal_s": 1800.0,
+          "L_effective_s": 1800.0,
+          "capped": false,
+          "oracle_enabled": true,
+          "critical_seat_frac": 0.9998825601879037,
+          "gain_pp": 10.604815032295944,
+          "total_dv_mps": 3.0068299806888323e-10,
+          "log": "data/eval/oracle_sweep_v2/eps_downlink_6sat__L1800.jsonl",
+          "log_sha256": "914a2a815b8bcd0a2ae9d551007b51574d365d743b1d0d88beb2a0a8a1385ea0",
+          "command": "uv run python -m cubesat.run --scenario data/eval/oracle_sweep_v2/eps_downlink_6sat__L1800.json --seed 42 --out data/eval/oracle_sweep_v2/eps_downlink_6sat__L1800.jsonl"
+        }
+      ]
+    },
+    "eps_imager_6sat": {
+      "scenario_path": "data/scenarios/eps_imager_6sat.json",
+      "t_fail_s": 2400.0,
+      "reactive_baseline_frac": 1.0,
+      "rows": [
+        {
+          "scenario": "eps_imager_6sat",
+          "L_nominal_s": 0.0,
+          "L_effective_s": 0.0,
+          "capped": false,
+          "oracle_enabled": false,
+          "critical_seat_frac": 1.0,
+          "gain_pp": 0.0,
+          "total_dv_mps": 435.8663278235513,
+          "log": "data/eval/oracle_sweep_v2/eps_imager_6sat__L0.jsonl",
+          "log_sha256": "58ed3cef697c365dc9524f8a6ade6884d168377770f102366175931d5811b739",
+          "command": "uv run python -m cubesat.run --scenario data/eval/oracle_sweep_v2/eps_imager_6sat__L0.json --seed 42 --out data/eval/oracle_sweep_v2/eps_imager_6sat__L0.jsonl"
+        },
+        {
+          "scenario": "eps_imager_6sat",
+          "L_nominal_s": 30.0,
+          "L_effective_s": 30.0,
+          "capped": false,
+          "oracle_enabled": true,
+          "critical_seat_frac": 1.0,
+          "gain_pp": 0.0,
+          "total_dv_mps": 454.8872882536129,
+          "log": "data/eval/oracle_sweep_v2/eps_imager_6sat__L30.jsonl",
+          "log_sha256": "5529c1e24ce6c647d8c91f02093f89903a40ec6da2c1deb70f6c015d9523e821",
+          "command": "uv run python -m cubesat.run --scenario data/eval/oracle_sweep_v2/eps_imager_6sat__L30.json --seed 42 --out data/eval/oracle_sweep_v2/eps_imager_6sat__L30.jsonl"
+        },
+        {
+          "scenario": "eps_imager_6sat",
+          "L_nominal_s": 60.0,
+          "L_effective_s": 60.0,
+          "capped": false,
+          "oracle_enabled": true,
+          "critical_seat_frac": 1.0,
+          "gain_pp": 0.0,
+          "total_dv_mps": 450.5041118533821,
+          "log": "data/eval/oracle_sweep_v2/eps_imager_6sat__L60.jsonl",
+          "log_sha256": "bc36c82b45368e0eb4b1930d2bad6fc803b9321527168c8ed09b6439fcf3eca9",
+          "command": "uv run python -m cubesat.run --scenario data/eval/oracle_sweep_v2/eps_imager_6sat__L60.json --seed 42 --out data/eval/oracle_sweep_v2/eps_imager_6sat__L60.jsonl"
+        },
+        {
+          "scenario": "eps_imager_6sat",
+          "L_nominal_s": 300.0,
+          "L_effective_s": 300.0,
+          "capped": false,
+          "oracle_enabled": true,
+          "critical_seat_frac": 1.0,
+          "gain_pp": 0.0,
+          "total_dv_mps": 502.71413955476334,
+          "log": "data/eval/oracle_sweep_v2/eps_imager_6sat__L300.jsonl",
+          "log_sha256": "ebf1fb485ada855b94f33d6a6ce68d401d28a078a58a349e82d49b3bab2ff4fc",
+          "command": "uv run python -m cubesat.run --scenario data/eval/oracle_sweep_v2/eps_imager_6sat__L300.json --seed 42 --out data/eval/oracle_sweep_v2/eps_imager_6sat__L300.jsonl"
+        },
+        {
+          "scenario": "eps_imager_6sat",
+          "L_nominal_s": 1800.0,
+          "L_effective_s": 1800.0,
+          "capped": false,
+          "oracle_enabled": true,
+          "critical_seat_frac": 1.0,
+          "gain_pp": 0.0,
+          "total_dv_mps": 874.3887740179669,
+          "log": "data/eval/oracle_sweep_v2/eps_imager_6sat__L1800.jsonl",
+          "log_sha256": "97ce55035bdaf3380cf59c997a2aac6d76573a92781305bea664f8381dafabd5",
+          "command": "uv run python -m cubesat.run --scenario data/eval/oracle_sweep_v2/eps_imager_6sat__L1800.json --seed 42 --out data/eval/oracle_sweep_v2/eps_imager_6sat__L1800.jsonl"
+        }
+      ]
+    },
+    "thruster_leader_6sat": {
+      "scenario_path": "data/scenarios/thruster_leader_6sat.json",
+      "t_fail_s": 2400.0,
+      "reactive_baseline_frac": 0.9997651203758074,
+      "rows": [
+        {
+          "scenario": "thruster_leader_6sat",
+          "L_nominal_s": 0.0,
+          "L_effective_s": 0.0,
+          "capped": false,
+          "oracle_enabled": false,
+          "critical_seat_frac": 0.9997651203758074,
+          "gain_pp": 0.0,
+          "total_dv_mps": 2.6320827761948215e-10,
+          "log": "data/eval/oracle_sweep_v2/thruster_leader_6sat__L0.jsonl",
+          "log_sha256": "09ef0942600dc2cd592d115c0245e6953d431491b7931a767de93e2b50c54bb7",
+          "command": "uv run python -m cubesat.run --scenario data/eval/oracle_sweep_v2/thruster_leader_6sat__L0.json --seed 42 --out data/eval/oracle_sweep_v2/thruster_leader_6sat__L0.jsonl"
+        },
+        {
+          "scenario": "thruster_leader_6sat",
+          "L_nominal_s": 30.0,
+          "L_effective_s": 30.0,
+          "capped": false,
+          "oracle_enabled": true,
+          "critical_seat_frac": 1.0,
+          "gain_pp": 0.023487962419255215,
+          "total_dv_mps": 525.4851710223002,
+          "log": "data/eval/oracle_sweep_v2/thruster_leader_6sat__L30.jsonl",
+          "log_sha256": "d8f4a977099b2f6865a498e7453c4d2bc439f475518604deb6e3ff2cf7fc573c",
+          "command": "uv run python -m cubesat.run --scenario data/eval/oracle_sweep_v2/thruster_leader_6sat__L30.json --seed 42 --out data/eval/oracle_sweep_v2/thruster_leader_6sat__L30.jsonl"
+        },
+        {
+          "scenario": "thruster_leader_6sat",
+          "L_nominal_s": 60.0,
+          "L_effective_s": 60.0,
+          "capped": false,
+          "oracle_enabled": true,
+          "critical_seat_frac": 1.0,
+          "gain_pp": 0.023487962419255215,
+          "total_dv_mps": 520.1085152568545,
+          "log": "data/eval/oracle_sweep_v2/thruster_leader_6sat__L60.jsonl",
+          "log_sha256": "202723b3218476f149268572d189ede059d5a9a99b812879c69fbbc32970921c",
+          "command": "uv run python -m cubesat.run --scenario data/eval/oracle_sweep_v2/thruster_leader_6sat__L60.json --seed 42 --out data/eval/oracle_sweep_v2/thruster_leader_6sat__L60.jsonl"
+        },
+        {
+          "scenario": "thruster_leader_6sat",
+          "L_nominal_s": 300.0,
+          "L_effective_s": 300.0,
+          "capped": false,
+          "oracle_enabled": true,
+          "critical_seat_frac": 1.0,
+          "gain_pp": 0.023487962419255215,
+          "total_dv_mps": 390.21015126030494,
+          "log": "data/eval/oracle_sweep_v2/thruster_leader_6sat__L300.jsonl",
+          "log_sha256": "8f7ce3d7c52c20eee4a0a4189b43592f284b720b967134253ad49b7abf7f228f",
+          "command": "uv run python -m cubesat.run --scenario data/eval/oracle_sweep_v2/thruster_leader_6sat__L300.json --seed 42 --out data/eval/oracle_sweep_v2/thruster_leader_6sat__L300.jsonl"
+        },
+        {
+          "scenario": "thruster_leader_6sat",
+          "L_nominal_s": 1800.0,
+          "L_effective_s": 1800.0,
+          "capped": false,
+          "oracle_enabled": true,
+          "critical_seat_frac": 1.0,
+          "gain_pp": 0.023487962419255215,
+          "total_dv_mps": 564.9304699667405,
+          "log": "data/eval/oracle_sweep_v2/thruster_leader_6sat__L1800.jsonl",
+          "log_sha256": "c0e31c2d33ffa774e06af55c7d8323175f8660020458fc1865aa848931e8a7e7",
+          "command": "uv run python -m cubesat.run --scenario data/eval/oracle_sweep_v2/thruster_leader_6sat__L1800.json --seed 42 --out data/eval/oracle_sweep_v2/thruster_leader_6sat__L1800.jsonl"
+        }
+      ]
+    }
+  },
+  "max_gain_at_L300": {
+    "pp": 1.7968291250733959,
+    "scenario": "eps_downlink_6sat",
+    "L_effective_s": 300.0,
+    "threshold_pp": 0.5
+  },
+  "max_gain_any_L": {
+    "pp": 10.604815032295944,
+    "scenario": "eps_downlink_6sat",
+    "L_nominal_s": 1800.0
+  },
+  "verdict": "CLEAR"
+}
