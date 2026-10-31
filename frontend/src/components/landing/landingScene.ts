@@ -225,10 +225,10 @@ function buildSun(): {
     return sp;
   };
   const group = new THREE.Group();
-  const glow = sprite(glowTex, 13, 0.6);
-  const rays = sprite(raysTex, 11, 0.42);
-  const raysB = sprite(raysTex, 8, 0.25);
-  const core = sprite(coreTex, 2.2, 1.7);
+  const glow = sprite(glowTex, 14.5, 0.8);
+  const rays = sprite(raysTex, 13, 0.6);
+  const raysB = sprite(raysTex, 9.5, 0.35);
+  const core = sprite(coreTex, 2.4, 2.05);
   group.add(glow, rays, raysB, core);
   return {
     group,
@@ -278,7 +278,7 @@ export function createLandingScene(
   // satellite readable without adding glints away from the sun.
   scene.add(new THREE.HemisphereLight(col("--hero-ink-muted"), col("--hero-bg"), 1.3));
   scene.add(new THREE.AmbientLight(col("--hero-light-rim"), 0.2));
-  const sunLight = new THREE.PointLight(col("--hero-sun"), 60, 15, 2);
+  const sunLight = new THREE.PointLight(col("--hero-sun"), 78, 15, 2);
   camera.add(sunLight);
   const sun = buildSun();
   camera.add(sun.group);
@@ -648,7 +648,7 @@ export function createLandingScene(
     // section (and back in on the way up), its light with it.
     const sunFade = (1 - smooth(0.02, 0.16, p)) * smooth(0.2, 1.8, t); // eases in on load
     sun.setFade(sunFade);
-    sunLight.intensity = 60 * sunFade;
+    sunLight.intensity = 78 * sunFade;
     storyLight.intensity = 2.6 * (1 - sunFade);
     composer.render();
   }
