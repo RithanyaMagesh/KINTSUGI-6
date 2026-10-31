@@ -33,11 +33,10 @@ from cubesat.sim import (
     STATE_INIT,
     STATE_SUMMARY,
     STATUS_DEAD,
-    STATUS_DEGRADED,
-    STATUS_NOMINAL,
     RunCancelled,
     build_slots,
 )
+from cubesat.spacecraft import thrust_limited
 
 REENTRY_ALTITUDE_M = 100e3  # below this a sat is flagged REENTERED and frozen
 
@@ -116,7 +115,7 @@ class EngineV2:
         t = self.k * self.dt
         c = self.X[0]
         lvlh = truth.eci_to_lvlh(self.X[1:, :3], self.X[1:, 3:], c[:3], c[3:])
-        events = self._reentries(t, lvlh) + self.faults.tick(t)
+        events = self._reentries(t, lvlh) + self.faults.tick(t, self.X[1:, 3:])
         draw_tick(self.rng, self.n_sats)  # Phases 3-4 use these rows; ignored for now
         status = self.faults.status
         gone = np.array([s == STATUS_REENTERED for s in status])
@@ -124,7 +123,9 @@ class EngineV2:
         imagers = [
             i
             for i, role in enumerate(self.scenario.roles)
-            if role == "imager" and status[i] not in (STATUS_DEAD, STATUS_REENTERED)
+            if role == "imager"
+            and status[i] not in (STATUS_DEAD, STATUS_REENTERED)
+            and self.faults.sats[i].payload_ok  # a failed payload does not image
         ]
         cov = coverage_fraction(lvlh[imagers, 1:3], self.grid, self.r_f)
         line = {
@@ -139,6 +140,12 @@ class EngineV2:
                     "r": lvlh[i, :3].tolist(),
                     "v": lvlh[i, 3:].tolist(),
                     "dv_used": float(self.dv[i]),
+                    "stuck": self.faults.sats[i].stuck_vec is not None,
+                    "fuel_kg": self.faults.sats[i].m_prop_kg,
+                    "fuel_mps_left": self.faults.sats[i].fuel_mps_left,
+                    "k": self.faults.sats[i].k,
+                    "payload_ok": self.faults.sats[i].payload_ok,
+                    "radio_ok": self.faults.sats[i].radio_ok,
                 }
                 for i in range(self.n_sats)
             ],
@@ -198,14 +205,17 @@ class EngineV2:
             raise ValueError(f"not an EngineV2 snapshot: {exc}") from exc
         if fingerprint != self._fingerprint():
             raise ValueError("snapshot fingerprint mismatch: different scenario, n_sats or schema")
-        self.k = state["k"]
-        self.X = np.array(state["X"])
-        self.refs = np.array(state["refs"])
-        self.dv = np.array(state["dv"])
-        self.hold = np.array(state["hold"])
-        self.cov = [(t, c) for t, c in state["cov"]]
-        self.faults.load(state["faults"])
-        self.rng.bit_generator.state = state["rng"]
+        try:  # parse everything first: a bad snapshot must leave the engine untouched
+            k, X, refs = int(state["k"]), np.array(state["X"]), np.array(state["refs"])
+            dv, hold = np.array(state["dv"]), np.array(state["hold"])
+            cov = [(t, c) for t, c in state["cov"]]
+            rng = make_rng(self.scenario)
+            rng.bit_generator.state = state["rng"]
+            self.faults.load(state["faults"])  # atomic itself; raises ValueError first
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(f"bad EngineV2 snapshot: {exc!r}") from exc
+        self.k, self.X, self.refs, self.dv, self.hold, self.cov = k, X, refs, dv, hold, cov
+        self.rng = rng
 
     # -- internals ---------------------------------------------------------------------------------
     def _reentries(self, t: float, lvlh: np.ndarray) -> list[dict]:
@@ -227,14 +237,24 @@ class EngineV2:
         return float(np.sqrt(np.min((d**2).sum(-1)[np.triu_indices(len(pts), 1)])))
 
     def _advance(self, lvlh: np.ndarray) -> None:
-        """PD command per holding sat (LVLH, zero-order hold), then one batched RK4 step."""
+        """PD command per sat that can still fly (LVLH, zero-order hold) through thrust_limited
+        (thrust cap k F_max / m, propellant use), then one batched RK4 step. A stuck-open
+        thruster ignores the PD and fires along its fixed ECI vector."""
         status, dt = self.faults.status, self.dt
-        u = np.zeros((self.n_sats, 3))
+        u = np.zeros((self.n_sats, 3))  # applied LVLH acceleration
+        a_stuck = np.zeros((self.n_sats, 3))  # applied ECI acceleration of stuck-open sats
         for i, s in enumerate(status):
-            if s in (STATUS_NOMINAL, STATUS_DEGRADED):
-                u[i] = self.pd.command(lvlh[i, :3], lvlh[i, 3:], self.refs[i, :3], self.refs[i, 3:])
-        self.dv += np.linalg.norm(u, axis=1) * dt
-        a_thrust = np.vstack([np.zeros(3), truth.thrust_eci(u, self.X[0, :3], self.X[0, 3:])])
+            if s in (STATUS_DEAD, STATUS_REENTERED):
+                continue
+            sat = self.faults.sats[i]
+            if sat.stuck_vec is not None:
+                a_stuck[i], _ = thrust_limited(sat, u[i], dt)
+            else:
+                cmd = self.pd.command(lvlh[i, :3], lvlh[i, 3:], self.refs[i, :3], self.refs[i, 3:])
+                u[i], _ = thrust_limited(sat, cmd, dt)
+        self.dv += np.linalg.norm(u + a_stuck, axis=1) * dt
+        a_dep = truth.thrust_eci(u, self.X[0, :3], self.X[0, 3:]) + a_stuck
+        a_thrust = np.vstack([np.zeros(3), a_dep])
         b = np.array([0.0] + [self._b_dead if s == STATUS_DEAD else self._b_active for s in status])
         tr = self.scenario.truth
 
