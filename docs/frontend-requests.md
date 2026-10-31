@@ -54,3 +54,7 @@ All additive and optional: no existing key, value or message changed meaning, an
 - `recoveryStore.ts` line ~198 looks for "ORACLE_SWAP" in the message text and then reads `payload.from_sat`; the wire event has no `payload`, so that handler was already inert and still is. Consume `sat_id` and the sentence instead.
 
 Not changed: `metrics.replanning_latency_ms` (still `null`; the client reads it as optional, so removal is safe once the frontend stops expecting it, but it was not touched here).
+
+## Earth view (user spec 2026-10-31, docs/superpowers/specs/KINTSUGI-6_earth_view_spec.md)
+Frontend items 1-6 of that spec are for the frontend session (load the frontend-design skill; `lvlhToScene()` "global" mode is to be deleted; formation = one cluster dot on the orbit ring + a Formation lens inset; constellation mode with per-plane rings; time-warp badge; failed red / in-transit amber / healthy green / repaired gold only; hex only in tokens.css; reduced motion; 60 fps at 1920x1080, check 1280x720; visual QA screenshots).
+Backend data they depend on (the backend session builds it, in this order; fields are optional/additive): (1) every `sim_state` gets `chief: {r_eci, lat_deg, lon_deg, alt_m}`, hello gets `epoch_utc`, `inclination_deg`, `raan_deg`, `orbit_ring` (256 ECI points of one chief period) and `ground_track` (lat/lon over +-1 orbit); (2) later, constellation layout with per-sat `r_eci`. Frontend steps 1-3 (formation mode) need backend item 1 only; step 4 (constellation) needs backend item 2.
