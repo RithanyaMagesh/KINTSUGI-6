@@ -288,6 +288,26 @@ def _run_monte_carlo(args) -> int:
     return 0
 
 
+def _run_ground_passes(args) -> int:
+    """Ground-pass statistics (cubesat/ground.py): one station, 48 deterministic
+    starts; machine-writes the report with its own command + model parameters.
+    No sim involvement (--base is accepted for CLI uniformity and unused)."""
+    from cubesat.ground import pass_statistics
+
+    report = {
+        "command": "uv run python -m cubesat.benchmark " + " ".join(sys.argv[1:]),
+        **pass_statistics(),
+    }
+    args.report.parent.mkdir(parents=True, exist_ok=True)
+    args.report.write_text(json.dumps(report, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    print(
+        f"wrote {args.report}: {report['passes_per_day']:.2f} passes/day, wait mean "
+        f"{report['wait_mean_s'] / 3600:.2f} h / median {report['wait_median_s'] / 3600:.2f} h / "
+        f"p90 {report['wait_p90_s'] / 3600:.2f} h, max gap {report['max_gap_s'] / 3600:.2f} h"
+    )
+    return 0
+
+
 def _run_keepout_report(args) -> int:
     """P2 dispatch (ENDGAME_PLAN 5): post-hoc analysis of written log bytes --
     no sim core involvement. Reads the logs named on the command line, writes
@@ -409,11 +429,13 @@ def main(argv: list[str] | None = None) -> int:
         prog="cubesat.benchmark", description="P0 exhaustive recovery benchmark"
     )
     parser.add_argument(
-        "--mode", choices=("benchmark", "keepout-report", "pareto", "cw-curve", "monte-carlo"),
+        "--mode", choices=("benchmark", "keepout-report", "pareto", "cw-curve", "monte-carlo",
+                 "ground-passes"),
         default="benchmark",
         help="benchmark: run the P0 sweep; keepout-report: P2 post-hoc log analysis; "
         "pareto: P1 w2 x dv_budget sweep; cw-curve: P3 CW-vs-Kepler error curves; "
-        "monte-carlo: P4 deterministic parameter-jitter robustness ensemble",
+        "monte-carlo: P4 deterministic parameter-jitter robustness ensemble; "
+        "ground-passes: single-station pass statistics (cubesat/ground.py)",
     )
     parser.add_argument("--base", required=True, type=Path, help="base scenario JSON")
     parser.add_argument(
@@ -483,6 +505,8 @@ def main(argv: list[str] | None = None) -> int:
     ):
         if value is not None:
             _confine_output_path(parser, label, value)
+    if args.mode == "ground-passes":
+        return _run_ground_passes(args)
     if args.mode == "keepout-report":
         return _run_keepout_report(args)
     if args.mode == "cw-curve":
