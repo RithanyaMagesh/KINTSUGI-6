@@ -282,6 +282,15 @@ export function createLandingScene(
   camera.add(sunLight);
   const sun = buildSun();
   camera.add(sun.group);
+  // Story lighting for the sections below the hero: as the sun fades out on
+  // scroll, a clear key light (front-left) and a cool rim (back-right) fade
+  // in, so the break / repair / proof scenes stay readable.
+  const storyKey = new THREE.DirectionalLight(col("--hero-light-key"), 0);
+  storyKey.position.set(-6, 7, 9);
+  scene.add(storyKey);
+  const storyRim = new THREE.DirectionalLight(col("--hero-light-rim"), 0);
+  storyRim.position.set(7, -3, -8);
+  scene.add(storyRim);
 
 
   const goldLight = new THREE.PointLight(col("--hero-gold"), 0, 14, 1.6);
@@ -638,6 +647,8 @@ export function createLandingScene(
     const sunFade = 1 - smooth(0.02, 0.16, p);
     sun.setFade(sunFade);
     sunLight.intensity = 95 * sunFade;
+    storyKey.intensity = 2.4 * (1 - sunFade);
+    storyRim.intensity = 1.8 * (1 - sunFade);
     composer.render();
   }
   raf = requestAnimationFrame(frame);
