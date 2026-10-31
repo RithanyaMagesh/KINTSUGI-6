@@ -30,7 +30,7 @@ All additive and optional: no existing key, value or message changed meaning, an
 
 **`role_handoffs` (on `role_reassignment`)**: derived by the wire from the previous frame, no sim change. Only for roles with one live holder (leader, downlink); `from_sat` is the last sole live holder, even if it is now dead. Absent when no role moved.
 
-**`sats[].old_role` (on `sim_state`)**: the sat's role in the previous frame, present only on the tick its role changed. Absent on the first frame of a run and after a seek.
+**`sats[].old_role` (on `sim_state`)**: the sat's role in the previous frame, present only on the tick its role changed. Absent on the first frame of a run and on the first frame after a backwards seek.
 ```json
 {"id": "SAT-3", "role": "leader", "old_role": "imager", "status": "healthy", "...": "..."}
 ```

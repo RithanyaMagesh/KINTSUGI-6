@@ -35,6 +35,7 @@ class SessionEnrich:
     replanning_latency_ms: float | None = None  # stays None in G5 (section 6.1 cut)
     prev_roles: dict[int, str] = field(default_factory=dict)  # log sat id -> role, last frame
     role_holder: dict[str, int] = field(default_factory=dict)  # role -> last sole live holder
+    last_t: float = -1.0  # previous frame time; a backwards step (seek) restarts role tracking
 
 
 # Live-selectable recovery policies (the benchmark's seam policies + the shipped
@@ -278,6 +279,11 @@ def _track_roles(frame: dict, enrich: SessionEnrich) -> tuple[dict[int, str], li
     is that last sole live holder, which survives the holder's death because the
     log keeps a dead sat's role label. No previous frame -> nothing to diff."""
     sats = frame.get("sats", [])
+    t = frame.get("t", 0.0)
+    if isinstance(t, (int, float)):
+        if t < enrich.last_t:
+            enrich.prev_roles, enrich.role_holder = {}, {}
+        enrich.last_t = t
     old = {
         s["id"]: enrich.prev_roles[s["id"]]
         for s in sats

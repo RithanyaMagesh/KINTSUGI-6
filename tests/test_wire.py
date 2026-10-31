@@ -463,3 +463,15 @@ def test_new_wire_output_is_a_superset_of_the_legacy_golden():
     legacy = json.loads((FIXTURES / "wire_golden_legacy_subset.json").read_text("utf-8"))
     new = to_messages(legacy["line"], SessionEnrich(scenario="two_failure.json", seed=42))
     _contains(new, legacy["expected_messages"])
+
+
+def test_old_role_tracking_resets_when_time_goes_backwards():
+    """A replay seek back does not rebuild enrich (session.py); a frame older than the
+    last one must start role tracking fresh, not report 'old_role' from the future."""
+    enrich = SessionEnrich()
+    a = [(0, "leader", "NOMINAL"), (1, "imager", "NOMINAL")]
+    b = [(0, "imager", "NOMINAL"), (1, "leader", "NOMINAL")]
+    to_messages(_tick(10.0, a), enrich)
+    to_messages(_tick(20.0, b), enrich)
+    back = to_messages(_tick(10.0, a), enrich)[0]
+    assert all("old_role" not in s for s in back["sats"])
