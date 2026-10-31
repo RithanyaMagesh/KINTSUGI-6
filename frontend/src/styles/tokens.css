@@ -49,14 +49,14 @@
   --hero-red: #e5484d; /* the broken satellite */
   --hero-star: #c9d2de;
   --hero-light-key: #ffffff;
-  --hero-sun: #fff1d6; /* warm-white sun: the landing's single key light */
-  --hero-sun-glow: #ffb766; /* outer corona of the sun sprite */
+  --hero-sun: #fffaf2; /* the sun from orbit: near-white, hard */
+  --hero-sun-glow: #ffe2b8; /* faint glare around it (camera bloom, not a corona) */
   --hero-light-rim: #6f9bff;
   --cubesat-frame: #c3c8cf; /* anodized aluminium rails */
   --cubesat-cap: #2a2f36;
-  --cubesat-panel: #1e4fd6; /* solar cells */
-  --cubesat-panel-line: #3d6cf2;
-  --cubesat-panel-gap: #0a1020;
+  --cubesat-panel: #2a3f8f; /* triple-junction cells: deep navy, near black */
+  --cubesat-panel-line: #7d8799; /* silver contact fingers */
+  --cubesat-panel-gap: #0b0e14;
   --cubesat-gold: #c9a44a; /* tape antennas */
 
   /* -- 3D scene extras — read through components/three/sceneColors.ts */
