@@ -167,6 +167,15 @@ def test_roles_follow_the_engine_rule_downlink_holder_does_not_image_while_other
     assert certify(Plan((), "h", st.t_s), st, sc, d_safe_m=500.0).roles_ok  # engine's own
 
 
+def test_an_empty_role_list_on_a_capable_sat_equals_the_engine_spare_label():
+    sc = scn(2.0, dt_s=10.0, failures=one("PAYLOAD_FAIL", 2))
+    st = swarm_state_from_engine(engine_at(sc, 30))
+    assert st.roles[2] == ["spare"]  # the engine's label for a capable sat with no role
+    item = PlanItem(2, None, slots(2.0)[2], ())
+    c = certify(Plan((item,), "x", st.t_s), st, sc, d_safe_m=500.0)
+    assert c.roles_ok and c.passed
+
+
 def _engine_states(cases):
     for sc_kw, ticks in cases:
         sc = scn(2.0, dt_s=10.0, **sc_kw)

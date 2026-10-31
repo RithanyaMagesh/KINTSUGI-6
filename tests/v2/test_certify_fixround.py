@@ -49,6 +49,9 @@ def test_hold_item_with_a_far_seat_fails_settled(y):
     c = certify(Plan((item,), "far", st.t_s), st, sc, d_safe_m=TINY, coverage_floor=0.0)
     print(f"\nhold item y={y:.0f}: settled error {c.settled_error_m / 1000:.0f} km, {kinds(c)}")
     assert not c.passed and "settled" in kinds(c) and c.settled_error_m > 1000.0
+    # the unreachable far seat earns nothing: sat 1 is left out on both sides of the comparison
+    full = certify(Plan((), "hold", st.t_s), st, sc, d_safe_m=TINY)
+    assert c.coverage == c.hold_coverage < full.hold_coverage - 1e-3
 
 
 def test_thruster_out_sat_with_a_far_hold_seat_fails_and_earns_no_coverage():
