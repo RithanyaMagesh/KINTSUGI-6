@@ -204,10 +204,9 @@ class Session:
         self._cancel: threading.Event | None = None  # cancel flag of the in-flight compute
         self._lock: asyncio.Lock | None = None
         self._lock_loop: asyncio.AbstractEventLoop | None = None
-        # Display-only predictor risk map (see _install_predictor): t_s -> sat_id -> [0,1].
+        # Display-only predictor risk map (see _score_risk): t_s -> sat_id -> [0,1].
         self._risk_by_t: dict[float, dict[int, float]] | None = None
         self._risk_times: list[float] = []  # sorted _risk_by_t keys, for bisect carry-forward
-        self._predictor_note: str | None = None
 
     # ---- read-only view (hello / snapshot / health) -----------------------
 
@@ -328,6 +327,13 @@ class Session:
                 422, f"unknown policy {policy!r}; expected one of: {', '.join(POLICY_VALUES)}"
             )
         scenario = self._load_scenario(scenario_name, seed)  # 404/409/422 before any teardown
+        # The predictor needs only the scenario + seed, so an unavailable one is a
+        # 422 BEFORE the running session is touched (never a silent run without it).
+        risk = (
+            await asyncio.to_thread(self._score_risk, scenario, scenario.seed)
+            if predictor
+            else None
+        )
         epoch = self._supersede()
         async with self._mutex():
             self._check_epoch(epoch)
@@ -366,11 +372,7 @@ class Session:
                 raise
             self._check_epoch(epoch)  # a newer start/reset arrived during the compute
             self._source = LiveSource(scenario, lines)
-            if predictor:
-                # DISPLAY-only scoring against the run's own scenario + seed (the
-                # source holds both); failure -> exactly one warning, run unaffected.
-                self._install_predictor(self._source.scenario, self._source.seed)
-                self._warn_predictor_down()
+            self._set_risk(risk)  # DISPLAY-only overlay, scored above
             await self._spawn_driver()
 
     async def load_replay(
@@ -380,10 +382,13 @@ class Session:
         path = self.log_dir / Path(filename).name  # section 7.2 path safety
         if not path.is_file():  # before any teardown (B-17)
             raise SessionError(404, "replay file not found")
+        log = await asyncio.to_thread(load_jsonl, path)
+        risk = None
+        if predictor:
+            scored_scenario, scored_seed = self._replay_scenario(log)
+            risk = await asyncio.to_thread(self._score_risk, scored_scenario, scored_seed)
         epoch = self._supersede()
         async with self._mutex():
-            self._check_epoch(epoch)
-            log = await asyncio.to_thread(load_jsonl, path)
             self._check_epoch(epoch)
             self._teardown()
             self.mode = "replay"
@@ -405,9 +410,7 @@ class Session:
                     to_event("critical", 0.0, f"replay file {filename} has no usable frames")
                 )
             self._source = ReplaySource(log)
-            if predictor:
-                self._install_replay_predictor()
-                self._warn_predictor_down()
+            self._set_risk(risk)
             await self._spawn_driver()
             return log.skipped
 
@@ -550,54 +553,61 @@ class Session:
             sim_module.replan = self._seam_original
             self._seam_original = None
 
-    def _install_predictor(self, scenario: Scenario, seed: int) -> None:
+    @staticmethod
+    def _score_risk(scenario: Scenario, seed: int) -> dict[float, dict[int, float]]:
         """Score the sealed LightGBM predictor over this scenario and build the
         display-only risk map t_s -> sat_id -> [0,1] (boundary: see _advance).
         Rows are STRIDE=10 scored ticks apart; frames between scored ticks carry
         forward the most recent earlier score at lookup time (_frame_with_risk),
         never by pre-filling. ood rows (past the pipeline's T_TICKS training
-        range) are excluded. Any failure -- missing model file, lightgbm import,
-        scoring -- leaves the map OFF and records the reason in _predictor_note,
-        so a broken predictor can never break a run."""
+        range) are excluded. Pure: touches no session state. Any failure -- missing
+        package, model file, scoring -- is a 422 (never a silent run without the
+        requested predictor); the reason names the cause class, never a path."""
         try:
             from predictor.runtime import score_run, telemetry_from_schedule
 
             rows = score_run(telemetry_from_schedule(scenario, seed))
-            risk: dict[float, dict[int, float]] = {}
-            for row in rows:
-                if row.ood:
-                    continue
-                risk.setdefault(row.t_s, {})[row.sat_id] = min(1.0, max(0.0, row.score))
-            self._risk_by_t = risk
-            self._risk_times = sorted(risk)  # explicit order: no dict-order reliance
-            self._predictor_note = None
-        except Exception as exc:  # noqa: BLE001 -- the predictor is strictly optional
-            self._risk_by_t = None
-            self._risk_times = []
-            self._predictor_note = f"{type(exc).__name__}: {exc}"
+        except ImportError:
+            raise SessionError(
+                422, "predictor: unavailable on this server (package not installed)"
+            ) from None
+        except Exception as exc:  # noqa: BLE001 -- any scoring failure is the same 422
+            raise SessionError(
+                422, f"predictor: unavailable on this server (scoring failed: {type(exc).__name__})"
+            ) from None
+        risk: dict[float, dict[int, float]] = {}
+        for row in rows:
+            if row.ood:
+                continue
+            risk.setdefault(row.t_s, {})[row.sat_id] = min(1.0, max(0.0, row.score))
+        return risk
 
-    def _install_replay_predictor(self) -> None:
+    def _replay_scenario(self, log: ReplayLog) -> tuple[Scenario, int]:
         """Resolve the replay's Scenario from scenarios_dir by the log's INIT
         scenario name + seed; a missing file (or a header without scenario/seed)
-        leaves the predictor off with the reason recorded."""
-        name = self._source.scenario_name if self._source else None
-        seed = self._source.seed if self._source else None
+        is a 422 for a predictor request."""
+        name = log.header.get("scenario") if log.header else None
+        seed = log.header.get("seed") if log.header else None
         if not name or seed is None:
-            self._predictor_note = "log header lacks scenario/seed"
-            return
+            raise SessionError(
+                422, "predictor: unavailable for this log (header has no scenario/seed)"
+            )
         fname = name if name.endswith(".json") else f"{name}.json"
         path = self.scenario_dir / Path(fname).name  # basename: traversal-safe
         if not path.is_file():
-            self._predictor_note = f"scenario file {path.name} not found"
-            return
-        self._install_predictor(load_scenario(path), seed)
-
-    def _warn_predictor_down(self) -> None:
-        """Publish the ONE predictor-unavailable warning when an install failed."""
-        if self._predictor_note is not None:
-            self.hub.publish(
-                to_event("warning", 0.0, "Predictor unavailable: " + self._predictor_note)
+            raise SessionError(
+                422, f"predictor: unavailable for this log (scenario {path.name} not on server)"
             )
+        try:
+            return load_scenario(path), seed
+        except ValueError:
+            raise SessionError(
+                422, f"predictor: unavailable for this log (scenario {path.name} is invalid)"
+            ) from None
+
+    def _set_risk(self, risk: dict[float, dict[int, float]] | None) -> None:
+        self._risk_by_t = risk
+        self._risk_times = sorted(risk) if risk else []  # explicit order: no dict-order reliance
 
     def _frame_with_risk(self, frame: dict) -> dict:
         """Display-only predictor overlay for one source frame. Sats scored at
@@ -649,7 +659,6 @@ class Session:
         self._last_emit_wall = None
         self._risk_by_t = None  # display-only risk map never outlives its run
         self._risk_times = []
-        self._predictor_note = None
         self.enrich = SessionEnrich()
         self._snapshot = to_sim_state({"state": "INIT", "t": 0.0}, self.enrich)
 

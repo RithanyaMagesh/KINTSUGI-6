@@ -1,7 +1,7 @@
 """Display-only predictor risk on the wire (live sandbox, round 2).
 
 The user order: the trained, sealed LightGBM predictor is invisible in the UI
--- make it visible. The display path: Session._install_predictor scores
+-- make it visible. The display path: Session._score_risk scores
 predictor.runtime against the run's own Scenario + seed into a risk map
 (t_s -> sat_id -> [0,1]); Session._frame_with_risk attaches sats[].risk to a
 throwaway COPY of each frame (applied in _advance and at seek-time snapshot
@@ -21,9 +21,9 @@ Wire contract pinned here:
 - WS hello carries "predictor": true IFF the risk map is active (deviation-only
   echo, same pattern as the policy echo); omitted otherwise, so predictor-off
   wire bytes are byte-identical to the pre-predictor stream.
-- Scoring failure (missing model, lightgbm import, raise) -> the run starts
-  anyway, exactly ONE warning event ("Predictor unavailable: <reason>") and no
-  risk keys anywhere.
+- Scoring failure (missing model, lightgbm import, raise) -> 422 "predictor:
+  unavailable on this server (...)" BEFORE the running session is touched; a
+  requested predictor is never silently dropped.
 
 Windows/TestClient guard (the test_api.py:265 doctrine): a driver spawned
 during an HTTP request is frozen when that request's ephemeral portal loop
@@ -210,10 +210,11 @@ def test_predictor_replay_risk_past_warmup(tmp_path, monkeypatch):
         assert all(isinstance(v, (int, float)) and 0.0 <= v <= 1.0 for v in risks)
 
 
-def test_predictor_scoring_failure_warning(tmp_path, monkeypatch):
-    """(c) score_run raising -> the run starts fine, the warning event rides the
-    wire ahead of the stream, and no risk key appears anywhere. The long
-    scenario keeps telemetry synthesis alive so the raise lands IN score_run."""
+def test_predictor_scoring_failure_is_422(tmp_path, monkeypatch):
+    """(c) score_run raising -> POST /simulation/start answers 422 naming the
+    predictor (the server never starts a run silently without the requested
+    option), nothing streams, and the session stays stopped. The long scenario
+    keeps telemetry synthesis alive so the raise lands IN score_run."""
     import cubesat.api
     import predictor.runtime as predictor_runtime
 
@@ -226,32 +227,15 @@ def test_predictor_scoring_failure_warning(tmp_path, monkeypatch):
 
     monkeypatch.setattr(predictor_runtime, "score_run", boom)
 
-    r = client.post("/simulation/start", json={"speed": SPEED_MAX, "predictor": True})
-    assert r.status_code == 200  # the run starts fine despite the failure
-    assert r.json()["predictor"] is False
-
     with client.websocket_connect("/ws/state") as ws:
-        hello = ws.receive_json()
-        assert "predictor" not in hello  # map never installed -> no echo
-        assert _assert_risk_values([ws.receive_json()]) == 0  # run-1 snapshot
-
-        # a second predictor=true start streams to the CONNECTED client. The
-        # warning is published during start, BEFORE any driver frame, so the
-        # bounded in-request read is deterministic: warning, INIT state, t=0.
-        assert client.post("/simulation/reset").status_code == 200
-        # reset now tells connected viewers: hello(mode=stopped) + empty state
-        stopped = [ws.receive_json(), ws.receive_json()]
-        assert [m["type"] for m in stopped] == ["hello", "sim_state"]
-        assert stopped[0]["mode"] == "stopped"
-        start = client.post("/simulation/start",
-                            json={"speed": 2.0, "predictor": True})
-        assert start.status_code == 200
-        msgs = [ws.receive_json() for _ in range(3)]
-        warning = msgs[0]
-        assert warning["type"] == "event" and warning["level"] == "warning"
-        assert warning["message"].startswith("Predictor unavailable: ")
-        assert "RuntimeError" in warning["message"]  # boom's own reason, verbatim
-        assert _assert_risk_values(msgs) == 0  # no risk keys anywhere
+        assert ws.receive_json()["type"] == "hello"
+        assert _assert_risk_values([ws.receive_json()]) == 0  # empty snapshot
+        r = client.post("/simulation/start", json={"speed": SPEED_MAX, "predictor": True})
+        assert r.status_code == 422
+        assert "predictor" in r.json()["detail"]
+        assert "RuntimeError" in r.json()["detail"]
+        assert client.get("/health").json()["mode"] == "stopped"
+        assert client.post("/simulation/reset").status_code == 200  # still addressable
 
 
 def test_predictor_live_control_use_stays_cut(tmp_path):

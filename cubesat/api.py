@@ -21,6 +21,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ValidationError
@@ -96,6 +97,27 @@ app.add_middleware(
         if host.strip()
     ],
 )
+
+
+def _describe_errors(errors, skip: int = 0) -> str:
+    """pydantic errors -> one plain-English sentence per problem, "<field>: <reason>"
+    (kit section 4 "422 fails loudly"). Never echoes the offending input, URLs or
+    paths -- the default FastAPI body did, and a NaN input crashed its encoder."""
+    parts = []
+    for err in errors:
+        if err["type"] == "json_invalid":
+            parts.append("request body: is not valid JSON")
+            continue
+        field = ".".join(str(x) for x in err["loc"][skip:]) or "request body"
+        parts.append(f"{field}: {err['msg']}")
+    return "; ".join(parts)
+
+
+@app.exception_handler(RequestValidationError)
+async def _loud_422(_request: Request, exc: RequestValidationError) -> JSONResponse:
+    return JSONResponse(
+        status_code=422, content={"detail": _describe_errors(exc.errors(), skip=1)}
+    )
 
 
 @app.middleware("http")
@@ -279,7 +301,9 @@ def scenarios_upload(req: UploadRequest) -> dict:
         # what was validated is what load_scenario will parse at start time.
         Scenario.model_validate_json(serialized)
     except ValidationError as exc:
-        raise HTTPException(status_code=422, detail=f"invalid scenario: {exc}") from None
+        raise HTTPException(
+            status_code=422, detail=f"invalid scenario: {_describe_errors(exc.errors())}"
+        ) from None
     directory.mkdir(parents=True, exist_ok=True)  # only after every check passed
     candidate.write_text(serialized, encoding="utf-8", newline="\n")
     return {"status": "saved", "filename": candidate.name,
