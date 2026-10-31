@@ -513,3 +513,115 @@ Above 1000 km use the 1000 km row; the schema's 2000 km max is far beyond any Cu
 1. Phase 0 and the Phase A audit in parallel.
 2. Then show me: the Phase 0 report, the merged problem map, and the updated plan with the order above.
 3. No code past Phase 0 until I say go.
+
+## 11. FRONTEND AUDIT + v2 CONSOLE SPEC (Track UI — merges V1, V2, L3 and plan Phase 8)
+
+(Verbatim from the user, 2026-10-31, appended after the first save. Load the frontend-design skill before any UI work. The physics plan's Phase 8 ("minimal, no restyle") is replaced by this section.)
+
+### 11.1 Backend data that never reaches the screen (verified in cubesat/wire.py)
+| Backend has | Wire today | Fix |
+|---|---|---|
+| ASSIGNMENT method (hungarian / greedy / do_no_harm_hold), formation (amp, phase), transfer_lower_bound_s | dropped (only cost_total + assignments) | pass through; the UI shows "kept formation (no move)" for a hold, never as a re-plan |
+| Previous role of each sat | not computed | wire derives old_role from the prior frame → ROLE_HANDOFF baton |
+| SUMMARY coverage_mean_last_orbit | replaced by the text "Run complete" | send it as a run_summary message |
+| DEGRADE_START, ORACLE_SWAP, ORACLE_ALERT | the bare type string | plain sentences (round-2 Phase 3 text). ORACLE_* are removed in v2 (Track S) |
+| STATE transitions | "State REPLANNING -> RECONFIGURING" (raw enums) | structured {from, to}; the UI owns the wording |
+| metrics.replanning_latency_ms | always None (wire.py:34) | delete the field and its UI paths |
+| One event per tick | simultaneous events arrive seconds apart | events: [] (L1) |
+
+### 11.2 Backend + planner gaps the UI needs (add to the plan)
+- Chief absolute state per frame: chief: {r_eci, lat, lon, alt} plus epoch_utc in hello. The globe can't show the true orbit without it (V1).
+- Plan payload on ASSIGNMENT (v2): plan_samples, old_slots, new_slots, dv_planned per sat, level, rejected: [{level, why}], certificate {...}. This drives the decision card and the arcs.
+- Mission KPIs in every sim_state: roles_held: {leader: id|null, downlink: id|null}; critical_vacancy_s (running); mission_state; t_since_failure; per-sat fuel_left_mps, fuel_budget_mps, soc, mode.
+- Hello metadata: role specs, budgets, scenario description, engine.
+- Counterfactual shadow (MUST, cheap with EngineV2): the session also steps a do_nothing twin from the same state and sends shadow: {critical_vacancy_s, coverage, roles_held}. The UI shows "Without recovery: leader vacant for 41:20". This is the single most persuasive element on stage.
+- Incidents API: GET /incidents, GET /incidents/{id} (timeline + sources), and a paired replay stream of two logs on one clock.
+- Live real-orbit API: GET /orbits/search?q= (CelesTrak cache, offline snapshot fallback), POST /simulation/start with {norad_id | elements}.
+- Anomaly report: GET /session/report → JSON (and the UI renders a printable page): what failed, detection time, decision + rejected options, Δv, certificate, vacancy, outcome.
+- Contract tests: a golden wire fixture per new message type; the frontend deserializer has a vitest test per type.
+
+### 11.3 AI filler and stale copy found (remove or rewrite; each is a P1 for judges)
+| Where | Text today | Problem → fix |
+|---|---|---|
+| live/*Field tooltips | "(cubesat/scenario.py Formation)", "(spec 7.5)", "(repo invariant 2)", "MASTER_PROMPT 3.4", "the validator allows 0 < dt <= 10" | Internal file paths and spec refs in user copy. Write what the setting does in one plain sentence; no file names |
+| controls/FailureInjectionPanel | "Keeps sending heartbeats but cannot maneuver (reactive heartbeat detector does not replan)" | False (THRUSTER_OUT self-reports and replans). Use "Thrusters fail; the satellite reports it and the swarm replans" |
+| FailureInjectionPanel / FailureRow | "DEAD (triggers autonomous replanning)", "THRUSTER_OUT …", "EPS_DEGRADE (gradual power death)" | Raw enums. Labels "Satellite dies", "Thrusters fail", "Battery fades". Enums only in the data |
+| dashboard tooltip | "Measured P0 benchmark: +4.93 coverage pts … (mean −2.13 pts during transit)" | Stale numbers (current: 0.2698 all pairs). Numbers come only from PITCH_NUMBERS with a source link |
+| pages/DocsPage | "recovery complete at t = 3114 s, worst separation 3095.1 m" | Premature RECOVERED (1,092 m off); one pair presented as general (worst in-flight is 1,852.5 m). Regenerate from artifacts |
+| dashboard/MissionHealthScore + utils/health.ts | "Composite 0-100 score" = 0.5·coverage + 0.3·formation + 0.2·safety | Invented weights; a made-up number on screen. Delete; replace with mission state + critical-role vacancy |
+| utils/suspect.ts + "Telemetry anomaly advisor" | Frontend heuristic: "centroid grew > K× calm jitter" | A detector invented in the UI with arbitrary thresholds. Delete; detection lives in the backend (P4) |
+| live/RiskPanel, "AI early warning (display-only)", "AI-risk option not accepted…" | Predictor panel | Decision D2. Hide now, delete after P4 |
+| controls policy labels | "Even redistribution — benchmark policy, adapted from the RL paper baseline" | Jargon/provenance. A single "Compare with: no recovery · wait for ground station" control instead of a policy picker |
+| layout view toggle | "Formation Array · Local 2:1 Clohessy-Wiltshire relative grid", "Global Orbit · Constellation orbiting Earth in inclined LEO" | Template meta strings. "Earth view" / "Formation view" (and the global view is fake; V1) |
+| recovery/AllocationFan | "Bezier allocation fan mapping surviving satellites to target slots" | Abstract diagram duplicating the scene. Delete; arcs are drawn in the 3D scene (V2) |
+| narration | "Why these moves: the allocator minimizes total burn…" (text generated in the UI) | Explanation belongs to the backend's rejected/level/certificate data; the UI renders facts, not prose it invents |
+| events | "State REPLANNING -> RECONFIGURING" | Plain wording: "Planning recovery", "Moving to new positions", "Recovered in 12:40" |
+
+Copy rules for every string:
+- Sentence case, plain verbs, written from the operator's view.
+- No file paths, spec sections, "invariant", "engine", "allocator" or "Hungarian" in primary UI. Put those in an "Under the hood" drawer.
+- No marketing words.
+- Every number either comes from the live stream or carries a source link to its artifact.
+- Errors say what happened and what to do.
+
+Grep gate in CI: fail on `\.py|spec \d|MASTER_PROMPT|invariant|RL paper` inside frontend/src/components/**/*.tsx string literals.
+
+### 11.4 Duplication and clutter to remove
+- EventLog is mounted in three places (Left, Right, Bottom), RecoveryLog in two, NarrationStrip in two. Keep one of each.
+- Six charts in tabs → three: separation vs the 2 km line, with dead-sat markers; fuel left per sat vs budget; critical-role vacancy + coverage on one time axis. FormationDeviationChart, InterSatDistanceChart and MissionHealthScore go.
+- Docs, FAQ and Tutorial pages → one "How it works" page; its numbers are read from docs/PITCH_NUMBERS.md at build time.
+
+### 11.5 What the console must show (judge test: understood in 10 s from 4 m, no narration)
+```
+┌───────────────────────────────────────────────────────────────┬──────────────────────┐
+│ STATE BANNER: "Recovering · L2 local re-seat · 03:12 since failure" (gold when recovered) │
+├───────────────────────────────────────────────┬───────────────────────────────────────┤
+│                                               │ Mission-critical roles                │
+│   3D: Earth view ⇄ Formation lens             │  Leader    SAT-3  held (stacked)      │
+│   ghost old slots · planned arcs · batons     │  Downlink  SAT-5  held                │
+│   dead-sat drift cone · 2 km keep-out rings   │  Vacancy   0:04   vs 41:20 without    │
+│                                               │            recovery (shadow run)      │
+│                                               ├───────────────────────────────────────┤
+│                                               │ Decision                              │
+│                                               │  L2 local re-seat (chosen)            │
+│                                               │  L1 role swap: rejected — no imager    │
+│                                               │  Certificate ✓ min sep 2.9 km         │
+│                                               │   fuel margin 6.1 m/s · roles ok      │
+│                                               ├───────────────────────────────────────┤
+│                                               │ Fuel left per sat  ▮▮▮▮▯  (budget)    │
+├───────────────────────────────────────────────┴───────────────────────────────────────┤
+│ Timeline: ● failed 1200 s ─ ● detected 1204 s ─ ● plan 1206 s ─ ● recovered 1980 s  [inject] │
+└──────────────────────────────────────────────────────────────────────────────────────┘
+```
+(The numbers in the wireframe are placeholders for layout only. Real values come from the stream.)
+
+Ordered must-haves: 1. State banner. 2. Critical roles with VACANT state + vacancy timer + shadow comparison. 3. Decision card with ladder level, rejected options and certificate. 4. In-scene recovery visuals (V2). 5. Fuel bars. 6. Event timeline with click-to-seek. 7. Inject panel (plain labels, three modes + v2 modes). 8. Report export.
+
+Presentation view: the same, with type sized for a projector (state banner ≥ 40 px, KPI numerals ≥ 32 px), director mode on.
+
+### 11.6 Design direction (frontend-design skill applied)
+Subject: a flight-ops console for a self-healing swarm. Audience: hackathon judges at projector distance first, engineers second. Job: make failure → decision → repair unmistakable.
+
+One bold move: kintsugi gold means "repaired", nowhere else. Use --hero-gold: the formation links of a recovered formation render as gold seams; role batons travel in gold; the "Recovered" state banner turns gold. Today "recovered" uses --status-info blue. Change it, so the console and the landing tell one story.
+
+Everything else stays quiet: graphite surfaces, red only for failed, amber only for degraded/in-transit, green only for healthy. Avoid making the console a near-black + one acid accent template: keep the existing token set and spend the boldness on gold only.
+
+Type: keep IBM Plex Sans for UI text; restrict IBM Plex Mono to numerals and sat IDs (59 mono uses today; most are labels → Sans); no all-caps labels, no ·-joined meta strings (12 today), no "WORD — fragment" labels.
+
+Motion: one orchestrated moment only — the recovery sequence (freeze → arcs draw → batons fly → seams turn gold). No idle animations on panels; honour reduced motion.
+
+Quality floor: 1280×720 projector check, keyboard focus visible, colour never the only signal (icons + words for state), no hex outside tokens.css.
+
+### 11.7 Order inside Track UI
+1. Copy + duplication cleanup (11.3, 11.4), as part of Track S, with no backend change.
+2. Wire pass-through fixes (11.1).
+3. V1 Formation lens + true globe (needs chief state, 11.2-1).
+4. State banner + critical-roles card + vacancy timer (needs 11.2-3; the shadow run 11.2-5 after L1).
+5. Decision card + V2 in-scene visuals (needs the plan payload, 11.2-2, after 5c/5d).
+6. Fuel bars (after 2.1).
+7. Timeline click-to-seek.
+8. Incidents UI.
+9. Live real-orbit picker.
+10. Report page.
+11. L3 performance pass.
+12. VISUAL-QA at 1920×1080 and 1280×720 after every step, with screenshots in the report.
