@@ -477,3 +477,29 @@ Branch `perf`, audit finding F3 (`docs/audit/2026-11-01-perf.md`). Files: `cubes
 - **Contradicts the story (reported, not tuned):** (1) decentral vacancy after a function holder's death on the ring is **40 s**, ten times the central leader's **4.0 s** ((K-1) dt, Phase 5a fix round), because a sequential six-task max-consensus over a 5-sat path costs 20 rounds and each round is charged one 2 s tick. The vacancy scales with the per-hop latency assumption (laser hops are ms in reality), so the ranking is an artefact of that assumption, not a measured result; C5 must report it per cell. (2) The load-penalised auction reshuffles 5 functions among live sats for one death (8 handoffs), not 1. (3) Star + decentral trades vacancy for split-brain (0 s vs 46 s).
 - Review: fresh adversarial reviewer on the diff, 0 Critical, 2 Important (star + decentral with the leader label off sat 0 gave a false partition and false isolation at t = 2 s: fixed, hub ignores roles under decentral; an empty `holders` restore crashed the next tick: fixed, strict load), 3 Minor (coercing load, unsorted `from` / `to`: fixed; docs: fixed; `benchmark.metrics_from_log` would report 100 % critical vacancy on a decentral log because it looks for a `leader` role: not changed (benchmark.py is not this track's file), flagged for C5).
 - Gates: `uv run ruff check .` → All checks passed!; `uv run python -m pytest -p no:cacheprovider` (fast + slow) → **951 passed, 2 skipped**, exit 0 (5 min 46 s, on accc561). Files: sim_v2.py 305, scenario_models.py 305 (budget 310), decentral.py 223, comms_v2.py 204 lines. Not claimed: bits delivered, flight consensus latency, any central-vs-decentral ranking (C5).
+
+**2026-11-01 — Track C4 follow-up (leader-kill scenario pair, per-sat ground-pass bids; branch `comms` on origin/backend f0a393e).**
+- **Scenarios** (both illustrative, engine v2, nominal geometry, 1 orbit 5676 s, sat 0 DEAD at 1200 s): `data/scenarios/decentral_leader_kill_6sat.json` (laser mesh, `recovery.authority` decentral; sat 0 is the would-be leader and holds failure_detection) and `data/scenarios/central_star_leader_kill_6sat.json` (laser star, central). Pinned in `tests/test_scenario_zoo.py` with `canonical_log_hash` regression pins taken from this tree (`471d8e6b…7af5`, `6d502203…f395`). No JSONL logs are committed: the zoo commits pins, not logs.
+- **ground_relay bid:**
+  - `ground.wait_to_next_pass` CAN differ per sat. With phase offsets of 0 vs 22 km / a (3.2e-3 rad = 2.89 s of orbit), it differed at **29 of 144** instants (every 600 s over one day) by up to **10 s**, one ground.py grid step. Command: `ground.wait_to_next_pass(t, 0, 0)` vs `(t, 0, 0.0032)`.
+  - So the bid now uses ground.py's next-pass wait at `t + y_i / v_orbit` (one cached window set; each sat's LVLH along-track offset y_i; scenario RAAN; ground.py's own model orbit: assumption).
+  - C4 numbers moved. Mesh sat-0 kill at 100 s: vacancy **40 → 38 s** (19 rounds); star unchanged (0 s vacancy, 46 s split-brain, 12 handoffs).
+- **Decentral scenario, measured:**
+  - failure_detection is vacant **1200–1234 s (36 s; the auction lands at 1236 s after 18 rounds, one hop per tick: assumption)**, with no split-brain before 1352 s. Only sat 0 is declared (1204 s).
+  - Then the sun splits the ring at 1352 s and 4190 s. Split-brain totals **346 s**: all six functions, from the auction landing 18 s after each split until the re-merge auction lands. Function vacancy totals **36 s**.
+- **Central-star scenario, measured:**
+  - PARTITION into 5 singletons at 1200 s; every healthy leaf is declared `isolated` at **1204 s**; the leader moves to sat 1 at 1204 s; the star re-forms at **1234 s** (17 partitioned ticks).
+  - The sun isolates sat 2 at 1352 s and 4190 s, and it is declared again each time. Partitioned **354 s** of the orbit.
+- **Measurement method:** both scenario sets of numbers come from `uv run python -m pytest -p no:cacheprovider tests/test_scenario_zoo.py tests/v2/test_decentral_v2.py` (asserted there). The totals (346, 354 s) come from summing `functions_vacant` / `split_brain` / multi-component ticks × 2 s over `run_scenario_v2(load_scenario(<file>))`.
+- **Tests renamed for clarity:**
+  - `test_ring_leader_kill_no_vacancy_after_consensus_rounds_and_no_split_brain`;
+  - `test_star_leader_kill_every_function_split_brain_until_the_replan_then_resolved`, now asserting one unbroken 23-tick window of all six functions;
+  - `test_a_radio_dead_sat_never_holds_a_function`;
+  - `test_decentral_run_is_byte_identical_twice`;
+  - `test_snapshot_restore_mid_auction_replays_identically`;
+  - new `test_defaults_off_leave_the_v2_log_byte_identical`.
+- **Docs:** the one-hop-per-tick assumption is stated in `decentral.FunctionState`'s docstring and in `docs/PHYSICS_V2.md` § Track C.
+- **Gates:**
+  - `uv run ruff check .` → All checks passed!
+  - `uv run python -m pytest -p no:cacheprovider` (fast + slow) → **991 passed, 2 skipped**, exit 0 (9 min 59 s, on ca10098).
+  - The full-log sha256 probe of 5 scenarios (v1 + v2, no track-C keys) is identical to the pre-C2 baseline.
