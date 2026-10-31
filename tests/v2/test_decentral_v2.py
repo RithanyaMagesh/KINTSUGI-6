@@ -60,7 +60,9 @@ def test_connected_mesh_holds_every_function_once_and_no_leader_role():
     assert max(len(s["functions"]) for s in lines[0]["sats"]) <= 2  # load is spread
 
 
-def test_ring_kill_of_a_function_holder_is_vacant_for_the_consensus_rounds_only():
+def test_ring_leader_kill_no_vacancy_after_consensus_rounds_and_no_split_brain():
+    """Ring (mesh) leader kill: the dead holder's functions are vacant from the death tick for
+    exactly consensus_rounds ticks (one hop per tick: assumption), never after; no split-brain."""
     probe = _ticks(run_scenario_v2(_scn(duration_s=4.0)))[0]
     victim = max(probe["sats"], key=lambda s: (len(s["functions"]), -s["id"]))["id"]
     lines = _ticks(run_scenario_v2(_scn([{"t": 100.0, "sat_id": victim, "mode": "DEAD"}])))
@@ -79,14 +81,16 @@ def test_ring_kill_of_a_function_holder_is_vacant_for_the_consensus_rounds_only(
             assert x["sats"][victim]["functions"] == []
 
 
-def test_star_hub_death_is_split_brain_until_the_star_reforms():
+def test_star_leader_kill_every_function_split_brain_until_the_replan_then_resolved():
+    """Star hub kill: from the death tick every function is split-brain (each singleton elects
+    itself at once, 0 rounds) without a gap, until the star re-forms and the auction lands;
+    then resolved for the rest of the run."""
     lines = _ticks(run_scenario_v2(_scn([{"t": 100.0, "sat_id": 0, "mode": "DEAD"}], "star")))
-    at = {x["t"]: x for x in lines}
-    assert at[98.0]["split_brain"] == []
     brain = [x["t"] for x in lines if x["split_brain"]]
-    assert brain[0] == 100.0 and set(at[100.0]["split_brain"]) == set(
-        LEADER_FUNCTIONS)
-    assert lines[-1]["split_brain"] == []  # singletons elect themselves at once (0 rounds)
+    assert brain == [100.0 + 2.0 * k for k in range(len(brain))]  # one unbroken window
+    assert len(brain) == 23  # 100 -> 144 s; resolved from 146 s
+    assert all(x["split_brain"] == list(LEADER_FUNCTIONS) for x in lines if x["t"] in brain)
+    assert all(x["functions_vacant"] == [] for x in lines)
     assert lines[-1]["components"] == [[1, 2, 3, 4, 5]]
 
 
@@ -98,7 +102,7 @@ def test_a_radio_dead_sat_never_holds_a_function():
 
 
 # --- engine contract ---
-def test_decentral_run_is_deterministic():
+def test_decentral_run_is_byte_identical_twice():
     s = _scn([{"t": 100.0, "sat_id": 0, "mode": "DEAD"}])
     assert _dump(run_scenario_v2(s)) == _dump(run_scenario_v2(s))
 
@@ -112,7 +116,7 @@ def test_inject_mid_run_equals_a_fresh_run_with_that_injection():
     assert _dump(out) == _dump(list(EngineV2(s, injections=live.injections).run()))
 
 
-def test_snapshot_with_a_pending_auction_replays_identically():
+def test_snapshot_restore_mid_auction_replays_identically():
     s = _scn([{"t": 100.0, "sat_id": 0, "mode": "DEAD"}])
     a = EngineV2(s)
     for _ in range(51):  # t = 100 s: the auction after the death is still converging
@@ -163,7 +167,7 @@ def test_restore_rejects_malformed_function_state(patch):
 
 def test_measured_vacancy_and_split_brain_seconds_for_a_sat0_kill():
     """GATES.md C4 numbers (a count of 2 s ticks, one consensus hop per tick: assumption).
-    Mesh: 40 s with failure_detection vacant (20 rounds on the broken ring), no split-brain.
+    Mesh: 38 s with failure_detection vacant (19 rounds on the broken ring), no split-brain.
     Star: no vacancy (each singleton elects itself), 46 s with all six functions split-brain
     until the star re-forms around sat 1 and the auction lands."""
     out = {}
@@ -172,4 +176,16 @@ def test_measured_vacancy_and_split_brain_seconds_for_a_sat0_kill():
         vac = sum(bool(x["functions_vacant"]) for x in lines) * 2.0
         brain = sum(bool(x["split_brain"]) for x in lines) * 2.0
         out[topo] = (vac, brain, len(_events(lines, "FUNCTION_HANDOFF")))
-    assert out == {"mesh": (40.0, 0.0, 8), "star": (0.0, 46.0, 12)}
+    assert out == {"mesh": (38.0, 0.0, 8), "star": (0.0, 46.0, 12)}
+
+
+def test_defaults_off_leave_the_v2_log_byte_identical():
+    """No comms / recovery keys = comms ideal = recovery central (no laser): the same bytes.
+    The golden pins (tests/test_cli.py, test_failure_modes.py, test_policy_selection.py,
+    tests/v2 hash tests) cover the committed scenarios themselves."""
+    d = {**NOMINAL, "engine": "v2", "duration_s": 300.0, "sensor": SENSOR,
+         "failures": [{"t": 100.0, "sat_id": 0, "mode": "DEAD"}]}
+    base = _dump(run_scenario_v2(Scenario.model_validate(d)))
+    for extra in ({"comms": {"model": "ideal"}}, {"recovery": {"authority": "central"}},
+                  {"comms": {"model": "ideal"}, "recovery": {"authority": "central"}}):
+        assert _dump(run_scenario_v2(Scenario.model_validate({**d, **extra}))) == base
