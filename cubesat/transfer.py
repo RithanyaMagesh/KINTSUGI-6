@@ -98,13 +98,12 @@ def lp_transfer(
     x_target = np.asarray(x_target, dtype=float)
     times = np.linspace(0.0, T, N)
     cap = k * a_max * (T / N) / math.sqrt(3.0)
-    # Velocity columns of the STM (all 6 rows); position rows scaled by n so every row is O(1)
-    # (m * n ~ m/s): without it HiGHS' 1e-7 feasibility tolerance leaves ~1e-4 m residuals.
-    scale = np.array([n, n, n, 1.0, 1.0, 1.0])[:, None]
-    blocks = [stm(T - t, n)[:, 3:] for t in times]
-    G = np.hstack(blocks)  # (6, 3N): state at T per unit dv
-    A_eq = np.hstack([G, -G]) * scale
-    b_eq = (x_target - stm(T, n) @ x0) * scale[:, 0]
+    # Velocity columns of the STM (all 6 rows). Row scaling (position rows * n) was measured
+    # to change the landing residual by nothing (60 random cases, ~1e-9 m either way): HiGHS
+    # scales internally, so none is applied.
+    G = np.hstack([stm(T - t, n)[:, 3:] for t in times])  # (6, 3N): state at T per unit dv
+    A_eq = np.hstack([G, -G])
+    b_eq = x_target - stm(T, n) @ x0
     c = np.ones(6 * N)
 
     samples = []  # (t_j, rows (3, 3N) giving rho(t_j) - free, free rho(t_j), rho_o, d_safe)
@@ -148,3 +147,56 @@ def lp_transfer(
         x_prev = x
     return None
 
+
+def best_transfer(
+    x0,
+    x_target_fn,
+    n: float,
+    a_max: float,
+    k: float,
+    N: int = 48,
+    orbits=(0.5, 1, 2),
+    keepout=None,
+    cancel_event: threading.Event | None = None,
+) -> Transfer | None:
+    """Sweep T over `orbits` periods; return the feasible plan with the least total delta-v
+    (ties: smaller T), or None. x_target_fn(T) is the target state T seconds after the plan
+    start. cancel_event is checked before each solve; a set event raises TransferCancelled and
+    discards everything computed so far (checked inside every lp_transfer call)."""
+    best = None
+    for o in sorted(orbits):  # lp_transfer checks cancel_event first, before any solve
+        T = float(o) * 2.0 * math.pi / n
+        tr = lp_transfer(x0, x_target_fn(T), T, n, a_max, k, N, keepout, cancel_event)
+        if tr is not None and (best is None or tr.total_dv_mps < best.total_dv_mps - 1e-9):
+            best = tr
+    return best
+
+
+def mpc_due(tick: int, M: int = MPC_M) -> bool:
+    """True on the ticks where the receding-horizon planner re-solves (every M ticks)."""
+    return tick % M == 0
+
+
+def mpc_step(
+    x_meas,
+    x_target_fn,
+    t_elapsed: float,
+    T_total: float,
+    n: float,
+    a_max: float,
+    k: float,
+    N: int = 48,
+    keepout=None,
+    cancel_event: threading.Event | None = None,
+) -> Transfer | None:
+    """Re-solve from the measured state x_meas at t_elapsed s into a T_total s plan, on the
+    remaining horizon T_total - t_elapsed, to the same target x_target_fn(T_total). Returned
+    node times are relative to NOW. Keep-out sample times (plan-start based) are shifted.
+    The terminal hold is the caller's (PD); None when no horizon is left or infeasible."""
+    rem = float(T_total) - float(t_elapsed)
+    if rem <= 0.0:
+        return None
+    shifted = [(np.asarray(ts, float) - t_elapsed, pos, d) for ts, pos, d in keepout or []]
+    return lp_transfer(
+        x_meas, x_target_fn(T_total), rem, n, a_max, k, N, shifted or None, cancel_event
+    )

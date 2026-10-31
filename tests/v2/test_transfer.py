@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+import threading
 
 import numpy as np
 import pytest
@@ -11,7 +12,11 @@ from cubesat.dv_bound import two_impulse_dv
 from cubesat.hcw import mean_motion, propagate, slot_initial_state, stm
 from cubesat.transfer import (
     Transfer,
+    TransferCancelled,
+    best_transfer,
     lp_transfer,
+    mpc_due,
+    mpc_step,
     propagate_plan,
 )
 
@@ -137,3 +142,84 @@ def test_keepout_obstacle_on_target_is_infeasible():
     ko = [(ts, target(T_S)[None, :3], 500.0)]
     assert plan(keepout=ko) is None
 
+
+# ---- 5c.2: best_transfer + mpc_step -------------------------------------------------
+def _best(a_max=A_BIG, **kw):
+    return best_transfer(SLOT0, target, N_MM, a_max, 1.0, N=24, **kw)
+
+
+def test_best_transfer_picks_least_dv_feasible_T():
+    best = _best()
+    assert best is not None
+    per_T = [lp_transfer(SLOT0, target(o * PERIOD), o * PERIOD, N_MM, A_BIG, 1.0, 24)
+             for o in (0.5, 1.0, 2.0)]
+    feas = [t for t in per_T if t is not None]
+    assert len(feas) == 3 and len({t.total_dv_mps for t in feas}) == 3
+    assert best.total_dv_mps == min(t.total_dv_mps for t in feas)
+    assert best.T_s == min(feas, key=lambda t: t.total_dv_mps).T_s
+
+
+def test_best_transfer_tie_prefers_smaller_T():
+    # target already on the free trajectory: every T needs zero dv -> shortest T wins
+    free = lambda T: propagate(SLOT0, T, N_MM)  # noqa: E731
+    best = best_transfer(SLOT0, free, N_MM, A_BIG, 1.0, N=12)
+    assert best is not None and best.total_dv_mps == pytest.approx(0.0, abs=1e-9)
+    assert best.T_s == pytest.approx(0.5 * PERIOD)
+
+
+def test_best_transfer_falls_back_to_longer_T_at_low_a_max():
+    # a_max low enough that 0.5 orbit is infeasible but 2 orbits is
+    lo, hi = 1e-4, A_BIG
+    for _ in range(40):  # smallest a_max for which T=0.5 orbit is feasible
+        mid = math.sqrt(lo * hi)
+        ok = lp_transfer(SLOT0, target(0.5 * PERIOD), 0.5 * PERIOD, N_MM, mid, 1.0, 24)
+        lo, hi = (lo, mid) if ok else (mid, hi)
+    a_max = 0.8 * hi  # just below the 0.5-orbit threshold
+    assert lp_transfer(SLOT0, target(0.5 * PERIOD), 0.5 * PERIOD, N_MM, a_max, 1.0, 24) is None
+    best = _best(a_max=a_max)
+    assert best is not None and best.T_s > 0.5 * PERIOD
+    assert best_transfer(SLOT0, target, N_MM, 1e-9, 1.0, N=24) is None
+
+
+def test_cancel_mid_sweep_raises_without_partial_result():
+    ev, calls = threading.Event(), []
+
+    def fn(T):
+        calls.append(T)
+        if len(calls) == 2:
+            ev.set()  # set while the sweep is running
+        return target(T)
+
+    with pytest.raises(TransferCancelled):
+        best_transfer(SLOT0, fn, N_MM, A_BIG, 1.0, N=24, cancel_event=ev)
+    assert len(calls) == 2  # stopped before the third T
+
+
+def test_cancel_before_lp_raises():
+    ev = threading.Event()
+    ev.set()
+    with pytest.raises(TransferCancelled):
+        plan(cancel_event=ev)
+
+
+def test_mpc_due_every_60_ticks():
+    assert [mpc_due(t) for t in (0, 59, 60, 120)] == [True, False, True, True]
+
+
+def test_mpc_step_recovers_from_perturbation():
+    T, dt, ticks = PERIOD, 2.0, 60
+    first = lp_transfer(SLOT0, target(T), T, N_MM, 0.01, 1.0, 48)
+    assert first is not None
+    t_e = ticks * dt
+    rng = np.random.default_rng(7)
+    x = propagate_plan(SLOT0, first, N_MM, t_e)
+    x_meas = x + np.concatenate([rng.normal(0, 5.0, 3), rng.normal(0, 0.01, 3)])
+    # left alone the perturbation misses the target by metres
+    miss = propagate_plan(x_meas, Transfer(first.dv[:0], first.times[:0], 0.0, T - t_e, 1), N_MM)
+    assert np.linalg.norm(miss[:3] - target(T)[:3]) > 1.0
+    fix = mpc_step(x_meas, target, t_e, T, N_MM, 0.01, 1.0, 48)
+    assert fix is not None and fix.T_s == pytest.approx(T - t_e)
+    xf = propagate_plan(x_meas, fix, N_MM)
+    assert np.linalg.norm(xf[:3] - target(T)[:3]) < 1e-3
+    assert mpc_step(x_meas, target, T + 1.0, T, N_MM, 0.01, 1.0, 48) is None  # no horizon left
+    assert mpc_step(x_meas, target, t_e, T, N_MM, 0.01, 0.0, 48) is None  # zero fuel
