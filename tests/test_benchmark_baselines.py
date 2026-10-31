@@ -11,10 +11,15 @@ import pytest
 
 import cubesat.allocate as allocate
 import cubesat.sim as sim_module
+from cubesat import ground
 from cubesat.benchmark import (
+    _scenario_for_policy,
+    _write_log,
     enumerate_pairs,
+    metrics_from_log,
     run_one,
     scenario_for_pair,
+    wait_for_ground_plan,
 )
 from cubesat.benchmark_policies import role_swap_only_replan
 from cubesat.canon import canonical_log_hash
@@ -130,3 +135,52 @@ def test_role_swap_only_nothing_lost_changes_nothing(base):
     roles = ["leader", "imager", "imager", "downlink"]
     plan, *_ = role_swap_only_replan(**_replan_kwargs(base, roles))
     assert plan.seat_roles == roles
+
+
+# --- wait_for_ground ---------------------------------------------------------
+
+ORBIT_S = 2 * math.pi / mean_motion(500_000.0)
+
+
+def test_wait_for_ground_delay_from_ground_model(base):
+    sc = scenario_for_pair(base, (1, 2), TIMES)
+    out = _scenario_for_policy(sc, "wait_for_ground")
+    delay = ground.wait_to_next_pass(1200.0)
+    assert out.recovery_delay_s == pytest.approx(delay)
+    assert out.recovery_enabled is True
+    assert out.duration_s >= 1200.0 + delay + 3 * ORBIT_S - 2.0
+    assert round(out.duration_s / out.dt_s) + 1 <= 100_000
+    assert wait_for_ground_plan(sc)["truncated"] is False
+
+
+def test_wait_for_ground_truncation_is_capped_and_flagged(base, monkeypatch):
+    monkeypatch.setattr(ground, "wait_to_next_pass", lambda *a, **k: 80_000.0)
+    sc = scenario_for_pair(base, (1, 2), TIMES)
+    plan = wait_for_ground_plan(sc)
+    assert plan["truncated"] is True
+    assert round(plan["duration_s"] / sc.dt_s) + 1 <= 100_000
+    assert plan["duration_s"] <= 86_400.0
+    assert _scenario_for_policy(sc, "wait_for_ground").duration_s == plan["duration_s"]
+
+
+def test_wait_for_ground_holds_in_failure_detected_until_delay(base):
+    sc = scenario_for_pair(base, (0, 5), TIMES)
+    lines = run_one(sc, "wait_for_ground")
+    ticks = [ln for ln in lines if ln["state"] not in ("INIT", "SUMMARY")]
+    delay = ground.wait_to_next_pass(1200.0)
+    t_detect = next(t["t"] for t in ticks if t["state"] == "FAILURE_DETECTED")
+    t_replan = next(t["t"] for t in ticks if t["state"] == "REPLANNING")
+    assert t_replan >= t_detect + delay - 1e-9
+    held = [t["state"] for t in ticks if t_detect <= t["t"] < t_detect + delay - 1e-9]
+    assert held and set(held) == {"FAILURE_DETECTED"}
+
+
+def test_wait_for_ground_vacancy_at_least_delay(base, tmp_path):
+    sc = scenario_for_pair(base, (0, 5), TIMES)  # leader AND downlink die
+    out = _scenario_for_policy(sc, "wait_for_ground")
+    path = tmp_path / "wfg.jsonl"
+    _write_log(run_one(sc, "wait_for_ground"), path)
+    m = metrics_from_log(path, first_failure_t=1200.0, dead_ids=[0, 5], duration_s=out.duration_s)
+    delay = ground.wait_to_next_pass(1200.0)
+    assert m["critical_roles_held_end"] is True
+    assert m["critical_vacancy_s"] >= delay

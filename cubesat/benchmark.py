@@ -33,12 +33,14 @@ import sys
 from pathlib import Path
 
 import cubesat.sim as sim_module
+from cubesat import ground
 from cubesat.benchmark_policies import (
     even_split_replan,
     hungarian_keepout_replan,
     role_swap_only_replan,
 )
-from cubesat.scenario import Failure, FailureMode, Scenario
+from cubesat.hcw import mean_motion
+from cubesat.scenario import MAX_DURATION_S, MAX_TICKS, Failure, FailureMode, Scenario
 
 POLICY_ORDER = ("do_nothing", "even_split", "greedy", "hungarian", "hungarian_keepout")
 # Pre-registered baselines (GATES.md 2026-10-31). Kept OUT of POLICY_ORDER so the
@@ -68,7 +70,31 @@ def scenario_for_pair(
     return base.model_copy(update={"name": f"bench_pair_{pair[0]}-{pair[1]}", "failures": failures})
 
 
+def wait_for_ground_plan(scenario: Scenario) -> dict:
+    """`wait_for_ground` timing (GATES.md 2026-10-31 pre-registration): recovery is
+    held for the ground-model wait from the first failure instant (default pass
+    start RAAN 0 / phase 0; sim.py counts the delay from detection, i.e. ~4 s
+    after the failure -- a documented offset), and the run is extended to
+    first_failure_t + delay + 3 orbit periods, capped at MAX_TICKS ticks and
+    MAX_DURATION_S (then `truncated` is True and the caller must flag the row)."""
+    first_failure_t = min(f.t for f in scenario.failures)
+    delay = ground.wait_to_next_pass(first_failure_t)
+    period = 2.0 * math.pi / mean_motion(scenario.chief.altitude_km * 1000.0)
+    wanted = first_failure_t + delay + 3.0 * period
+    cap = min(MAX_DURATION_S, (MAX_TICKS - 1) * scenario.dt_s)
+    return {
+        "recovery_delay_s": delay,
+        "duration_s": min(wanted, cap),
+        "truncated": wanted > cap,
+    }
+
+
 def _scenario_for_policy(scenario: Scenario, policy: str) -> Scenario:
+    if policy == "wait_for_ground":
+        plan = wait_for_ground_plan(scenario)
+        return scenario.model_copy(
+            update={"recovery_delay_s": plan["recovery_delay_s"], "duration_s": plan["duration_s"]}
+        )
     if policy == "do_nothing":
         # Existing no-recovery baseline knob (scenario.py recovery_enabled).
         return scenario.model_copy(update={"recovery_enabled": False})
@@ -181,6 +207,7 @@ def run_benchmark(
         pair_scenario = scenario_for_pair(base, pair, failure_times)
         dead_ids = list(pair)
         for policy in policies:
+            policy_scenario = _scenario_for_policy(pair_scenario, policy)
             lines = run_one(pair_scenario, policy)
             filename = f"pair_{pair[0]}-{pair[1]}__{policy}.jsonl"
             log_path = out_dir / filename
@@ -197,9 +224,13 @@ def run_benchmark(
                     log_path,
                     first_failure_t=first_failure_t,
                     dead_ids=dead_ids,
-                    duration_s=pair_scenario.duration_s,
+                    duration_s=policy_scenario.duration_s,
                 ),
             }
+            if policy == "wait_for_ground":
+                wfg = wait_for_ground_plan(pair_scenario)
+                row["recovery_delay_s"] = wfg["recovery_delay_s"]
+                row["truncated"] = wfg["truncated"]
             if policy == "do_nothing":
                 do_nothing_coverage[pair] = row["coverage_mean_last_orbit"]
             rows.append(row)
