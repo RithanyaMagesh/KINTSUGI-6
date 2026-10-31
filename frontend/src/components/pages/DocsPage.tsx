@@ -89,12 +89,13 @@ z'' + n²z          = az`}</pre>
         </p>
         <p className={styles.p}>
           Stated plainly, the two known limitations: the CW linearization error grows with
-          separation — measured at 3.1 m over 3 orbits for a 1 km ellipse but 2984.5 m at the
-          11 km formation scale — and the engine limit is mission-shaping. The committed demo
+          separation — measured at 3.1 m over 3 orbits for a 1 km ellipse and 1578.5 m at the
+          8 km demo scale — and the engine limit is mission-shaping. The committed demo
           scenario carries <span className={styles.lit}>a_max</span> = 0.1 m/s² because the
-          measured default 0.01 m/s² cannot complete the 8 km-scale transfers at all (CW
-          dynamics cap what a saturated controller can chase); the resulting delta-v bill, up
-          to 193.68 m/s per satellite, is shown as measured rather than tuned away.
+          default 0.01 m/s² diverged on the 8 km-scale transfers in the 2026-09-28 sweep (not
+          re-run since); the resulting delta-v bill, 193.68 m/s on the busiest satellite in
+          the two-failure run and 251.24 m/s worst over all 15 pairs, is shown as measured
+          rather than tuned away.
         </p>
         <p className={`${styles.p} ${styles.muted}`}>
           Verification behind these numbers: state-transition matrix vs numerical
@@ -149,7 +150,8 @@ z'' + n²z          = az`}</pre>
         <p className={styles.p}>
           Four benchmark policies exist for comparison — the measurement benchmark runs all 15
           possible two-failure pairs of the 6-satellite formation against each of them and
-          the shipped Hungarian policy, 75 runs in all:
+          the shipped policy; the committed sweep compares four of them, 60 runs in all
+          (the keep-out variant is measured separately and was cut):
         </p>
         <div className={styles.dl}>
           <div className={styles.dlRow}>
@@ -183,11 +185,14 @@ z'' + n²z          = az`}</pre>
           </div>
         </div>
         <p className={styles.p}>
-          What the comparison showed on the committed demo scenario (seed 42): no-recovery
-          coverage drops 15.91 points after the two failures; recovery ends +4.93 points above
-          the no-recovery baseline, with detection latency 4 s, recovery complete at
-          t = 3114 s, worst separation 3095.1 m (threshold 2000 m), and delta-v up to 193.68
-          m/s on the hardest-working satellite.
+          On the committed two-failure demo (the SAT-2/SAT-3 pair, the best of the 15 pairs):
+          no-recovery coverage drops 15.91 points; recovery ends +4.93 points above it, and
+          recovery completes at t = 3114 s. Across all 15 pairs the mean is −2.13 points
+          (per-pair range −10.14 to +4.93): the policy protects the critical roles, not
+          coverage. Detection takes 4 s by construction (3 missed heartbeats at 2 s ticks).
+          Closest approach was 3095.1 m in this pair; the worst survivor-to-dead clearance
+          over all 15 pairs is 1852.5 m, under the 2000 m planning floor, which applies to
+          destination slots, not transfers.
         </p>
       </section>
 
@@ -205,9 +210,9 @@ z'' + n²z          = az`}</pre>
         <p className={styles.p}>
           Offline, on the held-out test runs, the model detects every slow-failure precursor
           and flags them earlier than the EWMA/CUSUM baselines — a paired median lead gain of
-          260.0 s, 31 of 31 paired events earlier (sign-test p ≈ 9.3e-10) — but the caveats
-          are part of the result: it does not generalize to unseen failure families (family
-          holdout 0/15), and sudden death is unpredictable by construction (1 of 16 events; a
+          260.0 s over EWMA (a gain over the baseline, not its own lead time), 31 of 31 paired
+          events earlier (sign-test p ≈ 9.3e-10), at 0.48 false alarms per satellite-orbit.
+          Generalization to unseen failure families is unmeasured, and sudden death is unpredictable by construction (1 of 16 events; a
           satellite that dies without warning has no precursor — the reactive 4 s detection is
           the safety net).
         </p>
@@ -215,11 +220,11 @@ z'' + n²z          = az`}</pre>
           It is not wired into the swarm. Before any integration, a pre-registered kill switch
           ran an oracle sweep — an idealized trigger that knows each failure time exactly,
           sweeping warning lead times — asking whether warning is worth anything to the
-          mission. Even a perfect warning improved the mission score the test used (how well
-          the critical roles stay covered) by at most 0.0235 percentage points, far below the
-          0.5-point bar set before the test, so the verdict was CUT: the demo
-          ships reactive-only, plus the measured value-of-warning curve. The Suspect
-          annotation in the satellite detail is a rule-based drift detector, not this model.
+          mission. On the Gate-2 sweep (sudden deaths) even a perfect warning added at most
+          0.0235 percentage points, so that verdict was CUT. The later gradual-power-fade
+          sweep came out CLEAR (+1.80 points at 300 s of warning, +10.60 best). Whether to wire
+          warnings into the control loop is still an open decision, so the demo stays
+          reactive and the model is display-only.
         </p>
       </section>
 
@@ -248,22 +253,22 @@ z'' + n²z          = az`}</pre>
           <div className={styles.dlRow}>
             <span className={styles.dt}>4 s detection</span>
             <p className={styles.dd}>
-              Measured on the recorded two-failure demo run (seed 42): each failure is flagged
-              4 seconds after it happens, once three heartbeats in a row are missed.
+              Three missed heartbeats at 2 s ticks with ideal comms, so 4 s by construction
+              for a kill-type failure, not a measured detector latency.
             </p>
           </div>
           <div className={styles.dlRow}>
-            <span className={styles.dt}>27.0% vs 22.1%</span>
+            <span className={styles.dt}>15 / 15 pairs</span>
             <p className={styles.dd}>
-              Mean ground coverage over the last orbit of that same run with recovery (0.2698)
-              versus the identical run with recovery switched off (0.2205), a 4.93-point gain.
+              Across all 15 two-failure pairs of the 6-satellite formation, the shipped policy
+              keeps both the leader and the downlink role held in every pair; with no
+              recovery that happens in 6 of 15.
             </p>
           </div>
           <div className={styles.dlRow}>
-            <span className={styles.dt}>75 runs</span>
+            <span className={styles.dt}>60 runs</span>
             <p className={styles.dd}>
-              The benchmark: all 15 two-failure pairs of the 6-satellite formation, each run
-              under the 5 recovery policies above.
+              The benchmark: 15 failure pairs, each run under 4 policies, no-recovery included.
             </p>
           </div>
           <div className={styles.dlRow}>

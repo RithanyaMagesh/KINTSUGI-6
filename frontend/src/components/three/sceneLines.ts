@@ -1,5 +1,5 @@
 // Formation pair lines — §7.2 formation lines + §7.3 failure coloring.
-// Supports up to MAX_SATS = 50 (the backend schema ceiling in cubesat/scenario.py)
+// Buffers sized for up to 50 satellites (backend cap is 32)
 // so large swarms never silently truncate formation links.
 import * as THREE from "three";
 import type { Satellite } from "../../types/satellite";

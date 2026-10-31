@@ -77,8 +77,8 @@ const QUESTIONS = [
           cold-gas class — because the measured finding is that at the 8 km formation scale
           the small-satellite default (0.01 m/s²) cannot complete the transfers at all: CW
           dynamics cap what a saturated controller can chase. The result is honest heavy
-          spending — up to 193.68 m/s per satellite in the recorded two-failure demo run,
-          reported rather than tuned away. <a href="#/docs">Details in Docs</a>.
+          spending — 193.68 m/s on the busiest satellite in the two-failure demo run, 251.24
+          m/s worst over all 15 failure pairs, reported rather than tuned away. <a href="#/docs">Details in Docs</a>.
         </p>
       </>
     ),
@@ -91,18 +91,17 @@ const QUESTIONS = [
           There is a sealed LightGBM proof of concept, trained on synthetic degradation
           telemetry from the simulator&apos;s own failure schedule. Its honest status: on the
           failure families it was trained on it flags precursors earlier than the EWMA/CUSUM
-          baseline — about 260 s median lead across 31/31 paired events. It does not
-          generalize to unseen families (family holdout: 0/15 detected), and sudden death has
+          baseline — a median 260 s earlier than EWMA on 31/31 paired events (a gain over the
+          baseline, not its own lead time), at 0.48 false alarms per satellite-orbit.
+          Generalization to unseen families is unmeasured, and sudden death has
           about zero recall by construction — a satellite that dies without warning has no
           precursor to learn; the reactive 4 s detection is the safety net for it.
         </p>
         <p className={styles.p}>
-          It is not wired into the swarm. The pre-registered kill switch — an oracle sweep
-          asking how much warning lead time is worth — found that even perfect warning
-          improved how well the critical roles stay covered by at most 0.0235 percentage
-          points, far below the 0.5-point bar set before the test, so the
-          verdict was CUT: the demo ships reactive-only. The Suspect annotation you may see on
-          a satellite is a rule-based drift detector, not the learned model.
+          It is not wired into the swarm. A pre-registered oracle sweep on sudden deaths found
+          perfect warning worth at most 0.0235 points (verdict CUT); a later sweep on gradual
+          power fades came out CLEAR (+1.80 points at 300 s of warning). Wiring warnings into
+          the control loop is an open decision, so the demo stays reactive.
         </p>
       </>
     ),

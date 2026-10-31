@@ -4,8 +4,8 @@
 // actually carries a score for.
 //
 // Claims honesty (audit_out/AUDIT.md + ENDGAME_PLAN §7): the LightGBM model is
-// strictly display-only — cut from the control loop by the pre-registered
-// oracle sweep (+0.0235 pp vs 0.5 pp threshold). Reactive 4 s heartbeat
+// strictly display-only — not wired into the control loop (an open decision;
+// the sweeps disagree, see GATES.md). Reactive 4 s heartbeat
 // detection drives all reassignments; no risk number is ever invented.
 import { useState } from "react";
 import { useSimStore } from "../../stores/simStore";
