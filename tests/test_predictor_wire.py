@@ -239,6 +239,10 @@ def test_predictor_scoring_failure_warning(tmp_path, monkeypatch):
         # warning is published during start, BEFORE any driver frame, so the
         # bounded in-request read is deterministic: warning, INIT state, t=0.
         assert client.post("/simulation/reset").status_code == 200
+        # reset now tells connected viewers: hello(mode=stopped) + empty state
+        stopped = [ws.receive_json(), ws.receive_json()]
+        assert [m["type"] for m in stopped] == ["hello", "sim_state"]
+        assert stopped[0]["mode"] == "stopped"
         start = client.post("/simulation/start",
                             json={"speed": 2.0, "predictor": True})
         assert start.status_code == 200

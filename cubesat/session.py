@@ -272,6 +272,13 @@ class Session:
             self._cancel.set()
             self._cancel = None
 
+    def _announce_stopped(self) -> None:
+        """Tell every viewer the run is gone (B-19): hello(mode=stopped) then the
+        empty sim_state. Both are existing message types -- no new wire shape; the
+        console treats the empty state as "no satellites"."""
+        self.hub.publish(self.hello())
+        self.hub.publish(self.snapshot())
+
     def shutdown(self) -> None:
         """Server stop: drop the run and cancel any in-flight compute thread."""
         self._supersede()
@@ -344,6 +351,7 @@ class Session:
             except TimeoutError:
                 cancel.set()  # the abandoned thread stops at its next tick
                 self._teardown()  # also closes the policy seam
+                self._announce_stopped()
                 raise SessionError(504, "scenario computation timed out") from None
             except RunCancelled:
                 self._restore_seam()
@@ -419,7 +427,10 @@ class Session:
         epoch = self._supersede()
         async with self._mutex():
             if epoch == self._epoch:  # a start queued after this reset keeps the floor
+                was_running = self.mode != "stopped"
                 self._teardown()
+                if was_running:
+                    self._announce_stopped()
 
     async def set_speed(self, speed: float) -> None:
         self._require_running()
