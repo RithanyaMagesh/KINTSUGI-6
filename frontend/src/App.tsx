@@ -17,9 +17,16 @@ export default function App() {
   useWebSocket();
   useFrameHistory(); // chart sampler — store subscriptions, zero per-message renders
   const presentation = useUiStore((s) => s.presentationMode);
+  const route = useUiStore((s) => s.route);
 
   if (presentation) {
     return <PresentationView />;
+  }
+
+  // #/live is a full-screen 3D stage with its own floating HUD (wordmark
+  // links home), so the persistent top bar steps aside there.
+  if (route === "live") {
+    return <Router />;
   }
 
   return (

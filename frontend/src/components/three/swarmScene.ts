@@ -26,6 +26,7 @@ import { AutoFitController, earthFitRadius, FIT_FILL } from "./sceneCamera";
 import { FormationLines } from "./sceneLines";
 import { createEnvironment, type Environment } from "./sceneEarth";
 import { SCENE_TOKENS, tokenColor } from "./sceneColors";
+import { SUN_DIR } from "./sceneGlobe";
 
 export type CameraPreset = "reset" | "top" | "formation" | "focus";
 
@@ -63,7 +64,7 @@ export class SwarmSceneController {
   private fit = new AutoFitController();
   private environment: Environment;
   private lines = new FormationLines();
-  private bg = tokenColor(SCENE_TOKENS.bg).clone();
+  private bg = tokenColor(SCENE_TOKENS.void).clone();
 
   private toggles = { labels: true, trails: true, lines: true, slots: true };
   private reducedMotion: boolean;
@@ -82,7 +83,11 @@ export class SwarmSceneController {
     this.onPick = onPick;
     this.reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    this.scene.background = tokenColor(SCENE_TOKENS.bg).clone();
+    // Space stays dark in both themes: the stage is the void, not a panel.
+    this.scene.background = tokenColor(SCENE_TOKENS.void).clone();
+    const sun = new THREE.DirectionalLight(tokenColor("--hero-light-key"), 2.4);
+    sun.position.copy(SUN_DIR).multiplyScalar(10);
+    this.scene.add(sun, new THREE.HemisphereLight(tokenColor("--hero-light-rim"), tokenColor("--space-void"), 0.22));
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -159,7 +164,7 @@ export class SwarmSceneController {
   }
 
   refreshTheme(): void {
-    this.bg = tokenColor(SCENE_TOKENS.bg).clone();
+    this.bg = tokenColor(SCENE_TOKENS.void).clone();
     this.scene.background = this.bg.clone();
     this.environment.refreshTheme();
     this.slots.refreshTheme();
@@ -203,6 +208,20 @@ export class SwarmSceneController {
     }
     this.fit.onPreset(preset === "formation" ? "formation" : preset === "focus" ? "focus" : "reset");
     this.controls.update();
+  }
+
+  /** Dolly toward (factor < 1) or away from (factor > 1) the orbit target —
+   * the on-screen zoom buttons. Hands framing to the user like a wheel zoom. */
+  zoom(factor: number): void {
+    this.fit.onWheel();
+    const offset = this.camera.position.clone().sub(this.controls.target);
+    const d = Math.min(Math.max(offset.length() * factor, this.controls.minDistance || 1), 1e7 * 0.5);
+    this.camera.position.copy(this.controls.target).add(offset.setLength(d));
+    this.controls.update();
+  }
+
+  getToggles(): { labels: boolean; trails: boolean; lines: boolean; slots: boolean } {
+    return { ...this.toggles };
   }
 
   private syncAllObjects(satellites: Satellite[], fit: ReturnType<typeof fitFormation>): void {
@@ -350,6 +369,8 @@ export class SwarmSceneController {
     this.viewW = w;
     this.viewH = h;
     this.camera.aspect = w / h;
+    // Lift the picture slightly so the swarm clears the bottom readout bar.
+    this.camera.setViewOffset(w, h, 0, Math.round(h * 0.06), w, h);
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h);
   }

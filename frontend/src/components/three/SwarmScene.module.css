@@ -31,18 +31,29 @@
   left: 0;
   top: 0;
   visibility: hidden;
-  background: var(--panel);
-  border: 1px solid var(--border-strong);
+  background: var(--glass);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--glass-line);
   border-left-width: 3px;
   border-radius: 3px;
   padding: 1px 6px;
-  font-family: var(--font-mono);
-  font-size: var(--text-tick);
+  font-family: var(--font-sans);
+  font-size: 13px;
   line-height: 1.4;
   white-space: nowrap;
   color: var(--ink);
   cursor: pointer;
   transition: background var(--motion-duration) var(--motion-ease);
+}
+
+.satLabelId {
+  font-weight: 600;
+  color: var(--ink);
+  margin-right: 0.45em;
+}
+
+.satLabelRole {
+  color: inherit;
 }
 
 .satLabel:hover {
@@ -187,4 +198,27 @@
 .stateNotice strong {
   color: var(--ink);
   font-size: var(--text-panel-title);
+}
+
+/* Full-screen live view: no frame, no radius — the canvas IS the page. */
+.viewportImmersive {
+  position: absolute;
+  inset: 0;
+  min-height: 0;
+  border-radius: 0;
+  background: var(--space-void);
+}
+
+.stateNoticeImmersive {
+  inset: auto;
+  left: 50%;
+  bottom: 18%;
+  transform: translateX(-50%);
+  width: min(420px, calc(100% - 32px));
+  border: 1px solid var(--glass-line);
+  border-radius: var(--radius-panel);
+  padding: var(--space-4) var(--space-5);
+  background: var(--glass);
+  backdrop-filter: blur(14px);
+  border-color: var(--glass-line);
 }
