@@ -241,3 +241,21 @@ def test_depleted_then_dead_is_still_declared():
     det = [(e["payload"]["mode"], e["payload"].get("self_report"))
            for _, e in _events(lines, "FAILURE_DETECTED") if e["payload"]["sat_id"] == 1]
     assert det == [("FUEL_DEPLETED", True), ("DEAD", None)]
+
+
+@pytest.mark.parametrize(
+    "mode", ["PAYLOAD_FAIL", "PARTIAL_THRUST", "THRUSTER_STUCK_OPEN", "RADIO_FAIL"]
+)
+def test_live_inject_of_every_v2_mode_equals_replay_of_recorded_injections(mode):
+    s = _scn(duration_s=200.0, spacecraft={"m_prop_kg": 0.002})
+    start = _displaced(s)
+    live = EngineV2(s, initial_lvlh=start)
+    lines = [live.header()]
+    for k in range(101):
+        if k == 30:
+            live.inject(Failure(t=0.0, sat_id=1, mode=mode))
+        lines.append(live.step())
+    lines += list(live.run())
+    replay = list(EngineV2(s, live.injections, initial_lvlh=start).run())
+    assert json.dumps(lines, sort_keys=True) == json.dumps(replay, sort_keys=True)
+    assert [(f.t, f.mode.value) for f in live.injections] == [(60.0, mode)]
