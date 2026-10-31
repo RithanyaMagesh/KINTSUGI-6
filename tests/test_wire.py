@@ -308,3 +308,44 @@ def test_role_reassignment_without_method_adds_no_new_keys():
     msgs = to_messages(_tick(1.0, event={"type": "ASSIGNMENT", "payload": payload}),
                        SessionEnrich())
     assert set(msgs[1]) == {"type", "sim_time", "assignments"}
+
+
+def test_old_role_only_on_tick_where_role_changed():
+    enrich = SessionEnrich()
+    nom = [(0, "leader", "NOMINAL"), (1, "imager", "NOMINAL"), (2, "imager", "NOMINAL")]
+    first = to_messages(_tick(1.0, nom), enrich)[0]
+    assert all("old_role" not in s for s in first["sats"])  # no previous frame yet
+    same = to_messages(_tick(2.0, nom), enrich)[0]
+    assert all("old_role" not in s for s in same["sats"])
+    swapped = [(0, "imager", "NOMINAL"), (1, "leader", "NOMINAL"), (2, "imager", "NOMINAL")]
+    sats = to_messages(_tick(3.0, swapped), enrich)[0]["sats"]
+    assert [s.get("old_role") for s in sats] == ["leader", "imager", None]
+    again = to_messages(_tick(4.0, swapped), enrich)[0]
+    assert all("old_role" not in s for s in again["sats"])  # gone the next tick
+
+
+def test_leader_loss_produces_leader_handoff():
+    enrich = SessionEnrich()
+    live = [(0, "leader", "NOMINAL"), (1, "imager", "NOMINAL"), (2, "imager", "NOMINAL")]
+    to_messages(_tick(1.0, live), enrich)
+    # sat 0 dies but keeps its role label in the log; sat 2 becomes leader
+    dead = [(0, "leader", "DEAD"), (1, "imager", "NOMINAL"), (2, "imager", "NOMINAL")]
+    to_messages(_tick(2.0, dead), enrich)
+    after = [(0, "leader", "DEAD"), (1, "imager", "NOMINAL"), (2, "leader", "NOMINAL")]
+    ev = {"type": "ASSIGNMENT", "payload": {"assignments": [
+        {"role": "leader", "sat_id": 2, "slot_index": 0},
+        {"role": "imager", "sat_id": 1, "slot_index": 1}]}}
+    msgs = to_messages(_tick(3.0, after, ev), enrich)
+    assert msgs[0]["sats"][2]["old_role"] == "imager"
+    assert msgs[1]["role_handoffs"] == [{"role": "leader", "from_sat": "SAT-1", "to_sat": "SAT-3"}]
+
+
+def test_no_handoff_when_roles_unchanged():
+    enrich = SessionEnrich()
+    live = [(0, "leader", "NOMINAL"), (1, "imager", "NOMINAL")]
+    to_messages(_tick(1.0, live), enrich)
+    ev = {"type": "ASSIGNMENT", "payload": {"assignments": [
+        {"role": "leader", "sat_id": 0, "slot_index": 0}]}}
+    msgs = to_messages(_tick(2.0, live, ev), enrich)
+    assert "role_handoffs" not in msgs[1]
+    assert all("old_role" not in s for s in msgs[0]["sats"])

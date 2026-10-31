@@ -32,6 +32,8 @@ class SessionEnrich:
     assignment_map: dict[int, str] = field(default_factory=dict)  # log sat id -> "slot_i"
     detection_latency_s: float | None = None
     replanning_latency_ms: float | None = None  # stays None in G5 (section 6.1 cut)
+    prev_roles: dict[int, str] = field(default_factory=dict)  # log sat id -> role, last frame
+    role_holder: dict[str, int] = field(default_factory=dict)  # role -> last sole live holder
 
 
 # Live-selectable recovery policies (the benchmark's seam policies + the shipped
@@ -246,6 +248,36 @@ def _role_reassignment(frame: dict, payload: dict, enrich: SessionEnrich) -> dic
     return msg
 
 
+def _track_roles(frame: dict, enrich: SessionEnrich) -> tuple[dict[int, str], list[dict]]:
+    """Per-frame role diff, then advance enrich: ({sat id: old role} for sats whose
+    role changed since the previous frame, role_handoffs). A handoff is only
+    well-defined for a role with ONE live holder (leader/downlink); the from_sat
+    is that last sole live holder, which survives the holder's death because the
+    log keeps a dead sat's role label. No previous frame -> nothing to diff."""
+    sats = frame.get("sats", [])
+    old = {
+        s["id"]: enrich.prev_roles[s["id"]]
+        for s in sats
+        if s["id"] in enrich.prev_roles and enrich.prev_roles[s["id"]] != s["role"]
+    }
+    handoffs = [
+        {
+            "role": s["role"],
+            "from_sat": display_sat_id(enrich.role_holder[s["role"]]),
+            "to_sat": display_sat_id(s["id"]),
+        }
+        for s in sats
+        if s["id"] in old and enrich.role_holder.get(s["role"], s["id"]) != s["id"]
+    ]
+    enrich.prev_roles = {s["id"]: s["role"] for s in sats}
+    live: dict[str, list[int]] = {}
+    for s in sats:
+        if s["status"] in ("NOMINAL", "DEGRADED"):
+            live.setdefault(s["role"], []).append(s["id"])
+    enrich.role_holder.update({r: ids[0] for r, ids in live.items() if len(ids) == 1})
+    return old, handoffs
+
+
 def _evasive_event(frame: dict, payload: dict) -> dict:
     """EVASIVE_MANEUVER -> info event 'SAT-x evasive maneuver (SAT-y, range Z m)'
     (Addendum v1.2: additive; old logs never carry the type, so the branch is
@@ -304,7 +336,13 @@ def to_messages(frame: dict, enrich: SessionEnrich) -> list[dict]:
         else:
             event_msg = _plain_event(frame, etype, payload)
 
+    old_roles, handoffs = _track_roles(frame, enrich)
     msgs = [to_sim_state(frame, enrich)]
+    for row, sat in zip(msgs[0]["sats"], frame.get("sats", []), strict=True):
+        if sat["id"] in old_roles:
+            row["old_role"] = old_roles[sat["id"]]
+    if reassignment is not None and handoffs:
+        reassignment["role_handoffs"] = handoffs
     if event_msg is not None:
         msgs.append(event_msg)
     if reassignment is not None:
