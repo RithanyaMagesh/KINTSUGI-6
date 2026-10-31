@@ -62,14 +62,34 @@ def _crit_held(line: dict) -> bool:
     return leader and "downlink" in nominal
 
 
+ROUND_TIMES_S = (0.1, 0.5, 2.0)
+
+
+def _round_time_model(post: list[dict], dt: float) -> dict:
+    """MODEL, not a simulation (GATES.md C5 amendment): each function-vacancy window closed by an
+    auction of r rounds is re-stated as max(0, window - r dt + r tau); an open window stays."""
+    out = dict.fromkeys(ROUND_TIMES_S, 0.0)
+    window = 0.0
+    for x in [*post, None]:
+        if x is not None and x.get("functions_vacant"):
+            window += dt
+            continue
+        r = (x.get("consensus_rounds") or 0) if x is not None else 0
+        for tau in ROUND_TIMES_S:
+            out[tau] += max(0.0, window - r * dt + r * tau) if window else 0.0
+        window = 0.0
+    return {str(tau): v for tau, v in out.items()}
+
+
 def run_metrics(lines, *, killed, first_failure_t, period_s, dt) -> dict:
     ticks = [x for x in lines if "sats" in x]
     laser = any("components" in x for x in ticks)
     decentral = any("functions_vacant" in x for x in ticks)
-    lat, false_iso, iso_s, part_s, locked, rows = [], 0, 0.0, 0.0, 0, 0
+    lat, false_iso, iso_s, part_s, locked, rows, handoffs = [], 0, 0.0, 0.0, 0, 0, 0
     for x in ticks:
         for e in x.get("events") or ([x["event"]] if x.get("event") else []):
             p = e.get("payload") or {}
+            handoffs += e.get("type") == "FUNCTION_HANDOFF"
             if e.get("type") != "FAILURE_DETECTED":
                 continue
             if p.get("cause") == "isolated":
@@ -96,6 +116,10 @@ def run_metrics(lines, *, killed, first_failure_t, period_s, dt) -> dict:
         "function_vacancy_s": dt * sum(1 for x in post if x.get("functions_vacant"))
         if decentral else None,
         "split_brain_s": dt * sum(1 for x in post if x.get("split_brain")) if decentral else None,
+        "consensus_rounds_max": max((x.get("consensus_rounds") or 0 for x in post), default=0)
+        if decentral else None,
+        "function_handoffs": handoffs if decentral else None,
+        "function_vacancy_s_by_round_time": _round_time_model(post, dt) if decentral else None,
         "coverage_mean_last_orbit": summary.get("coverage_mean_last_orbit"),
     }
 

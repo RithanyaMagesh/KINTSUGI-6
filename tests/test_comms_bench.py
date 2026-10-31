@@ -116,3 +116,22 @@ def test_a_cell_field_the_engine_does_not_know_is_refused_not_ignored():
     if "recovery" not in Scenario.model_fields:  # before C4: decentral is unmeasured
         with pytest.raises(ValueError, match="recovery"):
             _scenario(base, CELLS[3], (0,))
+
+
+def test_decentral_rounds_handoffs_and_round_time_sensitivity():
+    sats = [_sat(0, roles=("imager",)), _sat(1, roles=DOWN)]
+    hand = {"type": "FUNCTION_HANDOFF",
+            "payload": {"function": "time_sync", "from": [0], "to": [1]}}
+    lines = [_tick(0.0, sats, functions_vacant=[], consensus_rounds=18, split_brain=[]),
+             _tick(2.0, sats, functions_vacant=["time_sync"], consensus_rounds=18, split_brain=[]),
+             _tick(4.0, sats, functions_vacant=["time_sync"], consensus_rounds=18, split_brain=[]),
+             _tick(6.0, sats, functions_vacant=["time_sync"], consensus_rounds=18, split_brain=[]),
+             _tick(8.0, sats, functions_vacant=[], consensus_rounds=2, split_brain=[],
+                   events=[hand])]
+    m = run_metrics(lines, killed=[], first_failure_t=1.0, period_s=10.0, dt=2.0)
+    assert m["function_vacancy_s"] == 6.0
+    assert m["consensus_rounds_max"] == 18  # max per-tick value at or after the first failure
+    assert m["function_handoffs"] == 1
+    # the 6 s window closed by an auction of 2 rounds: 6 - 2 * 2 + 2 * tau, floored at 0
+    assert m["function_vacancy_s_by_round_time"] == pytest.approx({"0.1": 2.2, "0.5": 3.0,
+                                                                    "2.0": 6.0})
