@@ -267,3 +267,40 @@ Every number below is the printed output of the command beside it (macOS arm64, 
 | v2 vs CW, G1 state, J2/drag off, 3 orbits | 3.1026 m (recorded 3.101 m) | 3.411 m | `uv run python -m pytest tests/v2/test_sim_v2_truth.py -m slow -s -k "3p1_m and not 1orbit"` |
 | v2 vs CW, G1 state, J2 on, 1 orbit | 44.8058 m | finite | `uv run python -m pytest tests/v2/test_sim_v2_truth.py -s -k j2_on` |
 | Review fixes: inject/replay, draw order, schema bounds, re-entry, snapshot | 17 of 17 mutants killed | all killed | mutation method and table in `docs/PHYSICS_V2.md` "Mutation check" |
+
+## 2026-10-31 — v2 Physics Phase 2 (fuel-first subset): propulsion, mass, failure modes as resource damage (branch `backend-fuel`, engine `v2` only; v1 untouched)
+
+Scope: plan Tasks 2.1, 2.3, 2.4. Power/eclipse/safe-off modes (Task 2.2) are NOT built (no battery fields). Every number below is the printed output of the command beside it (macOS arm64, 2026-10-31); formulas, illustrative defaults, simplifications and limits: `docs/PHYSICS_V2.md` "Phase 2 (fuel-first)". Pytest commands add `-p no:cacheprovider`.
+
+| Gate | Result | Command |
+|---|---|---|
+| lint | All checks passed | `uv run ruff check .` |
+| fast tests | 466 passed, 2 skipped, 5 deselected (426 before this phase, +40 new) | `uv run python -m pytest -m "not slow"` |
+| slow tests | 5 passed | `uv run python -m pytest -m slow` |
+| v1 pins unchanged | no edit outside `tests/v2`; sha/hash grep empty | `git diff $(git merge-base backend HEAD)..HEAD -- tests/ ':!tests/v2' \| grep -E 'sha\|hash'` |
+| v1 logs byte-identical to the pre-phase tree | `two_failure` (11,908,333 bytes) and `nominal` (4,042,263 bytes) `cmp` equal against `git archive 75ceac9` | `uv run python -m cubesat.run --scenario data/scenarios/<s>.json --seed 42 --out <f>` in each tree, then `cmp` |
+| determinism | two v2 CLI runs byte-identical (`cmp`), 901 sat rows carry `fuel_kg` | `uv run python -m cubesat.run --scenario <two_failure.json with "engine":"v2","a_max_mps2":0.01,"duration_s":1800> --seed 42 --out a.jsonl` twice |
+
+| Check | Measured | Threshold | Command |
+|---|---|---|---|
+| Acceleration cap k=1 / k=0.5 | 0.01 / 0.005 m/s^2 | 0.04/4, 0.02/4 | `uv run python -m pytest tests/v2/test_spacecraft.py::test_accel_saturates_at_k_fmax_over_m` |
+| Tank delta-v, 40 s, 4.0 -> 3.8 kg | 20.1206 m/s | 20.12 +- 0.05 | `uv run python -m pytest tests/v2/test_spacecraft.py::test_delta_v_budget_20p1 -s` |
+| Sum of a dt over a full tank at dt 2 s vs rocket equation | 20.1201 vs 20.1206 m/s (5.3e-4 m/s, start-of-step mass) | 2e-3 m/s | `uv run python -m pytest tests/v2/test_spacecraft.py::test_propellant_never_negative_over_a_long_saturated_burn` |
+| Propellant never negative; empties exactly; once-only FUEL_DEPLETED | holds | exact | `uv run python -m pytest tests/v2/test_sim_v2_resources.py -k "never_negative or exhausted"` |
+| Zero fuel at start; all-but-one depleted; depleted imager still in coverage | no crash; coast bit-identical to all-THRUSTER_OUT run; survivor holds seat | exact | `uv run python -m pytest tests/v2/test_sim_v2_resources.py -k "zero_fuel or all_but_one or imager_in_a_fuel"` |
+| Snapshot/restore and live-inject vs replay carry fuel, stuck, k | identical tails | byte equal | `uv run python -m pytest tests/v2/test_sim_v2_resources.py -k "snapshot or inject"` |
+| Per-mode semantics, v1 rejection of the 4 new modes | 19 tests | all pass | `uv run python -m pytest tests/v2/test_failure_modes_v2.py` |
+| Mutation check (14 mutants, scratch copy) | 13 killed, 1 equivalent survivor | all non-equivalent killed | table in `docs/PHYSICS_V2.md` "Mutation check (Phase 2)" |
+
+**Measured fuel demonstration** (`data/scenarios/two_failure.json` as engine v2, a_max 0.01, 0.2 kg / Isp 40 s / F_max 0.04 N, 17028 s; v1 PD seat-holder, no recovery; this is a measurement, not a planner claim): command `uv run python -m pytest tests/v2/test_fuel_demo_two_failure.py -s`.
+
+| sat | dv_used m/s | propellant used kg | tank left m/s | ran dry |
+|---|---|---|---|---|
+| 0 (leader) | 1.6608 | 0.016900 | 18.4598 | no |
+| 1 (imager, DEAD 1200 s) | 0.0653 | 0.000665 | 20.0554 | no |
+| 2 (imager, DEAD 1500 s) | 0.1192 | 0.001215 | 20.0014 | no |
+| 3 | 1.6733 | 0.017026 | 18.4473 | no |
+| 4 | 1.6730 | 0.017023 | 18.4476 | no |
+| 5 (downlink) | 1.6765 | 0.017059 | 18.4441 | no |
+
+**Not claimed:** no lifetime extrapolation; no recovery cost (Phase 5); no power/eclipse; PARTIAL_THRUST and THRUSTER_STUCK_OPEN are never declared (no detector until Phase 4); drag B keeps the wet mass (up to 5% off as the tank empties); FUEL_DEPLETED does not change the mission state; `wire.py`/`session.py`/`api.py` do not yet map the new modes and statuses (outside this change).

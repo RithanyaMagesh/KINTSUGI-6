@@ -185,3 +185,83 @@ Measured (command: `uv run python -m cubesat.geo_v2`, scenario `two_failure.json
 Tests: GMST 2000-01-01T12:00Z = 280.46061837 deg and Meeus ex. 12.b; sun within 0.5 deg of +x at the 2000 equinox and declination 23.44 +- 0.1 deg at the June solstice (`uv run python -m pytest tests/v2/test_geo_v2.py`).
 
 Honest limits: spherical Earth (latitude up to 0.2 deg off a real ellipsoid), UT1 = UTC, no precession/nutation/polar motion, constant rotation rate, sun fixed per run on the wire, the ring is one period of the J2-perturbed orbit and is open by 32 km, the ground track inherits the same J2 drift, one ground station, drag is not in the ring (the chief has none in the engine either).
+
+## Phase 2 (fuel-first): spacecraft resources (`cubesat/spacecraft.py`, 2026-10-31)
+Scope: propulsion, mass and failure modes as resource damage. Power, eclipse and safe/off modes (plan Task 2.2) are NOT built: `SatState` has no battery fields. Everything is engine `"v2"` only; v1 logs, canonical pins and v1 wire fixtures are untouched.
+
+**Formulas** (g0 = 9.80665 m/s^2):
+- thrust cap `|F| <= k F_max`, acceleration `a = F / m` with m the mass at the start of the step; a command under the cap passes through bit-unchanged, above it the vector is scaled (direction kept);
+- mass flow `mdot = |F| / (Isp g0)`, propellant used per step `dm = |a| m dt / (Isp g0)`;
+- tank delta-v `Isp g0 ln(m / (m - m_prop))` (log key `fuel_mps_left`);
+- empty tank: zero thrust. A burn that would overdraw the tank is truncated on that step: the acceleration is scaled by `m_prop / dm`, so the step delivers exactly the impulse the remaining propellant buys, and `m_prop` is set to exactly 0 (never negative).
+
+**Defaults (all ILLUSTRATIVE, not measured hardware):** a 3U cold-gas CubeSat; `truth.mass_kg` 4.0 kg is the WET mass (propellant included, dry = wet - m_prop), `spacecraft.m_prop_kg` 0.2, `isp_s` 40, `f_max_n` 0.04 (so 0.04 N / 4 kg = 0.01 m/s^2, the default `a_max`). Tank delta-v 20.12 m/s. Validation: `spacecraft.m_prop_kg < truth.mass_kg` for engine v2 scenarios.
+
+**Failure modes as resource damage** (`apply_failure(sat, mode, stuck_vec)`; the four new modes are rejected for engine `"v1"` scenarios with `failure mode X (sat N) requires engine "v2"`, so v1 JSON stays valid and unchanged):
+
+| Mode | Resource damage | Status | Event |
+|---|---|---|---|
+| DEAD, EPS_DEGRADE (fade ends in death, as Phase 1) | k=0, payload and radio off | DEAD | heartbeat rule after K misses |
+| THRUSTER_OUT | k=0 | THRUSTER_OUT | FAILURE_DETECTED self_report |
+| PARTIAL_THRUST | k=0.5 | DEGRADED | none (silent) |
+| THRUSTER_STUCK_OPEN | constant `stuck_k F_max` (stuck_k = 1.0, valve fully open, illustrative) along a unit ECI vector fixed at failure time (the sat's ECI velocity direction then; no random draw), PD ignored, until the propellant is empty | DEGRADED | none (silent) |
+| PAYLOAD_FAIL | payload_ok = False: flies and seat-holds, excluded from coverage | PAYLOAD_FAILED | FAILURE_DETECTED self_report |
+| RADIO_FAIL | radio_ok = False: flies and seat-holds, silent heartbeat | RADIO_SILENT | FAILURE_DETECTED after K misses (heartbeat rule) |
+| (any sat, tank empty) | m_prop = 0 | FUEL_DEPLETED | `FUEL_DEPLETED` {sat_id, t}, once |
+
+Status precedence: a new failure only raises the label (NOMINAL < DEGRADED < PAYLOAD_FAILED < THRUSTER_OUT < FUEL_DEPLETED < RADIO_SILENT < DEAD < REENTERED). A silent sat (radio failed) cannot self-report, so a later THRUSTER_OUT or empty tank on it is only visible through the flags. FUEL_DEPLETED is self-reported and plain: it does not move the mission state to FAILURE_DETECTED (a depleted sat still flies and images; a recovery policy decides in a later phase). A FUEL_DEPLETED sat coasts: no PD command, `dv_used` frozen, camera counts for coverage.
+
+**Engine wiring and log keys** (additive, v2 only; v1 sat rows keep exactly `id, role, status, r, v, dv_used`): per sat `fuel_kg`, `fuel_mps_left`, `k`, `payload_ok`, `radio_ok`; `dv_used` keeps its meaning (sum of the applied |a| dt). Coverage counts only imagers whose payload works and that are not DEAD/REENTERED.
+
+**Simplifications (stated, not hidden):**
+- Drag ballistic coefficient B stays `truth.mass_kg` (the wet mass) for the whole run: the propellant fraction is 5% by default, so B is up to 5% low as the tank empties. Not modelled.
+- Acceleration uses the mass at the START of each step, so the sum of `a dt` undershoots the rocket-equation tank delta-v: 20.1201 vs 20.1206 m/s (5.3e-4 m/s, 2.6e-5 relative) at dt = 2 s over a full tank.
+- The stuck direction is a fixed ECI vector (the sat's velocity direction at failure), not a body-fixed vector that rotates with attitude; stuck_k = 1 and the PD cannot counter the stuck thruster.
+- Zero-order hold: thrust is constant over a step, so a truncated burn is a scaled constant acceleration over the whole step, not a shorter burn at full thrust (same impulse).
+
+**Validation numbers (each: value, then the command):**
+
+| Quantity | Measured | Threshold | Command |
+|---|---|---|---|
+| Acceleration cap, k=1 / k=0.5 | 0.01 / 0.005 m/s^2 (rel 1e-12) | 0.04/4, 0.02/4 | `uv run python -m pytest tests/v2/test_spacecraft.py::test_accel_saturates_at_k_fmax_over_m` |
+| Mass flow at full thrust | 1.0197e-4 kg/s = 0.04/(40 g0) | rel 1e-12 | `uv run python -m pytest tests/v2/test_spacecraft.py::test_mass_flow_isp` |
+| Tank delta-v, 4.0 -> 3.8 kg | 20.1206 m/s | 20.12 +- 0.05 | `uv run python -m pytest tests/v2/test_spacecraft.py::test_delta_v_budget_20p1 -s` |
+| Full-tank burn at 2 s steps: time to empty, sum a dt | 1962 s, 20.1201 m/s | rocket eq within 2e-3 | `uv run python -m pytest tests/v2/test_spacecraft.py::test_propellant_never_negative_over_a_long_saturated_burn` |
+| Truncated step (1e-4 kg left) | dv step = 0.01 x 0.4903 x 2 s, matches Isp g0 ln(4/3.9999) to 1e-4 | exact, m_prop == 0.0 | `uv run python -m pytest tests/v2/test_spacecraft.py::test_burn_truncated_on_the_step_that_exhausts_the_tank tests/v2/test_sim_v2_resources.py::test_propellant_exactly_exhausted_mid_burn_truncates_that_step` |
+| Stuck-open whole tank (0.002 kg) | 0.1962 m/s, stops with the tank | rocket eq 1e-3 | `uv run python -m pytest tests/v2/test_failure_modes_v2.py::test_stuck_open_burns_constant_thrust_ignores_the_pd_and_stops_when_the_tank_empties` |
+| Radio-failed sat vs no-failure run | trajectory bit-identical, declared at t=104 | exact | `uv run python -m pytest tests/v2/test_failure_modes_v2.py::test_radio_failed_sat_keeps_flying_and_is_declared_by_the_heartbeat_rule` |
+| two_failure as v2, fuel use (PD seat-holder, no recovery) | table below | measurement | `uv run python -m pytest tests/v2/test_fuel_demo_two_failure.py -s` |
+
+**Measured fuel demonstration** (`data/scenarios/two_failure.json` with `engine "v2"`, `a_max_mps2` 0.01, spacecraft 0.2 kg / Isp 40 s / F_max 0.04 N, duration 17028 s = 3 orbits; sats 1 and 2 die at 1200 and 1500 s; the controller is the v1 PD seat-holder with no recovery, so this measures seat-holding against drag and J2, not a planner):
+
+| sat | role | final status | dv_used m/s | propellant used kg | tank left m/s | ran dry |
+|---|---|---|---|---|---|---|
+| 0 | leader | NOMINAL | 1.6608 | 0.016900 | 18.4598 | no |
+| 1 | imager | DEAD (t=1200) | 0.0653 | 0.000665 | 20.0554 | no |
+| 2 | imager | DEAD (t=1500) | 0.1192 | 0.001215 | 20.0014 | no |
+| 3 | imager | NOMINAL | 1.6733 | 0.017026 | 18.4473 | no |
+| 4 | imager | NOMINAL | 1.6730 | 0.017023 | 18.4476 | no |
+| 5 | downlink | NOMINAL | 1.6765 | 0.017059 | 18.4441 | no |
+
+No sat runs dry in 3 orbits: the survivors use about 8.5% of the 0.2 kg tank (1.66-1.68 of 20.12 m/s). Not claimed: any lifetime extrapolation, any recovery cost (a re-formation transfer is Phase 5).
+
+**Honest limits (Phase 2 fuel-first):** no power or eclipse model; no SEU, impact or aging; no propellant leak; the heartbeat rule is still the only detector, so PARTIAL_THRUST and THRUSTER_STUCK_OPEN are never declared (Phase 4); the recovery planner does not read `fuel_mps_left` yet (Phase 5); `wire.py` (inject message model `Literal`) still lists only the three v1 modes and `_STATUS_TO_WIRE` does not map the new statuses (a status string passes through unmapped); `wire.py`, `session.py` and `api.py` are outside this change.
+
+**Mutation check (Phase 2).** Method as above on a scratch copy (`/tmp/kmut`, script kept out of the repo): one string replacement at a time, run the three Phase 2 test files with `-x`, first failing test recorded. 13 of 14 mutants killed; the survivor is an equivalent mutant.
+
+| Mutant | First failing test |
+|---|---|
+| thrust cap comparison flipped | `test_spacecraft.py::test_accel_saturates_at_k_fmax_over_m` |
+| mass flow dropped (`dm = 0`) | `test_spacecraft.py::test_command_below_cap_passes_through_unchanged` |
+| negative propellant allowed (no truncation) | `test_spacecraft.py::test_propellant_never_negative_over_a_long_saturated_burn` |
+| truncated burn not scaled | same |
+| FUEL_DEPLETED skipped | `test_sim_v2_resources.py::test_fuel_never_negative_and_depleted_status_and_event_once` |
+| k ignored in the cap | `test_spacecraft.py::test_accel_saturates_at_k_fmax_over_m` |
+| PARTIAL_K = 1.0 | `test_failure_modes_v2.py::test_mode_PARTIAL_THRUST_semantics` |
+| stuck-open treated as nominal | `test_failure_modes_v2.py::test_mode_THRUSTER_STUCK_OPEN_semantics` |
+| coverage ignores payload_ok | `test_failure_modes_v2.py::test_payload_failed_sat_excluded_from_coverage_but_still_seat_holds` |
+| radio failure not silent | `test_failure_modes_v2.py::test_radio_failed_sat_keeps_flying_and_is_declared_by_the_heartbeat_rule` |
+| snapshot restore drops `fuel_out` | `test_sim_v2_resources.py::test_snapshot_restore_carries_fuel_state[35]` |
+| v2-only mode validator off | `test_failure_modes_v2.py::test_v1_scenarios_with_v2_modes_are_rejected_with_a_plain_message[PAYLOAD_FAIL]` |
+| `fuel_mps_left` wrong formula | `test_spacecraft.py::test_delta_v_budget_20p1` |
+| survivor (equivalent): engine PD gate `sat.k > 0` removed | none: `thrust_limited` already returns zero for k = 0, so behaviour is identical |
