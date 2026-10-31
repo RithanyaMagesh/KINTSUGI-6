@@ -85,7 +85,13 @@ export default function SwarmScene({ immersive = false, onController }: SwarmSce
     let prevTheme = useUiStore.getState().theme;
     let prevSel = useUiStore.getState().selectedSatelliteId;
 
+    let lastHandoff = useSimStore.getState().handoffs.at(-1); // only animate new ones
     const unsubSim = useSimStore.subscribe((s) => {
+      if (s.handoffs.at(-1) !== lastHandoff) {
+        // the store keeps the last 40, so find the last one seen by identity
+        for (const h of s.handoffs.slice(s.handoffs.indexOf(lastHandoff!) + 1)) controller.handoff(h.from, h.to);
+        lastHandoff = s.handoffs.at(-1);
+      }
       controller.update({
         satellites: s.satellites,
         selectedId: useUiStore.getState().selectedSatelliteId,

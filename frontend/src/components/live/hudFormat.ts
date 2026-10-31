@@ -1,6 +1,6 @@
 // Plain-language labels for the full-screen live HUD. The wire speaks in enum
 // literals (cubesat/wire.py); people on the screen read these instead.
-import type { MissionState } from "../../types/satellite";
+import type { MissionState, Satellite } from "../../types/satellite";
 
 export const STATE_LABEL: Record<MissionState, string> = {
   NOMINAL: "Nominal",
@@ -28,6 +28,7 @@ export function stateLabel(state: string | null): string {
 export function roleLabel(role: string): string {
   if (role === "leader") return "Leader";
   if (role === "downlink") return "Downlink";
+  if (role === "none") return "No role";
   if (role.startsWith("sensor") || role.startsWith("imager")) return "Imager";
   return role.charAt(0).toUpperCase() + role.slice(1).replace(/_/g, " ");
 }
@@ -49,8 +50,41 @@ export function statusLabel(status: string): string {
   }
 }
 
+/** Every role a satellite holds (v2 stacks them), e.g. "Leader and imager". */
+export function rolesLabel(sat: Satellite): string {
+  const rs = sat.roles ?? [sat.role];
+  if (rs.length === 0) return "No role";
+  const words = rs.map(roleLabel);
+  return [words[0], ...words.slice(1).map((w) => w.toLowerCase())].join(" and ");
+}
+
+/** One satellite's status in plain words. The v2 engine reports why a flying
+ * satellite is degraded (failure_type); the wire status alone can't say. */
+export function satLabel(sat: Satellite): string {
+  switch (sat.failureType) {
+    case "REENTERED":
+      return "Re-entered";
+    case "FUEL_DEPLETED":
+      return "Out of fuel";
+    case "PAYLOAD_FAILED":
+      return "Camera failed";
+    case "RADIO_SILENT":
+      return "Radio silent";
+  }
+  if (sat.stuck === true) return "Thruster stuck open";
+  if (sat.thrust !== undefined && sat.thrust < 1 && sat.status !== "failed")
+    return `${Math.round(sat.thrust * 100)}% thrust`;
+  return statusLabel(sat.status);
+}
+
 export function faultLabel(f: string | undefined): string {
   if (f === undefined) return "";
+  if (f === "PAYLOAD_FAIL" || f === "PAYLOAD_FAILED") return "Camera failure";
+  if (f === "PARTIAL_THRUST") return "Partial thrust";
+  if (f === "THRUSTER_STUCK_OPEN") return "Thruster stuck open";
+  if (f === "RADIO_FAIL" || f === "RADIO_SILENT") return "Radio failure";
+  if (f === "FUEL_DEPLETED") return "Out of fuel";
+  if (f === "REENTERED") return "Re-entered";
   if (f === "DEAD") return "Dead";
   if (f === "THRUSTER_OUT") return "Thruster out";
   if (f === "EPS_DEGRADE" || f === "DEGRADED") return "Battery fade"; // wire sends the status
@@ -87,5 +121,8 @@ export function eventText(msg: string): string {
   return msg
     .replace(/\bDEAD\b/g, "dead")
     .replace(/\bTHRUSTER_OUT\b/g, "thruster-out")
-    .replace(/\bEPS_DEGRADE\b/g, "battery-fade");
+    .replace(/\bEPS_DEGRADE\b/g, "battery-fade")
+    .replace(/\b(PAYLOAD_FAIL|PARTIAL_THRUST|THRUSTER_STUCK_OPEN|RADIO_FAIL|FUEL_DEPLETED|REENTERED|PAYLOAD_FAILED|RADIO_SILENT)\b/g, (w) =>
+      faultLabel(w).toLowerCase(),
+    );
 }

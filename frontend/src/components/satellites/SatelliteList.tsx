@@ -5,7 +5,7 @@
 // carries it (the Risk column exists for that frame — nothing is invented).
 import { useSimStore } from "../../stores/simStore";
 import { useUiStore } from "../../stores/uiStore";
-import { faultLabel, roleLabel, statusLabel } from "../live/hudFormat";
+import { faultLabel, rolesLabel, satLabel, statusLabel } from "../live/hudFormat";
 import { satelliteStatusColor } from "../../utils/colors";
 import { formatMsPerS } from "../../utils/format";
 import chrome from "../../styles/chrome.module.css";
@@ -76,11 +76,11 @@ function SatelliteRow(props: {
       }}
     >
       <td className={styles.id}>{sat.id}</td>
-      <td className={sat.role === "leader" ? styles.leader : styles.role}>{roleLabel(sat.role)}</td>
+      <td className={sat.role === "leader" ? styles.leader : styles.role}>{rolesLabel(sat)}</td>
       <td className={styles.status}>
         <span className={styles.dot} style={{ background: satelliteStatusColor(sat.status) }} />
-        {statusLabel(sat.status)}
-        {sat.failureType !== undefined && (
+        {satLabel(sat)}
+        {sat.failureType !== undefined && satLabel(sat) === statusLabel(sat.status) && (
           <span className={styles.failureType}> ({faultLabel(sat.failureType)})</span>
         )}
       </td>

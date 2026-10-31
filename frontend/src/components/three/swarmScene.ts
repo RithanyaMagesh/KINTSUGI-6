@@ -99,6 +99,9 @@ export class SwarmSceneController {
   private lastHoverAt = 0;
   private followFly = 0; // seconds left in the fly-in
   private lastFollowPos = new THREE.Vector3();
+  // Role batons: a gold token flying from the old holder to the new one.
+  private batons: { mesh: THREE.Mesh; from: string; to: string; start: number }[] = [];
+  private batonGeo = new THREE.OctahedronGeometry(1);
 
   constructor(container: HTMLElement, onPick: (id: string | null) => void) {
     this.container = container;
@@ -388,7 +391,44 @@ export class SwarmSceneController {
     );
   }
 
+  /** Fly a role baton from one satellite to another (a role handoff). */
+  handoff(from: string, to: string): void {
+    if (this.reducedMotion || !this.records.has(from) || !this.records.has(to)) return;
+    const mat = new THREE.MeshBasicMaterial({ color: tokenColor("--status-repaired"), transparent: true, depthTest: false });
+    const mesh = new THREE.Mesh(this.batonGeo, mat);
+    mesh.renderOrder = 10;
+    this.scene.add(mesh);
+    this.batons.push({ mesh, from, to, start: performance.now() });
+  }
+
+  private updateBatons(): void {
+    const now = performance.now();
+    const BATON_MS = 2400;
+    this.batons = this.batons.filter((b) => {
+      const a = this.records.get(b.from);
+      const z = this.records.get(b.to);
+      const u = (now - b.start) / BATON_MS;
+      if (a === undefined || z === undefined || u >= 1) {
+        this.scene.remove(b.mesh);
+        (b.mesh.material as THREE.Material).dispose();
+        return false;
+      }
+      const e = u < 0.5 ? 2 * u * u : 1 - (-2 * u + 2) ** 2 / 2; // ease in-out
+      const p = b.mesh.position.lerpVectors(a.group.position, z.group.position, e);
+      const span = a.group.position.distanceTo(z.group.position);
+      // arc outward from the scene centre so it rides over the planet, not through it
+      const r = a.group.position.length() * (1 - e) + z.group.position.length() * e + span * 0.05 * Math.sin(Math.PI * e);
+      if (p.lengthSq() > 1e-9 && p.length() < r) p.setLength(r);
+      b.mesh.scale.setScalar(this.camera.position.distanceTo(p) * 0.012);
+      b.mesh.rotation.y = u * Math.PI * 4;
+      (b.mesh.material as THREE.MeshBasicMaterial).opacity = Math.min(1, 6 * (1 - u));
+      return true;
+    });
+  }
+
   dispose(): void {
+    for (const b of this.batons) (b.mesh.material as THREE.Material).dispose();
+    this.batonGeo.dispose();
     this.running = false;
     cancelAnimationFrame(this.raf);
     this.ro.disconnect();
@@ -603,6 +643,7 @@ export class SwarmSceneController {
     this.fit.update(this.camera, this.controls, dt, this.lastSats, this.environment.frame());
     this.environment.update(dt, this.reducedMotion);
     this.updateMarkers(elapsed);
+    this.updateBatons();
     this.updateLabels();
     this.fitClipPlanes();
     this.renderer.render(this.scene, this.camera);

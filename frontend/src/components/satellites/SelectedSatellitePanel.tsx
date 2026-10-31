@@ -8,7 +8,8 @@ import { historyFor } from "../../stores/roleHistoryStore";
 import type { RoleHistoryEntry } from "../../stores/roleHistoryStore";
 import { distanceToSeat, fitFormation } from "../../utils/geometry";
 import { formatMsPerS } from "../../utils/format";
-import { clock, faultLabel, roleLabel, statusLabel } from "../live/hudFormat";
+import { clock, faultLabel, roleLabel, rolesLabel, satLabel } from "../live/hudFormat";
+import { FuelBar, SatFlags } from "../live/SatBits";
 import { slotLabel } from "../recovery/RecoveryLog";
 import chrome from "../../styles/chrome.module.css";
 import styles from "./SelectedSatellitePanel.module.css";
@@ -128,13 +129,16 @@ export default function SelectedSatellitePanel() {
     return (
       <div className={styles.panel}>
         <Row label="Status">
-          {statusLabel(sat.status)}
-          {sat.failureType !== undefined && <> ({faultLabel(sat.failureType)})</>}
+          {satLabel(sat)}
+          <SatFlags sat={sat} />
         </Row>
-        <Row label="Role">{roleLabel(sat.role)}</Row>
+        <Row label="Role">
+          {rolesLabel(sat)}
+          {sat.originalRole !== undefined && sat.originalRole !== sat.role && <> (was {roleLabel(sat.originalRole).toLowerCase()})</>}
+        </Row>
         <Row label="Slot">{slotLabel(postSlot)}</Row>
         <Row label="Distance to slot">{distText}</Row>
-        <Row label="Fuel spent">{formatMsPerS(sat.dv_used)}</Row>
+        <Row label="Fuel">{sat.fuelMpsLeft !== undefined ? <FuelBar sat={sat} /> : formatMsPerS(sat.dv_used) + " spent"}</Row>
         {latestTransition !== "" && (
           <p className={styles.reason}>Latest change: {latestTransition}</p>
         )}
@@ -188,10 +192,13 @@ export default function SelectedSatellitePanel() {
 
       <Section title="Role">
         <Row label="Status">
-          {statusLabel(sat.status)}
-          {sat.failureType !== undefined && <> ({faultLabel(sat.failureType)})</>}
+          {satLabel(sat)}
+          <SatFlags sat={sat} />
         </Row>
-        <Row label="Role">{roleLabel(sat.role)}</Row>
+        <Row label="Role">
+          {rolesLabel(sat)}
+          {sat.originalRole !== undefined && sat.originalRole !== sat.role && <> (was {roleLabel(sat.originalRole).toLowerCase()})</>}
+        </Row>
         <div className={styles.row}>
           <span className={styles.label}>Job</span>
           <span className={styles.explain}>{semantics ?? "unmeasured"}</span>
@@ -207,7 +214,7 @@ export default function SelectedSatellitePanel() {
         <Row label="Speed">{formatMsPerS(Math.hypot(...sat.v))}</Row>
         <Row label="Slot">{slotLabel(postSlot)}</Row>
         <Row label="Distance to slot">{distText}</Row>
-        <Row label="Fuel spent">{formatMsPerS(sat.dv_used)}</Row>
+        <Row label="Fuel">{sat.fuelMpsLeft !== undefined ? <FuelBar sat={sat} /> : formatMsPerS(sat.dv_used) + " spent"}</Row>
       </Section>
 
       <Section title="Role and task history">

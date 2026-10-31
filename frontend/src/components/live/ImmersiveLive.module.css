@@ -916,3 +916,66 @@
   font-size: 12px;
   color: var(--ink-faint);
 }
+
+/* ---- end-of-run card ----------------------------------------------------- */
+
+.summary {
+  align-self: center;
+  width: min(560px, 100%);
+  border-radius: 12px;
+  padding: var(--space-4);
+}
+
+.summaryHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.summaryHead h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.summaryHead h2 span {
+  margin-left: var(--space-2);
+  font-weight: 400;
+  color: var(--ink-muted);
+}
+
+.summaryClose {
+  font: inherit;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--ink-muted);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-3);
+  margin: var(--space-3) 0 0;
+}
+
+.summaryGrid dt {
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+
+.summaryGrid dd {
+  margin: 2px 0 0;
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+@media (max-width: 600px) {
+  .summaryGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

@@ -18,7 +18,7 @@ import type { MissionState, Satellite } from "../../types/satellite";
 import { missionStateColor } from "../../utils/colors";
 import { formatSeconds } from "../../utils/format";
 import { WHY_LINE, slotLabel } from "../recovery/RecoveryLog";
-import { faultLabel, stateLabel } from "../live/hudFormat";
+import { faultLabel, satLabel, stateLabel } from "../live/hudFormat";
 import styles from "./NarrationStrip.module.css";
 
 function Mono({ children }: { children: ReactNode }) {
@@ -68,6 +68,10 @@ function narrationFor(
 
   const degradedSat = satellites.find((s) => s.status === "degraded");
   const degradedId = degradedSat?.id ?? (degradedSats.length > 0 ? degradedSats[0] : null);
+  if (degradedSat?.fuelMpsLeft !== undefined && (missionState === "NOMINAL" || missionState === "DEGRADED")) {
+    // v2: degraded has several causes; name the one this satellite has
+    return <>{degradedSat.id}: {satLabel(degradedSat).toLowerCase()}.</>;
+  }
   if (degradedId && (missionState === "NOMINAL" || missionState === "DEGRADED")) {
     const dId = degradedId.startsWith("SAT-") ? degradedId : `SAT-${degradedId}`;
     const fadeS = degradedInfo[degradedId]?.degrade_s;
@@ -82,6 +86,10 @@ function narrationFor(
         .
       </>
     );
+  }
+
+  if (assignment?.keptFormation === true && (missionState === "REPLANNING" || missionState === "RECONFIGURING")) {
+    return "Kept formation, no move: every survivor holds its slot.";
   }
 
   switch (missionState) {

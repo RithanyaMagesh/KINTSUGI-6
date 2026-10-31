@@ -5,7 +5,7 @@
 import { useEffect, useState } from "react";
 import { useSimStore } from "../../stores/simStore";
 import { useUiStore } from "../../stores/uiStore";
-import { roleLabel, statusLabel } from "./hudFormat";
+import { rolesLabel, satLabel } from "./hudFormat";
 import { satelliteStatusColor } from "../../utils/colors";
 import styles from "./ImmersiveLive.module.css";
 
@@ -62,10 +62,10 @@ export default function SpectatorBar({ onExit }: { onExit(): void }) {
             <span className={styles.statusPip} style={{ background: satelliteStatusColor(sat.status) }} aria-hidden="true" />
           )}
           {selectedId ?? "No satellite"}
-          {sat !== null && <span className={styles.specRole}>{roleLabel(sat.role)}</span>}
+          {sat !== null && <span className={styles.specRole}>{rolesLabel(sat)}</span>}
         </span>
         <span className={styles.specMeta}>
-          {sat !== null ? `${statusLabel(sat.status)}, ${pos} of ${count}` : `${count} satellites`}
+          {sat !== null ? `${satLabel(sat)}, ${pos} of ${count}` : `${count} satellites`}
         </span>
       </div>
       <button type="button" className={styles.specBtn} onClick={() => spectateStep(1)} aria-label="Next satellite" title="Next (→)">

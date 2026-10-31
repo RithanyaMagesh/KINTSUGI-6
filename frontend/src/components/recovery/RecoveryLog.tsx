@@ -251,7 +251,9 @@ function stepsFor(
     }
     steps.push({
       time: a.time,
-      body: (
+      body: a.keptFormation === true ? (
+        <>Kept formation, no move: every survivor holds its slot</>
+      ) : (
         <>
           Replan{policyLabel !== null && ` (${policyLabel.replace(/ \((default|comparison)\)$/, "")})`}: {parts}
         </>

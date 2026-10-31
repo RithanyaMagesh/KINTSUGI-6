@@ -25,6 +25,8 @@ export interface AssignmentEvent {
   time: number;
   rows: Array<{ satelliteId: string; targetSlot: string | null; prevSlot: string | null }>;
   costTotal: number | null;
+  /** The planner held every slot (do-no-harm): nobody moves. */
+  keptFormation?: boolean;
 }
 
 interface RecoveryStore {
@@ -237,6 +239,7 @@ export const useRecoveryStore = create<RecoveryStore>((set, get) => ({
             prevSlot: s.prevSlots[a.satellite_id] ?? null,
           })),
           costTotal: msg.reassignment.cost_total ?? null,
+          keptFormation: msg.reassignment.kept_formation === true,
         }),
       );
     }

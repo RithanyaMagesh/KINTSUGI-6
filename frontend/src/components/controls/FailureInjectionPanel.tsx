@@ -7,15 +7,23 @@ import { useEffect, useState } from "react";
 import { backend } from "../../api/backend";
 import { useSimStore } from "../../stores/simStore";
 import { useUiStore } from "../../stores/uiStore";
-import { faultLabel, roleLabel, statusLabel } from "../live/hudFormat";
+import { faultLabel, rolesLabel, satLabel } from "../live/hudFormat";
 import chrome from "../../styles/chrome.module.css";
 import styles from "./FailureInjectionPanel.module.css";
 
-const MODE_DESCRIPTIONS: Record<"DEAD" | "THRUSTER_OUT" | "EPS_DEGRADE", string> = {
-  DEAD: "Goes silent and drifts.",
-  THRUSTER_OUT: "Can't move any more; it reports the fault and the swarm replans.",
-  EPS_DEGRADE: "Power fades over the time you set, then it goes silent.",
-};
+// Descriptions follow the engine's own (FailureMode docstrings). The last four
+// exist only in the v2 engine; on a v1 run the server refuses them and its
+// message is shown as is.
+const MODES = [
+  { id: "DEAD", desc: "Goes silent and drifts. The swarm notices within seconds and moves the survivors into new slots." },
+  { id: "THRUSTER_OUT", desc: "Can't move any more; it reports the fault and the swarm replans." },
+  { id: "EPS_DEGRADE", desc: "Power fades over the time you set, then it goes silent." },
+  { id: "PAYLOAD_FAIL", desc: "Keeps flying but can no longer image. Needs the v2 engine." },
+  { id: "PARTIAL_THRUST", desc: "Thrusters drop to half strength. No alarm is raised. Needs the v2 engine." },
+  { id: "THRUSTER_STUCK_OPEN", desc: "A thruster fires nonstop until the tank is empty. No alarm is raised. Needs the v2 engine." },
+  { id: "RADIO_FAIL", desc: "Keeps flying but goes silent. Needs the v2 engine." },
+] as const;
+type InjectMode = (typeof MODES)[number]["id"];
 
 export default function FailureInjectionPanel() {
   const mode = useSimStore((s) => s.mode);
@@ -23,7 +31,7 @@ export default function FailureInjectionPanel() {
   const selectedSatelliteId = useUiStore((s) => s.selectedSatelliteId);
   const viewMode = useUiStore((s) => s.viewMode);
   const [satId, setSatId] = useState("");
-  const [failureMode, setFailureMode] = useState<"DEAD" | "THRUSTER_OUT" | "EPS_DEGRADE">("DEAD");
+  const [failureMode, setFailureMode] = useState<InjectMode>("DEAD");
   const [degradeS, setDegradeS] = useState(600.0);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -44,7 +52,7 @@ export default function FailureInjectionPanel() {
     }
   }, [satellites, satId]);
 
-  const effectiveMode = viewMode === "simplified" ? "DEAD" : failureMode;
+  const effectiveMode: InjectMode = viewMode === "simplified" ? "DEAD" : failureMode;
   const live = mode === "live";
   const canInject = live && satellites.length > 0 && satId !== "" && !busy;
 
@@ -84,7 +92,7 @@ export default function FailureInjectionPanel() {
           <option value="">Select satellite…</option>
           {satellites.map((s) => (
             <option key={s.id} value={s.id}>
-              {`${s.id}, ${roleLabel(s.role)}, ${statusLabel(s.status)}`}
+              {`${s.id}, ${rolesLabel(s)}, ${satLabel(s)}`}
             </option>
           ))}
         </select>
@@ -101,13 +109,13 @@ export default function FailureInjectionPanel() {
               className={chrome.select}
               value={failureMode}
               disabled={!live || busy}
-              onChange={(e) =>
-                setFailureMode(e.target.value as "DEAD" | "THRUSTER_OUT" | "EPS_DEGRADE")
-              }
+              onChange={(e) => setFailureMode(e.target.value as InjectMode)}
             >
-              <option value="DEAD">Dead</option>
-              <option value="THRUSTER_OUT">Thruster out</option>
-              <option value="EPS_DEGRADE">Battery fade</option>
+              {MODES.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {faultLabel(m.id)}
+                </option>
+              ))}
             </select>
           </div>
           {failureMode === "EPS_DEGRADE" && (
@@ -140,8 +148,7 @@ export default function FailureInjectionPanel() {
       </button>
 
       <p className={styles.modeHint}>
-        {faultLabel(effectiveMode)}: {MODE_DESCRIPTIONS[effectiveMode]} The swarm notices within
-        seconds and moves the survivors into new slots.
+        {faultLabel(effectiveMode)}: {MODES.find((m) => m.id === effectiveMode)!.desc}
       </p>
       {!live && <p className={chrome.hint}>Start a live simulation above to fail satellites.</p>}
       {error !== null && <p className={chrome.errorText}>{error}</p>}

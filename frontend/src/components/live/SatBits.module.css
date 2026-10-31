@@ -1,0 +1,36 @@
+.fuel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  white-space: nowrap;
+}
+
+.track {
+  display: inline-block;
+  width: 48px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.fill {
+  display: block;
+  height: 100%;
+}
+
+.fuelText {
+  font-variant-numeric: tabular-nums;
+}
+
+.flags {
+  display: inline-flex;
+  gap: 4px;
+  vertical-align: -3px;
+  margin-left: 6px;
+}
+
+.icon {
+  width: 14px;
+  height: 14px;
+}

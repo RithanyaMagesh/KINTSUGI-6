@@ -6,6 +6,7 @@
 // - "local" (Formation array view): maps raw LVLH coordinates [y, x, z] onto
 //   the close-up 2:1 Clohessy-Wiltshire relative formation grid.
 // All colors derive strictly from tokens.css via sceneColors.ts (§13.1).
+import { rolesLabel } from "../live/hudFormat";
 import * as THREE from "three";
 import type { Satellite } from "../../types/satellite";
 import type { OrbitViewMode } from "../../stores/uiStore";
@@ -294,7 +295,7 @@ export function createSatelliteRecord(
 
 function roleWord(sat: Satellite): string {
   if (sat.status === "failed") return "lost";
-  return sat.role === "leader" ? "leader" : sat.role === "downlink" ? "downlink" : "imager";
+  return rolesLabel(sat).toLowerCase();
 }
 
 function labelText(sat: Satellite): string {

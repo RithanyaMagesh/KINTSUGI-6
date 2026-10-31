@@ -134,6 +134,16 @@ function MissionTab() {
         <Row label="Scenario" value={s.scenario ?? DASH} />
         <Row label="Seed" value={s.seed === null ? DASH : String(s.seed)} />
         <Row label="Recovery method" value={s.policy === null ? DASH : (POLICY_NAME[s.policy] ?? s.policy)} />
+        <Row
+          label="Last replan"
+          value={
+            s.lastReassignment === null
+              ? DASH
+              : s.lastReassignment.keptFormation
+                ? "Kept formation, no move"
+                : (POLICY_NAME[s.lastReassignment.method ?? ""] ?? s.lastReassignment.method ?? DASH)
+          }
+        />
         <Row label="Mode" value={s.mode === "live" ? "Live" : s.mode === "replay" ? "Replay" : "Stopped"} />
         <Row
           label="Backend"
