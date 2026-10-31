@@ -358,31 +358,51 @@ Formulation, caps, verified keep-out, MPC schedule, validation and the corrected
 - **Brief's prototype claims (disagreements reported, nothing tuned):** 16.4 m/s at 0.01 / 1 orbit / 8 km: 16.31 L1 from the 1208 s state (-0.09), **16.40 from the 1206 s state** (the brief's definition). "~4 m/s" at 0.002 / 2 km: 4.55 L1 / 4.15 L2 at T = 1 orbit (+0.55 / +0.15); 3.96 at T = 2 orbits. The brief's PD 155 m/s is the second replan episode (replan t = 1506 s), not reproduced here.
 - **L1 is not the L2 optimum:** SLSQP minimum of sum ||dv||_2 on the 8 km reference, T = 1 orbit, N = 48: 14.1426 m/s at a_max 0.1 and 0.01 (neither the box nor the spherical cap binds), equal to the dual lower bound (14.1426); the LP's L2 is 15.707 (+11.1 percent) and 16.310 (+15.3 percent). Cap shapes at a_max 0.01: minimum feasible a_max box 0.005050 / octahedron 0.003378 / sphere (SLSQP) 0.003066; box costs +2.7 percent L1 vs octahedron (16.31 vs 15.88). The default stays `box`; `cap_shape="octahedron"` is optional. Using cap interval T/(N-1) instead of T/N lowers the box minimum feasible a_max to 0.004944 (-2.1 percent).
 - Convergence in N (L1 at N = 12/24/48/96, relative change on halving): 8 km @ 0.01: 16.494 / 16.264 / 16.310 / 16.333 (1.4, 0.28, 0.15 percent); 8 km @ 0.1: 15.844 / 15.746 / 15.707 / 15.700 (0.6, 0.24, 0.05 percent); 2 km @ 0.002: 4.496 / 4.533 / 4.546 / 4.559 (0.8, 0.29, 0.29 percent). Solver runtime 1.3-9 ms per solve (machine-dependent).
-- **Fix-round numbers.** Keep-out fuzz (100 seeded crossings, obstacle between widely spaced samples): free plan collided 100/100; 96 planned, 4 None; worst grid shortfall 0 m; TRUE min distance (0.05 s grid) above d_safe in all 96 (worst margin 43.3 m); bound between 1 s grid points: v_rel * 0.5 s. Landing fuzz (300 seeded cases): 259 shipped, worst residual 1.7e-7 m / 3.5e-11 m/s (relative 1.3e-11), post-check tolerance 1e-6 max(1, |x_target|). MPC closed loop (a_max 0.01, N = 48, T = 1 orbit, re-solve every 120 s): zero noise 0 None, L1 17.6846 = open loop 17.6846; noise 1 m / 1e-3 m/s: 0 None, L1 17.7215, final error 5e-12 m. The reviewer's reproduced defects (sampled-only keep-out, shrinking MPC cap, unvalidated k > 1 / N = 2.7, status-0-only solver gate) each have a red-first test in `tests/v2/test_transfer_hardening.py`.
-- Tests: `uv run python -m pytest tests/v2/test_transfer.py tests/v2/test_transfer_hardening.py tests/v2/test_transfer_report.py -p no:cacheprovider`. Mutation check, copy in /tmp, 23 mutants, 23 killed (a first round found two survivors that were fixed: an equivalent row-scaling mutant, whose code was deleted, and a redundant cancel check, removed; the second round's survivors, a dense-grid coincidence, a status check that only the landing check masked, an assembly cancel check masked by the verification checks, a redundant T guard and the octahedron rows, each got a sharper test or the redundant guard was removed):
+- **Fix-round numbers.** Keep-out fuzz (100 seeded crossings, obstacle between widely spaced samples): free plan collided 100/100; **100 planned, 0 None** (96/4 before the head-on multi-start); worst grid shortfall 0 m; TRUE min distance (0.05 s grid) above d_safe in all 100 (worst margin 0.21 m, small: the `v_rel * 0.5 s` bound between 1 s grid points is a worst case, not observed); landing fuzz (300 seeded cases): 259 shipped, worst residual 1.7e-7 m / 3.5e-11 m/s (relative 1.3e-11), post-check tolerance 1e-6 max(1, |x_target|). MPC closed loop (a_max 0.01, N = 48, T = 1 orbit, re-solve every 120 s): zero noise 0 None, L1 17.6846 = open loop 17.6846; noise 1 m / 1e-3 m/s: 0 None, L1 17.7215, final error 5e-12 m. The reviewer's reproduced defects (sampled-only keep-out, shrinking MPC cap, unvalidated k > 1 / N = 2.7, status-0-only solver gate, head-on false None) each have a red-first test in `tests/v2/test_transfer_hardening.py` / `test_transfer_headon.py`.
+- **Head-on (second review round):** an obstacle crossing exactly through the free plan gave `None` (undefined half-space normal). Now degenerate obstacles try up to 8 fixed normals (`+-x, +-y, +-z, +-unit(cross(v_rel, z))`) through the same verify-and-refine loop; cheapest verified plan wins. Table (8 km, T = 1 orbit, N = 48, a_max 0.05, d_safe 300 m, obstacle along z at v; free plan L1 16.729); all 8 combos plan, cost within 0.03 percent of the free plan and below the offset-150 reference:
+
+| m samples | v (m/s) | head-on L1 (m/s) | verified clearance (m) | true min distance (m) | offset-150 L1 (m/s) |
+|---|---|---|---|---|---|
+| 10 | 2 | 16.730 | 329.4 | 329.4 | 16.798 |
+| 10 | 10 | 16.730 | 323.2 | 323.2 | 16.801 |
+| 20 | 2 | 16.730 | 337.0 | 337.0 | 16.930 |
+| 20 | 10 | 16.730 | 334.2 | 334.2 | 16.930 |
+| 50 | 2 | 16.733 | 352.7 | 352.6 | 16.822 |
+| 50 | 10 | 16.733 | 374.8 | 374.8 | 16.793 |
+| 96 | 2 | 16.733 | 343.2 | 343.2 | 16.806 |
+| 96 | 10 | 16.733 | 378.7 | 378.7 | 16.764 |
+
+  The literal threshold `max(1 m, 1e-3 d_safe)` detected only 2 of 8 (the 1 s grid never lands within 1 m of a crossing); the threshold also includes `|v_rel| * 1 s` (measured, reported). Runtime: 3-7 ms per LP solve; head-on call 10-14 LP solves, 0.5-0.64 s (machine-dependent, dominated by the dense verification) vs 0.06 s non-degenerate; worst case 28 LP solves. `transfer.py` was split (validation + dense model + keep-out grid moved to `cubesat/transfer_validate.py`): 307 + 200 lines, no behaviour change, committed artifacts regenerate identically.
+- Tests: `uv run python -m pytest tests/v2/test_transfer.py tests/v2/test_transfer_hardening.py tests/v2/test_transfer_headon.py tests/v2/test_transfer_report.py -p no:cacheprovider`. Mutation check, copy in /tmp, 29 mutants, 29 killed (earlier rounds' survivors were fixed with sharper tests or by removing redundant code: an equivalent row-scaling mutant, a redundant cancel check, a dense-grid coincidence, a status check masked by the landing check, assembly/candidate-loop cancel checks masked by the verification checks, a redundant T guard, the octahedron rows, and the candidate-set reductions, now pinned by a direct candidate-set test):
 
 | Mutant | Killed by |
 |---|---|
-| KILLED   guard k==0 dropped | `test_transfer_hardening.py::test_zero_burn_transfer_with_no_fuel_or_thrust_is_none[kw0]` |
-| KILLED   guard a_max==0 dropped | `test_transfer_hardening.py::test_zero_burn_transfer_with_no_fuel_or_thrust_is_none[kw1]` |
-| KILLED   guard n>0 dropped | `test_transfer_hardening.py::test_malformed_n_and_target_and_keepout_raise` |
-| KILLED   status==0 check dropped | `test_transfer_hardening.py::test_nonzero_status_is_none_even_when_x_is_a_valid_landing_plan[1]` |
-| KILLED   cancel not forwarded in mpc_step | `test_transfer_hardening.py::test_mpc_cancel_is_forwarded_to_the_solve` |
-| KILLED   keep-out times not shifted in mpc_step | `test_transfer_hardening.py::test_mpc_keepout_times_are_shifted_by_elapsed_time` |
-| KILLED   tie tolerance dropped in best_transfer | `test_transfer_hardening.py::test_best_transfer_ties_within_tolerance_prefer_the_shorter_T` |
-| KILLED   entry cancel check dropped | `test_transfer.py::test_cancel_mid_sweep_raises_without_partial_result` |
-| KILLED   verification cancel check dropped | `test_transfer_hardening.py::test_cancel_inside_a_large_keepout_build_is_prompt` |
-| KILLED   assembly cancel check dropped | `test_transfer_hardening.py::test_keepout_assembly_loop_checks_cancel_between_chunks` |
-| KILLED   min_clearance always None | `test_transfer_hardening.py::test_obstacle_crossing_between_widely_spaced_samples_is_avoided` |
-| KILLED   verification grid 1000 s instead of 1 s | `test_transfer_hardening.py::test_obstacle_crossing_between_widely_spaced_samples_is_avoided` |
-| KILLED   cap clip dropped | `test_transfer_hardening.py::test_overshoot_of_the_cap_is_clipped_and_relanded` |
-| KILLED   landing tolerance infinite | `test_transfer_hardening.py::test_status0_with_garbage_solution_is_rejected_by_the_landing_check` |
-| KILLED   MPC cap interval shrinks with horizon | `test_transfer_hardening.py::test_mpc_on_plan_state_stays_feasible_at_every_resolve_time` |
-| KILLED   k upper bound dropped | `test_transfer_hardening.py::test_malformed_input_raises_valueerror[kw0]` |
-| KILLED   N integer check dropped | `test_transfer_hardening.py::test_malformed_input_raises_valueerror[kw8]` |
-| KILLED   no refinement rounds | `test_transfer.py::test_keepout_avoids_obstacle_on_straight_path` |
-| KILLED   octahedron cap rows dropped | `test_transfer_hardening.py::test_octahedron_cap_rejects_a_node_whose_l1_exceeds_it` |
-| KILLED   T>0 check dropped | `test_transfer_hardening.py::test_malformed_input_raises_valueerror[kw14]` |
-| KILLED   mpc negative t_elapsed allowed | `test_transfer_hardening.py::test_best_transfer_and_mpc_validate_the_same_way` |
-| KILLED   box cap loses 1/sqrt(3) | `test_transfer.py::test_per_component_cap_respected_and_binding` |
-| KILLED   velocity STM columns -> position columns | `test_transfer.py::test_lp_lands_on_target_exactly` |
+| guard k==0 dropped | `test_transfer_hardening.py::test_zero_burn_transfer_with_no_fuel_or_thrust_is_none[kw0]` |
+| guard a_max==0 dropped | `test_transfer_hardening.py::test_zero_burn_transfer_with_no_fuel_or_thrust_is_none[kw1]` |
+| guard n>0 dropped | `test_transfer_hardening.py::test_malformed_n_and_target_and_keepout_raise` |
+| status==0 check dropped | `test_transfer_hardening.py::test_nonzero_status_is_none_even_when_x_is_a_valid_landing_plan[1]` |
+| cancel not forwarded in mpc_step | `test_transfer_hardening.py::test_mpc_cancel_is_forwarded_to_the_solve` |
+| keep-out times not shifted in mpc_step | `test_transfer_hardening.py::test_mpc_keepout_times_are_shifted_by_elapsed_time` |
+| tie tolerance dropped in best_transfer | `test_transfer_hardening.py::test_best_transfer_ties_within_tolerance_prefer_the_shorter_T` |
+| entry cancel check dropped | `test_transfer.py::test_cancel_mid_sweep_raises_without_partial_result` |
+| verification cancel check dropped | `test_transfer_hardening.py::test_cancel_inside_a_large_keepout_build_is_prompt` |
+| assembly cancel check dropped | `test_transfer_hardening.py::test_keepout_assembly_loop_checks_cancel_between_chunks` |
+| min_clearance always None | `test_transfer_hardening.py::test_obstacle_crossing_between_widely_spaced_samples_is_avoided` |
+| verification grid 1000 s instead of 1 s | `test_transfer_hardening.py::test_obstacle_crossing_between_widely_spaced_samples_is_avoided` |
+| cap clip dropped | `test_transfer_hardening.py::test_overshoot_of_the_cap_is_clipped_and_relanded` |
+| landing tolerance infinite | `test_transfer_hardening.py::test_status0_with_garbage_solution_is_rejected_by_the_landing_check` |
+| MPC cap interval shrinks with horizon | `test_transfer_hardening.py::test_mpc_on_plan_state_stays_feasible_at_every_resolve_time` |
+| k upper bound dropped | `test_transfer_hardening.py::test_malformed_input_raises_valueerror[kw0]` |
+| N integer check dropped | `test_transfer_hardening.py::test_malformed_input_raises_valueerror[kw8]` |
+| no refinement rounds | `test_transfer.py::test_keepout_avoids_obstacle_on_straight_path` |
+| octahedron cap rows dropped | `test_transfer_hardening.py::test_octahedron_cap_rejects_a_node_whose_l1_exceeds_it` |
+| T>0 check dropped | `test_transfer_hardening.py::test_malformed_input_raises_valueerror[kw14]` |
+| box cap loses 1/sqrt(3) | `test_transfer.py::test_per_component_cap_respected_and_binding` |
+| velocity STM columns -> position columns | `test_transfer.py::test_lp_lands_on_target_exactly` |
+| degenerate-normal multi-start removed | `test_transfer_headon.py::test_head_on_obstacle_through_the_free_plan_gets_a_verified_plan[10-2.0]` |
+| candidate set reduced to +x | `test_transfer_hardening.py::test_degenerate_candidate_set_is_the_six_axes_plus_two_perpendiculars` |
+| candidate set reduced to the 6 axes | `test_transfer_hardening.py::test_degenerate_candidate_set_is_the_six_axes_plus_two_perpendiculars` |
+| fixed normal ignored (re-linearised per row) | `ERROR tests/v2/test_transfer.py` |
+| wrong side per window (sign alternates per row) | `test_transfer_headon.py::test_head_on_obstacle_through_the_free_plan_gets_a_verified_plan[10-2.0]` |
+| degenerate threshold ignores grid-spacing term | `test_transfer_headon.py::test_head_on_obstacle_through_the_free_plan_gets_a_verified_plan[20-2.0]` |
+| most expensive candidate wins | `test_transfer_headon.py::test_head_on_cost_is_within_2_percent_of_the_best_offset_150_plan` |
