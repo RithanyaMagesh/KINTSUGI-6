@@ -207,3 +207,9 @@ def test_station_threshold_matches_ground_module():
         assert out["elevation_deg"] == pytest.approx(float(ground.elevation_deg(r, r_gs)))
         assert out["visible"] == (out["elevation_deg"] >= ground.MIN_ELEVATION_DEG)
 
+
+def test_report_numbers_are_within_the_documented_limits():
+    r = geo_v2.report(_scn())
+    assert r["ring_closure_m"] < 40e3 and r["ring_vs_engine_max_abs_diff_m"] < 1e-6
+    assert r["ground_track_max_abs_lat_deg"] == pytest.approx(82.6, abs=0.1)
+    assert r["hello_earth_keys_bytes"] < 60_000

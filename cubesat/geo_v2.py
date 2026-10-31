@@ -172,3 +172,45 @@ def hello_fields(scenario: Scenario) -> dict:
         },
     }
 
+
+def report(scenario: Scenario) -> dict:
+    """Measured Earth-view numbers for docs/PHYSICS_V2.md ("Earth view data"); the command is
+    `uv run python -m cubesat.geo_v2`. Sizes are compact JSON bytes."""
+    import json
+
+    from cubesat.sim_v2 import EngineV2
+
+    ring = np.array(orbit_ring(scenario))
+    period = chief_period_s(scenario)
+    closure = float(np.linalg.norm(ring[0] - chief_states(scenario, [period])[0, :3]))
+    radius = np.linalg.norm(ring, axis=1)
+    n = 100  # samples on engine ticks: ring[k] must equal the engine's chief at tick k
+    short = scenario.model_copy(update={"duration_s": n * scenario.dt_s})
+    on_ticks, eng, worst = orbit_ring(short, n=n, span_s=n * short.dt_s), EngineV2(short), 0.0
+    for k in range(n):
+        worst = max(worst, float(np.max(np.abs(eng.X[0, :3] - np.array(on_ticks[k])))))
+        eng.step()
+    sun = sun_direction_eci("2000-06-21T01:48:00Z")
+    equinox = sun_direction_eci("2000-03-20T07:35:00Z")
+    hello = hello_fields(scenario)
+    tick = tick_fields(ring[0], scenario.chief.epoch_utc, 0.0)
+    compact = {"separators": (",", ":"), "allow_nan": False}
+    return {
+        "period_s": period,
+        "ring_closure_m": closure,
+        "ring_radius_rel_span": float((radius.max() - radius.min()) / radius.mean()),
+        "ground_track_max_abs_lat_deg": float(np.abs(np.array(ground_track(scenario))[:, 0]).max()),
+        "ring_vs_engine_max_abs_diff_m": worst,
+        "sun_declination_2000_06_21_deg": math.degrees(math.asin(sun[2])),
+        "sun_angle_to_plus_x_2000_03_20_deg": math.degrees(math.acos(equinox[0])),
+        "hello_earth_keys_bytes": len(json.dumps(hello, **compact)),
+        "sim_state_extra_bytes_per_tick": len(json.dumps(tick, **compact)),
+    }
+
+
+if __name__ == "__main__":
+    from cubesat.scenario import load_scenario
+
+    base = load_scenario("data/scenarios/two_failure.json")
+    for key, value in report(base.model_copy(update={"engine": "v2"})).items():
+        print(f"{key} = {value}")

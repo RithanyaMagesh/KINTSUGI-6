@@ -58,3 +58,32 @@ Not changed: `metrics.replanning_latency_ms` (still `null`; the client reads it 
 ## Earth view (user spec 2026-10-31, docs/superpowers/specs/KINTSUGI-6_earth_view_spec.md)
 Frontend items 1-6 of that spec are for the frontend session (load the frontend-design skill; `lvlhToScene()` "global" mode is to be deleted; formation = one cluster dot on the orbit ring + a Formation lens inset; constellation mode with per-plane rings; time-warp badge; failed red / in-transit amber / healthy green / repaired gold only; hex only in tokens.css; reduced motion; 60 fps at 1920x1080, check 1280x720; visual QA screenshots).
 Backend data they depend on (the backend session builds it, in this order; fields are optional/additive): (1) every `sim_state` gets `chief: {r_eci, lat_deg, lon_deg, alt_m}`, hello gets `epoch_utc`, `inclination_deg`, `raan_deg`, `orbit_ring` (256 ECI points of one chief period) and `ground_track` (lat/lon over +-1 orbit); (2) later, constellation layout with per-sat `r_eci`. Frontend steps 1-3 (formation mode) need backend item 1 only; step 4 (constellation) needs backend item 2.
+
+## Earth view data (2026-10-31)
+
+Backend item 1 of the Earth-view spec, engine v2 runs only (live). Everything is additive and optional: engine v1 runs, replays and every committed log keep their exact bytes, so absent keys mean "no globe data, fall back". Source: `cubesat/geo_v2.py`, wire in `cubesat/wire.py` and `Session.hello()`, pinned in `tests/v2/test_earth_wire.py` and `tests/v2/test_earth_tick.py`.
+
+**Frames and units.** ECI, metres, z = Earth rotation axis, x = vernal equinox direction (precession/nutation ignored). Per-sat `r`/`v` stay LVLH, unchanged. `lat_deg`/`lon_deg` in degrees, longitude in [-180, 180], east positive. `alt_m` above a spherical Earth of radius 6378.137 km (no flattening: up to ~0.2 deg latitude difference against a real ellipsoid, same model as `cubesat/ground.py`).
+
+**hello additions (v2 live runs only)**, computed once per run, about 14.8 kB of JSON:
+```json
+{"type": "hello", "mode": "live", "scenario": "two_failure.json", "seed": 42, "sim_time": null, "skipped": 0, "policy": "hungarian",
+ "epoch_utc": "2026-03-20T12:00:00Z", "inclination_deg": 97.4, "raan_deg": 0.0,
+ "orbit_ring": [[6878137.0, 0.0, 0.0], [6876062.542, -21740.427, 167391.971], "... 256 points, ECI m, one chief period from t=0"],
+ "ground_track": [[-2.7891, 2.5137], [0.0, 1.9658], [2.7891, 1.418], "... 257 [lat_deg, lon_deg] samples, t = -1 period .. +1 period, index 128 is t = 0"],
+ "sun_vector_eci": [0.999998, -0.001749, -0.000758],
+ "ground_station": {"name": "Bengaluru", "lat_deg": 13.03, "lon_deg": 77.51, "min_elevation_deg": 10.0}}
+```
+`orbit_ring[k]` is the chief at t = k * T / 256 (T = 2 pi / n, 5677.0 s at 500 km). The ring is the engine's own chief trajectory (gravity + J2, no drag), so it does NOT close exactly: the end of one period is 32.5 km from the start (J2 nodal-period phase drift). Draw it as an open loop of 256 points, or close it visually with a line back to point 0. `time_warp`: not sent, there is no existing hello field for it; the speed is the one you set via `/simulation/speed` and the start response.
+
+**sim_state additions (every v2 tick, about 160 bytes)**:
+```json
+{"type": "sim_state", "sim_time": 1500.0, "...": "...",
+ "chief": {"r_eci": [-614967.24, -882850.85, 6786655.15], "lat_deg": 80.99, "lon_deg": -129.16, "alt_m": 493274.68},
+ "station": {"elevation_deg": -40.2, "visible": false}}
+```
+`station.visible` is true while the chief is at least `ground_station.min_elevation_deg` above the Bengaluru horizon: show the visibility cone only then. The station moves with the Earth, so place it from `ground_station` lat/lon on the rotating globe.
+
+**Rotating the Earth.** Earth-fixed to ECI rotation about +z by GMST(t) = GMST(epoch) + 7.2921159e-5 rad/s * sim_time. The frontend needs GMST at the epoch: `gmst0 = (280.46061837 + 360.98564736629 * d + 0.000387933 * (d/36525)^2) deg` with `d` = days from 2000-01-01T12:00:00Z to `epoch_utc` (IAU-1982, UT1 = UTC). Rotate the globe mesh (texture with longitude 0 on +x at GMST = 0) by `gmst0 + 7.2921159e-5 * sim_time` about the z axis. A point at (lat, lon) sits at ECI angle lon + GMST. For lighting, `sun_vector_eci` is fixed at the epoch (the sun moves 1 deg/day: at most 0.07 deg over a one-orbit-day run, so keep it constant for a run). Use the sat positions in ECI: chief `r_eci`; satellites = chief + LVLH offset rotated by the LVLH basis (x radial, y along-track, z cross-track), or simply draw the formation as one cluster at `chief.r_eci` as the spec says. The `ground_track` is Earth-fixed (lat/lon at the sample times), draw it on the surface without rotating it with sim time.
+
+Simplifications: spherical Earth, UT1 = UTC, constant rotation rate, sun direction from the low-precision almanac formula (about 0.01 deg), no precession/nutation, replays of v2 logs carry the per-tick keys but no hello extras (the hello needs the scenario).
