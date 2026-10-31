@@ -20,13 +20,22 @@ OMEGA_E = 7.2921159e-5  # rad/s, Earth rotation about +z
 # largest h0 <= h; the 1000 km row is used above 1000 km, the 150 km row below 150 km.
 _VALLADO = np.array(
     [
-        (150, 2.070e-9, 22.523), (180, 5.464e-10, 29.740), (200, 2.789e-10, 37.105),
-        (250, 7.248e-11, 45.546), (300, 2.418e-11, 53.628), (350, 9.518e-12, 53.298),
-        (400, 3.725e-12, 58.515), (450, 1.585e-12, 60.828), (500, 6.967e-13, 63.822),
-        (600, 1.454e-13, 71.835), (700, 3.614e-14, 88.667), (800, 1.170e-14, 124.64),
-        (900, 5.245e-15, 181.05), (1000, 3.019e-15, 268.00),
+        (150, 2.070e-9, 22.523),
+        (180, 5.464e-10, 29.740),
+        (200, 2.789e-10, 37.105),
+        (250, 7.248e-11, 45.546),
+        (300, 2.418e-11, 53.628),
+        (350, 9.518e-12, 53.298),
+        (400, 3.725e-12, 58.515),
+        (450, 1.585e-12, 60.828),
+        (500, 6.967e-13, 63.822),
+        (600, 1.454e-13, 71.835),
+        (700, 3.614e-14, 88.667),
+        (800, 1.170e-14, 124.64),
+        (900, 5.245e-15, 181.05),
+        (1000, 3.019e-15, 268.00),
     ]
-)  # fmt: skip
+)
 _H0, _RHO0, _SH = _VALLADO[:, 0], _VALLADO[:, 1], _VALLADO[:, 2]
 
 
@@ -47,8 +56,9 @@ def accel_j2(r: np.ndarray) -> np.ndarray:
 
 
 def density(h_m):
-    """Exponential-atmosphere density [kg/m^3] at altitude h_m [m] (scalar or array)."""
-    h_km = np.asarray(h_m, dtype=float) / 1e3
+    """Exponential-atmosphere density [kg/m^3] at altitude h_m [m] (scalar or array); below
+    150 km the 150 km row value is used (constant, no extrapolation)."""
+    h_km = np.maximum(np.asarray(h_m, dtype=float) / 1e3, _H0[0])  # never extrapolate below 150 km
     i = np.clip(np.searchsorted(_H0, h_km, side="right") - 1, 0, len(_H0) - 1)
     rho = _RHO0[i] * np.exp(-(h_km - _H0[i]) / _SH[i])
     return float(rho) if rho.ndim == 0 else rho
@@ -74,8 +84,8 @@ def lvlh_dcm(r_c: np.ndarray, v_c: np.ndarray) -> np.ndarray:
 
 
 def thrust_eci(a_lvlh: np.ndarray, r_c: np.ndarray, v_c: np.ndarray) -> np.ndarray:
-    """Commanded LVLH acceleration rotated to ECI: a_I = C^T a_LVLH."""
-    return lvlh_dcm(r_c, v_c).T @ np.asarray(a_lvlh, dtype=float)
+    """Commanded LVLH acceleration rotated to ECI: a_I = C^T a_LVLH; a_lvlh is (3,) or (N, 3)."""
+    return np.asarray(a_lvlh, dtype=float) @ lvlh_dcm(r_c, v_c)
 
 
 def rk4_step(state: np.ndarray, dt: float, accel_fn) -> np.ndarray:

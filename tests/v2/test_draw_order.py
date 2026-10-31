@@ -1,14 +1,8 @@
 """Task 1.2: one sim-owned Generator and a fixed, documented draw order.
 
-Table (rows fixed so phases can land in any order; mirrored in docs/PHYSICS_V2.md,
-checked by test_doc_table_matches once that file exists):
- 1 heartbeat_loss  rng.random()            Phase 4  unconditional
- 2 measurement_noise rng.standard_normal(6) Phase 4  unconditional
- 3 seu             rng.random()            Phase 3  unconditional
- 4 seu_duration    rng.uniform(30,120)     Phase 3  only on an SEU hit (after unconditional rows)
- 5 impact          rng.random()            Phase 3  unconditional
- 6 impact_component rng.random()           Phase 3  only on an impact hit
- 7 impact_fraction rng.uniform(0.2,0.6)    Phase 3  only on an impact hit
+Every row is drawn for every sat at every tick (rows in table order, sats ascending), whether or
+not its event fires: docs/PHYSICS_V2.md. The per-row consumption is pinned in
+tests/v2/test_p1_fixes.py (test_all_seven_rows_drawn_per_sat_per_tick).
 """
 
 import json
@@ -17,7 +11,7 @@ from pathlib import Path
 
 import numpy as np
 
-from cubesat import sim_v2
+from cubesat import rng_v2, sim_v2
 from cubesat.scenario import Scenario
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -54,25 +48,7 @@ def test_generator_is_pcg64_seedsequence():
 
 
 def test_draw_order_constant():
-    assert sim_v2.DRAW_ORDER == EXPECTED_ORDER
-
-
-def test_reserved_rows_consumed_as_noops():
-    """draw_tick consumes rows 1,2,3,5 per sat in ascending id; a later phase replaces
-    consume_reserved with real effects but must keep this exact consumption."""
-    a = sim_v2.make_rng(_scenario(3))
-    out = sim_v2.draw_tick(a, 4)
-    b = sim_v2.make_rng(_scenario(3))
-    for i in range(4):
-        assert b.random() == out["heartbeat_u"][i]
-        assert np.array_equal(b.standard_normal(6), out["noise"][i])
-        assert b.random() == out["seu_u"][i]
-        assert b.random() == out["impact_u"][i]
-    assert a.bit_generator.state == b.bit_generator.state
-    c = sim_v2.make_rng(_scenario(3))
-    sim_v2.consume_reserved(c, 4)
-    assert c.bit_generator.state == a.bit_generator.state
-
+    assert rng_v2.DRAW_ORDER == EXPECTED_ORDER
 
 
 def test_doc_table_matches():
@@ -80,4 +56,4 @@ def test_doc_table_matches():
     text = (ROOT / "docs" / "PHYSICS_V2.md").read_text(encoding="utf-8")
     names = re.findall(r"^\| (\d) \| `(\w+)` \|", text, flags=re.M)
     assert [int(n) for n, _ in names] == list(range(1, 8))
-    assert tuple(name for _, name in names) == sim_v2.DRAW_ORDER
+    assert tuple(name for _, name in names) == rng_v2.DRAW_ORDER

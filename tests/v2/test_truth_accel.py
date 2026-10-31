@@ -14,12 +14,21 @@ ROOT = Path(__file__).resolve().parents[2]
 # Vallado, Fundamentals of Astrodynamics and Applications, Table 8-4 (h0 km, rho0 kg/m3, H km),
 # copied from docs/superpowers/plans/2026-10-31-physics-v2-plan.md Task 1.3.
 VALLADO = [
-    (150, 2.070e-9, 22.523), (180, 5.464e-10, 29.740), (200, 2.789e-10, 37.105),
-    (250, 7.248e-11, 45.546), (300, 2.418e-11, 53.628), (350, 9.518e-12, 53.298),
-    (400, 3.725e-12, 58.515), (450, 1.585e-12, 60.828), (500, 6.967e-13, 63.822),
-    (600, 1.454e-13, 71.835), (700, 3.614e-14, 88.667), (800, 1.170e-14, 124.64),
-    (900, 5.245e-15, 181.05), (1000, 3.019e-15, 268.00),
-]  # fmt: skip
+    (150, 2.070e-9, 22.523),
+    (180, 5.464e-10, 29.740),
+    (200, 2.789e-10, 37.105),
+    (250, 7.248e-11, 45.546),
+    (300, 2.418e-11, 53.628),
+    (350, 9.518e-12, 53.298),
+    (400, 3.725e-12, 58.515),
+    (450, 1.585e-12, 60.828),
+    (500, 6.967e-13, 63.822),
+    (600, 1.454e-13, 71.835),
+    (700, 3.614e-14, 88.667),
+    (800, 1.170e-14, 124.64),
+    (900, 5.245e-15, 181.05),
+    (1000, 3.019e-15, 268.00),
+]
 
 
 def _u_j2(r):
@@ -32,9 +41,7 @@ def _u_j2(r):
 def test_j2_matches_potential_gradient():
     r = np.array([4.2e6, -3.1e6, 4.4e6])
     h = 10.0
-    grad = np.array([
-        (_u_j2(r + h * e) - _u_j2(r - h * e)) / (2.0 * h) for e in np.eye(3)
-    ])  # fmt: skip
+    grad = np.array([(_u_j2(r + h * e) - _u_j2(r - h * e)) / (2.0 * h) for e in np.eye(3)])
     a = truth.accel_j2(r)
     rel = np.linalg.norm(a - grad) / np.linalg.norm(grad)
     print(f"J2 gradient rel err = {rel:.3e}")
@@ -116,6 +123,10 @@ def test_truth_block_defaults_are_illustrative_and_v1_neutral():
     payload = json.loads((ROOT / "data" / "scenarios" / "nominal.json").read_text())
     t = Scenario.model_validate(payload).truth
     assert (t.cd, t.area_active_m2, t.area_dead_m2, t.mass_kg, t.density_factor) == (
-        2.2, 0.010, 0.035, 4.0, 1.0,
-    )  # fmt: skip
+        2.2,
+        0.010,
+        0.035,
+        4.0,
+        1.0,
+    )
     assert t.j2_enabled is True

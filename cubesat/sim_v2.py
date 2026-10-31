@@ -1,15 +1,20 @@
 """Engine v2: stepper-native truth-dynamics loop (ECI two-body + J2 + drag, RK4).
 
-Log schema = cubesat/sim.py (v1) plus optional keys (`events`, INIT `engine`). Phase 1 scope:
-truth propagation, v1 PDController seat holding on the LVLH state (until Phase 5), failures coast
-in the truth model (DEAD = tumbling area), v1-style heartbeat detection, NO recovery.
-Contract: EngineV2(scenario, injections) replayed from t=0 gives the identical log.
+Log schema = cubesat/sim.py (v1) plus optional keys: `events` (every event of the tick) and INIT
+`engine`. Consumers that read only `frame["event"]` (wire.py, dv_bound.py) see just the FIRST of
+several simultaneous events; `events` carries all of them. Phase 1 scope: truth propagation,
+v1 PDController seat holding on the LVLH state (until Phase 5), failures coast in the truth model
+(cubesat/faults_v2.py), a re-entry guard, NO recovery.
+
+Contract: EngineV2(scenario, injections) replayed from t=0 gives the identical log; the
+injections to replay are `engine.injections` (inject() records the RESOLVED failure).
 """
 
 from __future__ import annotations
 
+import hashlib
+import json
 import math
-import pickle
 import threading
 from collections.abc import Iterator
 
@@ -17,68 +22,28 @@ import numpy as np
 
 from cubesat import truth
 from cubesat.coverage import coverage_fraction, footprint_radius, target_grid
+from cubesat.faults_v2 import STATUS_REENTERED, Faults
 from cubesat.hcw import mean_motion, stm
 from cubesat.pd import PDController
-from cubesat.scenario import Failure, FailureMode, Scenario
+from cubesat.rng_v2 import draw_tick, make_rng
+from cubesat.scenario import Failure, Scenario
 from cubesat.sim import (
     LOG_SCHEMA_VERSION,
-    STATE_FAILURE_DETECTED,
     STATE_INIT,
-    STATE_NOMINAL,
     STATE_SUMMARY,
     STATUS_DEAD,
     STATUS_DEGRADED,
     STATUS_NOMINAL,
-    STATUS_THRUSTER_OUT,
     RunCancelled,
     build_slots,
 )
 
-# Draw-order table (docs/PHYSICS_V2.md). Row positions are fixed: new draws are APPENDED,
-# never inserted; conditional rows (4, 6, 7) come after the tick's unconditional ones.
-DRAW_ORDER: tuple[str, ...] = (
-    "heartbeat_loss",  # 1 rng.random()            Phase 4, every sat every tick
-    "measurement_noise",  # 2 rng.standard_normal(6) Phase 4, every sat every tick
-    "seu",  # 3 rng.random()                        Phase 3, every sat every tick
-    "seu_duration",  # 4 rng.uniform(30, 120)        Phase 3, only on an SEU hit
-    "impact",  # 5 rng.random()                      Phase 3, every sat every tick
-    "impact_component",  # 6 rng.random()            Phase 3, only on an impact hit
-    "impact_fraction",  # 7 rng.uniform(0.2, 0.6)    Phase 3, only on an impact hit
-)
-
-
-def make_rng(scenario: Scenario) -> np.random.Generator:
-    """The one sim-owned Generator (v1 never touches it; the seed stays write-only there)."""
-    return np.random.Generator(np.random.PCG64(np.random.SeedSequence(scenario.seed)))
-
-
-def draw_tick(rng: np.random.Generator, n_sats: int) -> dict[str, np.ndarray]:
-    """One tick's unconditional rows (1, 2, 3, 5) per sat in ascending id.
-
-    Phases 3-4 are not implemented yet: the values are drawn and ignored so a later phase
-    changes no stream position (tests/v2/test_draw_order.py)."""
-    hb, seu, imp = np.empty(n_sats), np.empty(n_sats), np.empty(n_sats)
-    noise = np.empty((n_sats, 6))
-    for i in range(n_sats):
-        hb[i] = rng.random()
-        noise[i] = rng.standard_normal(6)
-        seu[i] = rng.random()
-        imp[i] = rng.random()
-    return {"heartbeat_u": hb, "noise": noise, "seu_u": seu, "impact_u": imp}
-
-
-def consume_reserved(rng: np.random.Generator, n_sats: int) -> None:
-    """No-op consumer of the reserved rows (Phases 3-4 replace it)."""
-    draw_tick(rng, n_sats)
-
-
-
-_STATE = ("k", "X", "refs", "dv", "status", "missed", "declared", "t_fail", "fail_mode",
-          "mission", "pending", "fired", "injections", "cov")  # fmt: skip
+REENTRY_ALTITUDE_M = 100e3  # below this a sat is flagged REENTERED and frozen
 
 
 class EngineV2:
     """Stepper-native v2 engine: step() -> one tick line; inject(); snapshot()/restore(); run()."""
+
     def __init__(
         self,
         scenario: Scenario,
@@ -102,63 +67,83 @@ class EngineV2:
         self.phi_dt = stm(self.dt, self.n)  # cached once; G(dt) comes with the LP (Ph. 5)
         self.pd = PDController(scenario.gains.wn, scenario.gains.zeta, scenario.a_max_mps2)
         tr = scenario.truth
-        self._b = {s: tr.cd * a / tr.mass_kg for s, a in (("act", tr.area_active_m2),
-                                                          ("dead", tr.area_dead_m2))}  # fmt: skip
+        self._b_active = tr.cd * tr.area_active_m2 / tr.mass_kg
+        self._b_dead = tr.cd * tr.area_dead_m2 / tr.mass_kg
         self.r_f = footprint_radius(alt, math.radians(scenario.sensor.fov_half_angle_deg))
-        self.grid = target_grid(scenario.sensor.grid_step_km * 1000.0,
-                                scenario.sensor.grid_extent_km * 1000.0)  # fmt: skip
+        sensor = scenario.sensor
+        self.grid = target_grid(sensor.grid_step_km * 1000.0, sensor.grid_extent_km * 1000.0)
         self.rng = make_rng(scenario)
         self.k = 0
         self.dv = np.zeros(self.n_sats)
-        self.status = [STATUS_NOMINAL] * self.n_sats
-        self.missed = [0] * self.n_sats
-        self.declared = [False] * self.n_sats
-        self.t_fail = [0.0] * self.n_sats
-        self.fail_mode = [""] * self.n_sats
-        self.mission = STATE_NOMINAL
-        self.injections: list[Failure] = []
-        self.pending = sorted(scenario.failures, key=lambda f: (f.t, f.sat_id))
-        self.fired = 0
+        self.hold = np.zeros((self.n_sats, 6))  # LVLH state of re-entered sats, frozen at re-entry
+        self.faults = Faults(scenario)
+        self.cov: list[tuple[float, float]] = []
         for f in injections:
             self.inject(f)
-        self.cov: list[tuple[float, float]] = []
+
+    @property
+    def injections(self) -> list[Failure]:
+        return self.faults.injections
+
+    @property
+    def status(self) -> list[str]:
+        return self.faults.status
 
     def header(self) -> dict:
         s = self.scenario
-        return {"v": LOG_SCHEMA_VERSION, "t": 0.0, "state": STATE_INIT, "scenario": s.name,
-                "seed": s.seed, "n_sats": s.n_sats, "engine": "v2"}  # fmt: skip
+        return {
+            "v": LOG_SCHEMA_VERSION,
+            "t": 0.0,
+            "state": STATE_INIT,
+            "scenario": s.name,
+            "seed": s.seed,
+            "n_sats": s.n_sats,
+            "engine": "v2",
+        }
 
     def inject(self, failure: Failure) -> None:
-        """Apply `failure` at the current tick (a past time is clamped to now) and record it."""
-        if failure.sat_id >= self.n_sats:
-            raise ValueError(f"sat_id={failure.sat_id}, only {self.n_sats} sats exist")
-        now = self.k * self.dt
-        if failure.t < now:
-            failure = failure.model_copy(update={"t": now})
-        self.injections.append(failure)
-        rest = [*self.pending[self.fired :], failure]  # stable: scenario failures stay first
-        self.pending, self.fired = sorted(rest, key=lambda f: (f.t, f.sat_id)), 0
+        """Apply `failure` at the current tick (past times clamp to now) and record the
+        resolved failure in `injections`."""
+        if self.k >= self.n_ticks:
+            raise RuntimeError("run finished: cannot inject")
+        self.faults.inject(failure, self.k * self.dt)
 
     def step(self) -> dict:
-        """Process tick k (failures, detection, log line), then advance the truth state by dt."""
+        """Process tick k (re-entry, failures, detection, log line), then advance by dt."""
         if self.k >= self.n_ticks:
             raise RuntimeError("run finished")
         t = self.k * self.dt
-        events = self._failures_and_detection(t)
-        consume_reserved(self.rng, self.n_sats)  # Phases 3-4 draw rows, ignored for now
-        lvlh = truth.eci_to_lvlh(self.X[1:, :3], self.X[1:, 3:], self.X[0, :3], self.X[0, 3:])
-        imagers = [i for i, role in enumerate(self.scenario.roles)
-                   if role == "imager" and self.status[i] != STATUS_DEAD]  # fmt: skip
+        c = self.X[0]
+        lvlh = truth.eci_to_lvlh(self.X[1:, :3], self.X[1:, 3:], c[:3], c[3:])
+        events = self._reentries(t, lvlh) + self.faults.tick(t)
+        draw_tick(self.rng, self.n_sats)  # Phases 3-4 use these rows; ignored for now
+        status = self.faults.status
+        gone = np.array([s == STATUS_REENTERED for s in status])
+        lvlh[gone] = self.hold[gone]  # a re-entered sat shows its state at re-entry
+        imagers = [
+            i
+            for i, role in enumerate(self.scenario.roles)
+            if role == "imager" and status[i] not in (STATUS_DEAD, STATUS_REENTERED)
+        ]
         cov = coverage_fraction(lvlh[imagers, 1:3], self.grid, self.r_f)
-        d = lvlh[:, None, :3] - lvlh[None, :, :3]
-        min_sep = float(np.sqrt(np.min((d**2).sum(-1)[np.triu_indices(self.n_sats, 1)])))
         line = {
-            "v": LOG_SCHEMA_VERSION, "t": t, "state": self.mission,
-            "sats": [{"id": i, "role": self.scenario.roles[i], "status": self.status[i],
-                      "r": lvlh[i, :3].tolist(), "v": lvlh[i, 3:].tolist(),
-                      "dv_used": float(self.dv[i])} for i in range(self.n_sats)],
-            "coverage": cov, "min_sep": min_sep,
-        }  # fmt: skip
+            "v": LOG_SCHEMA_VERSION,
+            "t": t,
+            "state": self.faults.mission,
+            "sats": [
+                {
+                    "id": i,
+                    "role": self.scenario.roles[i],
+                    "status": status[i],
+                    "r": lvlh[i, :3].tolist(),
+                    "v": lvlh[i, 3:].tolist(),
+                    "dv_used": float(self.dv[i]),
+                }
+                for i in range(self.n_sats)
+            ],
+            "coverage": cov,
+            "min_sep": self._min_sep(lvlh[:, :3]),
+        }
         if events:
             line["event"], line["events"] = events[0], events
         self.cov.append((t, cov))
@@ -176,72 +161,88 @@ class EngineV2:
             yield self.step()
         window = self.scenario.duration_s - 2.0 * math.pi / self.n
         tail = [c for (t, c) in self.cov if t >= window - 1e-9]
-        yield {"v": LOG_SCHEMA_VERSION, "t": self.cov[-1][0], "state": STATE_SUMMARY,
-               "coverage_mean_last_orbit": sum(tail) / len(tail)}  # fmt: skip
+        yield {
+            "v": LOG_SCHEMA_VERSION,
+            "t": self.cov[-1][0],
+            "state": STATE_SUMMARY,
+            "coverage_mean_last_orbit": sum(tail) / len(tail),
+        }
+
+    # -- snapshot: JSON data (not code), guarded by a scenario fingerprint -----------------------
+    def _fingerprint(self) -> dict:
+        digest = hashlib.sha256(self.scenario.model_dump_json().encode()).hexdigest()
+        return {"scenario_sha256": digest, "n_sats": self.n_sats, "schema": LOG_SCHEMA_VERSION}
 
     def snapshot(self) -> bytes:
-        """Full state incl. Generator state (pickle: restore only your own blobs)."""
-        state = {name: getattr(self, name) for name in _STATE}
-        return pickle.dumps((state, self.rng.bit_generator.state), protocol=4)
+        """Full state incl. the Generator state, as JSON bytes (floats round-trip exactly)."""
+        state = {
+            "k": self.k,
+            "X": self.X.tolist(),
+            "refs": self.refs.tolist(),
+            "dv": self.dv.tolist(),
+            "hold": self.hold.tolist(),
+            "cov": self.cov,
+            "faults": self.faults.state(),
+            "rng": self.rng.bit_generator.state,
+        }
+        doc = {"fingerprint": self._fingerprint(), "state": state}
+        return json.dumps(doc, sort_keys=True).encode()
 
     def restore(self, blob: bytes) -> None:
-        state, rng_state = pickle.loads(blob)  # noqa: S301 (own snapshots only)
-        for name, value in state.items():
-            setattr(self, name, value)
-        self.rng.bit_generator.state = rng_state
+        try:
+            doc = json.loads(blob)
+            fingerprint, state = doc["fingerprint"], doc["state"]
+        except (ValueError, KeyError, TypeError) as exc:
+            raise ValueError(f"not an EngineV2 snapshot: {exc}") from exc
+        if fingerprint != self._fingerprint():
+            raise ValueError("snapshot fingerprint mismatch: different scenario, n_sats or schema")
+        self.k = state["k"]
+        self.X = np.array(state["X"])
+        self.refs = np.array(state["refs"])
+        self.dv = np.array(state["dv"])
+        self.hold = np.array(state["hold"])
+        self.cov = [(t, c) for t, c in state["cov"]]
+        self.faults.load(state["faults"])
+        self.rng.bit_generator.state = state["rng"]
 
-    def _failures_and_detection(self, t: float) -> list[dict]:
-        events: list[dict] = []
-        sc = self.scenario
-        for f in sc.failures + self.injections:  # EPS_DEGRADE fade onset: DEGRADED, still holding
-            if (f.mode == FailureMode.EPS_DEGRADE and f.degrade_s > 0
-                    and max(f.t - f.degrade_s, 0.0) <= t + 1e-9
-                    and self.status[f.sat_id] == STATUS_NOMINAL and f.t > t + 1e-9):  # fmt: skip
-                self.status[f.sat_id] = STATUS_DEGRADED
-                events.append({"type": "DEGRADE_START", "payload": {
-                    "sat_id": f.sat_id, "t_fail": f.t, "degrade_s": f.degrade_s}})  # fmt: skip
-        while self.fired < len(self.pending) and self.pending[self.fired].t <= t + 1e-9:
-            f = self.pending[self.fired]
-            self.fired += 1
-            i = f.sat_id
-            if self.status[i] == STATUS_DEAD:
-                continue
-            thr = f.mode == FailureMode.THRUSTER_OUT
-            self.status[i] = STATUS_THRUSTER_OUT if thr else STATUS_DEAD
-            self.t_fail[i], self.fail_mode[i] = f.t, f.mode.value
-            if thr:  # self-reported, like v1
-                self.mission = STATE_FAILURE_DETECTED
-                events.append({"type": "FAILURE_DETECTED", "payload": {
-                    "sat_id": i, "mode": f.mode.value, "t_fail": f.t, "t_detect": t,
-                    "self_report": True}})  # fmt: skip
-        for i in range(self.n_sats):  # heartbeat: only DEAD sats are silent
-            self.missed[i] = self.missed[i] + 1 if self.status[i] == STATUS_DEAD else 0
-            if (self.status[i] == STATUS_DEAD and not self.declared[i]
-                    and self.missed[i] >= sc.detection.missed_ticks_k):  # fmt: skip
-                self.declared[i] = True
-                self.mission = STATE_FAILURE_DETECTED
-                events.append({"type": "FAILURE_DETECTED", "payload": {
-                    "sat_id": i, "mode": self.fail_mode[i], "t_fail": self.t_fail[i],
-                    "t_detect": t}})  # fmt: skip
+    # -- internals ---------------------------------------------------------------------------------
+    def _reentries(self, t: float, lvlh: np.ndarray) -> list[dict]:
+        """Flag (once) every sat whose altitude fell below REENTRY_ALTITUDE_M; remember its LVLH
+        state at that moment (the ECI state is frozen too, see _advance)."""
+        alt = np.linalg.norm(self.X[1:, :3], axis=1) - truth.RE
+        events = []
+        for i in range(self.n_sats):
+            if alt[i] < REENTRY_ALTITUDE_M and self.faults.status[i] != STATUS_REENTERED:
+                self.hold[i] = lvlh[i]
+                events.append(self.faults.mark_reentered(i, t, float(alt[i])))
         return events
+
+    def _min_sep(self, rho: np.ndarray) -> float:
+        """Minimum pairwise LVLH distance among sats not re-entered (all sats if fewer than 2)."""
+        keep = [i for i, s in enumerate(self.faults.status) if s != STATUS_REENTERED]
+        pts = rho[keep] if len(keep) >= 2 else rho
+        d = pts[:, None, :] - pts[None, :, :]
+        return float(np.sqrt(np.min((d**2).sum(-1)[np.triu_indices(len(pts), 1)])))
 
     def _advance(self, lvlh: np.ndarray) -> None:
         """PD command per holding sat (LVLH, zero-order hold), then one batched RK4 step."""
-        n_s, dt = self.n_sats, self.dt
-        u = np.zeros((n_s, 3))
-        for i in range(n_s):
-            if self.status[i] in (STATUS_NOMINAL, STATUS_DEGRADED):
+        status, dt = self.faults.status, self.dt
+        u = np.zeros((self.n_sats, 3))
+        for i, s in enumerate(status):
+            if s in (STATUS_NOMINAL, STATUS_DEGRADED):
                 u[i] = self.pd.command(lvlh[i, :3], lvlh[i, 3:], self.refs[i, :3], self.refs[i, 3:])
         self.dv += np.linalg.norm(u, axis=1) * dt
-        a_thrust = np.vstack([np.zeros(3), u @ truth.lvlh_dcm(self.X[0, :3], self.X[0, 3:])])
-        b = np.array([0.0] + [self._b["dead" if s == STATUS_DEAD else "act"] for s in self.status])
+        a_thrust = np.vstack([np.zeros(3), truth.thrust_eci(u, self.X[0, :3], self.X[0, 3:])])
+        b = np.array([0.0] + [self._b_dead if s == STATUS_DEAD else self._b_active for s in status])
         tr = self.scenario.truth
 
         def accel(r, v):
             a = truth.accel_gravity(r) + truth.accel_drag(r, v, b, tr.density_factor) + a_thrust
             return a + truth.accel_j2(r) if tr.j2_enabled else a
 
-        self.X = truth.rk4_step(self.X, dt, accel)
+        new = truth.rk4_step(self.X, dt, accel)
+        frozen = np.array([False] + [s == STATUS_REENTERED for s in status])  # chief never frozen
+        self.X = np.where(frozen[:, None], self.X, new)
         self.refs = self.refs @ self.phi_dt.T
 
 

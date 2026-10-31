@@ -73,8 +73,9 @@ def test_rk4_dt2_vs_rk45_two_body_j2_3orbits_500km():
     n_steps = int(3 * period / 2.0)
     t_eval = np.arange(0, n_steps + 1, 100) * 2.0
     t0 = time.perf_counter()
-    ref = solve_ivp(_f_grav_j2, (0, t_eval[-1]), s0, method="RK45", rtol=1e-12, atol=1e-9,
-                    t_eval=t_eval)  # fmt: skip
+    ref = solve_ivp(
+        _f_grav_j2, (0, t_eval[-1]), s0, method="RK45", rtol=1e-12, atol=1e-9, t_eval=t_eval
+    )
     t_ref = time.perf_counter() - t0
     s, err = s0.copy(), []
     t0 = time.perf_counter()
@@ -83,8 +84,10 @@ def test_rk4_dt2_vs_rk45_two_body_j2_3orbits_500km():
             err.append(np.linalg.norm(s[:3] - ref.y[:3, k // 100]))
         s = truth.rk4_step(s, 2.0, _grav_j2)
     t_rk4 = time.perf_counter() - t0
-    print(f"RK4(dt=2) vs RK45(rtol 1e-12): max position error {max(err):.3e} m over "
-          f"{n_steps} steps (RK4 {t_rk4:.1f} s, RK45 {t_ref:.1f} s)")
+    print(
+        f"RK4(dt=2) vs RK45(rtol 1e-12): max position error {max(err):.3e} m over "
+        f"{n_steps} steps (RK4 {t_rk4:.1f} s, RK45 {t_ref:.1f} s)"
+    )
     assert max(err) < 1e-2
 
 

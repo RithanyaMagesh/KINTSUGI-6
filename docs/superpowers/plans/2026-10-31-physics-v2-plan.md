@@ -81,17 +81,18 @@ Modified (additive): `cubesat/scenario.py` (new fields/blocks), `cubesat/sim.py`
 v2 scenarios (packs) set `a_max_mps2` 0.01 and `engine: "v2"`; v1 defaults unchanged.
 
 ## Randomness: one Generator, one draw-order table
-`sim_v2.make_rng(scenario) -> np.random.Generator` = `Generator(PCG64(SeedSequence(scenario.seed)))`, created once at tick 0, passed by reference to hazards and detector. v1 never touches it (seed stays written-but-unused in v1, so v1 bytes are unchanged). Draws happen ONLY in this order per tick `k`, sats in ascending id, and a draw is made whether or not its event fires (so enabling one hazard never shifts another's stream). New draws are APPENDED to the end of the table, never inserted; the table lives in `docs/PHYSICS_V2.md` and is asserted by `tests/v2/test_draw_order.py` (Task 1.2).
+`sim_v2.make_rng(scenario) -> np.random.Generator` = `Generator(PCG64(SeedSequence(scenario.seed)))`, created once at tick 0, passed by reference to hazards and detector. v1 never touches it (seed stays written-but-unused in v1, so v1 bytes are unchanged). Draws happen ONLY in this order per tick `k`, sats in ascending id, ALL SEVEN rows for every sat at every tick, and a draw is made whether or not its event fires (so neither enabling one hazard nor a hit ever shifts any later draw; the conditional rows are drawn and simply not used without a hit; amended after the Phase 1 review, a hit-only draw shifted every later heartbeat/noise draw). New draws are APPENDED to the end of the table, never inserted; the table lives in `docs/PHYSICS_V2.md` and is asserted by `tests/v2/test_draw_order.py` (Task 1.2).
 
 | # | Draw | Phase | Per tick, per sat | Notes |
 |---|---|---|---|---|
 | 1 | heartbeat loss `rng.random()` < `p_loss` | 4 | 1 float | always drawn when engine v2 |
 | 2 | measurement noise `rng.standard_normal(6)` | 4 | 6 floats | scaled by sigma (0 => value 0, still drawn) |
 | 3 | SEU `rng.random()` < λ_seu·dt/86400 | 3 | 1 float | on hit: duration `rng.uniform(30,120)` appended as #4 |
-| 4 | SEU duration `rng.uniform(30,120)` | 3 | 1 float only on SEU hit | extension rule: conditional draws come after the unconditional ones of the same tick |
-| 5 | impact `rng.random()` < λ_imp·dt | 3 | 1 float | on hit: component `rng.random()` (#6), f `rng.uniform(0.2,0.6)` (#7) |
-| 6-7 | impact component / panel fraction | 3 | only on impact hit | |
-Row positions are fixed here so phases can land in any order: a phase not yet implemented still draws its rows and discards them (Task 1.2 `test_reserved_rows_consumed_as_noops`). Phase 4 owns rows 1-2, Phase 3 owns rows 3-7.
+| 4 | SEU duration `rng.uniform(30,120)` | 3 | 1 float, always drawn | used only on an SEU hit (amended: no longer hit-only) |
+| 5 | impact `rng.random()` < λ_imp·dt | 3 | 1 float | on hit the values of #6 and #7 below are used |
+| 6 | impact component `rng.random()` | 3 | 1 float, always drawn | used only on an impact hit |
+| 7 | panel fraction `rng.uniform(0.2,0.6)` | 3 | 1 float, always drawn | used only on an impact hit |
+Row positions are fixed here so phases can land in any order: a phase not yet implemented still draws its rows and discards them (Task 1.2 `test_reserved_rows_consumed_as_noops`). Phase 4 owns rows 1-2, Phase 3 owns rows 3-7. Per sat per tick the call sequence is exactly rows 1..7 in order.
 
 ---
 
@@ -117,7 +118,7 @@ Delivered (details and numbers in GATES.md): one-line like-for-like fix kept (`a
 ### Task 1.2: seeded Generator + draw-order table
 **Files:** Modify `cubesat/sim_v2.py`; Create `tests/v2/test_draw_order.py`.
 **Interfaces:** Produces `make_rng(scenario: Scenario) -> np.random.Generator`; module constant `DRAW_ORDER: tuple[str, ...]` (names of rows 1-7 above, asserted to match the table in `docs/PHYSICS_V2.md` once that exists — until then, in-test copy).
-- [ ] **Step 1: Failing tests** — `test_same_seed_same_stream` (two `make_rng` with seed 7 give equal first 5 draws); `test_different_seed_differs`; `test_reserved_rows_consumed_as_noops` (calling `consume_reserved(rng, k_sats)` advances the stream by exactly the fixed count; documents that a later phase replaces it).
+- [ ] **Step 1: Failing tests** — `test_same_seed_same_stream` (two `make_rng` with seed 7 give equal first 5 draws); `test_different_seed_differs`; `test_reserved_rows_consumed_as_noops` (`draw_tick(rng, k_sats)` advances the stream by exactly the fixed 7-row sequence per sat; amended: `consume_reserved` was dropped, the engine calls `draw_tick`).
 - [ ] **Step 2:** run → FAIL: `make_rng` not defined.
 - [ ] **Step 3:** implement `make_rng` (one line) and `DRAW_ORDER`; `draw_tick(rng, n_sats) -> dict` returns the unconditional rows 1-3,5 for every sat in ascending id (reserved values for unimplemented phases are drawn and ignored).
 - [ ] **Step 4:** PASS. **Step 5:** commit `physics-v2: phase 1 — seeded generator and draw order`.

@@ -21,8 +21,9 @@ CW_VS_KEPLER_1KM_M = 3.101  # GATES.md G1 row (tests/test_hcw.py, cubesat/cw_cur
 def _scn(**kw) -> Scenario:
     """Small v2 scenario: 6 sats, tiny coverage grid (coverage is irrelevant here)."""
     base = json.loads((ROOT / "data" / "scenarios" / "nominal.json").read_text())
-    base.update(engine="v2", sensor={"fov_half_angle_deg": 1.5, "grid_step_km": 5.0,
-                                     "grid_extent_km": 5.0})  # fmt: skip
+    base.update(
+        engine="v2", sensor={"fov_half_angle_deg": 1.5, "grid_step_km": 5.0, "grid_extent_km": 5.0}
+    )
     base.update(kw)
     return Scenario.model_validate(base)
 
@@ -30,10 +31,11 @@ def _scn(**kw) -> Scenario:
 def _passive(radial_km, orbits, *, j2, drag) -> Scenario:
     """No effective control (a_max 1e-12): the v1 path is then pure CW (hcw.propagate)."""
     return _scn(
-        duration_s=orbits * PERIOD_500KM, a_max_mps2=1e-12,
+        duration_s=orbits * PERIOD_500KM,
+        a_max_mps2=1e-12,
         formation={"n_slots": 6, "radial_amp_km": radial_km, "phase_offset_deg": 0.0},
         truth={"j2_enabled": j2, "density_factor": 1.0 if drag else 0.0},
-    )  # fmt: skip
+    )
 
 
 def _max_diff_vs_cw(s: Scenario, start: np.ndarray | None = None) -> float:
@@ -53,8 +55,12 @@ def _max_diff_vs_cw(s: Scenario, start: np.ndarray | None = None) -> float:
 def _g1_scenario(orbits, *, j2, drag) -> tuple[Scenario, np.ndarray]:
     """Two sats on the G1 evidence state (1 km radial, 500 m cross-track) and its negative."""
     g1 = cw_curve.state_1km_passive_ellipse()
-    s = _passive(1.0, orbits, j2=j2, drag=drag).model_copy(update={"roles": ["leader", "imager"],
-        "formation": Formation(n_slots=2, radial_amp_km=1.0, phase_offset_deg=0.0)})  # fmt: skip
+    s = _passive(1.0, orbits, j2=j2, drag=drag).model_copy(
+        update={
+            "roles": ["leader", "imager"],
+            "formation": Formation(n_slots=2, radial_amp_km=1.0, phase_offset_deg=0.0),
+        }
+    )
     return s, np.array([g1, -g1])
 
 
@@ -90,10 +96,12 @@ def test_slot_formation_cw_error_matches_independent_kepler_reference():
     ref = max(
         cw_curve.cw_vs_kepler_errors(
             hcw.slot_initial_state(1000.0, 1000.0, 2 * math.pi * p / 6, cw_curve.N),
-            t_grid=t1, n=cw_curve.N, chief_y=cw_curve.chief_states(t1),
+            t_grid=t1,
+            n=cw_curve.N,
+            chief_y=cw_curve.chief_states(t1),
         ).max()
         for p in range(6)
-    )  # fmt: skip
+    )
     print(f"ring slots 1 km, 1 orbit: engine {d:.3f} m vs cw_curve RK45 reference {ref:.3f} m")
     assert abs(d - ref) / ref < 0.02
 
@@ -196,10 +204,13 @@ def test_cancel_event_stops_run():
 
 
 def test_events_list_allows_multiple_per_tick():
-    s = _scn(duration_s=40.0, failures=[
-        {"t": 10.0, "sat_id": 0, "mode": "THRUSTER_OUT"},
-        {"t": 10.0, "sat_id": 4, "mode": "THRUSTER_OUT"},
-    ])  # fmt: skip
+    s = _scn(
+        duration_s=40.0,
+        failures=[
+            {"t": 10.0, "sat_id": 0, "mode": "THRUSTER_OUT"},
+            {"t": 10.0, "sat_id": 4, "mode": "THRUSTER_OUT"},
+        ],
+    )
     line = next(x for x in EngineV2(s).run() if x["t"] == 10.0)
     assert [e["payload"]["sat_id"] for e in line["events"]] == [0, 4]
     assert line["event"] == line["events"][0]
@@ -210,4 +221,3 @@ def test_run_scenario_dispatches_v2_and_inject_validates_sat():
     assert run_scenario(s)[-1]["state"] == "SUMMARY"
     with pytest.raises(ValueError):
         EngineV2(s).inject(Failure(t=0.0, sat_id=9, mode="DEAD"))
-

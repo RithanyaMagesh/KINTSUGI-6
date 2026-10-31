@@ -103,17 +103,17 @@ Command: `uv run python -m cubesat.cw_truth --report data/eval/cw_vs_truth_repor
 The same file holds `g1_state`: v2 vs CW 3.1026 m, CW vs two-body RK45 (`cw_curve`) 3.1009 m. The 8 km drag-on case is lower than drag-off; it is the measured value, cause not investigated.
 
 ## Randomness: one Generator, one draw-order table
-`sim_v2.make_rng(scenario)` = `numpy.random.Generator(PCG64(SeedSequence(scenario.seed)))`, created once at tick 0, owned by the engine, saved in `snapshot()`. v1 never touches it. Per tick, sats in ascending id; each sat draws rows 1, 2, 3, 5 whether or not its event fires; conditional rows (4, 6, 7) come after the tick's unconditional draws. New rows are appended, never inserted. Phase 1 draws rows 1, 2, 3, 5 and ignores them (`sim_v2.draw_tick` / `consume_reserved`). The table is asserted by `tests/v2/test_draw_order.py::test_doc_table_matches`.
+`sim_v2.make_rng(scenario)` = `numpy.random.Generator(PCG64(SeedSequence(scenario.seed)))`, created once at tick 0, owned by the engine, saved in `snapshot()`. v1 never touches it. Per tick, sats in ascending id; each sat draws ALL seven rows in table order, whether or not its event fires (the conditional rows are drawn and used only on a hit), so a hit never shifts any later draw. This amends the first Phase 1 version, where rows 4, 6, 7 were hit-only and a hit moved every later heartbeat/noise draw. New rows are appended, never inserted. Phase 1 draws all rows and ignores them (`sim_v2.draw_tick`). The names are asserted by `tests/v2/test_draw_order.py::test_doc_table_matches`, the call sequence by `tests/v2/test_p1_fixes.py::test_all_seven_rows_drawn_per_sat_per_tick` and `::test_tick1_heartbeat_independent_of_a_hit_at_tick0`.
 
 | # | Draw | Call | Phase | Drawn |
 |---|---|---|---|---|
 | 1 | `heartbeat_loss` | `rng.random()` | 4 | every sat, every tick |
 | 2 | `measurement_noise` | `rng.standard_normal(6)` | 4 | every sat, every tick |
 | 3 | `seu` | `rng.random()` | 3 | every sat, every tick |
-| 4 | `seu_duration` | `rng.uniform(30, 120)` | 3 | only on an SEU hit |
+| 4 | `seu_duration` | `rng.uniform(30, 120)` | 3 | every sat, every tick (used on an SEU hit) |
 | 5 | `impact` | `rng.random()` | 3 | every sat, every tick |
-| 6 | `impact_component` | `rng.random()` | 3 | only on an impact hit |
-| 7 | `impact_fraction` | `rng.uniform(0.2, 0.6)` | 3 | only on an impact hit |
+| 6 | `impact_component` | `rng.random()` | 3 | every sat, every tick (used on an impact hit) |
+| 7 | `impact_fraction` | `rng.uniform(0.2, 0.6)` | 3 | every sat, every tick (used on an impact hit) |
 
 ## Determinism
 Same scenario + seed gives identical bytes on one machine: `uv run python -m pytest tests/v2/test_sim_v2_truth.py -k byte_identical` and, from the CLI, two `uv run python -m cubesat.run --scenario <two_failure.json with "engine": "v2", "duration_s": 1800> --seed 42 --out a.jsonl|b.jsonl` runs compared with `cmp` (identical at the gate).
