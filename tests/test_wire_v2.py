@@ -40,3 +40,23 @@ def test_status_maps_to_a_ui_status_and_failure_type_keeps_raw(raw, wire):
 def test_unknown_future_status_passes_through_unchanged():
     row = _sim_state([_sat(status="WARP_CORE_BREACH")])["sats"][0]
     assert row["status"] == "WARP_CORE_BREACH"
+
+
+# --- item 2: per-sat optional resource keys -------------------------------------------------
+V2_VALUES = {"fuel_kg": 0.25, "fuel_mps_left": 12.5, "k": 0.5, "payload_ok": False,
+             "radio_ok": True, "stuck": False}
+
+
+def test_v1_sat_has_no_resource_keys():
+    row = _sim_state([_sat()])["sats"][0]
+    assert not set(V2_SAT_KEYS) & set(row)
+
+
+def test_v2_sat_passes_every_resource_key_through_unchanged():
+    row = _sim_state([_sat(**V2_VALUES)])["sats"][0]
+    assert {k: row[k] for k in V2_SAT_KEYS} == V2_VALUES
+
+
+def test_only_present_resource_keys_are_passed():
+    row = _sim_state([_sat(fuel_kg=1.0)])["sats"][0]
+    assert row["fuel_kg"] == 1.0 and not set(V2_SAT_KEYS[1:]) & set(row)

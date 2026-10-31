@@ -103,6 +103,9 @@ _STATUS_TO_WIRE = {
 # and assignment_map needs a hashable key), status must be hashable.
 _SAT_REQUIRED_KEYS = ("role", "r", "v", "dv_used")
 
+# Engine-v2 per-sat resource keys: optional passthrough, only when the log carries them.
+_SAT_V2_KEYS = ("fuel_kg", "fuel_mps_left", "k", "payload_ok", "radio_ok", "stuck")
+
 
 def sat_row_ok(sat: object) -> bool:
     """True when _sat_to_wire can render this sats entry without KeyError/TypeError."""
@@ -175,6 +178,9 @@ def _sat_to_wire(sat: dict, enrich: SessionEnrich) -> dict:
         out["target_slot"] = slot
     if "risk" in sat:  # Appendix B optional passthrough; never synthesized
         out["risk"] = sat["risk"]
+    for key in _SAT_V2_KEYS:
+        if key in sat:
+            out[key] = sat[key]
     return out
 
 
