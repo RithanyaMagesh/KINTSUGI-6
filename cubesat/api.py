@@ -348,12 +348,12 @@ def replay_file(filename: str) -> FileResponse:
     used to be servable, e.g. an operator-pointed CUBESAT_LOG_DIR with
     non-log files in it)."""
     base = log_dir().resolve()
-    candidate = (base / Path(filename).name).resolve()
-    if (
-        base not in candidate.parents
-        or not candidate.is_file()
-        or candidate.suffix != ".jsonl"
-    ):
+    try:
+        candidate = (base / Path(filename).name).resolve()
+        found = candidate.is_file()
+    except ValueError:  # embedded NUL: not a file name (B-15)
+        raise HTTPException(status_code=404, detail="replay file not found") from None
+    if base not in candidate.parents or not found or candidate.suffix != ".jsonl":
         raise HTTPException(status_code=404, detail="replay file not found")
     return FileResponse(candidate)
 
