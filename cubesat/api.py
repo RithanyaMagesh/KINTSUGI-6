@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import math
 import os
 import re
 from contextlib import asynccontextmanager
@@ -37,6 +38,7 @@ from cubesat.wire import (
     SeekRequest,
     SpeedRequest,
     StartRequest,
+    to_event,
 )
 
 # WS emit-cadence cap (section 10); tests monkeypatch this to 0 to neutralize
@@ -254,6 +256,20 @@ def _sanitize_scenario_name(name: str | None) -> str:
     return cleaned
 
 
+def _first_non_finite(node, path: str = "") -> str | None:
+    """Dotted path of the first NaN/+-Infinity in an uploaded scenario, else None
+    (B-14: the stored file would stream NaN to the browser as invalid JSON)."""
+    if isinstance(node, float) and not math.isfinite(node):
+        return path or "scenario"
+    if isinstance(node, dict):
+        children = ((f"{path}.{k}" if path else str(k), v) for k, v in node.items())
+    elif isinstance(node, list):
+        children = ((f"{path}.{i}" if path else str(i), v) for i, v in enumerate(node))
+    else:
+        return None
+    return next((hit for hit in (_first_non_finite(v, p) for p, v in children) if hit), None)
+
+
 @app.post("/scenarios/upload")
 def scenarios_upload(req: UploadRequest) -> dict:
     """Save a console-authored scenario into the scenarios dir. Overwrites are
@@ -290,6 +306,12 @@ def scenarios_upload(req: UploadRequest) -> dict:
     # written) is exactly the inert payload. The size cap measures the exact
     # serialization that will be written to disk.
     payload = _sanitize_scenario_labels(req.scenario)
+    bad = _first_non_finite(payload)
+    if bad is not None:
+        raise HTTPException(
+            status_code=422,
+            detail=f"invalid scenario: {bad}: Input should be a finite number",
+        )
     serialized = json.dumps(payload, indent=2, sort_keys=True) + "\n"
     if len(serialized) > MAX_UPLOAD_BYTES:
         raise HTTPException(
@@ -435,6 +457,21 @@ async def replay_stop() -> dict:
     return {"status": "stopped", "mode": session.mode}
 
 
+def _wire_text(msg: dict) -> str:
+    """Strict-JSON encoding of one WS message (allow_nan=False). A message that
+    carries NaN/Infinity (e.g. a replay log with a corrupt position) would reach
+    the browser as the token NaN and throw in JSON.parse; it is replaced by a
+    critical event instead -- never fabricated zeros, never invalid JSON."""
+    try:
+        return json.dumps(msg, allow_nan=False, separators=(",", ":"), ensure_ascii=False)
+    except ValueError:
+        t = msg.get("sim_time")
+        t = t if isinstance(t, (int, float)) and math.isfinite(t) else 0.0
+        what = f"dropped a {msg.get('type')} message containing NaN/Infinity"
+        note = to_event("critical", t, what)
+        return json.dumps(note, allow_nan=False, separators=(",", ":"))
+
+
 @app.websocket("/ws/state")
 async def ws_state(ws: WebSocket) -> None:
     """Section 6.3: accept -> hello -> snapshot -> reader/writer tasks; ping ->
@@ -446,8 +483,8 @@ async def ws_state(ws: WebSocket) -> None:
     reader: asyncio.Task | None = None
     writer: asyncio.Task | None = None
     try:
-        await ws.send_json(state.session.hello())
-        await ws.send_json(state.session.snapshot())
+        await ws.send_text(_wire_text(state.session.hello()))
+        await ws.send_text(_wire_text(state.session.snapshot()))
 
         async def read_loop() -> None:
             while True:
@@ -461,13 +498,13 @@ async def ws_state(ws: WebSocket) -> None:
                     await ws.close(code=1003)
                     return
                 if isinstance(msg, dict) and msg.get("type") == "ping":
-                    await ws.send_json({"type": "pong"})
+                    await ws.send_text(_wire_text({"type": "pong"}))
                 # anything else ignored (section 6.3)
 
         async def write_loop() -> None:
             while True:
                 msg = await queue.get()
-                await ws.send_json(msg)
+                await ws.send_text(_wire_text(msg))
 
         reader = asyncio.create_task(read_loop())
         writer = asyncio.create_task(write_loop())
