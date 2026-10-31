@@ -2,248 +2,700 @@
   "command": "uv run python -m cubesat.dv_bound --base data/scenarios/two_failure.json --p0-dir data/eval/benchmark --report data/eval/dv_lower_bounds.json --csv data/eval/dv_lower_bounds.csv",
   "completed_episode_note": "each pair replans twice (one ASSIGNMENT per failure); the FIRST episode is interrupted by the second failure detection before any transfer completes, so its two-impulse bound is the cost of COMPLETING the commanded transfer within the truncated window -- a continuous partial burn need not pay that, which is why whole-run totals can sit below it (ratio_total < 1). The FINAL episode ends at RECOVERED: same start state, target slot and transfer time as an actual completed transfer, so its spend-vs-bound ratio is the apples-to-apples figure.",
   "g4_headline_pair_1_2": {
-    "bound_mps": 149.3710106900033,
+    "bound_mps": 149.37101069000323,
     "bound_total_mps": 718.6601908353094,
     "completed_episode": {
       "bound_total_mps": 164.4658584165989,
-      "controller_spend_total_mps": 469.2474438600106,
+      "controller_spend_total_mps": 469.2474438600105,
       "per_sat": {
         "0": {
-          "bound_mps": 47.81292034219051,
-          "controller_dv_in_window_mps": 155.0855516576631,
-          "ratio": 3.2435908651414116
+          "bound_mps": 47.812920342190495,
+          "controller_dv_in_window_mps": 155.08555165766307,
+          "ratio": 3.243590865141412
         },
         "3": {
-          "bound_mps": 34.14715977938862,
-          "controller_dv_in_window_mps": 97.85592200753372,
-          "ratio": 2.8657118963844246
+          "bound_mps": 34.14715977938863,
+          "controller_dv_in_window_mps": 97.85592200753388,
+          "ratio": 2.8657118963844286
         },
         "4": {
           "bound_mps": 48.86694114716317,
-          "controller_dv_in_window_mps": 136.68140116102725,
-          "ratio": 2.797011598278889
+          "controller_dv_in_window_mps": 136.6814011610271,
+          "ratio": 2.797011598278886
         },
         "5": {
-          "bound_mps": 33.6388371478566,
-          "controller_dv_in_window_mps": 79.62456903378653,
-          "ratio": 2.3670428523971747
+          "bound_mps": 33.63883714785663,
+          "controller_dv_in_window_mps": 79.62456903378643,
+          "ratio": 2.36704285239717
         }
       },
-      "ratio_total": 2.8531602143916532,
+      "ratio_total": 2.8531602143916523,
       "t_end": 3114.0,
       "t_replan": 1506.0,
       "transfer_time_s": 1608.0
     },
-    "controller_total_mps": 624.717372741646,
-    "controller_worst_per_sat_mps": 193.67907947544882,
+    "controller_total_mps": 624.7173727416294,
+    "controller_worst_per_sat_mps": 193.67907947544643,
     "note": "two_failure.json == P0 pair (1,2) (failures: sat 1 at t=1200, sat 2 at t=1500; GATES.md P0 row's pair_1-2__hungarian.jsonl is the same run); its worst sat and totals, for direct comparison with the G4 single-run ledger row (GATES.md G4: per-sat dv 0-193.68 m/s at a_max = 0.1)",
     "pair": [
       1,
       2
     ],
-    "ratio": 1.2966309766585176,
-    "ratio_total": 0.8692806151061849,
+    "ratio": 1.296630976658502,
+    "ratio_total": 0.8692806151061618,
     "sat_id": 0
   },
   "headline": {
-    "bound_completed_window_mps": 47.81292034219051,
-    "bound_total_both_episodes_mps": 149.3710106900033,
-    "controller_dv_completed_window_mps": 155.0855516576631,
-    "controller_dv_used_total_mps": 193.67907947544882,
+    "bound_completed_window_mps": 47.812920342190495,
+    "bound_total_both_episodes_mps": 149.37101069000323,
+    "controller_dv_completed_window_mps": 155.08555165766307,
+    "controller_dv_used_total_mps": 193.67907947544643,
     "definition": "the G4 headline per-satellite dv (193.68 m/s, GATES.md G4 row, reproduced as the worst sat's dv_used in P0 pairs (1,2) (1,3) (1,4) (1,5) (3,4) (3,5), and as sat 0's total also in (4,5) where sat 2 is the worst sat) divided by the same satellite's two-impulse CW bound for its ACTUAL COMPLETED transfer (final episode: start state at the final replan tick, assigned slot, window replan tick -> RECOVERED tick)",
     "pair": [
       1,
       2
     ],
-    "ratio_completed": 3.2435908651414116,
-    "ratio_total_both_episodes": 1.2966309766585176,
+    "ratio_completed": 3.243590865141412,
+    "ratio_total_both_episodes": 1.296630976658502,
     "sat_id": 0
   },
-  "max_ratio_total": 1.9730964294415785,
-  "mean_completed_ratio_total": 2.583377627847381,
-  "mean_ratio_total": 1.0503477800191243,
+  "max_ratio_total": 5.520602589947903,
+  "mean_completed_ratio_total": 2.948337818643498,
+  "mean_ratio_total": 1.8629489622493671,
   "method": "two-impulse CW transfer from the hcw STM velocity block (cubesat.hcw.stm), same start state (REPLANNING tick), target slot (ASSIGNMENT event, slot_initial_state reconstruction of allocate.select_formation) and transfer time (replan tick -> next FAILURE_DETECTED or RECOVERED tick) as the actual run; ENDGAME_PLAN section 2 resolution method, post-hoc, zero core diff",
   "n_singular_solves_total": 0,
   "pairs": [
     {
-      "bound_total_mps": 250.05409757562964,
+      "bound_total_mps": 76.88737275885234,
       "command": "uv run python -m cubesat.dv_bound --base data/scenarios/two_failure.json --p0-dir data/eval/benchmark --report data/eval/dv_lower_bounds.json --csv data/eval/dv_lower_bounds.csv",
       "completed_episode": {
-        "bound_total_mps": 112.20925835164499,
-        "controller_spend_total_mps": 401.0949289724084,
+        "bound_total_mps": 76.88737275885234,
+        "controller_spend_total_mps": 228.22887531045785,
         "per_sat": {
           "2": {
-            "bound_mps": 29.10906919366861,
-            "controller_dv_in_window_mps": 164.1519539069213,
-            "ratio": 5.63920312308115
+            "bound_mps": 5.499683101895791e-13,
+            "controller_dv_in_window_mps": 8.760065423481506e-13,
+            "ratio": 1.592830943379598
           },
           "3": {
-            "bound_mps": 24.676437022865834,
-            "controller_dv_in_window_mps": 73.61843169742767,
-            "ratio": 2.9833493234542288
+            "bound_mps": 15.050619349907409,
+            "controller_dv_in_window_mps": 44.9356677781163,
+            "ratio": 2.9856357890276946
           },
           "4": {
-            "bound_mps": 30.919938326005003,
-            "controller_dv_in_window_mps": 98.75911849850444,
-            "ratio": 3.1940270209220873
+            "bound_mps": 28.032177482430257,
+            "controller_dv_in_window_mps": 98.54080220179475,
+            "ratio": 3.5152746255105307
           },
           "5": {
-            "bound_mps": 27.503813809105537,
-            "controller_dv_in_window_mps": 64.565424869555,
-            "ratio": 2.3475080698873727
+            "bound_mps": 33.80457592651412,
+            "controller_dv_in_window_mps": 84.75240533054593,
+            "ratio": 2.507128192194585
           }
         },
-        "ratio_total": 3.5745261564375035,
-        "t_end": 3216.0,
+        "ratio_total": 2.968353152425552,
+        "t_end": 2614.0,
         "t_replan": 1506.0,
-        "transfer_time_s": 1710.0
+        "transfer_time_s": 1108.0
       },
-      "controller_total_mps": 493.3808470937109,
+      "controller_total_mps": 235.0168633620818,
       "episodes": [
         {
-          "bound_total_mps": 137.84483922398465,
-          "controller_spend_total_mps": 83.24246733003099,
+          "bound_total_mps": 0.0,
+          "controller_spend_total_mps": 1.6783284511462923e-14,
           "formation_amp_m": 8000.0,
-          "formation_phase0_rad": 2.0943951023931953,
+          "formation_phase0_rad": 0.0,
           "n_survivors": 5,
           "per_sat": [
             {
-              "controller_dv_in_window_mps": 16.73805619031703,
-              "det_xy_scaled": 0.11073663784294477,
-              "dist_to_singular_s": 298.0,
-              "dv1_mps": 10.564021227587494,
-              "dv2_mps": 9.584243099951953,
-              "dv_total_mps": 20.148264327539447,
-              "ratio_in_window": 0.830744322102167,
+              "controller_dv_in_window_mps": 2.6701546085848957e-15,
+              "det_xy_scaled": 1.0,
+              "dist_to_singular_s": Infinity,
+              "dv1_mps": 0.0,
+              "dv2_mps": 0.0,
+              "dv_total_mps": 0.0,
+              "ratio_in_window": null,
               "sat_id": 1,
-              "sin_nt": 0.3238741234611607,
-              "singular": false,
-              "slot_index": 4,
-              "transfer_time_s": 298.0
-            },
-            {
-              "controller_dv_in_window_mps": 2.521054148877487e-13,
-              "det_xy_scaled": 0.11073663784294477,
-              "dist_to_singular_s": 298.0,
-              "dv1_mps": 2.319021777844689e-13,
-              "dv2_mps": 3.981427565580419e-13,
-              "dv_total_mps": 6.300449343425109e-13,
-              "ratio_in_window": 0.4001387855785804,
-              "sat_id": 2,
-              "sin_nt": 0.3238741234611607,
-              "singular": false,
-              "slot_index": 0,
-              "transfer_time_s": 298.0
-            },
-            {
-              "controller_dv_in_window_mps": 13.368086495038503,
-              "det_xy_scaled": 0.11073663784294477,
-              "dist_to_singular_s": 298.0,
-              "dv1_mps": 8.019717821820006,
-              "dv2_mps": 7.93535429886389,
-              "dv_total_mps": 15.955072120683896,
-              "ratio_in_window": 0.8378581051795017,
-              "sat_id": 3,
-              "sin_nt": 0.3238741234611607,
+              "sin_nt": 0.004427119323742496,
               "singular": false,
               "slot_index": 1,
-              "transfer_time_s": 298.0
+              "transfer_time_s": 4.0
             },
             {
-              "controller_dv_in_window_mps": 26.119394938048313,
-              "det_xy_scaled": 0.11073663784294477,
-              "dist_to_singular_s": 298.0,
-              "dv1_mps": 22.372182780050192,
-              "dv2_mps": 21.102184858352995,
-              "dv_total_mps": 43.47436763840319,
-              "ratio_in_window": 0.6007998817900155,
-              "sat_id": 4,
-              "sin_nt": 0.3238741234611607,
+              "controller_dv_in_window_mps": 4.268324617146424e-15,
+              "det_xy_scaled": 1.0,
+              "dist_to_singular_s": Infinity,
+              "dv1_mps": 0.0,
+              "dv2_mps": 0.0,
+              "dv_total_mps": 0.0,
+              "ratio_in_window": null,
+              "sat_id": 2,
+              "sin_nt": 0.004427119323742496,
               "singular": false,
               "slot_index": 2,
-              "transfer_time_s": 298.0
+              "transfer_time_s": 4.0
             },
             {
-              "controller_dv_in_window_mps": 27.016929706626893,
-              "det_xy_scaled": 0.11073663784294477,
-              "dist_to_singular_s": 298.0,
-              "dv1_mps": 27.63196753796174,
-              "dv2_mps": 30.635167599395764,
-              "dv_total_mps": 58.2671351373575,
-              "ratio_in_window": 0.46367355530588306,
-              "sat_id": 5,
-              "sin_nt": 0.3238741234611607,
+              "controller_dv_in_window_mps": 3.2000063259221243e-15,
+              "det_xy_scaled": 1.0,
+              "dist_to_singular_s": Infinity,
+              "dv1_mps": 0.0,
+              "dv2_mps": 0.0,
+              "dv_total_mps": 0.0,
+              "ratio_in_window": null,
+              "sat_id": 3,
+              "sin_nt": 0.004427119323742496,
               "singular": false,
               "slot_index": 3,
-              "transfer_time_s": 298.0
+              "transfer_time_s": 4.0
+            },
+            {
+              "controller_dv_in_window_mps": 2.6961419241661868e-15,
+              "det_xy_scaled": 1.0,
+              "dist_to_singular_s": Infinity,
+              "dv1_mps": 0.0,
+              "dv2_mps": 0.0,
+              "dv_total_mps": 0.0,
+              "ratio_in_window": null,
+              "sat_id": 4,
+              "sin_nt": 0.004427119323742496,
+              "singular": false,
+              "slot_index": 4,
+              "transfer_time_s": 4.0
+            },
+            {
+              "controller_dv_in_window_mps": 3.948657035643292e-15,
+              "det_xy_scaled": 1.0,
+              "dist_to_singular_s": Infinity,
+              "dv1_mps": 0.0,
+              "dv2_mps": 0.0,
+              "dv_total_mps": 0.0,
+              "ratio_in_window": null,
+              "sat_id": 5,
+              "sin_nt": 0.004427119323742496,
+              "singular": false,
+              "slot_index": 5,
+              "transfer_time_s": 4.0
             }
           ],
-          "t_end": 1504.0,
+          "t_end": 1210.0,
           "t_replan": 1206.0,
-          "transfer_time_s": 298.0,
+          "transfer_time_s": 4.0,
           "truncated_end": false
         },
         {
-          "bound_total_mps": 112.20925835164499,
-          "controller_spend_total_mps": 401.0949289724084,
+          "bound_total_mps": 76.88737275885234,
+          "controller_spend_total_mps": 228.22887531045785,
           "formation_amp_m": 8000.0,
           "formation_phase0_rad": 0.5235987755982988,
           "n_survivors": 4,
           "per_sat": [
             {
-              "controller_dv_in_window_mps": 164.1519539069213,
+              "controller_dv_in_window_mps": 8.760065423481506e-13,
+              "det_xy_scaled": 1.835525795276126,
+              "dist_to_singular_s": 1108.0,
+              "dv1_mps": 4.5338528785004745e-13,
+              "dv2_mps": 9.658302233953162e-14,
+              "dv_total_mps": 5.499683101895791e-13,
+              "ratio_in_window": 1.592830943379598,
+              "sat_id": 2,
+              "sin_nt": 0.9412510970453954,
+              "singular": false,
+              "slot_index": 1,
+              "transfer_time_s": 1108.0
+            },
+            {
+              "controller_dv_in_window_mps": 44.9356677781163,
+              "det_xy_scaled": 1.835525795276126,
+              "dist_to_singular_s": 1108.0,
+              "dv1_mps": 8.137864484163295,
+              "dv2_mps": 6.912754865744114,
+              "dv_total_mps": 15.050619349907409,
+              "ratio_in_window": 2.9856357890276946,
+              "sat_id": 3,
+              "sin_nt": 0.9412510970453954,
+              "singular": false,
+              "slot_index": 2,
+              "transfer_time_s": 1108.0
+            },
+            {
+              "controller_dv_in_window_mps": 98.54080220179475,
+              "det_xy_scaled": 1.835525795276126,
+              "dist_to_singular_s": 1108.0,
+              "dv1_mps": 12.71426813069651,
+              "dv2_mps": 15.317909351733746,
+              "dv_total_mps": 28.032177482430257,
+              "ratio_in_window": 3.5152746255105307,
+              "sat_id": 4,
+              "sin_nt": 0.9412510970453954,
+              "singular": false,
+              "slot_index": 3,
+              "transfer_time_s": 1108.0
+            },
+            {
+              "controller_dv_in_window_mps": 84.75240533054593,
+              "det_xy_scaled": 1.835525795276126,
+              "dist_to_singular_s": 1108.0,
+              "dv1_mps": 18.606228492634663,
+              "dv2_mps": 15.198347433879459,
+              "dv_total_mps": 33.80457592651412,
+              "ratio_in_window": 2.507128192194585,
+              "sat_id": 5,
+              "sin_nt": 0.9412510970453954,
+              "singular": false,
+              "slot_index": 0,
+              "transfer_time_s": 1108.0
+            }
+          ],
+          "t_end": 2614.0,
+          "t_replan": 1506.0,
+          "transfer_time_s": 1108.0,
+          "truncated_end": false
+        }
+      ],
+      "log": "pair_0-1__hungarian.jsonl",
+      "log_sha256": "376745704646c6f29b90b7d0467bc7f1cbcadfe6f5bb1f4374db9bc9164ed460",
+      "min_dist_to_singular_s": 1108.0,
+      "n_episodes": 2,
+      "n_singular_solves": 0,
+      "pair": [
+        0,
+        1
+      ],
+      "per_sat_bound_mps": {
+        "0": 0.0,
+        "1": 0.0,
+        "2": 5.499683101895791e-13,
+        "3": 15.050619349907409,
+        "4": 28.032177482430257,
+        "5": 33.80457592651412
+      },
+      "per_sat_controller_dv_mps": {
+        "0": 1.324845007004202e-12,
+        "1": 1.0545218712862473e-12,
+        "2": 4.457685652940815e-11,
+        "3": 45.03666603943282,
+        "4": 104.33784961794923,
+        "5": 85.64234770465279
+      },
+      "policy": "hungarian",
+      "ratio_total": 3.0566379748620482,
+      "transfer_windows_s": [
+        4.0,
+        1108.0
+      ],
+      "worst_sat": {
+        "bound_mps": 28.032177482430257,
+        "controller_dv_mps": 104.33784961794923,
+        "ratio": 3.7220743798210156,
+        "sat_id": 4
+      }
+    },
+    {
+      "bound_total_mps": 59.971357673469136,
+      "command": "uv run python -m cubesat.dv_bound --base data/scenarios/two_failure.json --p0-dir data/eval/benchmark --report data/eval/dv_lower_bounds.json --csv data/eval/dv_lower_bounds.csv",
+      "completed_episode": {
+        "bound_total_mps": 59.971357673469136,
+        "controller_spend_total_mps": 274.59075575955956,
+        "per_sat": {
+          "1": {
+            "bound_mps": 4.4920836972027915e-13,
+            "controller_dv_in_window_mps": 1.441286719348428e-12,
+            "ratio": 3.2085037067450752
+          },
+          "3": {
+            "bound_mps": 10.905420751999042,
+            "controller_dv_in_window_mps": 38.50674966613857,
+            "ratio": 3.5309733151818103
+          },
+          "4": {
+            "bound_mps": 27.44191911352941,
+            "controller_dv_in_window_mps": 132.50176905932506,
+            "ratio": 4.828443976937424
+          },
+          "5": {
+            "bound_mps": 21.624017807940238,
+            "controller_dv_in_window_mps": 103.58223703409448,
+            "ratio": 4.7901476013425945
+          }
+        },
+        "ratio_total": 4.5786983388744655,
+        "t_end": 2932.0,
+        "t_replan": 1506.0,
+        "transfer_time_s": 1426.0
+      },
+      "controller_total_mps": 283.4661418376879,
+      "episodes": [
+        {
+          "bound_total_mps": 0.0,
+          "controller_spend_total_mps": 1.6783284511462923e-14,
+          "formation_amp_m": 8000.0,
+          "formation_phase0_rad": 0.0,
+          "n_survivors": 5,
+          "per_sat": [
+            {
+              "controller_dv_in_window_mps": 2.6701546085848957e-15,
+              "det_xy_scaled": 1.0,
+              "dist_to_singular_s": Infinity,
+              "dv1_mps": 0.0,
+              "dv2_mps": 0.0,
+              "dv_total_mps": 0.0,
+              "ratio_in_window": null,
+              "sat_id": 1,
+              "sin_nt": 0.004427119323742496,
+              "singular": false,
+              "slot_index": 1,
+              "transfer_time_s": 4.0
+            },
+            {
+              "controller_dv_in_window_mps": 4.268324617146424e-15,
+              "det_xy_scaled": 1.0,
+              "dist_to_singular_s": Infinity,
+              "dv1_mps": 0.0,
+              "dv2_mps": 0.0,
+              "dv_total_mps": 0.0,
+              "ratio_in_window": null,
+              "sat_id": 2,
+              "sin_nt": 0.004427119323742496,
+              "singular": false,
+              "slot_index": 2,
+              "transfer_time_s": 4.0
+            },
+            {
+              "controller_dv_in_window_mps": 3.2000063259221243e-15,
+              "det_xy_scaled": 1.0,
+              "dist_to_singular_s": Infinity,
+              "dv1_mps": 0.0,
+              "dv2_mps": 0.0,
+              "dv_total_mps": 0.0,
+              "ratio_in_window": null,
+              "sat_id": 3,
+              "sin_nt": 0.004427119323742496,
+              "singular": false,
+              "slot_index": 3,
+              "transfer_time_s": 4.0
+            },
+            {
+              "controller_dv_in_window_mps": 2.6961419241661868e-15,
+              "det_xy_scaled": 1.0,
+              "dist_to_singular_s": Infinity,
+              "dv1_mps": 0.0,
+              "dv2_mps": 0.0,
+              "dv_total_mps": 0.0,
+              "ratio_in_window": null,
+              "sat_id": 4,
+              "sin_nt": 0.004427119323742496,
+              "singular": false,
+              "slot_index": 4,
+              "transfer_time_s": 4.0
+            },
+            {
+              "controller_dv_in_window_mps": 3.948657035643292e-15,
+              "det_xy_scaled": 1.0,
+              "dist_to_singular_s": Infinity,
+              "dv1_mps": 0.0,
+              "dv2_mps": 0.0,
+              "dv_total_mps": 0.0,
+              "ratio_in_window": null,
+              "sat_id": 5,
+              "sin_nt": 0.004427119323742496,
+              "singular": false,
+              "slot_index": 5,
+              "transfer_time_s": 4.0
+            }
+          ],
+          "t_end": 1210.0,
+          "t_replan": 1206.0,
+          "transfer_time_s": 4.0,
+          "truncated_end": false
+        },
+        {
+          "bound_total_mps": 59.971357673469136,
+          "controller_spend_total_mps": 274.59075575955956,
+          "formation_amp_m": 8000.0,
+          "formation_phase0_rad": 1.0471975511965976,
+          "n_survivors": 4,
+          "per_sat": [
+            {
+              "controller_dv_in_window_mps": 1.441286719348428e-12,
+              "det_xy_scaled": 3.3251271466950296,
+              "dist_to_singular_s": 1412.4890142629297,
+              "dv1_mps": 3.697226037623727e-13,
+              "dv2_mps": 7.948576595790647e-14,
+              "dv_total_mps": 4.4920836972027915e-13,
+              "ratio_in_window": 3.2085037067450752,
+              "sat_id": 1,
+              "sin_nt": 0.9999720483550741,
+              "singular": false,
+              "slot_index": 0,
+              "transfer_time_s": 1426.0
+            },
+            {
+              "controller_dv_in_window_mps": 38.50674966613857,
+              "det_xy_scaled": 3.3251271466950296,
+              "dist_to_singular_s": 1412.4890142629297,
+              "dv1_mps": 5.839749710081918,
+              "dv2_mps": 5.065671041917125,
+              "dv_total_mps": 10.905420751999042,
+              "ratio_in_window": 3.5309733151818103,
+              "sat_id": 3,
+              "sin_nt": 0.9999720483550741,
+              "singular": false,
+              "slot_index": 1,
+              "transfer_time_s": 1426.0
+            },
+            {
+              "controller_dv_in_window_mps": 132.50176905932506,
+              "det_xy_scaled": 3.3251271466950296,
+              "dist_to_singular_s": 1412.4890142629297,
+              "dv1_mps": 12.812943015407978,
+              "dv2_mps": 14.628976098121433,
+              "dv_total_mps": 27.44191911352941,
+              "ratio_in_window": 4.828443976937424,
+              "sat_id": 4,
+              "sin_nt": 0.9999720483550741,
+              "singular": false,
+              "slot_index": 3,
+              "transfer_time_s": 1426.0
+            },
+            {
+              "controller_dv_in_window_mps": 103.58223703409448,
+              "det_xy_scaled": 3.3251271466950296,
+              "dist_to_singular_s": 1412.4890142629297,
+              "dv1_mps": 10.058784269610063,
+              "dv2_mps": 11.565233538330174,
+              "dv_total_mps": 21.624017807940238,
+              "ratio_in_window": 4.7901476013425945,
+              "sat_id": 5,
+              "sin_nt": 0.9999720483550741,
+              "singular": false,
+              "slot_index": 2,
+              "transfer_time_s": 1426.0
+            }
+          ],
+          "t_end": 2932.0,
+          "t_replan": 1506.0,
+          "transfer_time_s": 1426.0,
+          "truncated_end": false
+        }
+      ],
+      "log": "pair_0-2__hungarian.jsonl",
+      "log_sha256": "5cb4884095c17300908252872e25813f87e82739b7c4f657b41b5a265b53759c",
+      "min_dist_to_singular_s": 1412.4890142629297,
+      "n_episodes": 2,
+      "n_singular_solves": 0,
+      "pair": [
+        0,
+        2
+      ],
+      "per_sat_bound_mps": {
+        "0": 0.0,
+        "1": 4.4920836972027915e-13,
+        "2": 0.0,
+        "3": 10.905420751999042,
+        "4": 27.44191911352941,
+        "5": 21.624017807940238
+      },
+      "per_sat_controller_dv_mps": {
+        "0": 1.324845007004202e-12,
+        "1": 4.433797269899681e-11,
+        "2": 1.5700136380949072e-12,
+        "3": 38.513456822633486,
+        "4": 140.61483539705569,
+        "5": 104.33784961795152
+      },
+      "policy": "hungarian",
+      "ratio_total": 4.726692088264848,
+      "transfer_windows_s": [
+        4.0,
+        1426.0
+      ],
+      "worst_sat": {
+        "bound_mps": 27.44191911352941,
+        "controller_dv_mps": 140.61483539705569,
+        "ratio": 5.124088982819346,
+        "sat_id": 4
+      }
+    },
+    {
+      "bound_total_mps": 59.80525960404294,
+      "command": "uv run python -m cubesat.dv_bound --base data/scenarios/two_failure.json --p0-dir data/eval/benchmark --report data/eval/dv_lower_bounds.json --csv data/eval/dv_lower_bounds.csv",
+      "completed_episode": {
+        "bound_total_mps": 59.80525960404294,
+        "controller_spend_total_mps": 321.4506752125145,
+        "per_sat": {
+          "1": {
+            "bound_mps": 12.48633678085322,
+            "controller_dv_in_window_mps": 53.06857986392219,
+            "ratio": 4.250132027937812
+          },
+          "2": {
+            "bound_mps": 5.931534208779744e-13,
+            "controller_dv_in_window_mps": 1.5489686740123628e-12,
+            "ratio": 2.611413201865394
+          },
+          "4": {
+            "bound_mps": 18.20985362952051,
+            "controller_dv_in_window_mps": 104.23014144166935,
+            "ratio": 5.723831918818881
+          },
+          "5": {
+            "bound_mps": 29.109069193668617,
+            "controller_dv_in_window_mps": 164.15195390692142,
+            "ratio": 5.639203123081153
+          }
+        },
+        "ratio_total": 5.37495660650529,
+        "t_end": 3216.0,
+        "t_replan": 1506.0,
+        "transfer_time_s": 1710.0
+      },
+      "controller_total_mps": 330.16107106258613,
+      "episodes": [
+        {
+          "bound_total_mps": 0.0,
+          "controller_spend_total_mps": 1.6783284511462923e-14,
+          "formation_amp_m": 8000.0,
+          "formation_phase0_rad": 0.0,
+          "n_survivors": 5,
+          "per_sat": [
+            {
+              "controller_dv_in_window_mps": 2.6701546085848957e-15,
+              "det_xy_scaled": 1.0,
+              "dist_to_singular_s": Infinity,
+              "dv1_mps": 0.0,
+              "dv2_mps": 0.0,
+              "dv_total_mps": 0.0,
+              "ratio_in_window": null,
+              "sat_id": 1,
+              "sin_nt": 0.004427119323742496,
+              "singular": false,
+              "slot_index": 1,
+              "transfer_time_s": 4.0
+            },
+            {
+              "controller_dv_in_window_mps": 4.268324617146424e-15,
+              "det_xy_scaled": 1.0,
+              "dist_to_singular_s": Infinity,
+              "dv1_mps": 0.0,
+              "dv2_mps": 0.0,
+              "dv_total_mps": 0.0,
+              "ratio_in_window": null,
+              "sat_id": 2,
+              "sin_nt": 0.004427119323742496,
+              "singular": false,
+              "slot_index": 2,
+              "transfer_time_s": 4.0
+            },
+            {
+              "controller_dv_in_window_mps": 3.2000063259221243e-15,
+              "det_xy_scaled": 1.0,
+              "dist_to_singular_s": Infinity,
+              "dv1_mps": 0.0,
+              "dv2_mps": 0.0,
+              "dv_total_mps": 0.0,
+              "ratio_in_window": null,
+              "sat_id": 3,
+              "sin_nt": 0.004427119323742496,
+              "singular": false,
+              "slot_index": 3,
+              "transfer_time_s": 4.0
+            },
+            {
+              "controller_dv_in_window_mps": 2.6961419241661868e-15,
+              "det_xy_scaled": 1.0,
+              "dist_to_singular_s": Infinity,
+              "dv1_mps": 0.0,
+              "dv2_mps": 0.0,
+              "dv_total_mps": 0.0,
+              "ratio_in_window": null,
+              "sat_id": 4,
+              "sin_nt": 0.004427119323742496,
+              "singular": false,
+              "slot_index": 4,
+              "transfer_time_s": 4.0
+            },
+            {
+              "controller_dv_in_window_mps": 3.948657035643292e-15,
+              "det_xy_scaled": 1.0,
+              "dist_to_singular_s": Infinity,
+              "dv1_mps": 0.0,
+              "dv2_mps": 0.0,
+              "dv_total_mps": 0.0,
+              "ratio_in_window": null,
+              "sat_id": 5,
+              "sin_nt": 0.004427119323742496,
+              "singular": false,
+              "slot_index": 5,
+              "transfer_time_s": 4.0
+            }
+          ],
+          "t_end": 1210.0,
+          "t_replan": 1206.0,
+          "transfer_time_s": 4.0,
+          "truncated_end": false
+        },
+        {
+          "bound_total_mps": 59.80525960404294,
+          "controller_spend_total_mps": 321.4506752125145,
+          "formation_amp_m": 8000.0,
+          "formation_phase0_rad": 0.5235987755982988,
+          "n_survivors": 4,
+          "per_sat": [
+            {
+              "controller_dv_in_window_mps": 53.06857986392219,
               "det_xy_scaled": 5.143884613576604,
               "dist_to_singular_s": 1128.4890142629295,
-              "dv1_mps": 14.420727142663909,
-              "dv2_mps": 14.688342051004703,
-              "dv_total_mps": 29.10906919366861,
-              "ratio_in_window": 5.63920312308115,
-              "sat_id": 2,
+              "dv1_mps": 6.222625375173113,
+              "dv2_mps": 6.263711405680107,
+              "dv_total_mps": 12.48633678085322,
+              "ratio_in_window": 4.250132027937812,
+              "sat_id": 1,
               "sin_nt": 0.9486665960937193,
               "singular": false,
               "slot_index": 0,
               "transfer_time_s": 1710.0
             },
             {
-              "controller_dv_in_window_mps": 73.61843169742767,
+              "controller_dv_in_window_mps": 1.5489686740123628e-12,
               "det_xy_scaled": 5.143884613576604,
               "dist_to_singular_s": 1128.4890142629295,
-              "dv1_mps": 14.071760200904885,
-              "dv2_mps": 10.604676821960949,
-              "dv_total_mps": 24.676437022865834,
-              "ratio_in_window": 2.9833493234542288,
-              "sat_id": 3,
+              "dv1_mps": 5.070596518499163e-13,
+              "dv2_mps": 8.609376902805817e-14,
+              "dv_total_mps": 5.931534208779744e-13,
+              "ratio_in_window": 2.611413201865394,
+              "sat_id": 2,
               "sin_nt": 0.9486665960937193,
               "singular": false,
               "slot_index": 1,
               "transfer_time_s": 1710.0
             },
             {
-              "controller_dv_in_window_mps": 98.75911849850444,
+              "controller_dv_in_window_mps": 104.23014144166935,
               "det_xy_scaled": 5.143884613576604,
               "dist_to_singular_s": 1128.4890142629295,
-              "dv1_mps": 22.426892409238686,
-              "dv2_mps": 8.493045916766317,
-              "dv_total_mps": 30.919938326005003,
-              "ratio_in_window": 3.1940270209220873,
+              "dv1_mps": 9.011785509192125,
+              "dv2_mps": 9.198068120328385,
+              "dv_total_mps": 18.20985362952051,
+              "ratio_in_window": 5.723831918818881,
               "sat_id": 4,
               "sin_nt": 0.9486665960937193,
               "singular": false,
-              "slot_index": 2,
+              "slot_index": 3,
               "transfer_time_s": 1710.0
             },
             {
-              "controller_dv_in_window_mps": 64.565424869555,
+              "controller_dv_in_window_mps": 164.15195390692142,
               "det_xy_scaled": 5.143884613576604,
               "dist_to_singular_s": 1128.4890142629295,
-              "dv1_mps": 24.731988496699966,
-              "dv2_mps": 2.7718253124055727,
-              "dv_total_mps": 27.503813809105537,
-              "ratio_in_window": 2.3475080698873727,
+              "dv1_mps": 14.420727142663923,
+              "dv2_mps": 14.688342051004696,
+              "dv_total_mps": 29.109069193668617,
+              "ratio_in_window": 5.639203123081153,
               "sat_id": 5,
               "sin_nt": 0.9486665960937193,
               "singular": false,
-              "slot_index": 3,
+              "slot_index": 2,
               "transfer_time_s": 1710.0
             }
           ],
@@ -253,461 +705,9 @@
           "truncated_end": false
         }
       ],
-      "log": "pair_0-1__hungarian.jsonl",
-      "log_sha256": "e67ef7207ea7d112d4a051ac5e652ca57dc2d1f8160419768359caaf30f05262",
-      "min_dist_to_singular_s": 298.0,
-      "n_episodes": 2,
-      "n_singular_solves": 0,
-      "pair": [
-        0,
-        1
-      ],
-      "per_sat_bound_mps": {
-        "0": 0.0,
-        "1": 20.148264327539447,
-        "2": 29.10906919366924,
-        "3": 40.63150914354973,
-        "4": 74.39430596440819,
-        "5": 85.77094894646304
-      },
-      "per_sat_controller_dv_mps": {
-        "0": 1.351607170133408e-12,
-        "1": 16.73805619031792,
-        "2": 172.75180675712673,
-        "3": 87.04429548354396,
-        "4": 125.08870139532307,
-        "5": 91.75798726739784
-      },
-      "policy": "hungarian",
-      "ratio_total": 1.9730964294415785,
-      "transfer_windows_s": [
-        298.0,
-        1710.0
-      ],
-      "worst_sat": {
-        "bound_mps": 29.10906919366924,
-        "controller_dv_mps": 172.75180675712673,
-        "ratio": 5.934638638142971,
-        "sat_id": 2
-      }
-    },
-    {
-      "bound_total_mps": 230.95450976637966,
-      "command": "uv run python -m cubesat.dv_bound --base data/scenarios/two_failure.json --p0-dir data/eval/benchmark --report data/eval/dv_lower_bounds.json --csv data/eval/dv_lower_bounds.csv",
-      "completed_episode": {
-        "bound_total_mps": 93.10967054239501,
-        "controller_spend_total_mps": 158.27659700378575,
-        "per_sat": {
-          "1": {
-            "bound_mps": 12.987675889744034,
-            "controller_dv_in_window_mps": 26.32429933923503,
-            "ratio": 2.0268675906843745
-          },
-          "3": {
-            "bound_mps": 27.094478655607077,
-            "controller_dv_in_window_mps": 50.750909793793205,
-            "ratio": 1.8731089252123527
-          },
-          "4": {
-            "bound_mps": 28.512336062353455,
-            "controller_dv_in_window_mps": 52.37774803827047,
-            "ratio": 1.837020576768101
-          },
-          "5": {
-            "bound_mps": 24.515179934690437,
-            "controller_dv_in_window_mps": 28.823639832487046,
-            "ratio": 1.1757466153328078
-          }
-        },
-        "ratio_total": 1.6998942868315565,
-        "t_end": 2214.0,
-        "t_replan": 1506.0,
-        "transfer_time_s": 708.0
-      },
-      "controller_total_mps": 248.6215936754045,
-      "episodes": [
-        {
-          "bound_total_mps": 137.84483922398465,
-          "controller_spend_total_mps": 83.38892400193475,
-          "formation_amp_m": 8000.0,
-          "formation_phase0_rad": 2.0943951023931953,
-          "n_survivors": 5,
-          "per_sat": [
-            {
-              "controller_dv_in_window_mps": 16.88451286222079,
-              "det_xy_scaled": 0.11073663784294477,
-              "dist_to_singular_s": 298.0,
-              "dv1_mps": 10.564021227587494,
-              "dv2_mps": 9.584243099951953,
-              "dv_total_mps": 20.148264327539447,
-              "ratio_in_window": 0.8380132694180694,
-              "sat_id": 1,
-              "sin_nt": 0.3238741234611607,
-              "singular": false,
-              "slot_index": 4,
-              "transfer_time_s": 298.0
-            },
-            {
-              "controller_dv_in_window_mps": 2.506826575268381e-13,
-              "det_xy_scaled": 0.11073663784294477,
-              "dist_to_singular_s": 298.0,
-              "dv1_mps": 2.319021777844689e-13,
-              "dv2_mps": 3.981427565580419e-13,
-              "dv_total_mps": 6.300449343425109e-13,
-              "ratio_in_window": 0.39788060162477185,
-              "sat_id": 2,
-              "sin_nt": 0.3238741234611607,
-              "singular": false,
-              "slot_index": 0,
-              "transfer_time_s": 298.0
-            },
-            {
-              "controller_dv_in_window_mps": 13.368086495038503,
-              "det_xy_scaled": 0.11073663784294477,
-              "dist_to_singular_s": 298.0,
-              "dv1_mps": 8.019717821820006,
-              "dv2_mps": 7.93535429886389,
-              "dv_total_mps": 15.955072120683896,
-              "ratio_in_window": 0.8378581051795017,
-              "sat_id": 3,
-              "sin_nt": 0.3238741234611607,
-              "singular": false,
-              "slot_index": 1,
-              "transfer_time_s": 298.0
-            },
-            {
-              "controller_dv_in_window_mps": 26.119394938048313,
-              "det_xy_scaled": 0.11073663784294477,
-              "dist_to_singular_s": 298.0,
-              "dv1_mps": 22.372182780050192,
-              "dv2_mps": 21.102184858352995,
-              "dv_total_mps": 43.47436763840319,
-              "ratio_in_window": 0.6007998817900155,
-              "sat_id": 4,
-              "sin_nt": 0.3238741234611607,
-              "singular": false,
-              "slot_index": 2,
-              "transfer_time_s": 298.0
-            },
-            {
-              "controller_dv_in_window_mps": 27.016929706626893,
-              "det_xy_scaled": 0.11073663784294477,
-              "dist_to_singular_s": 298.0,
-              "dv1_mps": 27.63196753796174,
-              "dv2_mps": 30.635167599395764,
-              "dv_total_mps": 58.2671351373575,
-              "ratio_in_window": 0.46367355530588306,
-              "sat_id": 5,
-              "sin_nt": 0.3238741234611607,
-              "singular": false,
-              "slot_index": 3,
-              "transfer_time_s": 298.0
-            }
-          ],
-          "t_end": 1504.0,
-          "t_replan": 1206.0,
-          "transfer_time_s": 298.0,
-          "truncated_end": false
-        },
-        {
-          "bound_total_mps": 93.10967054239501,
-          "controller_spend_total_mps": 158.27659700378575,
-          "formation_amp_m": 8000.0,
-          "formation_phase0_rad": 1.0471975511965976,
-          "n_survivors": 4,
-          "per_sat": [
-            {
-              "controller_dv_in_window_mps": 26.32429933923503,
-              "det_xy_scaled": 0.673713040013113,
-              "dist_to_singular_s": 708.0,
-              "dv1_mps": 9.28004758148838,
-              "dv2_mps": 3.7076283082556536,
-              "dv_total_mps": 12.987675889744034,
-              "ratio_in_window": 2.0268675906843745,
-              "sat_id": 1,
-              "sin_nt": 0.7058360436152951,
-              "singular": false,
-              "slot_index": 0,
-              "transfer_time_s": 708.0
-            },
-            {
-              "controller_dv_in_window_mps": 50.750909793793205,
-              "det_xy_scaled": 0.673713040013113,
-              "dist_to_singular_s": 708.0,
-              "dv1_mps": 16.52128827144366,
-              "dv2_mps": 10.573190384163416,
-              "dv_total_mps": 27.094478655607077,
-              "ratio_in_window": 1.8731089252123527,
-              "sat_id": 3,
-              "sin_nt": 0.7058360436152951,
-              "singular": false,
-              "slot_index": 1,
-              "transfer_time_s": 708.0
-            },
-            {
-              "controller_dv_in_window_mps": 52.37774803827047,
-              "det_xy_scaled": 0.673713040013113,
-              "dist_to_singular_s": 708.0,
-              "dv1_mps": 22.54419747319257,
-              "dv2_mps": 5.968138589160886,
-              "dv_total_mps": 28.512336062353455,
-              "ratio_in_window": 1.837020576768101,
-              "sat_id": 4,
-              "sin_nt": 0.7058360436152951,
-              "singular": false,
-              "slot_index": 2,
-              "transfer_time_s": 708.0
-            },
-            {
-              "controller_dv_in_window_mps": 28.823639832487046,
-              "det_xy_scaled": 0.673713040013113,
-              "dist_to_singular_s": 708.0,
-              "dv1_mps": 20.254311932957087,
-              "dv2_mps": 4.260868001733352,
-              "dv_total_mps": 24.515179934690437,
-              "ratio_in_window": 1.1757466153328078,
-              "sat_id": 5,
-              "sin_nt": 0.7058360436152951,
-              "singular": false,
-              "slot_index": 3,
-              "transfer_time_s": 708.0
-            }
-          ],
-          "t_end": 2214.0,
-          "t_replan": 1506.0,
-          "transfer_time_s": 708.0,
-          "truncated_end": false
-        }
-      ],
-      "log": "pair_0-2__hungarian.jsonl",
-      "log_sha256": "b60786ea97e32893301266e343ae2571df0774dfb563620d88e4e1ac5f3e4d21",
-      "min_dist_to_singular_s": 298.0,
-      "n_episodes": 2,
-      "n_singular_solves": 0,
-      "pair": [
-        0,
-        2
-      ],
-      "per_sat_bound_mps": {
-        "0": 0.0,
-        "1": 33.13594021728348,
-        "2": 6.300449343425109e-13,
-        "3": 43.04955077629097,
-        "4": 71.98670370075664,
-        "5": 82.78231507204794
-      },
-      "per_sat_controller_dv_mps": {
-        "0": 1.351607170133408e-12,
-        "1": 43.77642195038997,
-        "2": 1.5565358266533646e-12,
-        "3": 66.60682979344182,
-        "4": 81.89474962857273,
-        "5": 56.343592302997095
-      },
-      "policy": "hungarian",
-      "ratio_total": 1.076495946872377,
-      "transfer_windows_s": [
-        298.0,
-        708.0
-      ],
-      "worst_sat": {
-        "bound_mps": 71.98670370075664,
-        "controller_dv_mps": 81.89474962857273,
-        "ratio": 1.1376371665662468,
-        "sat_id": 4
-      }
-    },
-    {
-      "bound_total_mps": 218.3168773195295,
-      "command": "uv run python -m cubesat.dv_bound --base data/scenarios/two_failure.json --p0-dir data/eval/benchmark --report data/eval/dv_lower_bounds.json --csv data/eval/dv_lower_bounds.csv",
-      "completed_episode": {
-        "bound_total_mps": 80.47203809554483,
-        "controller_spend_total_mps": 192.62284590855194,
-        "per_sat": {
-          "1": {
-            "bound_mps": 10.312292129964906,
-            "controller_dv_in_window_mps": 33.32795880925366,
-            "ratio": 3.2318672114040545
-          },
-          "2": {
-            "bound_mps": 5.680139541719062e-13,
-            "controller_dv_in_window_mps": 9.11839450303068e-13,
-            "ratio": 1.6053117068794844
-          },
-          "4": {
-            "bound_mps": 40.32163563080378,
-            "controller_dv_in_window_mps": 95.34036067478448,
-            "ratio": 2.364496359913263
-          },
-          "5": {
-            "bound_mps": 29.83811033477558,
-            "controller_dv_in_window_mps": 63.95452642451288,
-            "ratio": 2.14338393775478
-          }
-        },
-        "ratio_total": 2.3936618292163785,
-        "t_end": 2546.0,
-        "t_replan": 1506.0,
-        "transfer_time_s": 1040.0
-      },
-      "controller_total_mps": 280.4738119063727,
-      "episodes": [
-        {
-          "bound_total_mps": 137.84483922398465,
-          "controller_spend_total_mps": 83.2834134206101,
-          "formation_amp_m": 8000.0,
-          "formation_phase0_rad": 2.0943951023931953,
-          "n_survivors": 5,
-          "per_sat": [
-            {
-              "controller_dv_in_window_mps": 16.88451286222079,
-              "det_xy_scaled": 0.11073663784294477,
-              "dist_to_singular_s": 298.0,
-              "dv1_mps": 10.564021227587494,
-              "dv2_mps": 9.584243099951953,
-              "dv_total_mps": 20.148264327539447,
-              "ratio_in_window": 0.8380132694180694,
-              "sat_id": 1,
-              "sin_nt": 0.3238741234611607,
-              "singular": false,
-              "slot_index": 4,
-              "transfer_time_s": 298.0
-            },
-            {
-              "controller_dv_in_window_mps": 2.521054148877487e-13,
-              "det_xy_scaled": 0.11073663784294477,
-              "dist_to_singular_s": 298.0,
-              "dv1_mps": 2.319021777844689e-13,
-              "dv2_mps": 3.981427565580419e-13,
-              "dv_total_mps": 6.300449343425109e-13,
-              "ratio_in_window": 0.4001387855785804,
-              "sat_id": 2,
-              "sin_nt": 0.3238741234611607,
-              "singular": false,
-              "slot_index": 0,
-              "transfer_time_s": 298.0
-            },
-            {
-              "controller_dv_in_window_mps": 13.262575913713851,
-              "det_xy_scaled": 0.11073663784294477,
-              "dist_to_singular_s": 298.0,
-              "dv1_mps": 8.019717821820006,
-              "dv2_mps": 7.93535429886389,
-              "dv_total_mps": 15.955072120683896,
-              "ratio_in_window": 0.8312451246472564,
-              "sat_id": 3,
-              "sin_nt": 0.3238741234611607,
-              "singular": false,
-              "slot_index": 1,
-              "transfer_time_s": 298.0
-            },
-            {
-              "controller_dv_in_window_mps": 26.119394938048313,
-              "det_xy_scaled": 0.11073663784294477,
-              "dist_to_singular_s": 298.0,
-              "dv1_mps": 22.372182780050192,
-              "dv2_mps": 21.102184858352995,
-              "dv_total_mps": 43.47436763840319,
-              "ratio_in_window": 0.6007998817900155,
-              "sat_id": 4,
-              "sin_nt": 0.3238741234611607,
-              "singular": false,
-              "slot_index": 2,
-              "transfer_time_s": 298.0
-            },
-            {
-              "controller_dv_in_window_mps": 27.016929706626893,
-              "det_xy_scaled": 0.11073663784294477,
-              "dist_to_singular_s": 298.0,
-              "dv1_mps": 27.63196753796174,
-              "dv2_mps": 30.635167599395764,
-              "dv_total_mps": 58.2671351373575,
-              "ratio_in_window": 0.46367355530588306,
-              "sat_id": 5,
-              "sin_nt": 0.3238741234611607,
-              "singular": false,
-              "slot_index": 3,
-              "transfer_time_s": 298.0
-            }
-          ],
-          "t_end": 1504.0,
-          "t_replan": 1206.0,
-          "transfer_time_s": 298.0,
-          "truncated_end": false
-        },
-        {
-          "bound_total_mps": 80.47203809554483,
-          "controller_spend_total_mps": 192.62284590855194,
-          "formation_amp_m": 8000.0,
-          "formation_phase0_rad": 0.5235987755982988,
-          "n_survivors": 4,
-          "per_sat": [
-            {
-              "controller_dv_in_window_mps": 33.32795880925366,
-              "det_xy_scaled": 1.5863944425493584,
-              "dist_to_singular_s": 1040.0,
-              "dv1_mps": 4.363647382311846,
-              "dv2_mps": 5.948644747653059,
-              "dv_total_mps": 10.312292129964906,
-              "ratio_in_window": 3.2318672114040545,
-              "sat_id": 1,
-              "sin_nt": 0.9131942985177084,
-              "singular": false,
-              "slot_index": 0,
-              "transfer_time_s": 1040.0
-            },
-            {
-              "controller_dv_in_window_mps": 9.11839450303068e-13,
-              "det_xy_scaled": 1.5863944425493584,
-              "dist_to_singular_s": 1040.0,
-              "dv1_mps": 4.612255032707205e-13,
-              "dv2_mps": 1.0678845090118569e-13,
-              "dv_total_mps": 5.680139541719062e-13,
-              "ratio_in_window": 1.6053117068794844,
-              "sat_id": 2,
-              "sin_nt": 0.9131942985177084,
-              "singular": false,
-              "slot_index": 1,
-              "transfer_time_s": 1040.0
-            },
-            {
-              "controller_dv_in_window_mps": 95.34036067478448,
-              "det_xy_scaled": 1.5863944425493584,
-              "dist_to_singular_s": 1040.0,
-              "dv1_mps": 27.831657230301694,
-              "dv2_mps": 12.48997840050209,
-              "dv_total_mps": 40.32163563080378,
-              "ratio_in_window": 2.364496359913263,
-              "sat_id": 4,
-              "sin_nt": 0.9131942985177084,
-              "singular": false,
-              "slot_index": 2,
-              "transfer_time_s": 1040.0
-            },
-            {
-              "controller_dv_in_window_mps": 63.95452642451288,
-              "det_xy_scaled": 1.5863944425493584,
-              "dist_to_singular_s": 1040.0,
-              "dv1_mps": 26.155944954913803,
-              "dv2_mps": 3.6821653798617735,
-              "dv_total_mps": 29.83811033477558,
-              "ratio_in_window": 2.14338393775478,
-              "sat_id": 5,
-              "sin_nt": 0.9131942985177084,
-              "singular": false,
-              "slot_index": 3,
-              "transfer_time_s": 1040.0
-            }
-          ],
-          "t_end": 2546.0,
-          "t_replan": 1506.0,
-          "transfer_time_s": 1040.0,
-          "truncated_end": false
-        }
-      ],
       "log": "pair_0-3__hungarian.jsonl",
-      "log_sha256": "11742e1f6df4529c9fd1201b9a5594664649f28952a03526e06f4b535abda4d3",
-      "min_dist_to_singular_s": 298.0,
+      "log_sha256": "c107cce566403278e55b64f588aa8cc4a2be7b65fb3edb446dd39ec2ea532430",
+      "min_dist_to_singular_s": 1128.4890142629295,
       "n_episodes": 2,
       "n_singular_solves": 0,
       "pair": [
@@ -716,224 +716,224 @@
       ],
       "per_sat_bound_mps": {
         "0": 0.0,
-        "1": 30.460556457504353,
-        "2": 1.198058888514417e-12,
-        "3": 15.955072120683896,
-        "4": 83.79600326920698,
-        "5": 88.10524547213308
+        "1": 12.48633678085322,
+        "2": 5.931534208779744e-13,
+        "3": 0.0,
+        "4": 18.20985362952051,
+        "5": 29.109069193668617
       },
       "per_sat_controller_dv_mps": {
-        "0": 1.351607170133408e-12,
-        "1": 50.36454732988793,
-        "2": 4.730516047032083e-11,
-        "3": 13.262575913715201,
-        "4": 125.08870139532307,
-        "5": 91.75798726739784
+        "0": 1.324845007004202e-12,
+        "1": 53.071414687468575,
+        "2": 4.457685652940815e-11,
+        "3": 1.5512623549697742e-12,
+        "4": 104.33784961794923,
+        "5": 172.75180675712087
       },
       "policy": "hungarian",
-      "ratio_total": 1.2847097088873713,
+      "ratio_total": 5.520602589947903,
       "transfer_windows_s": [
-        298.0,
-        1040.0
+        4.0,
+        1710.0
       ],
       "worst_sat": {
-        "bound_mps": 83.79600326920698,
-        "controller_dv_mps": 125.08870139532307,
-        "ratio": 1.4927764632575282,
-        "sat_id": 4
+        "bound_mps": 29.109069193668617,
+        "controller_dv_mps": 172.75180675712087,
+        "ratio": 5.934638638142897,
+        "sat_id": 5
       }
     },
     {
-      "bound_total_mps": 270.5582020073569,
+      "bound_total_mps": 47.849013515417255,
       "command": "uv run python -m cubesat.dv_bound --base data/scenarios/two_failure.json --p0-dir data/eval/benchmark --report data/eval/dv_lower_bounds.json --csv data/eval/dv_lower_bounds.csv",
       "completed_episode": {
-        "bound_total_mps": 132.71336278337222,
-        "controller_spend_total_mps": 231.84490308756298,
+        "bound_total_mps": 47.849013515417255,
+        "controller_spend_total_mps": 92.96027668736687,
         "per_sat": {
           "1": {
-            "bound_mps": 12.461690706819148,
-            "controller_dv_in_window_mps": 32.78044238012585,
-            "ratio": 2.6304971894534424
+            "bound_mps": 25.726949753206522,
+            "controller_dv_in_window_mps": 50.02849920040572,
+            "ratio": 1.9445950522824935
           },
           "2": {
-            "bound_mps": 46.64290434450339,
-            "controller_dv_in_window_mps": 71.96891792959501,
-            "ratio": 1.5429767708724627
+            "bound_mps": 5.525514347629296e-13,
+            "controller_dv_in_window_mps": 5.125632774332694e-13,
+            "ratio": 0.9276299819096172
           },
           "3": {
-            "bound_mps": 40.40092002230446,
-            "controller_dv_in_window_mps": 68.04263723792837,
-            "ratio": 1.684185340342832
+            "bound_mps": 22.122063762209642,
+            "controller_dv_in_window_mps": 42.93177748696013,
+            "ratio": 1.9406768712193572
           },
           "5": {
-            "bound_mps": 33.20784770974522,
-            "controller_dv_in_window_mps": 59.05290553991375,
-            "ratio": 1.7782816295734822
+            "bound_mps": 5.36365725417844e-13,
+            "controller_dv_in_window_mps": 5.112259650654709e-13,
+            "ratio": 0.953129442913623
           }
         },
-        "ratio_total": 1.746959750134604,
-        "t_end": 2230.0,
+        "ratio_total": 1.9427835572287082,
+        "t_end": 2160.0,
         "t_replan": 1506.0,
-        "transfer_time_s": 724.0
+        "transfer_time_s": 654.0
       },
-      "controller_total_mps": 340.61735413420496,
+      "controller_total_mps": 98.10808072699301,
       "episodes": [
         {
-          "bound_total_mps": 137.84483922398465,
-          "controller_spend_total_mps": 83.07770541260182,
+          "bound_total_mps": 0.0,
+          "controller_spend_total_mps": 1.6783284511462923e-14,
           "formation_amp_m": 8000.0,
-          "formation_phase0_rad": 2.0943951023931953,
+          "formation_phase0_rad": 0.0,
           "n_survivors": 5,
           "per_sat": [
             {
-              "controller_dv_in_window_mps": 16.88451286222079,
-              "det_xy_scaled": 0.11073663784294477,
-              "dist_to_singular_s": 298.0,
-              "dv1_mps": 10.564021227587494,
-              "dv2_mps": 9.584243099951953,
-              "dv_total_mps": 20.148264327539447,
-              "ratio_in_window": 0.8380132694180694,
+              "controller_dv_in_window_mps": 2.6701546085848957e-15,
+              "det_xy_scaled": 1.0,
+              "dist_to_singular_s": Infinity,
+              "dv1_mps": 0.0,
+              "dv2_mps": 0.0,
+              "dv_total_mps": 0.0,
+              "ratio_in_window": null,
               "sat_id": 1,
-              "sin_nt": 0.3238741234611607,
-              "singular": false,
-              "slot_index": 4,
-              "transfer_time_s": 298.0
-            },
-            {
-              "controller_dv_in_window_mps": 2.521054148877487e-13,
-              "det_xy_scaled": 0.11073663784294477,
-              "dist_to_singular_s": 298.0,
-              "dv1_mps": 2.319021777844689e-13,
-              "dv2_mps": 3.981427565580419e-13,
-              "dv_total_mps": 6.300449343425109e-13,
-              "ratio_in_window": 0.4001387855785804,
-              "sat_id": 2,
-              "sin_nt": 0.3238741234611607,
-              "singular": false,
-              "slot_index": 0,
-              "transfer_time_s": 298.0
-            },
-            {
-              "controller_dv_in_window_mps": 13.368086495038503,
-              "det_xy_scaled": 0.11073663784294477,
-              "dist_to_singular_s": 298.0,
-              "dv1_mps": 8.019717821820006,
-              "dv2_mps": 7.93535429886389,
-              "dv_total_mps": 15.955072120683896,
-              "ratio_in_window": 0.8378581051795017,
-              "sat_id": 3,
-              "sin_nt": 0.3238741234611607,
+              "sin_nt": 0.004427119323742496,
               "singular": false,
               "slot_index": 1,
-              "transfer_time_s": 298.0
+              "transfer_time_s": 4.0
             },
             {
-              "controller_dv_in_window_mps": 25.80817634871538,
-              "det_xy_scaled": 0.11073663784294477,
-              "dist_to_singular_s": 298.0,
-              "dv1_mps": 22.372182780050192,
-              "dv2_mps": 21.102184858352995,
-              "dv_total_mps": 43.47436763840319,
-              "ratio_in_window": 0.5936412132172721,
-              "sat_id": 4,
-              "sin_nt": 0.3238741234611607,
+              "controller_dv_in_window_mps": 4.268324617146424e-15,
+              "det_xy_scaled": 1.0,
+              "dist_to_singular_s": Infinity,
+              "dv1_mps": 0.0,
+              "dv2_mps": 0.0,
+              "dv_total_mps": 0.0,
+              "ratio_in_window": null,
+              "sat_id": 2,
+              "sin_nt": 0.004427119323742496,
               "singular": false,
               "slot_index": 2,
-              "transfer_time_s": 298.0
+              "transfer_time_s": 4.0
             },
             {
-              "controller_dv_in_window_mps": 27.016929706626893,
-              "det_xy_scaled": 0.11073663784294477,
-              "dist_to_singular_s": 298.0,
-              "dv1_mps": 27.63196753796174,
-              "dv2_mps": 30.635167599395764,
-              "dv_total_mps": 58.2671351373575,
-              "ratio_in_window": 0.46367355530588306,
-              "sat_id": 5,
-              "sin_nt": 0.3238741234611607,
+              "controller_dv_in_window_mps": 3.2000063259221243e-15,
+              "det_xy_scaled": 1.0,
+              "dist_to_singular_s": Infinity,
+              "dv1_mps": 0.0,
+              "dv2_mps": 0.0,
+              "dv_total_mps": 0.0,
+              "ratio_in_window": null,
+              "sat_id": 3,
+              "sin_nt": 0.004427119323742496,
               "singular": false,
               "slot_index": 3,
-              "transfer_time_s": 298.0
+              "transfer_time_s": 4.0
+            },
+            {
+              "controller_dv_in_window_mps": 2.6961419241661868e-15,
+              "det_xy_scaled": 1.0,
+              "dist_to_singular_s": Infinity,
+              "dv1_mps": 0.0,
+              "dv2_mps": 0.0,
+              "dv_total_mps": 0.0,
+              "ratio_in_window": null,
+              "sat_id": 4,
+              "sin_nt": 0.004427119323742496,
+              "singular": false,
+              "slot_index": 4,
+              "transfer_time_s": 4.0
+            },
+            {
+              "controller_dv_in_window_mps": 3.948657035643292e-15,
+              "det_xy_scaled": 1.0,
+              "dist_to_singular_s": Infinity,
+              "dv1_mps": 0.0,
+              "dv2_mps": 0.0,
+              "dv_total_mps": 0.0,
+              "ratio_in_window": null,
+              "sat_id": 5,
+              "sin_nt": 0.004427119323742496,
+              "singular": false,
+              "slot_index": 5,
+              "transfer_time_s": 4.0
             }
           ],
-          "t_end": 1504.0,
+          "t_end": 1210.0,
           "t_replan": 1206.0,
-          "transfer_time_s": 298.0,
+          "transfer_time_s": 4.0,
           "truncated_end": false
         },
         {
-          "bound_total_mps": 132.71336278337222,
-          "controller_spend_total_mps": 231.84490308756298,
+          "bound_total_mps": 47.849013515417255,
+          "controller_spend_total_mps": 92.96027668736687,
           "formation_amp_m": 8000.0,
           "formation_phase0_rad": 0.5235987755982988,
           "n_survivors": 4,
           "per_sat": [
             {
-              "controller_dv_in_window_mps": 32.78044238012585,
-              "det_xy_scaled": 0.707204948930043,
-              "dist_to_singular_s": 724.0,
-              "dv1_mps": 4.699553257487926,
-              "dv2_mps": 7.762137449331222,
-              "dv_total_mps": 12.461690706819148,
-              "ratio_in_window": 2.6304971894534424,
+              "controller_dv_in_window_mps": 50.02849920040572,
+              "det_xy_scaled": 0.5677231845758047,
+              "dist_to_singular_s": 654.0,
+              "dv1_mps": 13.43914173271767,
+              "dv2_mps": 12.287808020488852,
+              "dv_total_mps": 25.726949753206522,
+              "ratio_in_window": 1.9445950522824935,
               "sat_id": 1,
-              "sin_nt": 0.7182690063579618,
+              "sin_nt": 0.6622640204477889,
               "singular": false,
               "slot_index": 0,
-              "transfer_time_s": 724.0
+              "transfer_time_s": 654.0
             },
             {
-              "controller_dv_in_window_mps": 71.96891792959501,
-              "det_xy_scaled": 0.707204948930043,
-              "dist_to_singular_s": 724.0,
-              "dv1_mps": 24.84844405679425,
-              "dv2_mps": 21.794460287709146,
-              "dv_total_mps": 46.64290434450339,
-              "ratio_in_window": 1.5429767708724627,
+              "controller_dv_in_window_mps": 5.125632774332694e-13,
+              "det_xy_scaled": 0.5677231845758047,
+              "dist_to_singular_s": 654.0,
+              "dv1_mps": 3.9153862536820057e-13,
+              "dv2_mps": 1.6101280939472901e-13,
+              "dv_total_mps": 5.525514347629296e-13,
+              "ratio_in_window": 0.9276299819096172,
               "sat_id": 2,
-              "sin_nt": 0.7182690063579618,
-              "singular": false,
-              "slot_index": 2,
-              "transfer_time_s": 724.0
-            },
-            {
-              "controller_dv_in_window_mps": 68.04263723792837,
-              "det_xy_scaled": 0.707204948930043,
-              "dist_to_singular_s": 724.0,
-              "dv1_mps": 22.633047120476682,
-              "dv2_mps": 17.767872901827776,
-              "dv_total_mps": 40.40092002230446,
-              "ratio_in_window": 1.684185340342832,
-              "sat_id": 3,
-              "sin_nt": 0.7182690063579618,
+              "sin_nt": 0.6622640204477889,
               "singular": false,
               "slot_index": 1,
-              "transfer_time_s": 724.0
+              "transfer_time_s": 654.0
             },
             {
-              "controller_dv_in_window_mps": 59.05290553991375,
-              "det_xy_scaled": 0.707204948930043,
-              "dist_to_singular_s": 724.0,
-              "dv1_mps": 27.689023273242274,
-              "dv2_mps": 5.518824436502941,
-              "dv_total_mps": 33.20784770974522,
-              "ratio_in_window": 1.7782816295734822,
+              "controller_dv_in_window_mps": 42.93177748696013,
+              "det_xy_scaled": 0.5677231845758047,
+              "dist_to_singular_s": 654.0,
+              "dv1_mps": 12.150694787742687,
+              "dv2_mps": 9.971368974466953,
+              "dv_total_mps": 22.122063762209642,
+              "ratio_in_window": 1.9406768712193572,
+              "sat_id": 3,
+              "sin_nt": 0.6622640204477889,
+              "singular": false,
+              "slot_index": 2,
+              "transfer_time_s": 654.0
+            },
+            {
+              "controller_dv_in_window_mps": 5.112259650654709e-13,
+              "det_xy_scaled": 0.5677231845758047,
+              "dist_to_singular_s": 654.0,
+              "dv1_mps": 3.7834732701765555e-13,
+              "dv2_mps": 1.5801839840018847e-13,
+              "dv_total_mps": 5.36365725417844e-13,
+              "ratio_in_window": 0.953129442913623,
               "sat_id": 5,
-              "sin_nt": 0.7182690063579618,
+              "sin_nt": 0.6622640204477889,
               "singular": false,
               "slot_index": 3,
-              "transfer_time_s": 724.0
+              "transfer_time_s": 654.0
             }
           ],
-          "t_end": 2230.0,
+          "t_end": 2160.0,
           "t_replan": 1506.0,
-          "transfer_time_s": 724.0,
+          "transfer_time_s": 654.0,
           "truncated_end": false
         }
       ],
       "log": "pair_0-4__hungarian.jsonl",
-      "log_sha256": "b03f378647168d5571d794fb7cac65ac3b6240e392c1cc364ea5bc329d450778",
-      "min_dist_to_singular_s": 298.0,
+      "log_sha256": "8bd568b5136b5f0bb0889b54c291433349d3e149cdcb6f2e486192ea07508c04",
+      "min_dist_to_singular_s": 654.0,
       "n_episodes": 2,
       "n_singular_solves": 0,
       "pair": [
@@ -942,224 +942,224 @@
       ],
       "per_sat_bound_mps": {
         "0": 0.0,
-        "1": 32.60995503435859,
-        "2": 46.642904344504025,
-        "3": 56.355992142988356,
-        "4": 43.47436763840319,
-        "5": 91.47498284710272
+        "1": 25.726949753206522,
+        "2": 5.525514347629296e-13,
+        "3": 22.122063762209642,
+        "4": 0.0,
+        "5": 5.36365725417844e-13
       },
       "per_sat_controller_dv_mps": {
-        "0": 1.351607170133408e-12,
-        "1": 50.36454732988793,
-        "2": 85.6423477046576,
-        "3": 87.04429548354396,
-        "4": 25.808176348716277,
-        "5": 91.75798726739784
+        "0": 1.324845007004202e-12,
+        "1": 53.071414687468575,
+        "2": 4.457685652940815e-11,
+        "3": 45.03666603943282,
+        "4": 1.066758970894579e-12,
+        "5": 4.464838728578468e-11
       },
       "policy": "hungarian",
-      "ratio_total": 1.2589429986119698,
+      "ratio_total": 2.050367886798376,
       "transfer_windows_s": [
-        298.0,
-        724.0
+        4.0,
+        654.0
       ],
       "worst_sat": {
-        "bound_mps": 91.47498284710272,
-        "controller_dv_mps": 91.75798726739784,
-        "ratio": 1.003093790361985,
-        "sat_id": 5
+        "bound_mps": 25.726949753206522,
+        "controller_dv_mps": 53.071414687468575,
+        "ratio": 2.0628724040965616,
+        "sat_id": 1
       }
     },
     {
-      "bound_total_mps": 215.14732692003167,
+      "bound_total_mps": 63.019615200943676,
       "command": "uv run python -m cubesat.dv_bound --base data/scenarios/two_failure.json --p0-dir data/eval/benchmark --report data/eval/dv_lower_bounds.json --csv data/eval/dv_lower_bounds.csv",
       "completed_episode": {
-        "bound_total_mps": 77.302487696047,
-        "controller_spend_total_mps": 326.04744702848893,
+        "bound_total_mps": 63.019615200943676,
+        "controller_spend_total_mps": 267.35859702584685,
         "per_sat": {
           "1": {
-            "bound_mps": 11.330674204980387,
-            "controller_dv_in_window_mps": 33.407445576004335,
-            "ratio": 2.9484075679556763
+            "bound_mps": 4.4920836972027915e-13,
+            "controller_dv_in_window_mps": 1.441286719348428e-12,
+            "ratio": 3.2085037067450752
           },
           "2": {
-            "bound_mps": 6.395919592898627e-13,
-            "controller_dv_in_window_mps": 2.0328499575401117e-12,
-            "ratio": 3.1783544617996444
+            "bound_mps": 9.187911378080287,
+            "controller_dv_in_window_mps": 42.21235790169025,
+            "ratio": 4.594336641339052
           },
           "3": {
-            "bound_mps": 36.56168825202427,
-            "controller_dv_in_window_mps": 193.83700795151765,
-            "ratio": 5.301642709039447
+            "bound_mps": 26.389784709333533,
+            "controller_dv_in_window_mps": 92.64447006483009,
+            "ratio": 3.5106186384333635
           },
           "4": {
-            "bound_mps": 29.410125239041705,
-            "controller_dv_in_window_mps": 98.80299350096493,
-            "ratio": 3.3594890432429967
+            "bound_mps": 27.44191911352941,
+            "controller_dv_in_window_mps": 132.50176905932506,
+            "ratio": 4.828443976937424
           }
         },
-        "ratio_total": 4.217813122787276,
-        "t_end": 3474.0,
+        "ratio_total": 4.24246635231507,
+        "t_end": 2932.0,
         "t_replan": 1506.0,
-        "transfer_time_s": 1968.0
+        "transfer_time_s": 1426.0
       },
-      "controller_total_mps": 419.0439573070037,
+      "controller_total_mps": 275.7529948793657,
       "episodes": [
         {
-          "bound_total_mps": 137.84483922398465,
-          "controller_spend_total_mps": 83.06009187997562,
+          "bound_total_mps": 0.0,
+          "controller_spend_total_mps": 1.6783284511462923e-14,
           "formation_amp_m": 8000.0,
-          "formation_phase0_rad": 2.0943951023931953,
+          "formation_phase0_rad": 0.0,
           "n_survivors": 5,
           "per_sat": [
             {
-              "controller_dv_in_window_mps": 16.88451286222079,
-              "det_xy_scaled": 0.11073663784294477,
-              "dist_to_singular_s": 298.0,
-              "dv1_mps": 10.564021227587494,
-              "dv2_mps": 9.584243099951953,
-              "dv_total_mps": 20.148264327539447,
-              "ratio_in_window": 0.8380132694180694,
+              "controller_dv_in_window_mps": 2.6701546085848957e-15,
+              "det_xy_scaled": 1.0,
+              "dist_to_singular_s": Infinity,
+              "dv1_mps": 0.0,
+              "dv2_mps": 0.0,
+              "dv_total_mps": 0.0,
+              "ratio_in_window": null,
               "sat_id": 1,
-              "sin_nt": 0.3238741234611607,
-              "singular": false,
-              "slot_index": 4,
-              "transfer_time_s": 298.0
-            },
-            {
-              "controller_dv_in_window_mps": 2.521054148877487e-13,
-              "det_xy_scaled": 0.11073663784294477,
-              "dist_to_singular_s": 298.0,
-              "dv1_mps": 2.319021777844689e-13,
-              "dv2_mps": 3.981427565580419e-13,
-              "dv_total_mps": 6.300449343425109e-13,
-              "ratio_in_window": 0.4001387855785804,
-              "sat_id": 2,
-              "sin_nt": 0.3238741234611607,
-              "singular": false,
-              "slot_index": 0,
-              "transfer_time_s": 298.0
-            },
-            {
-              "controller_dv_in_window_mps": 13.368086495038503,
-              "det_xy_scaled": 0.11073663784294477,
-              "dist_to_singular_s": 298.0,
-              "dv1_mps": 8.019717821820006,
-              "dv2_mps": 7.93535429886389,
-              "dv_total_mps": 15.955072120683896,
-              "ratio_in_window": 0.8378581051795017,
-              "sat_id": 3,
-              "sin_nt": 0.3238741234611607,
+              "sin_nt": 0.004427119323742496,
               "singular": false,
               "slot_index": 1,
-              "transfer_time_s": 298.0
+              "transfer_time_s": 4.0
             },
             {
-              "controller_dv_in_window_mps": 26.119394938048313,
-              "det_xy_scaled": 0.11073663784294477,
-              "dist_to_singular_s": 298.0,
-              "dv1_mps": 22.372182780050192,
-              "dv2_mps": 21.102184858352995,
-              "dv_total_mps": 43.47436763840319,
-              "ratio_in_window": 0.6007998817900155,
-              "sat_id": 4,
-              "sin_nt": 0.3238741234611607,
+              "controller_dv_in_window_mps": 4.268324617146424e-15,
+              "det_xy_scaled": 1.0,
+              "dist_to_singular_s": Infinity,
+              "dv1_mps": 0.0,
+              "dv2_mps": 0.0,
+              "dv_total_mps": 0.0,
+              "ratio_in_window": null,
+              "sat_id": 2,
+              "sin_nt": 0.004427119323742496,
               "singular": false,
               "slot_index": 2,
-              "transfer_time_s": 298.0
+              "transfer_time_s": 4.0
             },
             {
-              "controller_dv_in_window_mps": 26.688097584667755,
-              "det_xy_scaled": 0.11073663784294477,
-              "dist_to_singular_s": 298.0,
-              "dv1_mps": 27.63196753796174,
-              "dv2_mps": 30.635167599395764,
-              "dv_total_mps": 58.2671351373575,
-              "ratio_in_window": 0.45803002879331367,
-              "sat_id": 5,
-              "sin_nt": 0.3238741234611607,
+              "controller_dv_in_window_mps": 3.2000063259221243e-15,
+              "det_xy_scaled": 1.0,
+              "dist_to_singular_s": Infinity,
+              "dv1_mps": 0.0,
+              "dv2_mps": 0.0,
+              "dv_total_mps": 0.0,
+              "ratio_in_window": null,
+              "sat_id": 3,
+              "sin_nt": 0.004427119323742496,
               "singular": false,
               "slot_index": 3,
-              "transfer_time_s": 298.0
+              "transfer_time_s": 4.0
+            },
+            {
+              "controller_dv_in_window_mps": 2.6961419241661868e-15,
+              "det_xy_scaled": 1.0,
+              "dist_to_singular_s": Infinity,
+              "dv1_mps": 0.0,
+              "dv2_mps": 0.0,
+              "dv_total_mps": 0.0,
+              "ratio_in_window": null,
+              "sat_id": 4,
+              "sin_nt": 0.004427119323742496,
+              "singular": false,
+              "slot_index": 4,
+              "transfer_time_s": 4.0
+            },
+            {
+              "controller_dv_in_window_mps": 3.948657035643292e-15,
+              "det_xy_scaled": 1.0,
+              "dist_to_singular_s": Infinity,
+              "dv1_mps": 0.0,
+              "dv2_mps": 0.0,
+              "dv_total_mps": 0.0,
+              "ratio_in_window": null,
+              "sat_id": 5,
+              "sin_nt": 0.004427119323742496,
+              "singular": false,
+              "slot_index": 5,
+              "transfer_time_s": 4.0
             }
           ],
-          "t_end": 1504.0,
+          "t_end": 1210.0,
           "t_replan": 1206.0,
-          "transfer_time_s": 298.0,
+          "transfer_time_s": 4.0,
           "truncated_end": false
         },
         {
-          "bound_total_mps": 77.302487696047,
-          "controller_spend_total_mps": 326.04744702848893,
+          "bound_total_mps": 63.019615200943676,
+          "controller_spend_total_mps": 267.35859702584685,
           "formation_amp_m": 8000.0,
-          "formation_phase0_rad": 0.5235987755982988,
+          "formation_phase0_rad": 1.0471975511965976,
           "n_survivors": 4,
           "per_sat": [
             {
-              "controller_dv_in_window_mps": 33.407445576004335,
-              "det_xy_scaled": 7.199733395102656,
-              "dist_to_singular_s": 870.4890142629297,
-              "dv1_mps": 6.885452540233276,
-              "dv2_mps": 4.445221664747111,
-              "dv_total_mps": 11.330674204980387,
-              "ratio_in_window": 2.9484075679556763,
+              "controller_dv_in_window_mps": 1.441286719348428e-12,
+              "det_xy_scaled": 3.3251271466950296,
+              "dist_to_singular_s": 1412.4890142629297,
+              "dv1_mps": 3.697226037623727e-13,
+              "dv2_mps": 7.948576595790647e-14,
+              "dv_total_mps": 4.4920836972027915e-13,
+              "ratio_in_window": 3.2085037067450752,
               "sat_id": 1,
-              "sin_nt": 0.8211612419341238,
+              "sin_nt": 0.9999720483550741,
               "singular": false,
               "slot_index": 0,
-              "transfer_time_s": 1968.0
+              "transfer_time_s": 1426.0
             },
             {
-              "controller_dv_in_window_mps": 2.0328499575401117e-12,
-              "det_xy_scaled": 7.199733395102656,
-              "dist_to_singular_s": 870.4890142629297,
-              "dv1_mps": 5.526853915184205e-13,
-              "dv2_mps": 8.690656777144217e-14,
-              "dv_total_mps": 6.395919592898627e-13,
-              "ratio_in_window": 3.1783544617996444,
+              "controller_dv_in_window_mps": 42.21235790169025,
+              "det_xy_scaled": 3.3251271466950296,
+              "dist_to_singular_s": 1412.4890142629297,
+              "dv1_mps": 4.6900042625604765,
+              "dv2_mps": 4.497907115519809,
+              "dv_total_mps": 9.187911378080287,
+              "ratio_in_window": 4.594336641339052,
               "sat_id": 2,
-              "sin_nt": 0.8211612419341238,
+              "sin_nt": 0.9999720483550741,
               "singular": false,
               "slot_index": 1,
-              "transfer_time_s": 1968.0
+              "transfer_time_s": 1426.0
             },
             {
-              "controller_dv_in_window_mps": 193.83700795151765,
-              "det_xy_scaled": 7.199733395102656,
-              "dist_to_singular_s": 870.4890142629297,
-              "dv1_mps": 20.37767705659427,
-              "dv2_mps": 16.184011195430003,
-              "dv_total_mps": 36.56168825202427,
-              "ratio_in_window": 5.301642709039447,
+              "controller_dv_in_window_mps": 92.64447006483009,
+              "det_xy_scaled": 3.3251271466950296,
+              "dist_to_singular_s": 1412.4890142629297,
+              "dv1_mps": 13.395410571428046,
+              "dv2_mps": 12.994374137905485,
+              "dv_total_mps": 26.389784709333533,
+              "ratio_in_window": 3.5106186384333635,
               "sat_id": 3,
-              "sin_nt": 0.8211612419341238,
-              "singular": false,
-              "slot_index": 3,
-              "transfer_time_s": 1968.0
-            },
-            {
-              "controller_dv_in_window_mps": 98.80299350096493,
-              "det_xy_scaled": 7.199733395102656,
-              "dist_to_singular_s": 870.4890142629297,
-              "dv1_mps": 21.564678441605857,
-              "dv2_mps": 7.845446797435849,
-              "dv_total_mps": 29.410125239041705,
-              "ratio_in_window": 3.3594890432429967,
-              "sat_id": 4,
-              "sin_nt": 0.8211612419341238,
+              "sin_nt": 0.9999720483550741,
               "singular": false,
               "slot_index": 2,
-              "transfer_time_s": 1968.0
+              "transfer_time_s": 1426.0
+            },
+            {
+              "controller_dv_in_window_mps": 132.50176905932506,
+              "det_xy_scaled": 3.3251271466950296,
+              "dist_to_singular_s": 1412.4890142629297,
+              "dv1_mps": 12.812943015407978,
+              "dv2_mps": 14.628976098121433,
+              "dv_total_mps": 27.44191911352941,
+              "ratio_in_window": 4.828443976937424,
+              "sat_id": 4,
+              "sin_nt": 0.9999720483550741,
+              "singular": false,
+              "slot_index": 3,
+              "transfer_time_s": 1426.0
             }
           ],
-          "t_end": 3474.0,
+          "t_end": 2932.0,
           "t_replan": 1506.0,
-          "transfer_time_s": 1968.0,
+          "transfer_time_s": 1426.0,
           "truncated_end": false
         }
       ],
       "log": "pair_0-5__hungarian.jsonl",
-      "log_sha256": "e57f9dd00bca6f9ecd01580b462d7cb05fa712ddadf937084c4dc07d2bf660f9",
-      "min_dist_to_singular_s": 298.0,
+      "log_sha256": "d419eab67c4a79b354eeca9750dfffb79bc145e7e037812beb4127973a1e95bb",
+      "min_dist_to_singular_s": 1412.4890142629297,
       "n_episodes": 2,
       "n_singular_solves": 0,
       "pair": [
@@ -1168,31 +1168,31 @@
       ],
       "per_sat_bound_mps": {
         "0": 0.0,
-        "1": 31.478938532519834,
-        "2": 1.2696368936323736e-12,
-        "3": 52.51676037270816,
-        "4": 72.8844928774449,
-        "5": 58.2671351373575
+        "1": 4.4920836972027915e-13,
+        "2": 9.187911378080287,
+        "3": 26.389784709333533,
+        "4": 27.44191911352941,
+        "5": 0.0
       },
       "per_sat_controller_dv_mps": {
-        "0": 1.351607170133408e-12,
-        "1": 50.36454732988793,
-        "2": 4.730516047032083e-11,
-        "3": 216.902610997075,
-        "4": 125.08870139532307,
-        "5": 26.688097584669062
+        "0": 1.324845007004202e-12,
+        "1": 4.433797269899681e-11,
+        "2": 42.220709990465046,
+        "3": 92.91744949179778,
+        "4": 140.61483539705569,
+        "5": 1.5523199003013134e-12
       },
       "policy": "hungarian",
-      "ratio_total": 1.947707012240773,
+      "ratio_total": 4.375669289634706,
       "transfer_windows_s": [
-        298.0,
-        1968.0
+        4.0,
+        1426.0
       ],
       "worst_sat": {
-        "bound_mps": 52.51676037270816,
-        "controller_dv_mps": 216.902610997075,
-        "ratio": 4.130159771047009,
-        "sat_id": 3
+        "bound_mps": 27.44191911352941,
+        "controller_dv_mps": 140.61483539705569,
+        "ratio": 5.124088982819346,
+        "sat_id": 4
       }
     },
     {
@@ -1200,51 +1200,51 @@
       "command": "uv run python -m cubesat.dv_bound --base data/scenarios/two_failure.json --p0-dir data/eval/benchmark --report data/eval/dv_lower_bounds.json --csv data/eval/dv_lower_bounds.csv",
       "completed_episode": {
         "bound_total_mps": 164.4658584165989,
-        "controller_spend_total_mps": 469.2474438600106,
+        "controller_spend_total_mps": 469.2474438600105,
         "per_sat": {
           "0": {
-            "bound_mps": 47.81292034219051,
-            "controller_dv_in_window_mps": 155.0855516576631,
-            "ratio": 3.2435908651414116
+            "bound_mps": 47.812920342190495,
+            "controller_dv_in_window_mps": 155.08555165766307,
+            "ratio": 3.243590865141412
           },
           "3": {
-            "bound_mps": 34.14715977938862,
-            "controller_dv_in_window_mps": 97.85592200753372,
-            "ratio": 2.8657118963844246
+            "bound_mps": 34.14715977938863,
+            "controller_dv_in_window_mps": 97.85592200753388,
+            "ratio": 2.8657118963844286
           },
           "4": {
             "bound_mps": 48.86694114716317,
-            "controller_dv_in_window_mps": 136.68140116102725,
-            "ratio": 2.797011598278889
+            "controller_dv_in_window_mps": 136.6814011610271,
+            "ratio": 2.797011598278886
           },
           "5": {
-            "bound_mps": 33.6388371478566,
-            "controller_dv_in_window_mps": 79.62456903378653,
-            "ratio": 2.3670428523971747
+            "bound_mps": 33.63883714785663,
+            "controller_dv_in_window_mps": 79.62456903378643,
+            "ratio": 2.36704285239717
           }
         },
-        "ratio_total": 2.8531602143916532,
+        "ratio_total": 2.8531602143916523,
         "t_end": 3114.0,
         "t_replan": 1506.0,
         "transfer_time_s": 1608.0
       },
-      "controller_total_mps": 624.717372741646,
+      "controller_total_mps": 624.7173727416294,
       "episodes": [
         {
           "bound_total_mps": 554.1943324187105,
-          "controller_spend_total_mps": 144.16230411198947,
+          "controller_spend_total_mps": 144.16230411198944,
           "formation_amp_m": 8000.0,
           "formation_phase0_rad": 0.0,
           "n_survivors": 5,
           "per_sat": [
             {
-              "controller_dv_in_window_mps": 29.79999999999993,
+              "controller_dv_in_window_mps": 29.799999999999926,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 53.57900979146259,
-              "dv2_mps": 47.97908055635018,
-              "dv_total_mps": 101.55809034781277,
-              "ratio_in_window": 0.2934281247111075,
+              "dv1_mps": 53.57900979146258,
+              "dv2_mps": 47.97908055635015,
+              "dv_total_mps": 101.55809034781274,
+              "ratio_in_window": 0.2934281247111076,
               "sat_id": 0,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -1252,10 +1252,10 @@
               "transfer_time_s": 298.0
             },
             {
-              "controller_dv_in_window_mps": 29.399999999999928,
+              "controller_dv_in_window_mps": 29.39999999999993,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 89.83827858902946,
+              "dv1_mps": 89.83827858902944,
               "dv2_mps": 82.42813619003593,
               "dv_total_mps": 172.26641477906537,
               "ratio_in_window": 0.17066588422186607,
@@ -1266,12 +1266,12 @@
               "transfer_time_s": 298.0
             },
             {
-              "controller_dv_in_window_mps": 25.36230411198975,
+              "controller_dv_in_window_mps": 25.36230411198974,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 23.979719917705367,
-              "dv2_mps": 26.400647832847046,
-              "dv_total_mps": 50.38036775055241,
+              "dv1_mps": 23.97971991770538,
+              "dv2_mps": 26.40064783284701,
+              "dv_total_mps": 50.380367750552395,
               "ratio_in_window": 0.5034164148536144,
               "sat_id": 3,
               "sin_nt": 0.3238741234611607,
@@ -1283,10 +1283,10 @@
               "controller_dv_in_window_mps": 29.799999999999926,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 44.39900655325261,
-              "dv2_mps": 43.206208990979974,
-              "dv_total_mps": 87.60521554423258,
-              "ratio_in_window": 0.3401623957531805,
+              "dv1_mps": 44.3990065532526,
+              "dv2_mps": 43.206208990979945,
+              "dv_total_mps": 87.60521554423255,
+              "ratio_in_window": 0.34016239575318064,
               "sat_id": 4,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -1294,13 +1294,13 @@
               "transfer_time_s": 298.0
             },
             {
-              "controller_dv_in_window_mps": 29.799999999999926,
+              "controller_dv_in_window_mps": 29.79999999999993,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 72.72630879498367,
-              "dv2_mps": 69.65793520206375,
+              "dv1_mps": 72.72630879498365,
+              "dv2_mps": 69.65793520206374,
               "dv_total_mps": 142.3842439970474,
-              "ratio_in_window": 0.2092928203531978,
+              "ratio_in_window": 0.20929282035319782,
               "sat_id": 5,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -1315,19 +1315,19 @@
         },
         {
           "bound_total_mps": 164.4658584165989,
-          "controller_spend_total_mps": 469.2474438600106,
+          "controller_spend_total_mps": 469.2474438600105,
           "formation_amp_m": 8000.0,
           "formation_phase0_rad": 0.5235987755982988,
           "n_survivors": 4,
           "per_sat": [
             {
-              "controller_dv_in_window_mps": 155.0855516576631,
+              "controller_dv_in_window_mps": 155.08555165766307,
               "det_xy_scaled": 4.436125028167439,
               "dist_to_singular_s": 1230.4890142629295,
-              "dv1_mps": 30.758619839684314,
+              "dv1_mps": 30.758619839684297,
               "dv2_mps": 17.054300502506198,
-              "dv_total_mps": 47.81292034219051,
-              "ratio_in_window": 3.2435908651414116,
+              "dv_total_mps": 47.812920342190495,
+              "ratio_in_window": 3.243590865141412,
               "sat_id": 0,
               "sin_nt": 0.9782572532301933,
               "singular": false,
@@ -1335,13 +1335,13 @@
               "transfer_time_s": 1608.0
             },
             {
-              "controller_dv_in_window_mps": 97.85592200753372,
+              "controller_dv_in_window_mps": 97.85592200753388,
               "det_xy_scaled": 4.436125028167439,
               "dist_to_singular_s": 1230.4890142629295,
-              "dv1_mps": 24.45323246314005,
-              "dv2_mps": 9.693927316248574,
-              "dv_total_mps": 34.14715977938862,
-              "ratio_in_window": 2.8657118963844246,
+              "dv1_mps": 24.45323246314006,
+              "dv2_mps": 9.69392731624857,
+              "dv_total_mps": 34.14715977938863,
+              "ratio_in_window": 2.8657118963844286,
               "sat_id": 3,
               "sin_nt": 0.9782572532301933,
               "singular": false,
@@ -1349,13 +1349,13 @@
               "transfer_time_s": 1608.0
             },
             {
-              "controller_dv_in_window_mps": 136.68140116102725,
+              "controller_dv_in_window_mps": 136.6814011610271,
               "det_xy_scaled": 4.436125028167439,
               "dist_to_singular_s": 1230.4890142629295,
               "dv1_mps": 34.12419642598451,
-              "dv2_mps": 14.742744721178658,
+              "dv2_mps": 14.74274472117866,
               "dv_total_mps": 48.86694114716317,
-              "ratio_in_window": 2.797011598278889,
+              "ratio_in_window": 2.797011598278886,
               "sat_id": 4,
               "sin_nt": 0.9782572532301933,
               "singular": false,
@@ -1363,13 +1363,13 @@
               "transfer_time_s": 1608.0
             },
             {
-              "controller_dv_in_window_mps": 79.62456903378653,
+              "controller_dv_in_window_mps": 79.62456903378643,
               "det_xy_scaled": 4.436125028167439,
               "dist_to_singular_s": 1230.4890142629295,
-              "dv1_mps": 31.11521971309186,
-              "dv2_mps": 2.5236174347647364,
-              "dv_total_mps": 33.6388371478566,
-              "ratio_in_window": 2.3670428523971747,
+              "dv1_mps": 31.115219713091875,
+              "dv2_mps": 2.5236174347647515,
+              "dv_total_mps": 33.63883714785663,
+              "ratio_in_window": 2.36704285239717,
               "sat_id": 5,
               "sin_nt": 0.9782572532301933,
               "singular": false,
@@ -1384,7 +1384,7 @@
         }
       ],
       "log": "pair_1-2__hungarian.jsonl",
-      "log_sha256": "978367398c087d80f1cd98168ff58e105eaf8013943bddff0be707ed47d05092",
+      "log_sha256": "86a9a3ab15f17327f56ac94dac173d3fcc9e4a25c052bc86d860d33e2dcc0244",
       "min_dist_to_singular_s": 298.0,
       "n_episodes": 2,
       "n_singular_solves": 0,
@@ -1393,31 +1393,31 @@
         2
       ],
       "per_sat_bound_mps": {
-        "0": 149.3710106900033,
+        "0": 149.37101069000323,
         "1": 0.0,
         "2": 172.26641477906537,
-        "3": 84.52752752994104,
-        "4": 136.47215669139575,
-        "5": 176.023081144904
+        "3": 84.52752752994103,
+        "4": 136.47215669139572,
+        "5": 176.02308114490404
       },
       "per_sat_controller_dv_mps": {
-        "0": 193.67907947544882,
-        "1": 8.839420505811725e-13,
-        "2": 29.400000000001235,
-        "3": 123.45918458886939,
-        "4": 168.52268173535253,
-        "5": 109.6564269419732
+        "0": 193.67907947544643,
+        "1": 8.377937623522883e-13,
+        "2": 29.40000000000122,
+        "3": 123.45918458886413,
+        "4": 168.52268173534674,
+        "5": 109.65642694197007
       },
       "policy": "hungarian",
-      "ratio_total": 0.8692806151061849,
+      "ratio_total": 0.8692806151061618,
       "transfer_windows_s": [
         298.0,
         1608.0
       ],
       "worst_sat": {
-        "bound_mps": 149.3710106900033,
-        "controller_dv_mps": 193.67907947544882,
-        "ratio": 1.2966309766585176,
+        "bound_mps": 149.37101069000323,
+        "controller_dv_mps": 193.67907947544643,
+        "ratio": 1.296630976658502,
         "sat_id": 0
       }
     },
@@ -1425,36 +1425,36 @@
       "bound_total_mps": 720.4983549236995,
       "command": "uv run python -m cubesat.dv_bound --base data/scenarios/two_failure.json --p0-dir data/eval/benchmark --report data/eval/dv_lower_bounds.json --csv data/eval/dv_lower_bounds.csv",
       "completed_episode": {
-        "bound_total_mps": 166.30402250498898,
-        "controller_spend_total_mps": 480.67484869050134,
+        "bound_total_mps": 166.304022504989,
+        "controller_spend_total_mps": 480.6748486905015,
         "per_sat": {
           "0": {
-            "bound_mps": 47.81292034219051,
-            "controller_dv_in_window_mps": 155.0855516576631,
-            "ratio": 3.2435908651414116
+            "bound_mps": 47.812920342190495,
+            "controller_dv_in_window_mps": 155.08555165766307,
+            "ratio": 3.243590865141412
           },
           "2": {
-            "bound_mps": 42.242445805294494,
-            "controller_dv_in_window_mps": 133.4017234855617,
-            "ratio": 3.1580018851285754
+            "bound_mps": 42.242445805294516,
+            "controller_dv_in_window_mps": 133.40172348556172,
+            "ratio": 3.1580018851285745
           },
           "4": {
             "bound_mps": 42.609819209647384,
-            "controller_dv_in_window_mps": 112.56300451349003,
-            "ratio": 2.6417151398756555
+            "controller_dv_in_window_mps": 112.56300451349027,
+            "ratio": 2.6417151398756613
           },
           "5": {
-            "bound_mps": 33.6388371478566,
-            "controller_dv_in_window_mps": 79.62456903378653,
-            "ratio": 2.3670428523971747
+            "bound_mps": 33.63883714785663,
+            "controller_dv_in_window_mps": 79.62456903378643,
+            "ratio": 2.36704285239717
           }
         },
-        "ratio_total": 2.8903380775175265,
+        "ratio_total": 2.8903380775175274,
         "t_end": 3114.0,
         "t_replan": 1506.0,
         "transfer_time_s": 1608.0
       },
-      "controller_total_mps": 636.1149448496893,
+      "controller_total_mps": 636.1149448496725,
       "episodes": [
         {
           "bound_total_mps": 554.1943324187105,
@@ -1464,13 +1464,13 @@
           "n_survivors": 5,
           "per_sat": [
             {
-              "controller_dv_in_window_mps": 29.79999999999993,
+              "controller_dv_in_window_mps": 29.799999999999926,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 53.57900979146259,
-              "dv2_mps": 47.97908055635018,
-              "dv_total_mps": 101.55809034781277,
-              "ratio_in_window": 0.2934281247111075,
+              "dv1_mps": 53.57900979146258,
+              "dv2_mps": 47.97908055635015,
+              "dv_total_mps": 101.55809034781274,
+              "ratio_in_window": 0.2934281247111076,
               "sat_id": 0,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -1478,10 +1478,10 @@
               "transfer_time_s": 298.0
             },
             {
-              "controller_dv_in_window_mps": 29.799999999999926,
+              "controller_dv_in_window_mps": 29.79999999999993,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 89.83827858902946,
+              "dv1_mps": 89.83827858902944,
               "dv2_mps": 82.42813619003593,
               "dv_total_mps": 172.26641477906537,
               "ratio_in_window": 0.1729878690412112,
@@ -1492,13 +1492,13 @@
               "transfer_time_s": 298.0
             },
             {
-              "controller_dv_in_window_mps": 25.049199358510066,
+              "controller_dv_in_window_mps": 25.049199358510055,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 23.979719917705367,
-              "dv2_mps": 26.400647832847046,
-              "dv_total_mps": 50.38036775055241,
-              "ratio_in_window": 0.4972015981013836,
+              "dv1_mps": 23.97971991770538,
+              "dv2_mps": 26.40064783284701,
+              "dv_total_mps": 50.380367750552395,
+              "ratio_in_window": 0.49720159810138354,
               "sat_id": 3,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -1509,10 +1509,10 @@
               "controller_dv_in_window_mps": 29.799999999999926,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 44.39900655325261,
-              "dv2_mps": 43.206208990979974,
-              "dv_total_mps": 87.60521554423258,
-              "ratio_in_window": 0.3401623957531805,
+              "dv1_mps": 44.3990065532526,
+              "dv2_mps": 43.206208990979945,
+              "dv_total_mps": 87.60521554423255,
+              "ratio_in_window": 0.34016239575318064,
               "sat_id": 4,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -1520,13 +1520,13 @@
               "transfer_time_s": 298.0
             },
             {
-              "controller_dv_in_window_mps": 29.799999999999926,
+              "controller_dv_in_window_mps": 29.79999999999993,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 72.72630879498367,
-              "dv2_mps": 69.65793520206375,
+              "dv1_mps": 72.72630879498365,
+              "dv2_mps": 69.65793520206374,
               "dv_total_mps": 142.3842439970474,
-              "ratio_in_window": 0.2092928203531978,
+              "ratio_in_window": 0.20929282035319782,
               "sat_id": 5,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -1540,20 +1540,20 @@
           "truncated_end": false
         },
         {
-          "bound_total_mps": 166.30402250498898,
-          "controller_spend_total_mps": 480.67484869050134,
+          "bound_total_mps": 166.304022504989,
+          "controller_spend_total_mps": 480.6748486905015,
           "formation_amp_m": 8000.0,
           "formation_phase0_rad": 0.5235987755982988,
           "n_survivors": 4,
           "per_sat": [
             {
-              "controller_dv_in_window_mps": 155.0855516576631,
+              "controller_dv_in_window_mps": 155.08555165766307,
               "det_xy_scaled": 4.436125028167439,
               "dist_to_singular_s": 1230.4890142629295,
-              "dv1_mps": 30.758619839684314,
+              "dv1_mps": 30.758619839684297,
               "dv2_mps": 17.054300502506198,
-              "dv_total_mps": 47.81292034219051,
-              "ratio_in_window": 3.2435908651414116,
+              "dv_total_mps": 47.812920342190495,
+              "ratio_in_window": 3.243590865141412,
               "sat_id": 0,
               "sin_nt": 0.9782572532301933,
               "singular": false,
@@ -1561,13 +1561,13 @@
               "transfer_time_s": 1608.0
             },
             {
-              "controller_dv_in_window_mps": 133.4017234855617,
+              "controller_dv_in_window_mps": 133.40172348556172,
               "det_xy_scaled": 4.436125028167439,
               "dist_to_singular_s": 1230.4890142629295,
-              "dv1_mps": 29.511229812317833,
-              "dv2_mps": 12.73121599297666,
-              "dv_total_mps": 42.242445805294494,
-              "ratio_in_window": 3.1580018851285754,
+              "dv1_mps": 29.51122981231785,
+              "dv2_mps": 12.731215992976665,
+              "dv_total_mps": 42.242445805294516,
+              "ratio_in_window": 3.1580018851285745,
               "sat_id": 2,
               "sin_nt": 0.9782572532301933,
               "singular": false,
@@ -1575,13 +1575,13 @@
               "transfer_time_s": 1608.0
             },
             {
-              "controller_dv_in_window_mps": 112.56300451349003,
+              "controller_dv_in_window_mps": 112.56300451349027,
               "det_xy_scaled": 4.436125028167439,
               "dist_to_singular_s": 1230.4890142629295,
               "dv1_mps": 34.05046909346619,
               "dv2_mps": 8.559350116181195,
               "dv_total_mps": 42.609819209647384,
-              "ratio_in_window": 2.6417151398756555,
+              "ratio_in_window": 2.6417151398756613,
               "sat_id": 4,
               "sin_nt": 0.9782572532301933,
               "singular": false,
@@ -1589,13 +1589,13 @@
               "transfer_time_s": 1608.0
             },
             {
-              "controller_dv_in_window_mps": 79.62456903378653,
+              "controller_dv_in_window_mps": 79.62456903378643,
               "det_xy_scaled": 4.436125028167439,
               "dist_to_singular_s": 1230.4890142629295,
-              "dv1_mps": 31.11521971309186,
-              "dv2_mps": 2.5236174347647364,
-              "dv_total_mps": 33.6388371478566,
-              "ratio_in_window": 2.3670428523971747,
+              "dv1_mps": 31.115219713091875,
+              "dv2_mps": 2.5236174347647515,
+              "dv_total_mps": 33.63883714785663,
+              "ratio_in_window": 2.36704285239717,
               "sat_id": 5,
               "sin_nt": 0.9782572532301933,
               "singular": false,
@@ -1610,7 +1610,7 @@
         }
       ],
       "log": "pair_1-3__hungarian.jsonl",
-      "log_sha256": "d46e8154e84490bc7cf31b76743540af1b035100b487d3d1fd28d42cf0921cf3",
+      "log_sha256": "510784f5818cbab23ab8ad844af9d2133ac0182739df62ddca0b6b09675d131f",
       "min_dist_to_singular_s": 298.0,
       "n_episodes": 2,
       "n_singular_solves": 0,
@@ -1619,84 +1619,84 @@
         3
       ],
       "per_sat_bound_mps": {
-        "0": 149.3710106900033,
+        "0": 149.37101069000323,
         "1": 0.0,
-        "2": 214.50886058435987,
-        "3": 50.38036775055241,
-        "4": 130.21503475387996,
-        "5": 176.023081144904
+        "2": 214.5088605843599,
+        "3": 50.380367750552395,
+        "4": 130.21503475387993,
+        "5": 176.02308114490404
       },
       "per_sat_controller_dv_mps": {
-        "0": 193.67907947544882,
-        "1": 8.839420505811725e-13,
-        "2": 164.85191521980192,
-        "3": 25.049199358511416,
-        "4": 142.87832385395305,
-        "5": 109.6564269419732
+        "0": 193.67907947544643,
+        "1": 8.377937623522883e-13,
+        "2": 164.85191521979627,
+        "3": 25.049199358511384,
+        "4": 142.87832385394756,
+        "5": 109.65642694197007
       },
       "policy": "hungarian",
-      "ratio_total": 0.8828818837720367,
+      "ratio_total": 0.8828818837720134,
       "transfer_windows_s": [
         298.0,
         1608.0
       ],
       "worst_sat": {
-        "bound_mps": 149.3710106900033,
-        "controller_dv_mps": 193.67907947544882,
-        "ratio": 1.2966309766585176,
+        "bound_mps": 149.37101069000323,
+        "controller_dv_mps": 193.67907947544643,
+        "ratio": 1.296630976658502,
         "sat_id": 0
       }
     },
     {
-      "bound_total_mps": 712.0356954934408,
+      "bound_total_mps": 712.0356954934407,
       "command": "uv run python -m cubesat.dv_bound --base data/scenarios/two_failure.json --p0-dir data/eval/benchmark --report data/eval/dv_lower_bounds.json --csv data/eval/dv_lower_bounds.csv",
       "completed_episode": {
-        "bound_total_mps": 157.84136307473022,
-        "controller_spend_total_mps": 465.96776618454504,
+        "bound_total_mps": 157.84136307473028,
+        "controller_spend_total_mps": 465.9677661845451,
         "per_sat": {
           "0": {
-            "bound_mps": 47.81292034219051,
-            "controller_dv_in_window_mps": 155.0855516576631,
-            "ratio": 3.2435908651414116
+            "bound_mps": 47.812920342190495,
+            "controller_dv_in_window_mps": 155.08555165766307,
+            "ratio": 3.243590865141412
           },
           "2": {
-            "bound_mps": 42.242445805294494,
-            "controller_dv_in_window_mps": 133.4017234855617,
-            "ratio": 3.1580018851285754
+            "bound_mps": 42.242445805294516,
+            "controller_dv_in_window_mps": 133.40172348556172,
+            "ratio": 3.1580018851285745
           },
           "3": {
-            "bound_mps": 34.14715977938862,
-            "controller_dv_in_window_mps": 97.85592200753372,
-            "ratio": 2.8657118963844246
+            "bound_mps": 34.14715977938863,
+            "controller_dv_in_window_mps": 97.85592200753388,
+            "ratio": 2.8657118963844286
           },
           "5": {
-            "bound_mps": 33.6388371478566,
-            "controller_dv_in_window_mps": 79.62456903378653,
-            "ratio": 2.3670428523971747
+            "bound_mps": 33.63883714785663,
+            "controller_dv_in_window_mps": 79.62456903378643,
+            "ratio": 2.36704285239717
           }
         },
-        "ratio_total": 2.952127104756007,
+        "ratio_total": 2.952127104756006,
         "t_end": 3114.0,
         "t_replan": 1506.0,
         "transfer_time_s": 1608.0
       },
-      "controller_total_mps": 621.046606226095,
+      "controller_total_mps": 621.0466062260786,
       "episodes": [
         {
           "bound_total_mps": 554.1943324187105,
-          "controller_spend_total_mps": 144.16230411198947,
+          "controller_spend_total_mps": 144.16230411198944,
           "formation_amp_m": 8000.0,
           "formation_phase0_rad": 0.0,
           "n_survivors": 5,
           "per_sat": [
             {
-              "controller_dv_in_window_mps": 29.79999999999993,
+              "controller_dv_in_window_mps": 29.799999999999926,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 53.57900979146259,
-              "dv2_mps": 47.97908055635018,
-              "dv_total_mps": 101.55809034781277,
-              "ratio_in_window": 0.2934281247111075,
+              "dv1_mps": 53.57900979146258,
+              "dv2_mps": 47.97908055635015,
+              "dv_total_mps": 101.55809034781274,
+              "ratio_in_window": 0.2934281247111076,
               "sat_id": 0,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -1704,10 +1704,10 @@
               "transfer_time_s": 298.0
             },
             {
-              "controller_dv_in_window_mps": 29.799999999999926,
+              "controller_dv_in_window_mps": 29.79999999999993,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 89.83827858902946,
+              "dv1_mps": 89.83827858902944,
               "dv2_mps": 82.42813619003593,
               "dv_total_mps": 172.26641477906537,
               "ratio_in_window": 0.1729878690412112,
@@ -1718,12 +1718,12 @@
               "transfer_time_s": 298.0
             },
             {
-              "controller_dv_in_window_mps": 25.36230411198975,
+              "controller_dv_in_window_mps": 25.36230411198974,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 23.979719917705367,
-              "dv2_mps": 26.400647832847046,
-              "dv_total_mps": 50.38036775055241,
+              "dv1_mps": 23.97971991770538,
+              "dv2_mps": 26.40064783284701,
+              "dv_total_mps": 50.380367750552395,
               "ratio_in_window": 0.5034164148536144,
               "sat_id": 3,
               "sin_nt": 0.3238741234611607,
@@ -1735,10 +1735,10 @@
               "controller_dv_in_window_mps": 29.399999999999928,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 44.39900655325261,
-              "dv2_mps": 43.206208990979974,
-              "dv_total_mps": 87.60521554423258,
-              "ratio_in_window": 0.3355964575551513,
+              "dv1_mps": 44.3990065532526,
+              "dv2_mps": 43.206208990979945,
+              "dv_total_mps": 87.60521554423255,
+              "ratio_in_window": 0.3355964575551514,
               "sat_id": 4,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -1746,13 +1746,13 @@
               "transfer_time_s": 298.0
             },
             {
-              "controller_dv_in_window_mps": 29.799999999999926,
+              "controller_dv_in_window_mps": 29.79999999999993,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 72.72630879498367,
-              "dv2_mps": 69.65793520206375,
+              "dv1_mps": 72.72630879498365,
+              "dv2_mps": 69.65793520206374,
               "dv_total_mps": 142.3842439970474,
-              "ratio_in_window": 0.2092928203531978,
+              "ratio_in_window": 0.20929282035319782,
               "sat_id": 5,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -1766,20 +1766,20 @@
           "truncated_end": false
         },
         {
-          "bound_total_mps": 157.84136307473022,
-          "controller_spend_total_mps": 465.96776618454504,
+          "bound_total_mps": 157.84136307473028,
+          "controller_spend_total_mps": 465.9677661845451,
           "formation_amp_m": 8000.0,
           "formation_phase0_rad": 0.5235987755982988,
           "n_survivors": 4,
           "per_sat": [
             {
-              "controller_dv_in_window_mps": 155.0855516576631,
+              "controller_dv_in_window_mps": 155.08555165766307,
               "det_xy_scaled": 4.436125028167439,
               "dist_to_singular_s": 1230.4890142629295,
-              "dv1_mps": 30.758619839684314,
+              "dv1_mps": 30.758619839684297,
               "dv2_mps": 17.054300502506198,
-              "dv_total_mps": 47.81292034219051,
-              "ratio_in_window": 3.2435908651414116,
+              "dv_total_mps": 47.812920342190495,
+              "ratio_in_window": 3.243590865141412,
               "sat_id": 0,
               "sin_nt": 0.9782572532301933,
               "singular": false,
@@ -1787,13 +1787,13 @@
               "transfer_time_s": 1608.0
             },
             {
-              "controller_dv_in_window_mps": 133.4017234855617,
+              "controller_dv_in_window_mps": 133.40172348556172,
               "det_xy_scaled": 4.436125028167439,
               "dist_to_singular_s": 1230.4890142629295,
-              "dv1_mps": 29.511229812317833,
-              "dv2_mps": 12.73121599297666,
-              "dv_total_mps": 42.242445805294494,
-              "ratio_in_window": 3.1580018851285754,
+              "dv1_mps": 29.51122981231785,
+              "dv2_mps": 12.731215992976665,
+              "dv_total_mps": 42.242445805294516,
+              "ratio_in_window": 3.1580018851285745,
               "sat_id": 2,
               "sin_nt": 0.9782572532301933,
               "singular": false,
@@ -1801,13 +1801,13 @@
               "transfer_time_s": 1608.0
             },
             {
-              "controller_dv_in_window_mps": 97.85592200753372,
+              "controller_dv_in_window_mps": 97.85592200753388,
               "det_xy_scaled": 4.436125028167439,
               "dist_to_singular_s": 1230.4890142629295,
-              "dv1_mps": 24.45323246314005,
-              "dv2_mps": 9.693927316248574,
-              "dv_total_mps": 34.14715977938862,
-              "ratio_in_window": 2.8657118963844246,
+              "dv1_mps": 24.45323246314006,
+              "dv2_mps": 9.69392731624857,
+              "dv_total_mps": 34.14715977938863,
+              "ratio_in_window": 2.8657118963844286,
               "sat_id": 3,
               "sin_nt": 0.9782572532301933,
               "singular": false,
@@ -1815,13 +1815,13 @@
               "transfer_time_s": 1608.0
             },
             {
-              "controller_dv_in_window_mps": 79.62456903378653,
+              "controller_dv_in_window_mps": 79.62456903378643,
               "det_xy_scaled": 4.436125028167439,
               "dist_to_singular_s": 1230.4890142629295,
-              "dv1_mps": 31.11521971309186,
-              "dv2_mps": 2.5236174347647364,
-              "dv_total_mps": 33.6388371478566,
-              "ratio_in_window": 2.3670428523971747,
+              "dv1_mps": 31.115219713091875,
+              "dv2_mps": 2.5236174347647515,
+              "dv_total_mps": 33.63883714785663,
+              "ratio_in_window": 2.36704285239717,
               "sat_id": 5,
               "sin_nt": 0.9782572532301933,
               "singular": false,
@@ -1836,7 +1836,7 @@
         }
       ],
       "log": "pair_1-4__hungarian.jsonl",
-      "log_sha256": "3d191acec28b8f8a3d8f04770825bd6c9910716a48f318b573e24a1b12b7f509",
+      "log_sha256": "617ee7bad54d81de8a466109bdfaaf36fbd5cf60afefe3cff8f4584c4d26cbf9",
       "min_dist_to_singular_s": 298.0,
       "n_episodes": 2,
       "n_singular_solves": 0,
@@ -1845,31 +1845,31 @@
         4
       ],
       "per_sat_bound_mps": {
-        "0": 149.3710106900033,
+        "0": 149.37101069000323,
         "1": 0.0,
-        "2": 214.50886058435987,
-        "3": 84.52752752994104,
-        "4": 87.60521554423258,
-        "5": 176.023081144904
+        "2": 214.5088605843599,
+        "3": 84.52752752994103,
+        "4": 87.60521554423255,
+        "5": 176.02308114490404
       },
       "per_sat_controller_dv_mps": {
-        "0": 193.67907947544882,
-        "1": 8.839420505811725e-13,
-        "2": 164.85191521980192,
-        "3": 123.45918458886939,
-        "4": 29.400000000000823,
-        "5": 109.6564269419732
+        "0": 193.67907947544643,
+        "1": 8.377937623522883e-13,
+        "2": 164.85191521979627,
+        "3": 123.45918458886413,
+        "4": 29.400000000000784,
+        "5": 109.65642694197007
       },
       "policy": "hungarian",
-      "ratio_total": 0.8722127418004089,
+      "ratio_total": 0.8722127418003859,
       "transfer_windows_s": [
         298.0,
         1608.0
       ],
       "worst_sat": {
-        "bound_mps": 149.3710106900033,
-        "controller_dv_mps": 193.67907947544882,
-        "ratio": 1.2966309766585176,
+        "bound_mps": 149.37101069000323,
+        "controller_dv_mps": 193.67907947544643,
+        "ratio": 1.296630976658502,
         "sat_id": 0
       }
     },
@@ -1878,51 +1878,51 @@
       "command": "uv run python -m cubesat.dv_bound --base data/scenarios/two_failure.json --p0-dir data/eval/benchmark --report data/eval/dv_lower_bounds.json --csv data/eval/dv_lower_bounds.csv",
       "completed_episode": {
         "bound_total_mps": 160.16415920243682,
-        "controller_spend_total_mps": 463.65368240896134,
+        "controller_spend_total_mps": 463.653682408961,
         "per_sat": {
           "0": {
-            "bound_mps": 47.81292034219051,
-            "controller_dv_in_window_mps": 155.0855516576631,
-            "ratio": 3.2435908651414116
+            "bound_mps": 47.812920342190495,
+            "controller_dv_in_window_mps": 155.08555165766307,
+            "ratio": 3.243590865141412
           },
           "2": {
-            "bound_mps": 42.242445805294494,
-            "controller_dv_in_window_mps": 133.4017234855617,
-            "ratio": 3.1580018851285754
+            "bound_mps": 42.242445805294516,
+            "controller_dv_in_window_mps": 133.40172348556172,
+            "ratio": 3.1580018851285745
           },
           "3": {
-            "bound_mps": 34.14715977938862,
-            "controller_dv_in_window_mps": 97.85592200753372,
-            "ratio": 2.8657118963844246
+            "bound_mps": 34.14715977938863,
+            "controller_dv_in_window_mps": 97.85592200753388,
+            "ratio": 2.8657118963844286
           },
           "4": {
-            "bound_mps": 35.96163327556319,
-            "controller_dv_in_window_mps": 77.3104852582028,
-            "ratio": 2.149804617209563
+            "bound_mps": 35.96163327556318,
+            "controller_dv_in_window_mps": 77.31048525820233,
+            "ratio": 2.1498046172095506
           }
         },
-        "ratio_total": 2.8948653975883207,
+        "ratio_total": 2.8948653975883185,
         "t_end": 3114.0,
         "t_replan": 1506.0,
         "transfer_time_s": 1608.0
       },
-      "controller_total_mps": 618.7345178924099,
+      "controller_total_mps": 618.7345178923932,
       "episodes": [
         {
           "bound_total_mps": 554.1943324187105,
-          "controller_spend_total_mps": 144.16230411198947,
+          "controller_spend_total_mps": 144.16230411198944,
           "formation_amp_m": 8000.0,
           "formation_phase0_rad": 0.0,
           "n_survivors": 5,
           "per_sat": [
             {
-              "controller_dv_in_window_mps": 29.79999999999993,
+              "controller_dv_in_window_mps": 29.799999999999926,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 53.57900979146259,
-              "dv2_mps": 47.97908055635018,
-              "dv_total_mps": 101.55809034781277,
-              "ratio_in_window": 0.2934281247111075,
+              "dv1_mps": 53.57900979146258,
+              "dv2_mps": 47.97908055635015,
+              "dv_total_mps": 101.55809034781274,
+              "ratio_in_window": 0.2934281247111076,
               "sat_id": 0,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -1930,10 +1930,10 @@
               "transfer_time_s": 298.0
             },
             {
-              "controller_dv_in_window_mps": 29.799999999999926,
+              "controller_dv_in_window_mps": 29.79999999999993,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 89.83827858902946,
+              "dv1_mps": 89.83827858902944,
               "dv2_mps": 82.42813619003593,
               "dv_total_mps": 172.26641477906537,
               "ratio_in_window": 0.1729878690412112,
@@ -1944,12 +1944,12 @@
               "transfer_time_s": 298.0
             },
             {
-              "controller_dv_in_window_mps": 25.36230411198975,
+              "controller_dv_in_window_mps": 25.36230411198974,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 23.979719917705367,
-              "dv2_mps": 26.400647832847046,
-              "dv_total_mps": 50.38036775055241,
+              "dv1_mps": 23.97971991770538,
+              "dv2_mps": 26.40064783284701,
+              "dv_total_mps": 50.380367750552395,
               "ratio_in_window": 0.5034164148536144,
               "sat_id": 3,
               "sin_nt": 0.3238741234611607,
@@ -1961,10 +1961,10 @@
               "controller_dv_in_window_mps": 29.799999999999926,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 44.39900655325261,
-              "dv2_mps": 43.206208990979974,
-              "dv_total_mps": 87.60521554423258,
-              "ratio_in_window": 0.3401623957531805,
+              "dv1_mps": 44.3990065532526,
+              "dv2_mps": 43.206208990979945,
+              "dv_total_mps": 87.60521554423255,
+              "ratio_in_window": 0.34016239575318064,
               "sat_id": 4,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -1972,13 +1972,13 @@
               "transfer_time_s": 298.0
             },
             {
-              "controller_dv_in_window_mps": 29.399999999999928,
+              "controller_dv_in_window_mps": 29.39999999999993,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 72.72630879498367,
-              "dv2_mps": 69.65793520206375,
+              "dv1_mps": 72.72630879498365,
+              "dv2_mps": 69.65793520206374,
               "dv_total_mps": 142.3842439970474,
-              "ratio_in_window": 0.20648352075114146,
+              "ratio_in_window": 0.20648352075114149,
               "sat_id": 5,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -1993,19 +1993,19 @@
         },
         {
           "bound_total_mps": 160.16415920243682,
-          "controller_spend_total_mps": 463.65368240896134,
+          "controller_spend_total_mps": 463.653682408961,
           "formation_amp_m": 8000.0,
           "formation_phase0_rad": 0.5235987755982988,
           "n_survivors": 4,
           "per_sat": [
             {
-              "controller_dv_in_window_mps": 155.0855516576631,
+              "controller_dv_in_window_mps": 155.08555165766307,
               "det_xy_scaled": 4.436125028167439,
               "dist_to_singular_s": 1230.4890142629295,
-              "dv1_mps": 30.758619839684314,
+              "dv1_mps": 30.758619839684297,
               "dv2_mps": 17.054300502506198,
-              "dv_total_mps": 47.81292034219051,
-              "ratio_in_window": 3.2435908651414116,
+              "dv_total_mps": 47.812920342190495,
+              "ratio_in_window": 3.243590865141412,
               "sat_id": 0,
               "sin_nt": 0.9782572532301933,
               "singular": false,
@@ -2013,13 +2013,13 @@
               "transfer_time_s": 1608.0
             },
             {
-              "controller_dv_in_window_mps": 133.4017234855617,
+              "controller_dv_in_window_mps": 133.40172348556172,
               "det_xy_scaled": 4.436125028167439,
               "dist_to_singular_s": 1230.4890142629295,
-              "dv1_mps": 29.511229812317833,
-              "dv2_mps": 12.73121599297666,
-              "dv_total_mps": 42.242445805294494,
-              "ratio_in_window": 3.1580018851285754,
+              "dv1_mps": 29.51122981231785,
+              "dv2_mps": 12.731215992976665,
+              "dv_total_mps": 42.242445805294516,
+              "ratio_in_window": 3.1580018851285745,
               "sat_id": 2,
               "sin_nt": 0.9782572532301933,
               "singular": false,
@@ -2027,13 +2027,13 @@
               "transfer_time_s": 1608.0
             },
             {
-              "controller_dv_in_window_mps": 97.85592200753372,
+              "controller_dv_in_window_mps": 97.85592200753388,
               "det_xy_scaled": 4.436125028167439,
               "dist_to_singular_s": 1230.4890142629295,
-              "dv1_mps": 24.45323246314005,
-              "dv2_mps": 9.693927316248574,
-              "dv_total_mps": 34.14715977938862,
-              "ratio_in_window": 2.8657118963844246,
+              "dv1_mps": 24.45323246314006,
+              "dv2_mps": 9.69392731624857,
+              "dv_total_mps": 34.14715977938863,
+              "ratio_in_window": 2.8657118963844286,
               "sat_id": 3,
               "sin_nt": 0.9782572532301933,
               "singular": false,
@@ -2041,13 +2041,13 @@
               "transfer_time_s": 1608.0
             },
             {
-              "controller_dv_in_window_mps": 77.3104852582028,
+              "controller_dv_in_window_mps": 77.31048525820233,
               "det_xy_scaled": 4.436125028167439,
               "dist_to_singular_s": 1230.4890142629295,
-              "dv1_mps": 28.37423134279915,
-              "dv2_mps": 7.587401932764036,
-              "dv_total_mps": 35.96163327556319,
-              "ratio_in_window": 2.149804617209563,
+              "dv1_mps": 28.374231342799142,
+              "dv2_mps": 7.5874019327640365,
+              "dv_total_mps": 35.96163327556318,
+              "ratio_in_window": 2.1498046172095506,
               "sat_id": 4,
               "sin_nt": 0.9782572532301933,
               "singular": false,
@@ -2062,7 +2062,7 @@
         }
       ],
       "log": "pair_1-5__hungarian.jsonl",
-      "log_sha256": "5494b968629fd9b66be9eec46dd3ea2b0091e4a4f13f3c6e1dca4bb67e318301",
+      "log_sha256": "4db487ffa1b62256c5ab93fd458321ce985573466da967c6686f78ee820aeda5",
       "min_dist_to_singular_s": 298.0,
       "n_episodes": 2,
       "n_singular_solves": 0,
@@ -2071,31 +2071,31 @@
         5
       ],
       "per_sat_bound_mps": {
-        "0": 149.3710106900033,
+        "0": 149.37101069000323,
         "1": 0.0,
-        "2": 214.50886058435987,
-        "3": 84.52752752994104,
-        "4": 123.56684881979577,
+        "2": 214.5088605843599,
+        "3": 84.52752752994103,
+        "4": 123.56684881979572,
         "5": 142.3842439970474
       },
       "per_sat_controller_dv_mps": {
-        "0": 193.67907947544882,
-        "1": 8.839420505811725e-13,
-        "2": 164.85191521980192,
-        "3": 123.45918458886939,
-        "4": 107.34433860828774,
-        "5": 29.400000000001235
+        "0": 193.67907947544643,
+        "1": 8.377937623522883e-13,
+        "2": 164.85191521979627,
+        "3": 123.45918458886413,
+        "4": 107.3443386082843,
+        "5": 29.400000000001217
       },
       "policy": "hungarian",
-      "ratio_total": 0.8661400755358409,
+      "ratio_total": 0.8661400755358175,
       "transfer_windows_s": [
         298.0,
         1608.0
       ],
       "worst_sat": {
-        "bound_mps": 149.3710106900033,
-        "controller_dv_mps": 193.67907947544882,
-        "ratio": 1.2966309766585176,
+        "bound_mps": 149.37101069000323,
+        "controller_dv_mps": 193.67907947544643,
+        "ratio": 1.296630976658502,
         "sat_id": 0
       }
     },
@@ -2104,51 +2104,51 @@
       "command": "uv run python -m cubesat.dv_bound --base data/scenarios/two_failure.json --p0-dir data/eval/benchmark --report data/eval/dv_lower_bounds.json --csv data/eval/dv_lower_bounds.csv",
       "completed_episode": {
         "bound_total_mps": 160.8964965420189,
-        "controller_spend_total_mps": 349.0927254312174,
+        "controller_spend_total_mps": 349.09272543121756,
         "per_sat": {
           "0": {
-            "bound_mps": 41.76846166174621,
+            "bound_mps": 41.76846166174619,
             "controller_dv_in_window_mps": 105.54348151978701,
-            "ratio": 2.5268702106989345
+            "ratio": 2.526870210698936
           },
           "1": {
-            "bound_mps": 34.40388073845046,
-            "controller_dv_in_window_mps": 46.142072884584074,
-            "ratio": 1.3411880257163773
+            "bound_mps": 34.403880738450475,
+            "controller_dv_in_window_mps": 46.14207288458395,
+            "ratio": 1.3411880257163733
           },
           "4": {
             "bound_mps": 51.95411591936025,
-            "controller_dv_in_window_mps": 145.73012307864386,
-            "ratio": 2.804977440186578
+            "controller_dv_in_window_mps": 145.73012307864406,
+            "ratio": 2.804977440186582
           },
           "5": {
             "bound_mps": 32.77003822246198,
-            "controller_dv_in_window_mps": 51.67704794820243,
-            "ratio": 1.5769602585565732
+            "controller_dv_in_window_mps": 51.67704794820255,
+            "ratio": 1.576960258556577
           }
         },
-        "ratio_total": 2.1696726338603036,
+        "ratio_total": 2.169672633860305,
         "t_end": 3100.0,
         "t_replan": 1506.0,
         "transfer_time_s": 1594.0
       },
-      "controller_total_mps": 500.3251679792904,
+      "controller_total_mps": 500.32516797929,
       "episodes": [
         {
-          "bound_total_mps": 465.2311058984763,
+          "bound_total_mps": 465.23110589847624,
           "controller_spend_total_mps": 144.24919935850977,
           "formation_amp_m": 8000.0,
           "formation_phase0_rad": 0.0,
           "n_survivors": 5,
           "per_sat": [
             {
-              "controller_dv_in_window_mps": 29.79999999999993,
+              "controller_dv_in_window_mps": 29.799999999999926,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 53.57900979146259,
-              "dv2_mps": 47.97908055635018,
-              "dv_total_mps": 101.55809034781277,
-              "ratio_in_window": 0.2934281247111075,
+              "dv1_mps": 53.57900979146258,
+              "dv2_mps": 47.97908055635015,
+              "dv_total_mps": 101.55809034781274,
+              "ratio_in_window": 0.2934281247111076,
               "sat_id": 0,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -2159,10 +2159,10 @@
               "controller_dv_in_window_mps": 29.79999999999993,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 43.8155588435898,
-              "dv2_mps": 39.487629415241344,
-              "dv_total_mps": 83.30318825883114,
-              "ratio_in_window": 0.3577294053549117,
+              "dv1_mps": 43.815558843589805,
+              "dv2_mps": 39.48762941524135,
+              "dv_total_mps": 83.30318825883116,
+              "ratio_in_window": 0.35772940535491166,
               "sat_id": 1,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -2170,13 +2170,13 @@
               "transfer_time_s": 298.0
             },
             {
-              "controller_dv_in_window_mps": 25.049199358510066,
+              "controller_dv_in_window_mps": 25.049199358510055,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 23.979719917705367,
-              "dv2_mps": 26.400647832847046,
-              "dv_total_mps": 50.38036775055241,
-              "ratio_in_window": 0.4972015981013836,
+              "dv1_mps": 23.97971991770538,
+              "dv2_mps": 26.40064783284701,
+              "dv_total_mps": 50.380367750552395,
+              "ratio_in_window": 0.49720159810138354,
               "sat_id": 3,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -2187,10 +2187,10 @@
               "controller_dv_in_window_mps": 29.799999999999926,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 44.39900655325261,
-              "dv2_mps": 43.206208990979974,
-              "dv_total_mps": 87.60521554423258,
-              "ratio_in_window": 0.3401623957531805,
+              "dv1_mps": 44.3990065532526,
+              "dv2_mps": 43.206208990979945,
+              "dv_total_mps": 87.60521554423255,
+              "ratio_in_window": 0.34016239575318064,
               "sat_id": 4,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -2198,13 +2198,13 @@
               "transfer_time_s": 298.0
             },
             {
-              "controller_dv_in_window_mps": 29.799999999999926,
+              "controller_dv_in_window_mps": 29.79999999999993,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 72.72630879498367,
-              "dv2_mps": 69.65793520206375,
+              "dv1_mps": 72.72630879498365,
+              "dv2_mps": 69.65793520206374,
               "dv_total_mps": 142.3842439970474,
-              "ratio_in_window": 0.2092928203531978,
+              "ratio_in_window": 0.20929282035319782,
               "sat_id": 5,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -2219,7 +2219,7 @@
         },
         {
           "bound_total_mps": 160.8964965420189,
-          "controller_spend_total_mps": 349.0927254312174,
+          "controller_spend_total_mps": 349.09272543121756,
           "formation_amp_m": 8000.0,
           "formation_phase0_rad": 0.0,
           "n_survivors": 4,
@@ -2228,10 +2228,10 @@
               "controller_dv_in_window_mps": 105.54348151978701,
               "det_xy_scaled": 4.343754277486371,
               "dist_to_singular_s": 1244.4890142629295,
-              "dv1_mps": 27.93444511662485,
-              "dv2_mps": 13.834016545121358,
-              "dv_total_mps": 41.76846166174621,
-              "ratio_in_window": 2.5268702106989345,
+              "dv1_mps": 27.934445116624833,
+              "dv2_mps": 13.834016545121354,
+              "dv_total_mps": 41.76846166174619,
+              "ratio_in_window": 2.526870210698936,
               "sat_id": 0,
               "sin_nt": 0.9813532713183583,
               "singular": false,
@@ -2239,13 +2239,13 @@
               "transfer_time_s": 1594.0
             },
             {
-              "controller_dv_in_window_mps": 46.142072884584074,
+              "controller_dv_in_window_mps": 46.14207288458395,
               "det_xy_scaled": 4.343754277486371,
               "dist_to_singular_s": 1244.4890142629295,
-              "dv1_mps": 26.0139564286274,
-              "dv2_mps": 8.389924309823064,
-              "dv_total_mps": 34.40388073845046,
-              "ratio_in_window": 1.3411880257163773,
+              "dv1_mps": 26.013956428627417,
+              "dv2_mps": 8.389924309823058,
+              "dv_total_mps": 34.403880738450475,
+              "ratio_in_window": 1.3411880257163733,
               "sat_id": 1,
               "sin_nt": 0.9813532713183583,
               "singular": false,
@@ -2253,13 +2253,13 @@
               "transfer_time_s": 1594.0
             },
             {
-              "controller_dv_in_window_mps": 145.73012307864386,
+              "controller_dv_in_window_mps": 145.73012307864406,
               "det_xy_scaled": 4.343754277486371,
               "dist_to_singular_s": 1244.4890142629295,
-              "dv1_mps": 37.59037514407757,
-              "dv2_mps": 14.363740775282682,
+              "dv1_mps": 37.59037514407756,
+              "dv2_mps": 14.36374077528269,
               "dv_total_mps": 51.95411591936025,
-              "ratio_in_window": 2.804977440186578,
+              "ratio_in_window": 2.804977440186582,
               "sat_id": 4,
               "sin_nt": 0.9813532713183583,
               "singular": false,
@@ -2267,13 +2267,13 @@
               "transfer_time_s": 1594.0
             },
             {
-              "controller_dv_in_window_mps": 51.67704794820243,
+              "controller_dv_in_window_mps": 51.67704794820255,
               "det_xy_scaled": 4.343754277486371,
               "dist_to_singular_s": 1244.4890142629295,
-              "dv1_mps": 30.15699822518948,
-              "dv2_mps": 2.6130399972725002,
+              "dv1_mps": 30.156998225189493,
+              "dv2_mps": 2.6130399972724874,
               "dv_total_mps": 32.77003822246198,
-              "ratio_in_window": 1.5769602585565732,
+              "ratio_in_window": 1.576960258556577,
               "sat_id": 5,
               "sin_nt": 0.9813532713183583,
               "singular": false,
@@ -2288,7 +2288,7 @@
         }
       ],
       "log": "pair_2-3__hungarian.jsonl",
-      "log_sha256": "a42ed0cc7346571e720b60c57216b83189b86f9875935c8443a670bf970edcb7",
+      "log_sha256": "8f72013db68948f23776465bfd663dc726d97e5e9f90a64f2b0cb0b96a019136",
       "min_dist_to_singular_s": 298.0,
       "n_episodes": 2,
       "n_singular_solves": 0,
@@ -2297,60 +2297,60 @@
         3
       ],
       "per_sat_bound_mps": {
-        "0": 143.32655200955898,
-        "1": 117.7070689972816,
+        "0": 143.32655200955892,
+        "1": 117.70706899728162,
         "2": 0.0,
-        "3": 50.38036775055241,
-        "4": 139.55933146359283,
+        "3": 50.380367750552395,
+        "4": 139.5593314635928,
         "5": 175.15428221950938
       },
       "per_sat_controller_dv_mps": {
-        "0": 135.78448944815932,
-        "1": 76.14444995233987,
-        "2": 1.3012924868676564e-12,
-        "3": 25.049199358511416,
-        "4": 181.66375095084112,
-        "5": 81.6832782694374
+        "0": 135.78448944815923,
+        "1": 76.14444995233968,
+        "2": 1.2861135883907983e-12,
+        "3": 25.049199358511384,
+        "4": 181.6637509508409,
+        "5": 81.68327826943747
       },
       "policy": "hungarian",
-      "ratio_total": 0.7990785999996534,
+      "ratio_total": 0.7990785999996527,
       "transfer_windows_s": [
         298.0,
         1594.0
       ],
       "worst_sat": {
-        "bound_mps": 139.55933146359283,
-        "controller_dv_mps": 181.66375095084112,
-        "ratio": 1.301695479948843,
+        "bound_mps": 139.5593314635928,
+        "controller_dv_mps": 181.6637509508409,
+        "ratio": 1.3016954799488416,
         "sat_id": 4
       }
     },
     {
-      "bound_total_mps": 597.4321411561298,
+      "bound_total_mps": 597.4321411561297,
       "command": "uv run python -m cubesat.dv_bound --base data/scenarios/two_failure.json --p0-dir data/eval/benchmark --report data/eval/dv_lower_bounds.json --csv data/eval/dv_lower_bounds.csv",
       "completed_episode": {
         "bound_total_mps": 132.20103525765344,
         "controller_spend_total_mps": 257.205691491436,
         "per_sat": {
           "0": {
-            "bound_mps": 40.15342445030137,
-            "controller_dv_in_window_mps": 99.50531000766455,
-            "ratio": 2.4781276160100387
+            "bound_mps": 40.153424450301344,
+            "controller_dv_in_window_mps": 99.50531000766458,
+            "ratio": 2.4781276160100414
           },
           "1": {
-            "bound_mps": 31.81575901662437,
-            "controller_dv_in_window_mps": 46.08242232760373,
-            "ratio": 1.4484149915620352
+            "bound_mps": 31.81575901662439,
+            "controller_dv_in_window_mps": 46.08242232760365,
+            "ratio": 1.4484149915620317
           },
           "3": {
-            "bound_mps": 27.138107809402047,
-            "controller_dv_in_window_mps": 60.09091001207011,
-            "ratio": 2.214263073686055
+            "bound_mps": 27.138107809402065,
+            "controller_dv_in_window_mps": 60.09091001207009,
+            "ratio": 2.2142630736860527
           },
           "5": {
             "bound_mps": 33.093743981325645,
-            "controller_dv_in_window_mps": 51.52704914409766,
-            "ratio": 1.5570027124514434
+            "controller_dv_in_window_mps": 51.52704914409774,
+            "ratio": 1.5570027124514458
           }
         },
         "ratio_total": 1.9455648814712725,
@@ -2358,23 +2358,23 @@
         "t_replan": 1506.0,
         "transfer_time_s": 1116.0
       },
-      "controller_total_mps": 408.8923259609277,
+      "controller_total_mps": 408.8923259609279,
       "episodes": [
         {
-          "bound_total_mps": 465.2311058984763,
-          "controller_spend_total_mps": 144.16230411198947,
+          "bound_total_mps": 465.23110589847624,
+          "controller_spend_total_mps": 144.16230411198944,
           "formation_amp_m": 8000.0,
           "formation_phase0_rad": 0.0,
           "n_survivors": 5,
           "per_sat": [
             {
-              "controller_dv_in_window_mps": 29.79999999999993,
+              "controller_dv_in_window_mps": 29.799999999999926,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 53.57900979146259,
-              "dv2_mps": 47.97908055635018,
-              "dv_total_mps": 101.55809034781277,
-              "ratio_in_window": 0.2934281247111075,
+              "dv1_mps": 53.57900979146258,
+              "dv2_mps": 47.97908055635015,
+              "dv_total_mps": 101.55809034781274,
+              "ratio_in_window": 0.2934281247111076,
               "sat_id": 0,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -2385,10 +2385,10 @@
               "controller_dv_in_window_mps": 29.79999999999993,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 43.8155588435898,
-              "dv2_mps": 39.487629415241344,
-              "dv_total_mps": 83.30318825883114,
-              "ratio_in_window": 0.3577294053549117,
+              "dv1_mps": 43.815558843589805,
+              "dv2_mps": 39.48762941524135,
+              "dv_total_mps": 83.30318825883116,
+              "ratio_in_window": 0.35772940535491166,
               "sat_id": 1,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -2396,12 +2396,12 @@
               "transfer_time_s": 298.0
             },
             {
-              "controller_dv_in_window_mps": 25.36230411198975,
+              "controller_dv_in_window_mps": 25.36230411198974,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 23.979719917705367,
-              "dv2_mps": 26.400647832847046,
-              "dv_total_mps": 50.38036775055241,
+              "dv1_mps": 23.97971991770538,
+              "dv2_mps": 26.40064783284701,
+              "dv_total_mps": 50.380367750552395,
               "ratio_in_window": 0.5034164148536144,
               "sat_id": 3,
               "sin_nt": 0.3238741234611607,
@@ -2413,10 +2413,10 @@
               "controller_dv_in_window_mps": 29.399999999999928,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 44.39900655325261,
-              "dv2_mps": 43.206208990979974,
-              "dv_total_mps": 87.60521554423258,
-              "ratio_in_window": 0.3355964575551513,
+              "dv1_mps": 44.3990065532526,
+              "dv2_mps": 43.206208990979945,
+              "dv_total_mps": 87.60521554423255,
+              "ratio_in_window": 0.3355964575551514,
               "sat_id": 4,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -2424,13 +2424,13 @@
               "transfer_time_s": 298.0
             },
             {
-              "controller_dv_in_window_mps": 29.799999999999926,
+              "controller_dv_in_window_mps": 29.79999999999993,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 72.72630879498367,
-              "dv2_mps": 69.65793520206375,
+              "dv1_mps": 72.72630879498365,
+              "dv2_mps": 69.65793520206374,
               "dv_total_mps": 142.3842439970474,
-              "ratio_in_window": 0.2092928203531978,
+              "ratio_in_window": 0.20929282035319782,
               "sat_id": 5,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -2451,13 +2451,13 @@
           "n_survivors": 4,
           "per_sat": [
             {
-              "controller_dv_in_window_mps": 99.50531000766455,
+              "controller_dv_in_window_mps": 99.50531000766458,
               "det_xy_scaled": 1.8663580901065355,
               "dist_to_singular_s": 1116.0,
-              "dv1_mps": 22.75328380734502,
-              "dv2_mps": 17.400140642956355,
-              "dv_total_mps": 40.15342445030137,
-              "ratio_in_window": 2.4781276160100387,
+              "dv1_mps": 22.753283807345003,
+              "dv2_mps": 17.400140642956345,
+              "dv_total_mps": 40.153424450301344,
+              "ratio_in_window": 2.4781276160100414,
               "sat_id": 0,
               "sin_nt": 0.944204314874237,
               "singular": false,
@@ -2465,13 +2465,13 @@
               "transfer_time_s": 1116.0
             },
             {
-              "controller_dv_in_window_mps": 46.08242232760373,
+              "controller_dv_in_window_mps": 46.08242232760365,
               "det_xy_scaled": 1.8663580901065355,
               "dist_to_singular_s": 1116.0,
-              "dv1_mps": 22.051207312239203,
+              "dv1_mps": 22.051207312239224,
               "dv2_mps": 9.764551704385168,
-              "dv_total_mps": 31.81575901662437,
-              "ratio_in_window": 1.4484149915620352,
+              "dv_total_mps": 31.81575901662439,
+              "ratio_in_window": 1.4484149915620317,
               "sat_id": 1,
               "sin_nt": 0.944204314874237,
               "singular": false,
@@ -2479,13 +2479,13 @@
               "transfer_time_s": 1116.0
             },
             {
-              "controller_dv_in_window_mps": 60.09091001207011,
+              "controller_dv_in_window_mps": 60.09091001207009,
               "det_xy_scaled": 1.8663580901065355,
               "dist_to_singular_s": 1116.0,
-              "dv1_mps": 23.22629153727488,
-              "dv2_mps": 3.9118162721271696,
-              "dv_total_mps": 27.138107809402047,
-              "ratio_in_window": 2.214263073686055,
+              "dv1_mps": 23.226291537274896,
+              "dv2_mps": 3.911816272127168,
+              "dv_total_mps": 27.138107809402065,
+              "ratio_in_window": 2.2142630736860527,
               "sat_id": 3,
               "sin_nt": 0.944204314874237,
               "singular": false,
@@ -2493,13 +2493,13 @@
               "transfer_time_s": 1116.0
             },
             {
-              "controller_dv_in_window_mps": 51.52704914409766,
+              "controller_dv_in_window_mps": 51.52704914409774,
               "det_xy_scaled": 1.8663580901065355,
               "dist_to_singular_s": 1116.0,
-              "dv1_mps": 29.519444116990226,
-              "dv2_mps": 3.5742998643354156,
+              "dv1_mps": 29.519444116990236,
+              "dv2_mps": 3.574299864335408,
               "dv_total_mps": 33.093743981325645,
-              "ratio_in_window": 1.5570027124514434,
+              "ratio_in_window": 1.5570027124514458,
               "sat_id": 5,
               "sin_nt": 0.944204314874237,
               "singular": false,
@@ -2514,7 +2514,7 @@
         }
       ],
       "log": "pair_2-4__hungarian.jsonl",
-      "log_sha256": "17874adb1291d2bf0f80a9dfe0658f69ecc850860185b854d497c89c0214934e",
+      "log_sha256": "889c08dfabc99b7544333f152e7ad3e268388f05d20350dea44b6d6b2c192216",
       "min_dist_to_singular_s": 298.0,
       "n_episodes": 2,
       "n_singular_solves": 0,
@@ -2523,31 +2523,31 @@
         4
       ],
       "per_sat_bound_mps": {
-        "0": 141.71151479811414,
-        "1": 115.11894727545551,
+        "0": 141.71151479811408,
+        "1": 115.11894727545555,
         "2": 0.0,
         "3": 77.51847555995445,
-        "4": 87.60521554423258,
+        "4": 87.60521554423255,
         "5": 175.47798797837305
       },
       "per_sat_controller_dv_mps": {
-        "0": 135.78448944815932,
-        "1": 76.14444995233987,
-        "2": 1.3012924868676564e-12,
-        "3": 85.88010829098899,
-        "4": 29.400000000000823,
-        "5": 81.6832782694374
+        "0": 135.78448944815923,
+        "1": 76.14444995233968,
+        "2": 1.2861135883907983e-12,
+        "3": 85.88010829098945,
+        "4": 29.400000000000784,
+        "5": 81.68327826943747
       },
       "policy": "hungarian",
-      "ratio_total": 0.6844163509007961,
+      "ratio_total": 0.6844163509007967,
       "transfer_windows_s": [
         298.0,
         1116.0
       ],
       "worst_sat": {
-        "bound_mps": 141.71151479811414,
-        "controller_dv_mps": 135.78448944815932,
-        "ratio": 0.958175414620339,
+        "bound_mps": 141.71151479811408,
+        "controller_dv_mps": 135.78448944815923,
+        "ratio": 0.9581754146203388,
         "sat_id": 0
       }
     },
@@ -2556,51 +2556,51 @@
       "command": "uv run python -m cubesat.dv_bound --base data/scenarios/two_failure.json --p0-dir data/eval/benchmark --report data/eval/dv_lower_bounds.json --csv data/eval/dv_lower_bounds.csv",
       "completed_episode": {
         "bound_total_mps": 131.51927856593272,
-        "controller_spend_total_mps": 250.78660554287816,
+        "controller_spend_total_mps": 250.78660554287825,
         "per_sat": {
           "0": {
-            "bound_mps": 40.15342445030137,
-            "controller_dv_in_window_mps": 99.50531000766455,
-            "ratio": 2.4781276160100387
+            "bound_mps": 40.153424450301344,
+            "controller_dv_in_window_mps": 99.50531000766458,
+            "ratio": 2.4781276160100414
           },
           "1": {
-            "bound_mps": 31.81575901662437,
-            "controller_dv_in_window_mps": 46.08242232760373,
-            "ratio": 1.4484149915620352
+            "bound_mps": 31.81575901662439,
+            "controller_dv_in_window_mps": 46.08242232760365,
+            "ratio": 1.4484149915620317
           },
           "3": {
-            "bound_mps": 27.138107809402047,
-            "controller_dv_in_window_mps": 60.09091001207011,
-            "ratio": 2.214263073686055
+            "bound_mps": 27.138107809402065,
+            "controller_dv_in_window_mps": 60.09091001207009,
+            "ratio": 2.2142630736860527
           },
           "4": {
-            "bound_mps": 32.41198728960493,
-            "controller_dv_in_window_mps": 45.10796319553977,
-            "ratio": 1.3917061855076887
+            "bound_mps": 32.41198728960491,
+            "controller_dv_in_window_mps": 45.107963195539924,
+            "ratio": 1.3917061855076944
           }
         },
-        "ratio_total": 1.9068429227822659,
+        "ratio_total": 1.9068429227822665,
         "t_end": 2622.0,
         "t_replan": 1506.0,
         "transfer_time_s": 1116.0
       },
-      "controller_total_mps": 402.413723452885,
+      "controller_total_mps": 402.41372345288534,
       "episodes": [
         {
-          "bound_total_mps": 465.2311058984763,
-          "controller_spend_total_mps": 144.16230411198947,
+          "bound_total_mps": 465.23110589847624,
+          "controller_spend_total_mps": 144.16230411198944,
           "formation_amp_m": 8000.0,
           "formation_phase0_rad": 0.0,
           "n_survivors": 5,
           "per_sat": [
             {
-              "controller_dv_in_window_mps": 29.79999999999993,
+              "controller_dv_in_window_mps": 29.799999999999926,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 53.57900979146259,
-              "dv2_mps": 47.97908055635018,
-              "dv_total_mps": 101.55809034781277,
-              "ratio_in_window": 0.2934281247111075,
+              "dv1_mps": 53.57900979146258,
+              "dv2_mps": 47.97908055635015,
+              "dv_total_mps": 101.55809034781274,
+              "ratio_in_window": 0.2934281247111076,
               "sat_id": 0,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -2611,10 +2611,10 @@
               "controller_dv_in_window_mps": 29.79999999999993,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 43.8155588435898,
-              "dv2_mps": 39.487629415241344,
-              "dv_total_mps": 83.30318825883114,
-              "ratio_in_window": 0.3577294053549117,
+              "dv1_mps": 43.815558843589805,
+              "dv2_mps": 39.48762941524135,
+              "dv_total_mps": 83.30318825883116,
+              "ratio_in_window": 0.35772940535491166,
               "sat_id": 1,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -2622,12 +2622,12 @@
               "transfer_time_s": 298.0
             },
             {
-              "controller_dv_in_window_mps": 25.36230411198975,
+              "controller_dv_in_window_mps": 25.36230411198974,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 23.979719917705367,
-              "dv2_mps": 26.400647832847046,
-              "dv_total_mps": 50.38036775055241,
+              "dv1_mps": 23.97971991770538,
+              "dv2_mps": 26.40064783284701,
+              "dv_total_mps": 50.380367750552395,
               "ratio_in_window": 0.5034164148536144,
               "sat_id": 3,
               "sin_nt": 0.3238741234611607,
@@ -2639,10 +2639,10 @@
               "controller_dv_in_window_mps": 29.799999999999926,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 44.39900655325261,
-              "dv2_mps": 43.206208990979974,
-              "dv_total_mps": 87.60521554423258,
-              "ratio_in_window": 0.3401623957531805,
+              "dv1_mps": 44.3990065532526,
+              "dv2_mps": 43.206208990979945,
+              "dv_total_mps": 87.60521554423255,
+              "ratio_in_window": 0.34016239575318064,
               "sat_id": 4,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -2650,13 +2650,13 @@
               "transfer_time_s": 298.0
             },
             {
-              "controller_dv_in_window_mps": 29.399999999999928,
+              "controller_dv_in_window_mps": 29.39999999999993,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 72.72630879498367,
-              "dv2_mps": 69.65793520206375,
+              "dv1_mps": 72.72630879498365,
+              "dv2_mps": 69.65793520206374,
               "dv_total_mps": 142.3842439970474,
-              "ratio_in_window": 0.20648352075114146,
+              "ratio_in_window": 0.20648352075114149,
               "sat_id": 5,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -2671,19 +2671,19 @@
         },
         {
           "bound_total_mps": 131.51927856593272,
-          "controller_spend_total_mps": 250.78660554287816,
+          "controller_spend_total_mps": 250.78660554287825,
           "formation_amp_m": 8000.0,
           "formation_phase0_rad": 0.0,
           "n_survivors": 4,
           "per_sat": [
             {
-              "controller_dv_in_window_mps": 99.50531000766455,
+              "controller_dv_in_window_mps": 99.50531000766458,
               "det_xy_scaled": 1.8663580901065355,
               "dist_to_singular_s": 1116.0,
-              "dv1_mps": 22.75328380734502,
-              "dv2_mps": 17.400140642956355,
-              "dv_total_mps": 40.15342445030137,
-              "ratio_in_window": 2.4781276160100387,
+              "dv1_mps": 22.753283807345003,
+              "dv2_mps": 17.400140642956345,
+              "dv_total_mps": 40.153424450301344,
+              "ratio_in_window": 2.4781276160100414,
               "sat_id": 0,
               "sin_nt": 0.944204314874237,
               "singular": false,
@@ -2691,13 +2691,13 @@
               "transfer_time_s": 1116.0
             },
             {
-              "controller_dv_in_window_mps": 46.08242232760373,
+              "controller_dv_in_window_mps": 46.08242232760365,
               "det_xy_scaled": 1.8663580901065355,
               "dist_to_singular_s": 1116.0,
-              "dv1_mps": 22.051207312239203,
+              "dv1_mps": 22.051207312239224,
               "dv2_mps": 9.764551704385168,
-              "dv_total_mps": 31.81575901662437,
-              "ratio_in_window": 1.4484149915620352,
+              "dv_total_mps": 31.81575901662439,
+              "ratio_in_window": 1.4484149915620317,
               "sat_id": 1,
               "sin_nt": 0.944204314874237,
               "singular": false,
@@ -2705,13 +2705,13 @@
               "transfer_time_s": 1116.0
             },
             {
-              "controller_dv_in_window_mps": 60.09091001207011,
+              "controller_dv_in_window_mps": 60.09091001207009,
               "det_xy_scaled": 1.8663580901065355,
               "dist_to_singular_s": 1116.0,
-              "dv1_mps": 23.22629153727488,
-              "dv2_mps": 3.9118162721271696,
-              "dv_total_mps": 27.138107809402047,
-              "ratio_in_window": 2.214263073686055,
+              "dv1_mps": 23.226291537274896,
+              "dv2_mps": 3.911816272127168,
+              "dv_total_mps": 27.138107809402065,
+              "ratio_in_window": 2.2142630736860527,
               "sat_id": 3,
               "sin_nt": 0.944204314874237,
               "singular": false,
@@ -2719,13 +2719,13 @@
               "transfer_time_s": 1116.0
             },
             {
-              "controller_dv_in_window_mps": 45.10796319553977,
+              "controller_dv_in_window_mps": 45.107963195539924,
               "det_xy_scaled": 1.8663580901065355,
               "dist_to_singular_s": 1116.0,
-              "dv1_mps": 27.87955188000462,
-              "dv2_mps": 4.532435409600308,
-              "dv_total_mps": 32.41198728960493,
-              "ratio_in_window": 1.3917061855076887,
+              "dv1_mps": 27.879551880004616,
+              "dv2_mps": 4.53243540960029,
+              "dv_total_mps": 32.41198728960491,
+              "ratio_in_window": 1.3917061855076944,
               "sat_id": 4,
               "sin_nt": 0.944204314874237,
               "singular": false,
@@ -2740,7 +2740,7 @@
         }
       ],
       "log": "pair_2-5__hungarian.jsonl",
-      "log_sha256": "40626c6a310940e9d4a597e4a54130d3896468eebe2d4dc1b2f7cd74dedb78b6",
+      "log_sha256": "558fe9ac4d8ef68ddf96d25eda663a9c3f50030d9e5d91b8143b747f582ede63",
       "min_dist_to_singular_s": 298.0,
       "n_episodes": 2,
       "n_singular_solves": 0,
@@ -2749,84 +2749,84 @@
         5
       ],
       "per_sat_bound_mps": {
-        "0": 141.71151479811414,
-        "1": 115.11894727545551,
+        "0": 141.71151479811408,
+        "1": 115.11894727545555,
         "2": 0.0,
         "3": 77.51847555995445,
-        "4": 120.0172028338375,
+        "4": 120.01720283383746,
         "5": 142.3842439970474
       },
       "per_sat_controller_dv_mps": {
-        "0": 135.78448944815932,
-        "1": 76.14444995233987,
-        "2": 1.3012924868676564e-12,
-        "3": 85.88010829098899,
-        "4": 75.20467576139427,
-        "5": 29.400000000001235
+        "0": 135.78448944815923,
+        "1": 76.14444995233968,
+        "2": 1.2861135883907983e-12,
+        "3": 85.88010829098945,
+        "4": 75.20467576139444,
+        "5": 29.400000000001217
       },
       "policy": "hungarian",
-      "ratio_total": 0.6743417916924451,
+      "ratio_total": 0.6743417916924457,
       "transfer_windows_s": [
         298.0,
         1116.0
       ],
       "worst_sat": {
-        "bound_mps": 141.71151479811414,
-        "controller_dv_mps": 135.78448944815932,
-        "ratio": 0.958175414620339,
+        "bound_mps": 141.71151479811408,
+        "controller_dv_mps": 135.78448944815923,
+        "ratio": 0.9581754146203388,
         "sat_id": 0
       }
     },
     {
-      "bound_total_mps": 598.2396196084928,
+      "bound_total_mps": 598.2396196084927,
       "command": "uv run python -m cubesat.dv_bound --base data/scenarios/two_failure.json --p0-dir data/eval/benchmark --report data/eval/dv_lower_bounds.json --csv data/eval/dv_lower_bounds.csv",
       "completed_episode": {
-        "bound_total_mps": 142.84160872573253,
-        "controller_spend_total_mps": 345.6721766565714,
+        "bound_total_mps": 142.84160872573256,
+        "controller_spend_total_mps": 345.67217665657137,
         "per_sat": {
           "0": {
-            "bound_mps": 47.81292034219051,
-            "controller_dv_in_window_mps": 155.0855516576631,
-            "ratio": 3.2435908651414116
+            "bound_mps": 47.812920342190495,
+            "controller_dv_in_window_mps": 155.08555165766307,
+            "ratio": 3.243590865141412
           },
           "1": {
-            "bound_mps": 30.2846636524969,
-            "controller_dv_in_window_mps": 39.57052180100336,
-            "ratio": 1.306619160610716
+            "bound_mps": 30.284663652496924,
+            "controller_dv_in_window_mps": 39.57052180100341,
+            "ratio": 1.3066191606107165
           },
           "2": {
-            "bound_mps": 31.105187583188513,
-            "controller_dv_in_window_mps": 71.39153416411841,
-            "ratio": 2.2951648812014733
+            "bound_mps": 31.10518758318851,
+            "controller_dv_in_window_mps": 71.39153416411844,
+            "ratio": 2.2951648812014747
           },
           "5": {
-            "bound_mps": 33.6388371478566,
-            "controller_dv_in_window_mps": 79.62456903378653,
-            "ratio": 2.3670428523971747
+            "bound_mps": 33.63883714785663,
+            "controller_dv_in_window_mps": 79.62456903378643,
+            "ratio": 2.36704285239717
           }
         },
-        "ratio_total": 2.4199683813439123,
+        "ratio_total": 2.4199683813439115,
         "t_end": 3114.0,
         "t_replan": 1506.0,
         "transfer_time_s": 1608.0
       },
-      "controller_total_mps": 498.33481889459836,
+      "controller_total_mps": 498.3348188945827,
       "episodes": [
         {
-          "bound_total_mps": 455.3980108827602,
-          "controller_spend_total_mps": 143.26921921510976,
+          "bound_total_mps": 455.39801088276016,
+          "controller_spend_total_mps": 143.26921921510973,
           "formation_amp_m": 8000.0,
           "formation_phase0_rad": 0.0,
           "n_survivors": 5,
           "per_sat": [
             {
-              "controller_dv_in_window_mps": 29.79999999999993,
+              "controller_dv_in_window_mps": 29.799999999999926,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 53.57900979146259,
-              "dv2_mps": 47.97908055635018,
-              "dv_total_mps": 101.55809034781277,
-              "ratio_in_window": 0.2934281247111075,
+              "dv1_mps": 53.57900979146258,
+              "dv2_mps": 47.97908055635015,
+              "dv_total_mps": 101.55809034781274,
+              "ratio_in_window": 0.2934281247111076,
               "sat_id": 0,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -2837,10 +2837,10 @@
               "controller_dv_in_window_mps": 29.79999999999993,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 43.8155588435898,
-              "dv2_mps": 39.487629415241344,
-              "dv_total_mps": 83.30318825883114,
-              "ratio_in_window": 0.3577294053549117,
+              "dv1_mps": 43.815558843589805,
+              "dv2_mps": 39.48762941524135,
+              "dv_total_mps": 83.30318825883116,
+              "ratio_in_window": 0.35772940535491166,
               "sat_id": 1,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -2848,13 +2848,13 @@
               "transfer_time_s": 298.0
             },
             {
-              "controller_dv_in_window_mps": 24.469219215110048,
+              "controller_dv_in_window_mps": 24.469219215110016,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 19.325790951277813,
-              "dv2_mps": 21.221481783558534,
-              "dv_total_mps": 40.54727273483635,
-              "ratio_in_window": 0.6034738606250877,
+              "dv1_mps": 19.325790951277817,
+              "dv2_mps": 21.221481783558513,
+              "dv_total_mps": 40.547272734836326,
+              "ratio_in_window": 0.6034738606250872,
               "sat_id": 2,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -2865,10 +2865,10 @@
               "controller_dv_in_window_mps": 29.399999999999928,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 44.39900655325261,
-              "dv2_mps": 43.206208990979974,
-              "dv_total_mps": 87.60521554423258,
-              "ratio_in_window": 0.3355964575551513,
+              "dv1_mps": 44.3990065532526,
+              "dv2_mps": 43.206208990979945,
+              "dv_total_mps": 87.60521554423255,
+              "ratio_in_window": 0.3355964575551514,
               "sat_id": 4,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -2876,13 +2876,13 @@
               "transfer_time_s": 298.0
             },
             {
-              "controller_dv_in_window_mps": 29.799999999999926,
+              "controller_dv_in_window_mps": 29.79999999999993,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 72.72630879498367,
-              "dv2_mps": 69.65793520206375,
+              "dv1_mps": 72.72630879498365,
+              "dv2_mps": 69.65793520206374,
               "dv_total_mps": 142.3842439970474,
-              "ratio_in_window": 0.2092928203531978,
+              "ratio_in_window": 0.20929282035319782,
               "sat_id": 5,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -2896,20 +2896,20 @@
           "truncated_end": false
         },
         {
-          "bound_total_mps": 142.84160872573253,
-          "controller_spend_total_mps": 345.6721766565714,
+          "bound_total_mps": 142.84160872573256,
+          "controller_spend_total_mps": 345.67217665657137,
           "formation_amp_m": 8000.0,
           "formation_phase0_rad": 0.5235987755982988,
           "n_survivors": 4,
           "per_sat": [
             {
-              "controller_dv_in_window_mps": 155.0855516576631,
+              "controller_dv_in_window_mps": 155.08555165766307,
               "det_xy_scaled": 4.436125028167439,
               "dist_to_singular_s": 1230.4890142629295,
-              "dv1_mps": 30.758619839684314,
+              "dv1_mps": 30.758619839684297,
               "dv2_mps": 17.054300502506198,
-              "dv_total_mps": 47.81292034219051,
-              "ratio_in_window": 3.2435908651414116,
+              "dv_total_mps": 47.812920342190495,
+              "ratio_in_window": 3.243590865141412,
               "sat_id": 0,
               "sin_nt": 0.9782572532301933,
               "singular": false,
@@ -2917,13 +2917,13 @@
               "transfer_time_s": 1608.0
             },
             {
-              "controller_dv_in_window_mps": 39.57052180100336,
+              "controller_dv_in_window_mps": 39.57052180100341,
               "det_xy_scaled": 4.436125028167439,
               "dist_to_singular_s": 1230.4890142629295,
-              "dv1_mps": 27.786868773289395,
-              "dv2_mps": 2.4977948792075035,
-              "dv_total_mps": 30.2846636524969,
-              "ratio_in_window": 1.306619160610716,
+              "dv1_mps": 27.786868773289417,
+              "dv2_mps": 2.497794879207506,
+              "dv_total_mps": 30.284663652496924,
+              "ratio_in_window": 1.3066191606107165,
               "sat_id": 1,
               "sin_nt": 0.9782572532301933,
               "singular": false,
@@ -2931,13 +2931,13 @@
               "transfer_time_s": 1608.0
             },
             {
-              "controller_dv_in_window_mps": 71.39153416411841,
+              "controller_dv_in_window_mps": 71.39153416411844,
               "det_xy_scaled": 4.436125028167439,
               "dist_to_singular_s": 1230.4890142629295,
               "dv1_mps": 18.89118046408519,
-              "dv2_mps": 12.214007119103325,
-              "dv_total_mps": 31.105187583188513,
-              "ratio_in_window": 2.2951648812014733,
+              "dv2_mps": 12.214007119103321,
+              "dv_total_mps": 31.10518758318851,
+              "ratio_in_window": 2.2951648812014747,
               "sat_id": 2,
               "sin_nt": 0.9782572532301933,
               "singular": false,
@@ -2945,13 +2945,13 @@
               "transfer_time_s": 1608.0
             },
             {
-              "controller_dv_in_window_mps": 79.62456903378653,
+              "controller_dv_in_window_mps": 79.62456903378643,
               "det_xy_scaled": 4.436125028167439,
               "dist_to_singular_s": 1230.4890142629295,
-              "dv1_mps": 31.11521971309186,
-              "dv2_mps": 2.5236174347647364,
-              "dv_total_mps": 33.6388371478566,
-              "ratio_in_window": 2.3670428523971747,
+              "dv1_mps": 31.115219713091875,
+              "dv2_mps": 2.5236174347647515,
+              "dv_total_mps": 33.63883714785663,
+              "ratio_in_window": 2.36704285239717,
               "sat_id": 5,
               "sin_nt": 0.9782572532301933,
               "singular": false,
@@ -2966,7 +2966,7 @@
         }
       ],
       "log": "pair_3-4__hungarian.jsonl",
-      "log_sha256": "4ecdc69e90c42cc833941e006aaec21f61a8f97047b889a637cd5789a3866bb5",
+      "log_sha256": "151b6f175e9862817e49fd4c1c8d2098a8331035070475fdf3d453dbdce50ce3",
       "min_dist_to_singular_s": 298.0,
       "n_episodes": 2,
       "n_singular_solves": 0,
@@ -2975,84 +2975,84 @@
         4
       ],
       "per_sat_bound_mps": {
-        "0": 149.3710106900033,
-        "1": 113.58785191132804,
-        "2": 71.65246031802486,
+        "0": 149.37101069000323,
+        "1": 113.58785191132807,
+        "2": 71.65246031802484,
         "3": 0.0,
-        "4": 87.60521554423258,
-        "5": 176.023081144904
+        "4": 87.60521554423255,
+        "5": 176.02308114490404
       },
       "per_sat_controller_dv_mps": {
-        "0": 193.67907947544882,
-        "1": 69.57229519151097,
-        "2": 96.02701728566318,
-        "3": 1.3475785499582314e-12,
-        "4": 29.400000000000823,
-        "5": 109.6564269419732
+        "0": 193.67907947544643,
+        "1": 69.57229519150658,
+        "2": 96.02701728565752,
+        "3": 1.3246298845524985e-12,
+        "4": 29.400000000000784,
+        "5": 109.65642694197007
       },
       "policy": "hungarian",
-      "ratio_total": 0.8330020322303705,
+      "ratio_total": 0.8330020322303445,
       "transfer_windows_s": [
         298.0,
         1608.0
       ],
       "worst_sat": {
-        "bound_mps": 149.3710106900033,
-        "controller_dv_mps": 193.67907947544882,
-        "ratio": 1.2966309766585176,
+        "bound_mps": 149.37101069000323,
+        "controller_dv_mps": 193.67907947544643,
+        "ratio": 1.296630976658502,
         "sat_id": 0
       }
     },
     {
-      "bound_total_mps": 600.5624157361993,
+      "bound_total_mps": 600.5624157361992,
       "command": "uv run python -m cubesat.dv_bound --base data/scenarios/two_failure.json --p0-dir data/eval/benchmark --report data/eval/dv_lower_bounds.json --csv data/eval/dv_lower_bounds.csv",
       "completed_episode": {
         "bound_total_mps": 145.16440485343912,
-        "controller_spend_total_mps": 343.35809288098767,
+        "controller_spend_total_mps": 343.3580928809873,
         "per_sat": {
           "0": {
-            "bound_mps": 47.81292034219051,
-            "controller_dv_in_window_mps": 155.0855516576631,
-            "ratio": 3.2435908651414116
+            "bound_mps": 47.812920342190495,
+            "controller_dv_in_window_mps": 155.08555165766307,
+            "ratio": 3.243590865141412
           },
           "1": {
-            "bound_mps": 30.2846636524969,
-            "controller_dv_in_window_mps": 39.57052180100336,
-            "ratio": 1.306619160610716
+            "bound_mps": 30.284663652496924,
+            "controller_dv_in_window_mps": 39.57052180100341,
+            "ratio": 1.3066191606107165
           },
           "2": {
-            "bound_mps": 31.105187583188513,
-            "controller_dv_in_window_mps": 71.39153416411841,
-            "ratio": 2.2951648812014733
+            "bound_mps": 31.10518758318851,
+            "controller_dv_in_window_mps": 71.39153416411844,
+            "ratio": 2.2951648812014747
           },
           "4": {
-            "bound_mps": 35.96163327556319,
-            "controller_dv_in_window_mps": 77.3104852582028,
-            "ratio": 2.149804617209563
+            "bound_mps": 35.96163327556318,
+            "controller_dv_in_window_mps": 77.31048525820233,
+            "ratio": 2.1498046172095506
           }
         },
-        "ratio_total": 2.365305001785037,
+        "ratio_total": 2.365305001785034,
         "t_end": 3114.0,
         "t_replan": 1506.0,
         "transfer_time_s": 1608.0
       },
-      "controller_total_mps": 496.0227305609133,
+      "controller_total_mps": 496.0227305608974,
       "episodes": [
         {
-          "bound_total_mps": 455.3980108827602,
-          "controller_spend_total_mps": 143.26921921510976,
+          "bound_total_mps": 455.39801088276016,
+          "controller_spend_total_mps": 143.26921921510973,
           "formation_amp_m": 8000.0,
           "formation_phase0_rad": 0.0,
           "n_survivors": 5,
           "per_sat": [
             {
-              "controller_dv_in_window_mps": 29.79999999999993,
+              "controller_dv_in_window_mps": 29.799999999999926,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 53.57900979146259,
-              "dv2_mps": 47.97908055635018,
-              "dv_total_mps": 101.55809034781277,
-              "ratio_in_window": 0.2934281247111075,
+              "dv1_mps": 53.57900979146258,
+              "dv2_mps": 47.97908055635015,
+              "dv_total_mps": 101.55809034781274,
+              "ratio_in_window": 0.2934281247111076,
               "sat_id": 0,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -3063,10 +3063,10 @@
               "controller_dv_in_window_mps": 29.79999999999993,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 43.8155588435898,
-              "dv2_mps": 39.487629415241344,
-              "dv_total_mps": 83.30318825883114,
-              "ratio_in_window": 0.3577294053549117,
+              "dv1_mps": 43.815558843589805,
+              "dv2_mps": 39.48762941524135,
+              "dv_total_mps": 83.30318825883116,
+              "ratio_in_window": 0.35772940535491166,
               "sat_id": 1,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -3074,13 +3074,13 @@
               "transfer_time_s": 298.0
             },
             {
-              "controller_dv_in_window_mps": 24.469219215110048,
+              "controller_dv_in_window_mps": 24.469219215110016,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 19.325790951277813,
-              "dv2_mps": 21.221481783558534,
-              "dv_total_mps": 40.54727273483635,
-              "ratio_in_window": 0.6034738606250877,
+              "dv1_mps": 19.325790951277817,
+              "dv2_mps": 21.221481783558513,
+              "dv_total_mps": 40.547272734836326,
+              "ratio_in_window": 0.6034738606250872,
               "sat_id": 2,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -3091,10 +3091,10 @@
               "controller_dv_in_window_mps": 29.799999999999926,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 44.39900655325261,
-              "dv2_mps": 43.206208990979974,
-              "dv_total_mps": 87.60521554423258,
-              "ratio_in_window": 0.3401623957531805,
+              "dv1_mps": 44.3990065532526,
+              "dv2_mps": 43.206208990979945,
+              "dv_total_mps": 87.60521554423255,
+              "ratio_in_window": 0.34016239575318064,
               "sat_id": 4,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -3102,13 +3102,13 @@
               "transfer_time_s": 298.0
             },
             {
-              "controller_dv_in_window_mps": 29.399999999999928,
+              "controller_dv_in_window_mps": 29.39999999999993,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 72.72630879498367,
-              "dv2_mps": 69.65793520206375,
+              "dv1_mps": 72.72630879498365,
+              "dv2_mps": 69.65793520206374,
               "dv_total_mps": 142.3842439970474,
-              "ratio_in_window": 0.20648352075114146,
+              "ratio_in_window": 0.20648352075114149,
               "sat_id": 5,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -3123,19 +3123,19 @@
         },
         {
           "bound_total_mps": 145.16440485343912,
-          "controller_spend_total_mps": 343.35809288098767,
+          "controller_spend_total_mps": 343.3580928809873,
           "formation_amp_m": 8000.0,
           "formation_phase0_rad": 0.5235987755982988,
           "n_survivors": 4,
           "per_sat": [
             {
-              "controller_dv_in_window_mps": 155.0855516576631,
+              "controller_dv_in_window_mps": 155.08555165766307,
               "det_xy_scaled": 4.436125028167439,
               "dist_to_singular_s": 1230.4890142629295,
-              "dv1_mps": 30.758619839684314,
+              "dv1_mps": 30.758619839684297,
               "dv2_mps": 17.054300502506198,
-              "dv_total_mps": 47.81292034219051,
-              "ratio_in_window": 3.2435908651414116,
+              "dv_total_mps": 47.812920342190495,
+              "ratio_in_window": 3.243590865141412,
               "sat_id": 0,
               "sin_nt": 0.9782572532301933,
               "singular": false,
@@ -3143,13 +3143,13 @@
               "transfer_time_s": 1608.0
             },
             {
-              "controller_dv_in_window_mps": 39.57052180100336,
+              "controller_dv_in_window_mps": 39.57052180100341,
               "det_xy_scaled": 4.436125028167439,
               "dist_to_singular_s": 1230.4890142629295,
-              "dv1_mps": 27.786868773289395,
-              "dv2_mps": 2.4977948792075035,
-              "dv_total_mps": 30.2846636524969,
-              "ratio_in_window": 1.306619160610716,
+              "dv1_mps": 27.786868773289417,
+              "dv2_mps": 2.497794879207506,
+              "dv_total_mps": 30.284663652496924,
+              "ratio_in_window": 1.3066191606107165,
               "sat_id": 1,
               "sin_nt": 0.9782572532301933,
               "singular": false,
@@ -3157,13 +3157,13 @@
               "transfer_time_s": 1608.0
             },
             {
-              "controller_dv_in_window_mps": 71.39153416411841,
+              "controller_dv_in_window_mps": 71.39153416411844,
               "det_xy_scaled": 4.436125028167439,
               "dist_to_singular_s": 1230.4890142629295,
               "dv1_mps": 18.89118046408519,
-              "dv2_mps": 12.214007119103325,
-              "dv_total_mps": 31.105187583188513,
-              "ratio_in_window": 2.2951648812014733,
+              "dv2_mps": 12.214007119103321,
+              "dv_total_mps": 31.10518758318851,
+              "ratio_in_window": 2.2951648812014747,
               "sat_id": 2,
               "sin_nt": 0.9782572532301933,
               "singular": false,
@@ -3171,13 +3171,13 @@
               "transfer_time_s": 1608.0
             },
             {
-              "controller_dv_in_window_mps": 77.3104852582028,
+              "controller_dv_in_window_mps": 77.31048525820233,
               "det_xy_scaled": 4.436125028167439,
               "dist_to_singular_s": 1230.4890142629295,
-              "dv1_mps": 28.37423134279915,
-              "dv2_mps": 7.587401932764036,
-              "dv_total_mps": 35.96163327556319,
-              "ratio_in_window": 2.149804617209563,
+              "dv1_mps": 28.374231342799142,
+              "dv2_mps": 7.5874019327640365,
+              "dv_total_mps": 35.96163327556318,
+              "ratio_in_window": 2.1498046172095506,
               "sat_id": 4,
               "sin_nt": 0.9782572532301933,
               "singular": false,
@@ -3192,7 +3192,7 @@
         }
       ],
       "log": "pair_3-5__hungarian.jsonl",
-      "log_sha256": "0e46ae40e3dc83b621c8e449f213caf4e14bc0611c9ac4379156a3cf9913f135",
+      "log_sha256": "9c2512db252598f756bb9a176ff35bcd5f58e909e4cfe0aa0266d617bbf23b67",
       "min_dist_to_singular_s": 298.0,
       "n_episodes": 2,
       "n_singular_solves": 0,
@@ -3201,84 +3201,84 @@
         5
       ],
       "per_sat_bound_mps": {
-        "0": 149.3710106900033,
-        "1": 113.58785191132804,
-        "2": 71.65246031802486,
+        "0": 149.37101069000323,
+        "1": 113.58785191132807,
+        "2": 71.65246031802484,
         "3": 0.0,
-        "4": 123.56684881979577,
+        "4": 123.56684881979572,
         "5": 142.3842439970474
       },
       "per_sat_controller_dv_mps": {
-        "0": 193.67907947544882,
-        "1": 69.57229519151097,
-        "2": 96.02701728566318,
-        "3": 1.3475785499582314e-12,
-        "4": 107.34433860828774,
-        "5": 29.400000000001235
+        "0": 193.67907947544643,
+        "1": 69.57229519150658,
+        "2": 96.02701728565752,
+        "3": 1.3246298845524985e-12,
+        "4": 107.3443386082843,
+        "5": 29.400000000001217
       },
       "policy": "hungarian",
-      "ratio_total": 0.8259303572183483,
+      "ratio_total": 0.825930357218322,
       "transfer_windows_s": [
         298.0,
         1608.0
       ],
       "worst_sat": {
-        "bound_mps": 149.3710106900033,
-        "controller_dv_mps": 193.67907947544882,
-        "ratio": 1.2966309766585176,
+        "bound_mps": 149.37101069000323,
+        "controller_dv_mps": 193.67907947544643,
+        "ratio": 1.296630976658502,
         "sat_id": 0
       }
     },
     {
-      "bound_total_mps": 700.5130911766511,
+      "bound_total_mps": 700.513091176651,
       "command": "uv run python -m cubesat.dv_bound --base data/scenarios/two_failure.json --p0-dir data/eval/benchmark --report data/eval/dv_lower_bounds.json --csv data/eval/dv_lower_bounds.csv",
       "completed_episode": {
-        "bound_total_mps": 176.77915082769948,
-        "controller_spend_total_mps": 480.83304231171275,
+        "bound_total_mps": 176.77915082769943,
+        "controller_spend_total_mps": 480.83304231171235,
         "per_sat": {
           "0": {
-            "bound_mps": 50.45905848061881,
-            "controller_dv_in_window_mps": 163.50203735973093,
+            "bound_mps": 50.45905848061878,
+            "controller_dv_in_window_mps": 163.50203735973085,
             "ratio": 3.240291085148401
           },
           "1": {
-            "bound_mps": 30.834355235582493,
-            "controller_dv_in_window_mps": 39.572256981491115,
-            "ratio": 1.2833820159088387
+            "bound_mps": 30.834355235582514,
+            "controller_dv_in_window_mps": 39.57225698149114,
+            "ratio": 1.2833820159088385
           },
           "2": {
             "bound_mps": 61.48012692171095,
-            "controller_dv_in_window_mps": 216.29988724493717,
-            "ratio": 3.518208209302729
+            "controller_dv_in_window_mps": 216.29988724493714,
+            "ratio": 3.5182082093027285
           },
           "3": {
-            "bound_mps": 34.00561018978725,
-            "controller_dv_in_window_mps": 61.45886072555352,
-            "ratio": 1.8073153336331305
+            "bound_mps": 34.00561018978717,
+            "controller_dv_in_window_mps": 61.458860725553194,
+            "ratio": 1.807315333633125
           }
         },
-        "ratio_total": 2.719964656807092,
+        "ratio_total": 2.7199646568070905,
         "t_end": 3688.0,
         "t_replan": 1506.0,
         "transfer_time_s": 2182.0
       },
-      "controller_total_mps": 635.3514726991264,
+      "controller_total_mps": 635.3514726991104,
       "episodes": [
         {
-          "bound_total_mps": 523.7339403489516,
-          "controller_spend_total_mps": 143.26921921510976,
+          "bound_total_mps": 523.7339403489515,
+          "controller_spend_total_mps": 143.26921921510973,
           "formation_amp_m": 8000.0,
           "formation_phase0_rad": 0.0,
           "n_survivors": 5,
           "per_sat": [
             {
-              "controller_dv_in_window_mps": 29.79999999999993,
+              "controller_dv_in_window_mps": 29.799999999999926,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 53.57900979146259,
-              "dv2_mps": 47.97908055635018,
-              "dv_total_mps": 101.55809034781277,
-              "ratio_in_window": 0.2934281247111075,
+              "dv1_mps": 53.57900979146258,
+              "dv2_mps": 47.97908055635015,
+              "dv_total_mps": 101.55809034781274,
+              "ratio_in_window": 0.2934281247111076,
               "sat_id": 0,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -3289,10 +3289,10 @@
               "controller_dv_in_window_mps": 29.79999999999993,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 43.8155588435898,
-              "dv2_mps": 39.487629415241344,
-              "dv_total_mps": 83.30318825883114,
-              "ratio_in_window": 0.3577294053549117,
+              "dv1_mps": 43.815558843589805,
+              "dv2_mps": 39.48762941524135,
+              "dv_total_mps": 83.30318825883116,
+              "ratio_in_window": 0.35772940535491166,
               "sat_id": 1,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -3300,13 +3300,13 @@
               "transfer_time_s": 298.0
             },
             {
-              "controller_dv_in_window_mps": 24.469219215110048,
+              "controller_dv_in_window_mps": 24.469219215110016,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 19.325790951277813,
-              "dv2_mps": 21.221481783558534,
-              "dv_total_mps": 40.54727273483635,
-              "ratio_in_window": 0.6034738606250877,
+              "dv1_mps": 19.325790951277817,
+              "dv2_mps": 21.221481783558513,
+              "dv_total_mps": 40.547272734836326,
+              "ratio_in_window": 0.6034738606250872,
               "sat_id": 2,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -3314,13 +3314,13 @@
               "transfer_time_s": 298.0
             },
             {
-              "controller_dv_in_window_mps": 29.79999999999993,
+              "controller_dv_in_window_mps": 29.799999999999926,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 81.76215774044296,
-              "dv2_mps": 74.17898726998098,
-              "dv_total_mps": 155.94114501042395,
-              "ratio_in_window": 0.19109773753429818,
+              "dv1_mps": 81.76215774044294,
+              "dv2_mps": 74.17898726998096,
+              "dv_total_mps": 155.9411450104239,
+              "ratio_in_window": 0.19109773753429823,
               "sat_id": 3,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -3328,13 +3328,13 @@
               "transfer_time_s": 298.0
             },
             {
-              "controller_dv_in_window_mps": 29.399999999999928,
+              "controller_dv_in_window_mps": 29.39999999999993,
               "det_xy_scaled": 0.11073663784294477,
               "dist_to_singular_s": 298.0,
-              "dv1_mps": 72.72630879498367,
-              "dv2_mps": 69.65793520206375,
+              "dv1_mps": 72.72630879498365,
+              "dv2_mps": 69.65793520206374,
               "dv_total_mps": 142.3842439970474,
-              "ratio_in_window": 0.20648352075114146,
+              "ratio_in_window": 0.20648352075114149,
               "sat_id": 5,
               "sin_nt": 0.3238741234611607,
               "singular": false,
@@ -3348,19 +3348,19 @@
           "truncated_end": false
         },
         {
-          "bound_total_mps": 176.77915082769948,
-          "controller_spend_total_mps": 480.83304231171275,
+          "bound_total_mps": 176.77915082769943,
+          "controller_spend_total_mps": 480.83304231171235,
           "formation_amp_m": 8000.0,
           "formation_phase0_rad": 0.5235987755982988,
           "n_survivors": 4,
           "per_sat": [
             {
-              "controller_dv_in_window_mps": 163.50203735973093,
+              "controller_dv_in_window_mps": 163.50203735973085,
               "det_xy_scaled": 9.16650460249618,
               "dist_to_singular_s": 656.4890142629298,
-              "dv1_mps": 36.83259088917963,
-              "dv2_mps": 13.626467591439178,
-              "dv_total_mps": 50.45905848061881,
+              "dv1_mps": 36.83259088917961,
+              "dv2_mps": 13.626467591439168,
+              "dv_total_mps": 50.45905848061878,
               "ratio_in_window": 3.240291085148401,
               "sat_id": 0,
               "sin_nt": 0.664325595271562,
@@ -3369,13 +3369,13 @@
               "transfer_time_s": 2182.0
             },
             {
-              "controller_dv_in_window_mps": 39.572256981491115,
+              "controller_dv_in_window_mps": 39.57225698149114,
               "det_xy_scaled": 9.16650460249618,
               "dist_to_singular_s": 656.4890142629298,
-              "dv1_mps": 28.801131473315,
-              "dv2_mps": 2.033223762267495,
-              "dv_total_mps": 30.834355235582493,
-              "ratio_in_window": 1.2833820159088387,
+              "dv1_mps": 28.801131473315014,
+              "dv2_mps": 2.0332237622674985,
+              "dv_total_mps": 30.834355235582514,
+              "ratio_in_window": 1.2833820159088385,
               "sat_id": 1,
               "sin_nt": 0.664325595271562,
               "singular": false,
@@ -3383,13 +3383,13 @@
               "transfer_time_s": 2182.0
             },
             {
-              "controller_dv_in_window_mps": 216.29988724493717,
+              "controller_dv_in_window_mps": 216.29988724493714,
               "det_xy_scaled": 9.16650460249618,
               "dist_to_singular_s": 656.4890142629298,
               "dv1_mps": 36.49226370351879,
               "dv2_mps": 24.98786321819216,
               "dv_total_mps": 61.48012692171095,
-              "ratio_in_window": 3.518208209302729,
+              "ratio_in_window": 3.5182082093027285,
               "sat_id": 2,
               "sin_nt": 0.664325595271562,
               "singular": false,
@@ -3397,13 +3397,13 @@
               "transfer_time_s": 2182.0
             },
             {
-              "controller_dv_in_window_mps": 61.45886072555352,
+              "controller_dv_in_window_mps": 61.458860725553194,
               "det_xy_scaled": 9.16650460249618,
               "dist_to_singular_s": 656.4890142629298,
-              "dv1_mps": 29.131702355060074,
-              "dv2_mps": 4.873907834727172,
-              "dv_total_mps": 34.00561018978725,
-              "ratio_in_window": 1.8073153336331305,
+              "dv1_mps": 29.131702355059996,
+              "dv2_mps": 4.873907834727171,
+              "dv_total_mps": 34.00561018978717,
+              "ratio_in_window": 1.807315333633125,
               "sat_id": 3,
               "sin_nt": 0.664325595271562,
               "singular": false,
@@ -3418,7 +3418,7 @@
         }
       ],
       "log": "pair_4-5__hungarian.jsonl",
-      "log_sha256": "9917c5e1d9d2782345a3b61952b68a34e3e66ccafbb933e400e0e3ac4e38cdc3",
+      "log_sha256": "c983def02fae67b45e9e519ddf73d18e0042ed07f1a1075906056d7cb5b0f04b",
       "min_dist_to_singular_s": 298.0,
       "n_episodes": 2,
       "n_singular_solves": 0,
@@ -3427,31 +3427,31 @@
         5
       ],
       "per_sat_bound_mps": {
-        "0": 152.01714882843157,
-        "1": 114.13754349441363,
-        "2": 102.02739965654729,
-        "3": 189.94675520021121,
+        "0": 152.01714882843152,
+        "1": 114.13754349441368,
+        "2": 102.02739965654727,
+        "3": 189.94675520021107,
         "4": 0.0,
         "5": 142.3842439970474
       },
       "per_sat_controller_dv_mps": {
-        "0": 193.67907947544882,
-        "1": 69.57229519151097,
-        "2": 251.2409923098402,
-        "3": 91.45910572232418,
-        "4": 8.896296216928492e-13,
-        "5": 29.400000000001235
+        "0": 193.67907947544643,
+        "1": 69.57229519150658,
+        "2": 251.24099230983734,
+        "3": 91.45910572231807,
+        "4": 8.509468817782454e-13,
+        "5": 29.400000000001217
       },
       "policy": "hungarian",
-      "ratio_total": 0.9069801559767101,
+      "ratio_total": 0.9069801559766876,
       "transfer_windows_s": [
         298.0,
         2182.0
       ],
       "worst_sat": {
-        "bound_mps": 102.02739965654729,
-        "controller_dv_mps": 251.2409923098402,
-        "ratio": 2.462485500518366,
+        "bound_mps": 102.02739965654727,
+        "controller_dv_mps": 251.24099230983734,
+        "ratio": 2.4624855005183384,
         "sat_id": 2
       }
     }
@@ -3459,13 +3459,13 @@
   "policy": "hungarian",
   "singularity_guard": "t = k*pi/n (velocity rows) and t = 2*k*pi/n (Phi_rv xy determinant); every solve records sin_nt, det_xy_scaled and dist_to_singular_s",
   "worst_completed_per_sat": {
-    "bound_mps": 29.10906919366861,
-    "controller_dv_in_window_mps": 164.1519539069213,
+    "bound_mps": 18.20985362952051,
+    "controller_dv_in_window_mps": 104.23014144166935,
     "pair": [
       0,
-      1
+      3
     ],
-    "ratio": 5.63920312308115,
-    "sat_id": 2
+    "ratio": 5.723831918818881,
+    "sat_id": 4
   }
 }
