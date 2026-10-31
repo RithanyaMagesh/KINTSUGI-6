@@ -248,7 +248,7 @@ class EngineV2:
             for b, rs in zip(self.believed, self.roles, strict=True)
         ]
         priority = [r for r in self.scenario.role_priority if r in self.scenario.roles]
-        new = assign_roles(view, priority)
+        new = assign_roles(view, priority, self.scenario.roles.count("imager"))
         payloads = handoff_events(self.roles, new, f.status, priority)
         self.roles = new
         return [{"type": "ROLE_HANDOFF", "payload": p} for p in payloads]

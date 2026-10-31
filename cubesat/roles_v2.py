@@ -52,42 +52,65 @@ _EPS = 1e-9  # row-major index tie-break (AGENTS.md invariant 6)
 _STACK_PENALTY = 2.0  # per non-stackable role the sat already holds (above the 0/1 incumbent gap)
 
 
-def assign_roles(sats: list[dict], priority: Sequence[str] = DEFAULT_PRIORITY) -> list[list[str]]:
+def assign_roles(
+    sats: list[dict], priority: Sequence[str] = DEFAULT_PRIORITY, imager_seats: int | None = None
+) -> list[list[str]]:
     """Roles held by each sat (index = position in `sats`), a pure function of its input.
 
     Each sat dict needs `status`, `payload_ok`, `radio_ok` and `roles` (the roles it holds NOW:
     the incumbents; a dead sat's stale labels are ignored because it is incapable). Roles are
-    filled in `priority` order. Per role, seats = 1 for a critical role and
-    max(1, capable incumbents) otherwise (an imager never multiplies, a lost imager is not
-    replaced: this phase does not replan). Rows = sats, columns = seats,
-    scipy linear_sum_assignment; cost = INCAPABLE (1e6) if the sat cannot hold the role, else
-    0 for an incumbent, else 1 + 2 per non-stackable role it already holds or critical role it
-    holds now (so a role stacks on a busy sat only when no free capable sat exists), plus a
-    1e-9 row-major index epsilon (ties go to the lowest id). A seat that lands on an incapable
-    sat stays VACANT: see vacant_roles. A capable sat left with nothing holds ["spare"]; an
-    incapable or dead one []."""
+    filled in `priority` order (any subset of downlink, imager, leader). Rows = sats, columns =
+    seats, scipy linear_sum_assignment. Seats: 1 for a critical role; for the imager
+    min(`imager_seats`, imager-eligible sats), `imager_seats` defaulting to the number of sats
+    whose incumbent roles include imager (at least 1). Imager-eligible = capable AND not
+    holding the downlink (it does not image) unless nobody else is capable (then the downlink
+    holder images: a lone survivor keeps every role it can). A lost imager seat is refilled
+    by a sat with a working payload (a leader-only or spare sat): a label change, zero fuel.
+    Cost: INCAPABLE (1e6, finite) if the sat cannot hold the role (or is not eligible), 0 for
+    an incumbent, else 1 + 2 per busy mark: a non-stackable role it already holds, a critical
+    role it already holds, or a critical incumbent role it holds now (so a role stacks on a
+    busy sat only when no free capable sat exists), plus a 1e-9 row-major index epsilon (ties
+    go to the lowest id). A seat that lands on an incapable sat stays VACANT. A capable sat
+    left with nothing holds ["spare"]; an incapable or dead one [].
+
+    The guards are greedy in priority order, so they are order dependent. Example: sats
+    [NOMINAL leader, NOMINAL empty, DEAD downlink]: with (imager, leader, downlink) the imager
+    takes the empty sat, the leader stays, and the downlink then finds both capable sats equally
+    busy and lands on sat 0 (leader + downlink on one sat); with the default order and with
+    (leader, downlink, imager) it does not. Pinned for all six orders in
+    tests/v2/test_roles_assign.py."""
     priority = tuple(dict.fromkeys(priority))
     for role in priority:
         if role not in ROLE_SPECS or role == "spare":
             raise ValueError(f"unknown role {role!r} in priority; known: {list(DEFAULT_PRIORITY)}")
-        n = len(sats)
+    n = len(sats)
     held: list[list[str]] = [[] for _ in range(n)]
     for role in priority if n else ():
         ok = [capability(s["status"], s["payload_ok"], s["radio_ok"], role) for s in sats]
         inc = [o and role in s.get("roles", ()) for o, s in zip(ok, sats, strict=True)]
-        seats = 1 if ROLE_SPECS[role]["critical"] else max(1, sum(inc))
+        elig, seats = ok, 1
+        if role == "imager":
+            elig = [o and "downlink" not in held[i] for i, o in enumerate(ok)]
+            elig = elig if any(elig) else ok
+            want = imager_seats
+            if want is None:
+                want = max(1, sum("imager" in s.get("roles", ()) for s in sats))
+            seats = min(want, sum(elig))
+        if seats == 0:
+            continue
         cost = np.empty((n, seats))
         for i in range(n):
-            busy = sum(not ROLE_SPECS[r]["stackable"] for r in held[i])
-            # a critical role the sat holds now also makes it busy (no leader+downlink pile-up)
+            busy = sum(  # bools count as 0/1: a held downlink weighs 2, leader 1, imager 1
+                (not ROLE_SPECS[r]["stackable"]) + ROLE_SPECS[r]["critical"] for r in held[i]
+            )
             busy += sum(
                 ROLE_SPECS[r]["critical"] and r != role and r not in held[i]
                 for r in sats[i].get("roles", ())
             )
-            cost[i] = INCAPABLE if not ok[i] else 0.0 if inc[i] else 1.0 + _STACK_PENALTY * busy
+            cost[i] = INCAPABLE if not elig[i] else 0.0 if inc[i] else 1.0 + _STACK_PENALTY * busy
         cost += _EPS * (np.arange(n)[:, None] * seats + np.arange(seats)[None, :])
         for i, _ in zip(*linear_sum_assignment(cost), strict=True):
-            if ok[i]:  # a seat that landed on an incapable sat stays vacant
+            if elig[i]:  # a seat that landed on an ineligible sat stays vacant
                 held[i].append(role)
     for i, s in enumerate(sats):
         if not held[i] and capability(s["status"], s["payload_ok"], s["radio_ok"], "spare"):

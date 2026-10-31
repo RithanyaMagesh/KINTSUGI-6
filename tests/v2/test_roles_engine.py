@@ -67,8 +67,9 @@ def test_motion_is_byte_identical_to_the_phase2_engine():
     assert canonical_log_hash(motion) == PHASE2_MOTION_PIN
 
 
-def _independent_coverage(lines, scn):
-    """The Phase-2 rule: scenario imagers that are not dead/re-entered and have a payload."""
+def _independent_coverage(lines, scn, rule="phase2"):
+    """rule "phase2": scenario imagers that are not dead/re-entered and have a payload.
+    rule "roles": sats that hold `imager` in the log AND can physically image now."""
     r_f = footprint_radius(scn.chief.altitude_km * 1e3, np.radians(scn.sensor.fov_half_angle_deg))
     grid = target_grid(scn.sensor.grid_step_km * 1e3, scn.sensor.grid_extent_km * 1e3)
     out = []
@@ -76,20 +77,37 @@ def _independent_coverage(lines, scn):
         ids = [
             s["id"]
             for s in x["sats"]
-            if s["original_role"] == "imager"
+            if (s["original_role"] == "imager" if rule == "phase2" else "imager" in s["roles"])
             and s["status"] not in ("DEAD", "REENTERED")
             and s["payload_ok"]
+            and (rule == "phase2" or s["radio_ok"])
         ]
         pos = np.array([x["sats"][i]["r"][1:3] for i in ids]).reshape(-1, 2)
         out.append(coverage_fraction(pos, grid, r_f))
     return out
 
 
-@pytest.mark.parametrize("failures", [[], [FAILS[0], FAILS[2], FAILS[3]]])
-def test_coverage_reproduces_the_phase2_rule(failures):
-    scn = _scn(failures)
+def test_coverage_reproduces_the_phase2_rule_without_failures():
+    scn = _scn()
     lines = _ticks(run_scenario_v2(scn))
     assert [x["coverage"] for x in lines] == _independent_coverage(lines, scn)
+
+
+@pytest.mark.parametrize("failures", [[FAILS[0], FAILS[2], FAILS[3]], FAILS])
+def test_coverage_is_the_roles_rule_with_failures(failures):
+    scn = _scn(failures)
+    lines = _ticks(run_scenario_v2(scn))
+    assert [x["coverage"] for x in lines] == _independent_coverage(lines, scn, "roles")
+
+
+def test_a_lone_survivor_images_and_counts_toward_coverage_with_every_role_stacked():
+    fine = {"fov_half_angle_deg": 1.5, "grid_step_km": 2.0, "grid_extent_km": 30.0}
+    fails = [{"t": 100.0, "sat_id": i, "mode": "DEAD"} for i in (0, 1, 2, 3, 4)]
+    scn = _scn(fails, duration_s=130.0, sensor=fine)
+    last = _ticks(run_scenario_v2(scn))[-1]
+    assert last["sats"][5]["roles"] == ["downlink", "imager", "leader"]
+    assert last["coverage"] > 0.0
+    assert last["coverage"] == _independent_coverage([last], scn, "roles")[0]
 
 
 def test_handoff_when_the_leader_dies_and_not_for_imager_changes():
@@ -224,7 +242,7 @@ def test_coverage_drops_at_the_failure_even_though_the_role_is_kept_for_a_few_ti
     fine = {"fov_half_angle_deg": 1.5, "grid_step_km": 2.0, "grid_extent_km": 30.0}
     scn = _scn([{"t": 100.0, "sat_id": 1, "mode": "DEAD"}], duration_s=110.0, sensor=fine)
     lines = _ticks(run_scenario_v2(scn))
-    assert [x["coverage"] for x in lines] == _independent_coverage(lines, scn)
+    assert [x["coverage"] for x in lines] == _independent_coverage(lines, scn, "roles")
     by_t = {x["t"]: x for x in lines}
     assert by_t[102.0]["sats"][1]["roles"] == ["imager"]
     assert by_t[102.0]["coverage"] < by_t[98.0]["coverage"]
@@ -253,3 +271,28 @@ def test_restore_refuses_a_state_list_of_the_wrong_length(key):
     with pytest.raises(ValueError):
         other.restore(json.dumps(doc).encode())
     assert other.k == 0
+
+
+# --- runtime invariant (tests only: it costs a pass over every tick, so the engine skips it) ----
+def _assert_one_leader_and_downlink(lines, settled_t):
+    """Never two holders of leader/downlink; after `settled_t` (last declaration) exactly one
+    holder as long as some sat can do the role, and it is a sat that really can."""
+    for x in _ticks(lines):
+        for role in ("leader", "downlink"):
+            held = [s["id"] for s in x["sats"] if role in s["roles"]]
+            assert len(held) <= 1, (x["t"], role, held)
+            if x["t"] >= settled_t:
+                ok = [s for s in x["sats"] if s["radio_ok"] and s["status"] != "REENTERED"]
+                capable = [s["id"] for s in ok]
+                assert len(held) == (1 if capable else 0), (x["t"], role, held)
+                assert held[0] in capable if held else True
+
+
+@pytest.mark.parametrize(
+    "failures",
+    [FAILS, [{"t": 100.0 + 50 * i, "sat_id": i, "mode": "DEAD"} for i in (0, 5, 1, 2)],
+     [{"t": 100.0, "sat_id": i, "mode": "DEAD"} for i in range(6)]],
+)
+def test_one_leader_and_one_downlink_whenever_a_capable_sat_exists(failures):
+    lines = run_scenario_v2(_scn(failures, duration_s=600.0))
+    _assert_one_leader_and_downlink(lines, max(f["t"] for f in failures) + 4.0)

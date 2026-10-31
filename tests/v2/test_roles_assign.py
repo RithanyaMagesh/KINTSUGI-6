@@ -48,7 +48,7 @@ def test_four_dead_with_the_critical_holders_among_the_dead():
     kinds = [DEAD, OK, OK, DEAD, DEAD, DEAD]
     inc = ["leader", "imager", "imager", "downlink", "imager", "imager"]
     out = assign_roles(sats(kinds, inc))
-    assert holders(out, "downlink") == [1] and holders(out, "imager") == [1, 2]
+    assert holders(out, "downlink") == [1] and holders(out, "imager") == [2]  # downlink: no imaging
     assert holders(out, "leader") == [2]  # stacked on an imager, off the downlink sat
     assert out[0] == out[3] == out[4] == out[5] == []
 
@@ -77,7 +77,8 @@ def test_leader_stacks_on_an_imager_when_only_two_survive():
 def test_incapable_sat_is_never_given_a_role_it_cannot_hold():
     kinds = [OK, ("PAYLOAD_FAILED", False, True), OK, OK, OK, OK]
     out = assign_roles(sats(kinds))
-    assert "imager" not in out[1] and holders(out, "imager") == [2, 3, 4]
+    assert "imager" not in out[1]
+    assert holders(out, "imager") == [0, 2, 3, 4]  # the leader-only sat is re-roled to imager
     silent = [OK, OK, OK, OK, OK, ("RADIO_SILENT", True, False)]  # the downlink holder goes mute
     out = assign_roles(sats(silent))
     assert out[5] == ["spare"] and len(holders(out, "downlink")) == 1
@@ -90,8 +91,8 @@ def test_incapable_sat_is_never_given_a_role_it_cannot_hold():
 def test_incumbents_keep_their_roles_when_still_capable():
     kinds = [OK, DEAD, OK, OK, OK, OK]  # an imager died: nobody else changes
     out = assign_roles(sats(kinds))
-    kept = [out[i] for i in (0, 2, 3, 4, 5)]
-    assert kept == [["leader"], ["imager"], ["imager"], ["imager"], ["downlink"]]
+    kept = [out[i] for i in (0, 2, 3, 4, 5)]  # sat 0 (leader only) refills the lost imager seat
+    assert kept == [["imager", "leader"], ["imager"], ["imager"], ["imager"], ["downlink"]]
     # a stacked leader on an imager is not moved to a free spare
     inc = [["imager", "leader"], ["downlink"], ["imager"], []]
     s = sats([OK] * 4, [None] * 4)
@@ -124,7 +125,7 @@ def test_deterministic_and_input_not_mutated():
 
 def test_priority_order_decides_who_gets_a_scarce_sat():
     s = sats([OK, OK], [None, None])
-    assert assign_roles(s) == [["downlink", "leader"], ["imager"]]
+    assert assign_roles(s) == [["downlink"], ["imager", "leader"]]
     swapped = assign_roles(s, ("imager", "downlink", "leader"))
     assert swapped == [["imager", "leader"], ["downlink"]]
 
@@ -162,3 +163,88 @@ def test_a_lost_critical_role_avoids_the_sat_that_already_holds_the_other_one():
         d["roles"] = r
     out = assign_roles(s)
     assert holders(out, "downlink") == [2] and holders(out, "leader") == [1]
+
+
+# --- imager seats = min(original count, capable imager-eligible survivors), downlink never images
+def test_a_lost_imager_seat_is_refilled_by_a_leader_only_sat_with_a_working_payload():
+    out = assign_roles(sats([OK, DEAD, OK, OK, OK, OK]), imager_seats=4)
+    assert holders(out, "imager") == [0, 2, 3, 4] and out[0] == ["imager", "leader"]
+
+
+def test_the_new_downlink_holder_stops_imaging_and_a_leader_only_sat_takes_its_seat():
+    out = assign_roles(sats([OK, OK, OK, OK, OK, DEAD]), imager_seats=4)
+    assert out == [["imager", "leader"], ["downlink"], ["imager"], ["imager"], ["imager"], []]
+
+
+def test_seats_are_capped_by_the_eligible_survivors():
+    out = assign_roles(sats([OK, DEAD, DEAD, DEAD, DEAD, OK]), imager_seats=4)
+    assert holders(out, "imager") == [0] and holders(out, "downlink") == [5]
+
+
+def test_downlink_holder_images_only_when_it_is_the_sole_imager_capable_sat():
+    payload_dead = ("PAYLOAD_FAILED", False, True)
+    out = assign_roles(sats([payload_dead, DEAD, DEAD, DEAD, DEAD, OK]), imager_seats=4)
+    assert out[5] == ["downlink", "imager"] and out[0] == ["leader"]  # sat 5 is the only imager
+    out = assign_roles(sats([OK, DEAD, DEAD, DEAD, DEAD, OK]), imager_seats=4)
+    assert "imager" not in out[5]  # a second capable sat exists: the downlink does not image
+
+
+def test_zero_imager_seats_assigns_no_imager():
+    assert holders(assign_roles(sats([OK] * 6), imager_seats=0), "imager") == []
+
+
+# --- order dependence of the stacking guards (pinned, documented in docs/PHYSICS_V2.md) --------
+PERMS = list(itertools.permutations(["downlink", "imager", "leader"]))
+
+
+def _two_survivors():  # reviewer's counterexample: leader sat, an empty sat, a dead downlink
+    inc = [["leader"], [], ["downlink"]]
+    s = sats([OK, OK, DEAD], [None] * 3)
+    for d, r in zip(s, inc, strict=True):
+        d["roles"] = r
+    return s
+
+
+PIN_A = {  # sats [NOMINAL leader, NOMINAL empty, DEAD downlink], imager_seats=1
+    ("downlink", "imager", "leader"): [["imager", "leader"], ["downlink"], []],
+    ("downlink", "leader", "imager"): [["leader", "imager"], ["downlink"], []],
+    ("imager", "downlink", "leader"): [["downlink", "leader"], ["imager"], []],
+    ("imager", "leader", "downlink"): [["leader", "downlink"], ["imager"], []],  # pile-up
+    ("leader", "downlink", "imager"): [["leader", "imager"], ["downlink"], []],
+    ("leader", "imager", "downlink"): [["leader", "downlink"], ["imager"], []],  # pile-up
+}
+PIN_C = {  # sats [DEAD leader, NOMINAL imager, NOMINAL downlink], imager_seats=1
+    p: [[], ["imager", "leader"] if p.index("imager") < p.index("leader") else ["leader", "imager"],
+        ["downlink"]]
+    for p in PERMS
+}
+
+
+def _case(kinds, inc):
+    s = sats(kinds, [None] * len(kinds))
+    for d, r in zip(s, inc, strict=True):
+        d["roles"] = r
+    return s
+
+
+@pytest.mark.parametrize("perm", PERMS)
+def test_two_capable_survivors_pinned_for_every_priority_order(perm):
+    a = _case([OK, OK, DEAD], [["leader"], [], ["downlink"]])
+    assert assign_roles(a, perm, imager_seats=1) == PIN_A[perm]
+    c = _case([DEAD, OK, OK], [["leader"], ["imager"], ["downlink"]])
+    assert assign_roles(c, perm, imager_seats=1) == PIN_C[perm]
+
+
+@pytest.mark.parametrize("perm", PERMS)
+def test_three_capable_survivors_keep_their_incumbents_in_every_priority_order(perm):
+    b = _case([OK, OK, OK], [["leader"], ["imager"], ["downlink"]])
+    assert assign_roles(b, perm, imager_seats=1) == [["leader"], ["imager"], ["downlink"]]
+
+
+def test_the_default_order_never_piles_leader_and_downlink_on_two_capable_sats():
+    for kinds in itertools.product([OK, DEAD], repeat=3):
+        if sum(k is OK for k in kinds) != 2:
+            continue
+        for inc in itertools.permutations([["leader"], ["downlink"], []]):
+            out = assign_roles(_case(list(kinds), list(inc)), imager_seats=1)
+            assert not any({"leader", "downlink"} <= set(r) for r in out), (kinds, inc, out)
