@@ -11,12 +11,12 @@
     "keepout_binding_comparison": {
       "binding_with_exclusion": true,
       "binding_without_exclusion": true,
-      "decision": "CUT",
-      "decision_text": "policy-5 exclusion never fired: run-window min clearance with the exclusion (1322.6 m) is identical to without (1322.6 m) on every pair, both below the 2000.0 m keep-out radius -- the 2 km sphere IS entered by post-replan dead-sat drift, which seat selection at replan time cannot prevent; the term provides no measured benefit; policy 5 cut per ENDGAME_PLAN 5(c)/10 cut order",
-      "exclusion_changed_any_clearance": false,
+      "decision": "KEEP",
+      "decision_text": "keep-out binding in both runs (1852.5 m without, 1322.6 m with, threshold 2000.0 m) but the exclusion improves the worst clearance; policy 5 kept",
+      "exclusion_changed_any_clearance": true,
       "keepout_radius_m": 2000.0,
       "min_clearance_with_exclusion_m": 1322.6031098669134,
-      "min_clearance_without_exclusion_m": 1322.6031098669134
+      "min_clearance_without_exclusion_m": 1852.5321340900236
     },
     "keepout_radius_m": 2000.0,
     "n_samples": 601,
@@ -446,142 +446,142 @@
       ],
       "hungarian": [
         {
-          "counterfactual_min_clearance_full_horizon_m": 5390.458045369952,
+          "counterfactual_min_clearance_full_horizon_m": 4912.778400410795,
           "drift_rate_mps": -1.1191048088221578e-12,
           "effective_horizon_orbits": 2.7881030929601915,
           "effective_horizon_s": 17028.0,
           "keepout_radius_m": 2000.0,
           "log": "pair_0-1__hungarian.jsonl",
-          "log_sha256": "e67ef7207ea7d112d4a051ac5e652ca57dc2d1f8160419768359caaf30f05262",
-          "min_clearance_logged_overlap_m": 5390.458045369952,
+          "log_sha256": "592e0d356874a0586e2dbf6ead87207eb9cb311fa1ac9766b2f31ececb445819",
+          "min_clearance_logged_overlap_m": 4912.778400410795,
           "n_samples_past_log_end_labeled_counterfactual": 43,
-          "run_window_min_clearance_m": 5376.931218402233,
+          "run_window_min_clearance_m": 4913.311100820089,
           "sat_id": 0,
           "t_death_s": 1200.0
         },
         {
-          "counterfactual_min_clearance_full_horizon_m": 1341.895293299503,
-          "drift_rate_mps": 17.094384252851995,
+          "counterfactual_min_clearance_full_horizon_m": 5846.5343156312,
+          "drift_rate_mps": 1.4210854715202004e-13,
           "effective_horizon_orbits": 2.7352580760352447,
           "effective_horizon_s": 17028.0,
           "keepout_radius_m": 2000.0,
           "log": "pair_0-1__hungarian.jsonl",
-          "log_sha256": "e67ef7207ea7d112d4a051ac5e652ca57dc2d1f8160419768359caaf30f05262",
-          "min_clearance_logged_overlap_m": 1341.895293299503,
+          "log_sha256": "592e0d356874a0586e2dbf6ead87207eb9cb311fa1ac9766b2f31ececb445819",
+          "min_clearance_logged_overlap_m": 5846.5343156312,
           "n_samples_past_log_end_labeled_counterfactual": 53,
-          "run_window_min_clearance_m": 1322.6031098669134,
+          "run_window_min_clearance_m": 5856.406476807377,
           "sat_id": 1,
           "t_death_s": 1500.0
         },
         {
-          "counterfactual_min_clearance_full_horizon_m": 5329.526708038162,
+          "counterfactual_min_clearance_full_horizon_m": 5720.11081694863,
           "drift_rate_mps": -1.1191048088221578e-12,
           "effective_horizon_orbits": 2.7881030929601915,
           "effective_horizon_s": 17028.0,
           "keepout_radius_m": 2000.0,
           "log": "pair_0-2__hungarian.jsonl",
-          "log_sha256": "b60786ea97e32893301266e343ae2571df0774dfb563620d88e4e1ac5f3e4d21",
-          "min_clearance_logged_overlap_m": 5329.526708038162,
+          "log_sha256": "a0131510c3427c653e9ec4e57a144e978f79aefd32c67dde7d1101eaf677ef5d",
+          "min_clearance_logged_overlap_m": 5720.11081694863,
           "n_samples_past_log_end_labeled_counterfactual": 43,
-          "run_window_min_clearance_m": 5333.1325145755945,
+          "run_window_min_clearance_m": 5723.113748216919,
           "sat_id": 0,
           "t_death_s": 1200.0
         },
         {
-          "counterfactual_min_clearance_full_horizon_m": 5844.9206081501015,
+          "counterfactual_min_clearance_full_horizon_m": 5844.920609323491,
           "drift_rate_mps": 1.0871303857129533e-12,
           "effective_horizon_orbits": 2.7352580760352447,
           "effective_horizon_s": 17028.0,
           "keepout_radius_m": 2000.0,
           "log": "pair_0-2__hungarian.jsonl",
-          "log_sha256": "b60786ea97e32893301266e343ae2571df0774dfb563620d88e4e1ac5f3e4d21",
-          "min_clearance_logged_overlap_m": 5844.9206081501015,
+          "log_sha256": "a0131510c3427c653e9ec4e57a144e978f79aefd32c67dde7d1101eaf677ef5d",
+          "min_clearance_logged_overlap_m": 5844.920609323491,
           "n_samples_past_log_end_labeled_counterfactual": 53,
           "run_window_min_clearance_m": 5856.406546961884,
           "sat_id": 2,
           "t_death_s": 1500.0
         },
         {
-          "counterfactual_min_clearance_full_horizon_m": 5390.458045369952,
+          "counterfactual_min_clearance_full_horizon_m": 5845.587201501967,
           "drift_rate_mps": -1.1191048088221578e-12,
           "effective_horizon_orbits": 2.7881030929601915,
           "effective_horizon_s": 17028.0,
           "keepout_radius_m": 2000.0,
           "log": "pair_0-3__hungarian.jsonl",
-          "log_sha256": "11742e1f6df4529c9fd1201b9a5594664649f28952a03526e06f4b535abda4d3",
-          "min_clearance_logged_overlap_m": 5390.458045369952,
-          "n_samples_past_log_end_labeled_counterfactual": 43,
-          "run_window_min_clearance_m": 5376.931218402233,
-          "sat_id": 0,
-          "t_death_s": 1200.0
-        },
-        {
-          "counterfactual_min_clearance_full_horizon_m": 2896.8048329237695,
-          "drift_rate_mps": 2.343197271292391,
-          "effective_horizon_orbits": 2.7352580760352447,
-          "effective_horizon_s": 17028.0,
-          "keepout_radius_m": 2000.0,
-          "log": "pair_0-3__hungarian.jsonl",
-          "log_sha256": "11742e1f6df4529c9fd1201b9a5594664649f28952a03526e06f4b535abda4d3",
-          "min_clearance_logged_overlap_m": 2896.8048329237695,
-          "n_samples_past_log_end_labeled_counterfactual": 53,
-          "run_window_min_clearance_m": 2888.535684388777,
-          "sat_id": 3,
-          "t_death_s": 1500.0
-        },
-        {
-          "counterfactual_min_clearance_full_horizon_m": 5390.458045369952,
-          "drift_rate_mps": -1.1191048088221578e-12,
-          "effective_horizon_orbits": 2.7881030929601915,
-          "effective_horizon_s": 17028.0,
-          "keepout_radius_m": 2000.0,
-          "log": "pair_0-4__hungarian.jsonl",
-          "log_sha256": "b03f378647168d5571d794fb7cac65ac3b6240e392c1cc364ea5bc329d450778",
-          "min_clearance_logged_overlap_m": 5390.458045369952,
-          "n_samples_past_log_end_labeled_counterfactual": 43,
-          "run_window_min_clearance_m": 5376.931218402233,
-          "sat_id": 0,
-          "t_death_s": 1200.0
-        },
-        {
-          "counterfactual_min_clearance_full_horizon_m": 6577.618000847935,
-          "drift_rate_mps": 54.85033220252152,
-          "effective_horizon_orbits": 2.7352580760352447,
-          "effective_horizon_s": 17028.0,
-          "keepout_radius_m": 2000.0,
-          "log": "pair_0-4__hungarian.jsonl",
-          "log_sha256": "b03f378647168d5571d794fb7cac65ac3b6240e392c1cc364ea5bc329d450778",
-          "min_clearance_logged_overlap_m": 6577.618000847935,
-          "n_samples_past_log_end_labeled_counterfactual": 53,
-          "run_window_min_clearance_m": 6577.381083052924,
-          "sat_id": 4,
-          "t_death_s": 1500.0
-        },
-        {
-          "counterfactual_min_clearance_full_horizon_m": 5845.587201501972,
-          "drift_rate_mps": -1.1191048088221578e-12,
-          "effective_horizon_orbits": 2.7881030929601915,
-          "effective_horizon_s": 17028.0,
-          "keepout_radius_m": 2000.0,
-          "log": "pair_0-5__hungarian.jsonl",
-          "log_sha256": "e57f9dd00bca6f9ecd01580b462d7cb05fa712ddadf937084c4dc07d2bf660f9",
-          "min_clearance_logged_overlap_m": 5845.587201501972,
+          "log_sha256": "d61ed20d035aa7f38953b2b2c8135c22e81ff8f2c4ecbc4fb698be0322df0e1c",
+          "min_clearance_logged_overlap_m": 5845.587201501967,
           "n_samples_past_log_end_labeled_counterfactual": 43,
           "run_window_min_clearance_m": 5856.406565191166,
           "sat_id": 0,
           "t_death_s": 1200.0
         },
         {
-          "counterfactual_min_clearance_full_horizon_m": 10837.09020559639,
-          "drift_rate_mps": 47.91718972088197,
+          "counterfactual_min_clearance_full_horizon_m": 5789.966879144774,
+          "drift_rate_mps": 9.654499422140361e-13,
+          "effective_horizon_orbits": 2.7352580760352447,
+          "effective_horizon_s": 17028.0,
+          "keepout_radius_m": 2000.0,
+          "log": "pair_0-3__hungarian.jsonl",
+          "log_sha256": "d61ed20d035aa7f38953b2b2c8135c22e81ff8f2c4ecbc4fb698be0322df0e1c",
+          "min_clearance_logged_overlap_m": 5789.966879144774,
+          "n_samples_past_log_end_labeled_counterfactual": 53,
+          "run_window_min_clearance_m": 5799.512406708841,
+          "sat_id": 3,
+          "t_death_s": 1500.0
+        },
+        {
+          "counterfactual_min_clearance_full_horizon_m": 5845.587201501967,
+          "drift_rate_mps": -1.1191048088221578e-12,
+          "effective_horizon_orbits": 2.7881030929601915,
+          "effective_horizon_s": 17028.0,
+          "keepout_radius_m": 2000.0,
+          "log": "pair_0-4__hungarian.jsonl",
+          "log_sha256": "3cec8105d1567e4d1b551723304e436bff48dd9ec17a253e43e4a4d2b6c042ae",
+          "min_clearance_logged_overlap_m": 5845.587201501967,
+          "n_samples_past_log_end_labeled_counterfactual": 43,
+          "run_window_min_clearance_m": 5856.406565191166,
+          "sat_id": 0,
+          "t_death_s": 1200.0
+        },
+        {
+          "counterfactual_min_clearance_full_horizon_m": 5846.534315631202,
+          "drift_rate_mps": -1.5631940186722204e-13,
+          "effective_horizon_orbits": 2.7352580760352447,
+          "effective_horizon_s": 17028.0,
+          "keepout_radius_m": 2000.0,
+          "log": "pair_0-4__hungarian.jsonl",
+          "log_sha256": "3cec8105d1567e4d1b551723304e436bff48dd9ec17a253e43e4a4d2b6c042ae",
+          "min_clearance_logged_overlap_m": 5846.534315631202,
+          "n_samples_past_log_end_labeled_counterfactual": 53,
+          "run_window_min_clearance_m": 5856.406476807284,
+          "sat_id": 4,
+          "t_death_s": 1500.0
+        },
+        {
+          "counterfactual_min_clearance_full_horizon_m": 5720.11081694863,
+          "drift_rate_mps": -1.1191048088221578e-12,
+          "effective_horizon_orbits": 2.7881030929601915,
+          "effective_horizon_s": 17028.0,
+          "keepout_radius_m": 2000.0,
+          "log": "pair_0-5__hungarian.jsonl",
+          "log_sha256": "20f06b5d94e9ef4e90f11eb62da24107d65f66d635531275476a30ac9e683825",
+          "min_clearance_logged_overlap_m": 5720.11081694863,
+          "n_samples_past_log_end_labeled_counterfactual": 43,
+          "run_window_min_clearance_m": 5723.113748216919,
+          "sat_id": 0,
+          "t_death_s": 1200.0
+        },
+        {
+          "counterfactual_min_clearance_full_horizon_m": 5526.324936585168,
+          "drift_rate_mps": -1.0942358130705543e-12,
           "effective_horizon_orbits": 2.7352580760352447,
           "effective_horizon_s": 17028.0,
           "keepout_radius_m": 2000.0,
           "log": "pair_0-5__hungarian.jsonl",
-          "log_sha256": "e57f9dd00bca6f9ecd01580b462d7cb05fa712ddadf937084c4dc07d2bf660f9",
-          "min_clearance_logged_overlap_m": 10837.09020559639,
+          "log_sha256": "20f06b5d94e9ef4e90f11eb62da24107d65f66d635531275476a30ac9e683825",
+          "min_clearance_logged_overlap_m": 5526.324936585168,
           "n_samples_past_log_end_labeled_counterfactual": 53,
-          "run_window_min_clearance_m": 10827.06621198709,
+          "run_window_min_clearance_m": 5500.233802980272,
           "sat_id": 5,
           "t_death_s": 1500.0
         },
@@ -1313,30 +1313,30 @@
       "worst_per_sat_dv_mps": 8.248202501159925e-11
     },
     "even_split": {
-      "mean_coverage_retained": 0.26980048594736833,
-      "mean_gain_vs_do_nothing_pts": -2.1255206426224458,
-      "mean_min_sep_survivor_dead_m": 1674.0306111061507,
-      "mean_total_dv_mps": 287.8163728430108,
-      "worst_coverage_retained": 0.26980048594736833,
-      "worst_min_sep_survivor_dead_m": 3.3813973669528937e-09,
-      "worst_per_sat_dv_mps": 260.9869734190498
+      "mean_coverage_retained": 0.26982203799538096,
+      "mean_gain_vs_do_nothing_pts": -2.123365437821179,
+      "mean_min_sep_survivor_dead_m": 2311.0636009949544,
+      "mean_total_dv_mps": 1439.546513973721,
+      "worst_coverage_retained": 0.2695776348386657,
+      "worst_min_sep_survivor_dead_m": 722.7728200558319,
+      "worst_per_sat_dv_mps": 1308.3630268729714
     },
     "greedy": {
       "mean_coverage_retained": 0.2697991664342247,
       "mean_gain_vs_do_nothing_pts": -2.12565259393681,
-      "mean_min_sep_survivor_dead_m": 4166.82896874915,
-      "mean_total_dv_mps": 503.1583605912885,
+      "mean_min_sep_survivor_dead_m": 4403.4708931343985,
+      "mean_total_dv_mps": 490.4797675387426,
       "worst_coverage_retained": 0.26979718716450923,
       "worst_min_sep_survivor_dead_m": 1852.5321340900236,
-      "worst_per_sat_dv_mps": 226.3853902606607
+      "worst_per_sat_dv_mps": 283.6472687486429
     },
     "hungarian": {
-      "mean_coverage_retained": 0.2697985066776528,
-      "mean_gain_vs_do_nothing_pts": -2.1257185695939915,
-      "mean_min_sep_survivor_dead_m": 3687.2438281364384,
-      "mean_total_dv_mps": 481.6060830249519,
+      "mean_coverage_retained": 0.2697991664342247,
+      "mean_gain_vs_do_nothing_pts": -2.12565259393681,
+      "mean_min_sep_survivor_dead_m": 4154.908391010354,
+      "mean_total_dv_mps": 444.2972555417578,
       "worst_coverage_retained": 0.26979718716450923,
-      "worst_min_sep_survivor_dead_m": 1322.6031098669134,
+      "worst_min_sep_survivor_dead_m": 1852.5321340900236,
       "worst_per_sat_dv_mps": 251.2409923098402
     }
   },
@@ -1368,12 +1368,12 @@
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark --report data/eval/benchmark_results.json --policies do_nothing,even_split,greedy,hungarian",
-      "coverage_mean_last_orbit": 0.26980048594736833,
+      "coverage_mean_last_orbit": 0.2695776348386657,
       "duration_s": 17028.0,
-      "gain_vs_do_nothing_pts": -2.844100621673956,
+      "gain_vs_do_nothing_pts": -2.866385732544219,
       "log": "pair_0-1__even_split.jsonl",
-      "log_sha256": "8b50422564f68f33ed718a7c027a047847b3fc526d4f580012fc716a25296b58",
-      "min_sep_survivor_dead_m": 3.3813973669528937e-09,
+      "log_sha256": "af44c07ded3b1e15383d4a977c12310fda3b205dbc6ea65e1855ce11847e8581",
+      "min_sep_survivor_dead_m": 826.2074294142874,
       "n_ticks": 8515,
       "pair": [
         0,
@@ -1382,14 +1382,14 @@
       "per_sat_dv_mps": [
         1.351607170133408e-12,
         29.40000000000082,
-        260.9869734190498,
+        1308.3630268729714,
         71.00739371085727,
         92.91744949183176,
         4.74621225937996e-11
       ],
       "policy": "even_split",
       "prefailure_mean_coverage": 0.37957162677766215,
-      "total_dv_mps": 454.31181662178847
+      "total_dv_mps": 1501.6878700757102
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark --report data/eval/benchmark_results.json --policies do_nothing,even_split,greedy,hungarian",
@@ -1397,8 +1397,8 @@
       "duration_s": 17028.0,
       "gain_vs_do_nothing_pts": -2.8444304999598655,
       "log": "pair_0-1__greedy.jsonl",
-      "log_sha256": "70a1ab57b5433adfdaed0dc0c63be27c52e586b5b92e97ac4ad04722b7196411",
-      "min_sep_survivor_dead_m": 5376.931218402233,
+      "log_sha256": "cf26c07ad400ea8d787700cd59326e73743c950c2db95cf775353f6ebef08c34",
+      "min_sep_survivor_dead_m": 4913.311100820089,
       "n_ticks": 8515,
       "pair": [
         0,
@@ -1406,15 +1406,15 @@
       ],
       "per_sat_dv_mps": [
         1.351607170133408e-12,
-        16.73805619031792,
-        85.6423477046576,
-        213.05415780322198,
-        127.44893996746907,
-        91.75798726739784
+        1.0892385139051848e-12,
+        4.730516047032083e-11,
+        45.03666603943784,
+        104.33784961795224,
+        85.6423477046567
       ],
       "policy": "greedy",
       "prefailure_mean_coverage": 0.37957162677766215,
-      "total_dv_mps": 534.6414889330657
+      "total_dv_mps": 235.01686336209653
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark --report data/eval/benchmark_results.json --policies do_nothing,even_split,greedy,hungarian",
@@ -1422,8 +1422,8 @@
       "duration_s": 17028.0,
       "gain_vs_do_nothing_pts": -2.8444304999598655,
       "log": "pair_0-1__hungarian.jsonl",
-      "log_sha256": "e67ef7207ea7d112d4a051ac5e652ca57dc2d1f8160419768359caaf30f05262",
-      "min_sep_survivor_dead_m": 1322.6031098669134,
+      "log_sha256": "592e0d356874a0586e2dbf6ead87207eb9cb311fa1ac9766b2f31ececb445819",
+      "min_sep_survivor_dead_m": 4913.311100820089,
       "n_ticks": 8515,
       "pair": [
         0,
@@ -1431,15 +1431,15 @@
       ],
       "per_sat_dv_mps": [
         1.351607170133408e-12,
-        16.73805619031792,
-        172.75180675712673,
-        87.04429548354396,
-        125.08870139532307,
-        91.75798726739784
+        1.0892385139051848e-12,
+        4.730516047032083e-11,
+        45.03666603943784,
+        104.33784961795224,
+        85.6423477046567
       ],
       "policy": "hungarian",
       "prefailure_mean_coverage": 0.37957162677766215,
-      "total_dv_mps": 493.3808470937109
+      "total_dv_mps": 235.01686336209653
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark --report data/eval/benchmark_results.json --policies do_nothing,even_split,greedy,hungarian",
@@ -1468,12 +1468,12 @@
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark --report data/eval/benchmark_results.json --policies do_nothing,even_split,greedy,hungarian",
-      "coverage_mean_last_orbit": 0.26980048594736833,
+      "coverage_mean_last_orbit": 0.2699687238731816,
       "duration_s": 17028.0,
-      "gain_vs_do_nothing_pts": -6.655074499345553,
+      "gain_vs_do_nothing_pts": -6.638250706764226,
       "log": "pair_0-2__even_split.jsonl",
-      "log_sha256": "cbbef5362f71466577f8cbd26f513f5317a5055ee3ee58e3571078e26989a117",
-      "min_sep_survivor_dead_m": 3.3813973669528937e-09,
+      "log_sha256": "081ce5bb26ffcfa6381783a88141de2a6732f3c9af33f34d233a65cd6a96f60e",
+      "min_sep_survivor_dead_m": 818.6644784658566,
       "n_ticks": 8515,
       "pair": [
         0,
@@ -1481,7 +1481,7 @@
       ],
       "per_sat_dv_mps": [
         1.351607170133408e-12,
-        76.14444995233987,
+        1269.016784711536,
         29.400000000001235,
         71.00739371085727,
         92.91744949183176,
@@ -1489,7 +1489,7 @@
       ],
       "policy": "even_split",
       "prefailure_mean_coverage": 0.37957162677766215,
-      "total_dv_mps": 269.46929315507896
+      "total_dv_mps": 1462.341627914275
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark --report data/eval/benchmark_results.json --policies do_nothing,even_split,greedy,hungarian",
@@ -1497,8 +1497,8 @@
       "duration_s": 17028.0,
       "gain_vs_do_nothing_pts": -6.65441474277374,
       "log": "pair_0-2__greedy.jsonl",
-      "log_sha256": "52d432311988cb171c76f392c6b43ba000a98d198569b5915136ebf70619ac1f",
-      "min_sep_survivor_dead_m": 5333.1325145755945,
+      "log_sha256": "36a22e23bbfeec1c5b205c7bcd148ddec2cc0325dba808e852a18c294bd7fa40",
+      "min_sep_survivor_dead_m": 5676.164203515202,
       "n_ticks": 8515,
       "pair": [
         0,
@@ -1506,15 +1506,15 @@
       ],
       "per_sat_dv_mps": [
         1.351607170133408e-12,
-        43.77642195038997,
+        4.691373034326071e-11,
         1.5565358266533646e-12,
-        83.58998871052147,
-        106.48109482698341,
-        56.343592302997095
+        92.91744949179996,
+        140.61483539705836,
+        283.6472687486429
       ],
       "policy": "greedy",
       "prefailure_mean_coverage": 0.37957162677766215,
-      "total_dv_mps": 290.19109779089484
+      "total_dv_mps": 517.1795536375511
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark --report data/eval/benchmark_results.json --policies do_nothing,even_split,greedy,hungarian",
@@ -1522,8 +1522,8 @@
       "duration_s": 17028.0,
       "gain_vs_do_nothing_pts": -6.65441474277374,
       "log": "pair_0-2__hungarian.jsonl",
-      "log_sha256": "b60786ea97e32893301266e343ae2571df0774dfb563620d88e4e1ac5f3e4d21",
-      "min_sep_survivor_dead_m": 5333.1325145755945,
+      "log_sha256": "a0131510c3427c653e9ec4e57a144e978f79aefd32c67dde7d1101eaf677ef5d",
+      "min_sep_survivor_dead_m": 5723.113748216919,
       "n_ticks": 8515,
       "pair": [
         0,
@@ -1531,15 +1531,15 @@
       ],
       "per_sat_dv_mps": [
         1.351607170133408e-12,
-        43.77642195038997,
+        4.691373034326071e-11,
         1.5565358266533646e-12,
-        66.60682979344182,
-        81.89474962857273,
-        56.343592302997095
+        38.5134568226375,
+        140.61483539705836,
+        104.33784961795423
       ],
       "policy": "hungarian",
       "prefailure_mean_coverage": 0.37957162677766215,
-      "total_dv_mps": 248.6215936754045
+      "total_dv_mps": 283.4661418376999
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark --report data/eval/benchmark_results.json --policies do_nothing,even_split,greedy,hungarian",
@@ -1568,12 +1568,12 @@
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark --report data/eval/benchmark_results.json --policies do_nothing,even_split,greedy,hungarian",
-      "coverage_mean_last_orbit": 0.26980048594736833,
+      "coverage_mean_last_orbit": 0.2699687238731816,
       "duration_s": 17028.0,
-      "gain_vs_do_nothing_pts": -6.654964539916919,
+      "gain_vs_do_nothing_pts": -6.638140747335592,
       "log": "pair_0-3__even_split.jsonl",
-      "log_sha256": "0c6c3184ea03ed40645435a89185e64c3e965c30f9ae5d27b2d2eba63cde6585",
-      "min_sep_survivor_dead_m": 3.3813973669528937e-09,
+      "log_sha256": "24755bde39c0ae5f67e8ebbdf5f4936287889345c93188e93b0d046bd38ccec8",
+      "min_sep_survivor_dead_m": 818.6644784658566,
       "n_ticks": 8515,
       "pair": [
         0,
@@ -1581,7 +1581,7 @@
       ],
       "per_sat_dv_mps": [
         1.351607170133408e-12,
-        76.14444995233987,
+        1269.016784711536,
         109.86228174638822,
         29.40000000000128,
         92.91744949183176,
@@ -1589,7 +1589,7 @@
       ],
       "policy": "even_split",
       "prefailure_mean_coverage": 0.37957162677766215,
-      "total_dv_mps": 308.3241811906099
+      "total_dv_mps": 1501.196515949806
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark --report data/eval/benchmark_results.json --policies do_nothing,even_split,greedy,hungarian",
@@ -1597,8 +1597,8 @@
       "duration_s": 17028.0,
       "gain_vs_do_nothing_pts": -6.655294418202828,
       "log": "pair_0-3__greedy.jsonl",
-      "log_sha256": "f0dd52abfaddbb8496e50d489fb2dcec678b090f79282647a7d9d99bfbf20a45",
-      "min_sep_survivor_dead_m": 3671.855904838178,
+      "log_sha256": "09c8822f93a4e2dd16a357a6226e88f7fb97ff6d4a39db506a2aefe0b9a43f32",
+      "min_sep_survivor_dead_m": 5799.512406708842,
       "n_ticks": 8515,
       "pair": [
         0,
@@ -1606,15 +1606,15 @@
       ],
       "per_sat_dv_mps": [
         1.351607170133408e-12,
-        50.36454732988793,
-        85.6423477046576,
-        29.40000000000128,
-        127.44893996746907,
-        91.75798726739784
+        53.0714146874736,
+        4.730516047032083e-11,
+        1.5843024306223523e-12,
+        104.33784961795224,
+        172.7518067571267
       ],
       "policy": "greedy",
       "prefailure_mean_coverage": 0.37957162677766215,
-      "total_dv_mps": 384.61382226941504
+      "total_dv_mps": 330.1610710626028
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark --report data/eval/benchmark_results.json --policies do_nothing,even_split,greedy,hungarian",
@@ -1622,8 +1622,8 @@
       "duration_s": 17028.0,
       "gain_vs_do_nothing_pts": -6.655294418202828,
       "log": "pair_0-3__hungarian.jsonl",
-      "log_sha256": "11742e1f6df4529c9fd1201b9a5594664649f28952a03526e06f4b535abda4d3",
-      "min_sep_survivor_dead_m": 2888.535684388777,
+      "log_sha256": "d61ed20d035aa7f38953b2b2c8135c22e81ff8f2c4ecbc4fb698be0322df0e1c",
+      "min_sep_survivor_dead_m": 5799.512406708842,
       "n_ticks": 8515,
       "pair": [
         0,
@@ -1631,15 +1631,15 @@
       ],
       "per_sat_dv_mps": [
         1.351607170133408e-12,
-        50.36454732988793,
+        53.0714146874736,
         4.730516047032083e-11,
-        13.262575913715201,
-        125.08870139532307,
-        91.75798726739784
+        1.5843024306223523e-12,
+        104.33784961795224,
+        172.7518067571267
       ],
       "policy": "hungarian",
       "prefailure_mean_coverage": 0.37957162677766215,
-      "total_dv_mps": 280.4738119063727
+      "total_dv_mps": 330.1610710626028
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark --report data/eval/benchmark_results.json --policies do_nothing,even_split,greedy,hungarian",
@@ -1668,12 +1668,12 @@
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark --report data/eval/benchmark_results.json --policies do_nothing,even_split,greedy,hungarian",
-      "coverage_mean_last_orbit": 0.26980048594736833,
+      "coverage_mean_last_orbit": 0.2699687238731816,
       "duration_s": 17028.0,
-      "gain_vs_do_nothing_pts": -2.843404211959255,
+      "gain_vs_do_nothing_pts": -2.826580419377928,
       "log": "pair_0-4__even_split.jsonl",
-      "log_sha256": "2bf5b453a0fbea16a220a304562c75d3f89ebd1cb4ae2c1a6bf255e9408fad09",
-      "min_sep_survivor_dead_m": 3.3813973669528937e-09,
+      "log_sha256": "381c8fd35300962224353469db354cfc6b0c7625d0ce9178bbfb9262e2844277",
+      "min_sep_survivor_dead_m": 818.6644784658566,
       "n_ticks": 8515,
       "pair": [
         0,
@@ -1681,7 +1681,7 @@
       ],
       "per_sat_dv_mps": [
         1.351607170133408e-12,
-        76.14444995233987,
+        1269.016784711536,
         109.86228174638822,
         119.97750779938019,
         1.0988073299205856e-12,
@@ -1689,16 +1689,16 @@
       ],
       "policy": "even_split",
       "prefailure_mean_coverage": 0.37957162677766215,
-      "total_dv_mps": 305.9842394981582
+      "total_dv_mps": 1498.8565742573544
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark --report data/eval/benchmark_results.json --policies do_nothing,even_split,greedy,hungarian",
-      "coverage_mean_last_orbit": 0.26980708351308647,
+      "coverage_mean_last_orbit": 0.26979718716450923,
       "duration_s": 17028.0,
-      "gain_vs_do_nothing_pts": -2.8427444553874412,
+      "gain_vs_do_nothing_pts": -2.8437340902451647,
       "log": "pair_0-4__greedy.jsonl",
-      "log_sha256": "c457bb86fbab4ff0021dc88df826e157ea5c15d2ddaf56db694e9279a9be8644",
-      "min_sep_survivor_dead_m": 3957.6729220457833,
+      "log_sha256": "03eb30959d6c8e07da5d1061bb2299785c2040d44fc509dd511173e782cc20ac",
+      "min_sep_survivor_dead_m": 5856.406476807284,
       "n_ticks": 8515,
       "pair": [
         0,
@@ -1706,15 +1706,15 @@
       ],
       "per_sat_dv_mps": [
         1.351607170133408e-12,
-        43.77642195038997,
-        129.12553672285262,
-        129.27232135052841,
-        29.400000000000823,
-        56.343592302997095
+        53.0714146874736,
+        238.7387071836155,
+        45.03666603943784,
+        1.0988073299205856e-12,
+        238.73870718361457
       ],
       "policy": "greedy",
       "prefailure_mean_coverage": 0.37957162677766215,
-      "total_dv_mps": 387.9178723267703
+      "total_dv_mps": 575.585495094144
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark --report data/eval/benchmark_results.json --policies do_nothing,even_split,greedy,hungarian",
@@ -1722,8 +1722,8 @@
       "duration_s": 17028.0,
       "gain_vs_do_nothing_pts": -2.8437340902451647,
       "log": "pair_0-4__hungarian.jsonl",
-      "log_sha256": "b03f378647168d5571d794fb7cac65ac3b6240e392c1cc364ea5bc329d450778",
-      "min_sep_survivor_dead_m": 5376.931218402233,
+      "log_sha256": "3cec8105d1567e4d1b551723304e436bff48dd9ec17a253e43e4a4d2b6c042ae",
+      "min_sep_survivor_dead_m": 5856.406476807284,
       "n_ticks": 8515,
       "pair": [
         0,
@@ -1731,15 +1731,15 @@
       ],
       "per_sat_dv_mps": [
         1.351607170133408e-12,
-        50.36454732988793,
-        85.6423477046576,
-        87.04429548354396,
-        25.808176348716277,
-        91.75798726739784
+        53.0714146874736,
+        4.730516047032083e-11,
+        45.03666603943784,
+        1.0988073299205856e-12,
+        4.74621225937996e-11
       ],
       "policy": "hungarian",
       "prefailure_mean_coverage": 0.37957162677766215,
-      "total_dv_mps": 340.61735413420496
+      "total_dv_mps": 98.10808072700866
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark --report data/eval/benchmark_results.json --policies do_nothing,even_split,greedy,hungarian",
@@ -1768,12 +1768,12 @@
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark --report data/eval/benchmark_results.json --policies do_nothing,even_split,greedy,hungarian",
-      "coverage_mean_last_orbit": 0.26980048594736833,
+      "coverage_mean_last_orbit": 0.2699687238731816,
       "duration_s": 17028.0,
-      "gain_vs_do_nothing_pts": -10.140641774539915,
+      "gain_vs_do_nothing_pts": -10.123817981958588,
       "log": "pair_0-5__even_split.jsonl",
-      "log_sha256": "45bbea4d82d81d5854c1632c1476ef15a863c1d584019458cc1dc143e54c902a",
-      "min_sep_survivor_dead_m": 3.3813973669528937e-09,
+      "log_sha256": "c8c211331e9e0a4e16c78f5c8eb450028dae6b9ddb82fac8320effa2c398b6c9",
+      "min_sep_survivor_dead_m": 810.604382314112,
       "n_ticks": 8515,
       "pair": [
         0,
@@ -1781,24 +1781,24 @@
       ],
       "per_sat_dv_mps": [
         1.351607170133408e-12,
-        76.14444995233987,
+        1269.016784711536,
         109.86228174638822,
         119.97750779938019,
-        104.33784961795224,
+        1246.233173454369,
         1.5459194615994637e-12
       ],
       "policy": "even_split",
       "prefailure_mean_coverage": 0.37957162677766215,
-      "total_dv_mps": 410.3220891160634
+      "total_dv_mps": 2745.0897477116764
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark --report data/eval/benchmark_results.json --policies do_nothing,even_split,greedy,hungarian",
-      "coverage_mean_last_orbit": 0.26979718716450923,
+      "coverage_mean_last_orbit": 0.26980708351308647,
       "duration_s": 17028.0,
-      "gain_vs_do_nothing_pts": -10.140971652825826,
+      "gain_vs_do_nothing_pts": -10.139982017968102,
       "log": "pair_0-5__greedy.jsonl",
-      "log_sha256": "98c7f1a66054b31db92f4f2dfa011e4c0abacb87d03ca79f320233c3004cb3a3",
-      "min_sep_survivor_dead_m": 5856.406565191165,
+      "log_sha256": "903daa88b1dadfe9a557a1fff752f93973df35da46d8f528eb4bfbe32c5c3116",
+      "min_sep_survivor_dead_m": 5500.233802980272,
       "n_ticks": 8515,
       "pair": [
         0,
@@ -1806,24 +1806,24 @@
       ],
       "per_sat_dv_mps": [
         1.351607170133408e-12,
-        50.36454732988793,
-        85.6423477046576,
-        137.43020962393857,
-        226.3853902606607,
-        26.688097584669062
+        4.691373034326071e-11,
+        42.22070999046902,
+        92.91744949179996,
+        140.61483539705836,
+        1.5459194615994637e-12
       ],
       "policy": "greedy",
       "prefailure_mean_coverage": 0.37957162677766215,
-      "total_dv_mps": 526.5105925038152
+      "total_dv_mps": 275.7529948793771
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark --report data/eval/benchmark_results.json --policies do_nothing,even_split,greedy,hungarian",
-      "coverage_mean_last_orbit": 0.26979718716450923,
+      "coverage_mean_last_orbit": 0.26980708351308647,
       "duration_s": 17028.0,
-      "gain_vs_do_nothing_pts": -10.140971652825826,
+      "gain_vs_do_nothing_pts": -10.139982017968102,
       "log": "pair_0-5__hungarian.jsonl",
-      "log_sha256": "e57f9dd00bca6f9ecd01580b462d7cb05fa712ddadf937084c4dc07d2bf660f9",
-      "min_sep_survivor_dead_m": 5856.406565191165,
+      "log_sha256": "20f06b5d94e9ef4e90f11eb62da24107d65f66d635531275476a30ac9e683825",
+      "min_sep_survivor_dead_m": 5500.233802980272,
       "n_ticks": 8515,
       "pair": [
         0,
@@ -1831,15 +1831,15 @@
       ],
       "per_sat_dv_mps": [
         1.351607170133408e-12,
-        50.36454732988793,
-        4.730516047032083e-11,
-        216.902610997075,
-        125.08870139532307,
-        26.688097584669062
+        4.691373034326071e-11,
+        42.22070999046902,
+        92.91744949179996,
+        140.61483539705836,
+        1.5459194615994637e-12
       ],
       "policy": "hungarian",
       "prefailure_mean_coverage": 0.37957162677766215,
-      "total_dv_mps": 419.0439573070037
+      "total_dv_mps": 275.7529948793771
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark --report data/eval/benchmark_results.json --policies do_nothing,even_split,greedy,hungarian",
@@ -2172,8 +2172,8 @@
       "duration_s": 17028.0,
       "gain_vs_do_nothing_pts": -2.844100621673956,
       "log": "pair_1-5__even_split.jsonl",
-      "log_sha256": "820e0e251d867f208321760e1c5077ea68fbea58eb30d3ce1c562df3f91f3af5",
-      "min_sep_survivor_dead_m": 3.6400548185319046e-09,
+      "log_sha256": "77e004239669f2cf4c9295bf951bb68301f5719bd8eba978f0c321f8cab90186",
+      "min_sep_survivor_dead_m": 810.604382314112,
       "n_ticks": 8515,
       "pair": [
         1,
@@ -2184,12 +2184,12 @@
         8.839420505811725e-13,
         109.86228174638822,
         119.97750779938019,
-        104.33784961795224,
+        1246.233173454369,
         1.5459194615994637e-12
       ],
       "policy": "even_split",
       "prefailure_mean_coverage": 0.37957162677766215,
-      "total_dv_mps": 334.17763916380557
+      "total_dv_mps": 1476.0729630002224
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark --report data/eval/benchmark_results.json --policies do_nothing,even_split,greedy,hungarian",
@@ -2272,8 +2272,8 @@
       "duration_s": 17028.0,
       "gain_vs_do_nothing_pts": -0.0006597565718136078,
       "log": "pair_2-3__even_split.jsonl",
-      "log_sha256": "1e4bc9a8f9aaeb9b817b8f2ecfc1a2768c677998e1696530a33e3667d506586f",
-      "min_sep_survivor_dead_m": 3.693049573339038e-09,
+      "log_sha256": "5f3536def0618cead1aa28bd29f1504bea0ede6201705f1e100d38662940a0f7",
+      "min_sep_survivor_dead_m": 810.6043823141636,
       "n_ticks": 8515,
       "pair": [
         2,
@@ -2281,7 +2281,7 @@
       ],
       "per_sat_dv_mps": [
         8.248202501159925e-11,
-        104.33784961795222,
+        1246.2331734537152,
         1.3012924868676564e-12,
         29.40000000000128,
         92.91744949183176,
@@ -2289,7 +2289,7 @@
       ],
       "policy": "even_split",
       "prefailure_mean_coverage": 0.37957162677766215,
-      "total_dv_mps": 226.6552991099165
+      "total_dv_mps": 1368.5506229456794
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark --report data/eval/benchmark_results.json --policies do_nothing,even_split,greedy,hungarian",
@@ -2372,8 +2372,8 @@
       "duration_s": 17028.0,
       "gain_vs_do_nothing_pts": 0.7252923912840326,
       "log": "pair_2-4__even_split.jsonl",
-      "log_sha256": "506f4f3d3f0d49e0f32f0ec13641d31ea82dc2b24fd0dcceac37d140865d6ddd",
-      "min_sep_survivor_dead_m": 3.693049573339038e-09,
+      "log_sha256": "5b33b35bbcd645e193ac9f7cde5d83748426140940f0b7fd317d7b1f6ed71cc8",
+      "min_sep_survivor_dead_m": 810.6043823141636,
       "n_ticks": 8515,
       "pair": [
         2,
@@ -2381,7 +2381,7 @@
       ],
       "per_sat_dv_mps": [
         8.248202501159925e-11,
-        104.33784961795222,
+        1246.2331734537152,
         1.3012924868676564e-12,
         119.97750779938019,
         1.0988073299205856e-12,
@@ -2389,7 +2389,7 @@
       ],
       "policy": "even_split",
       "prefailure_mean_coverage": 0.37957162677766215,
-      "total_dv_mps": 224.31535741746475
+      "total_dv_mps": 1366.2106812532277
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark --report data/eval/benchmark_results.json --policies do_nothing,even_split,greedy,hungarian",
@@ -2472,8 +2472,8 @@
       "duration_s": 17028.0,
       "gain_vs_do_nothing_pts": -6.655074499345553,
       "log": "pair_2-5__even_split.jsonl",
-      "log_sha256": "705927be9d78b91c0cfc87f2fe2d2b4cbb8dd8cd5131ad1955f453a35b72aba2",
-      "min_sep_survivor_dead_m": 3.6400548185319046e-09,
+      "log_sha256": "054a5cec9eeef5d5fbc5443794135424a14d3194652455ad38876454dbb8ed2e",
+      "min_sep_survivor_dead_m": 810.604382314112,
       "n_ticks": 8515,
       "pair": [
         2,
@@ -2481,15 +2481,15 @@
       ],
       "per_sat_dv_mps": [
         8.248202501159925e-11,
-        104.33784961795222,
+        1246.2331734537152,
         1.3012924868676564e-12,
         119.97750779938019,
-        104.33784961795224,
+        1246.233173454369,
         1.5459194615994637e-12
       ],
       "policy": "even_split",
       "prefailure_mean_coverage": 0.37957162677766215,
-      "total_dv_mps": 328.65320703537
+      "total_dv_mps": 2612.4438547075497
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark --report data/eval/benchmark_results.json --policies do_nothing,even_split,greedy,hungarian",
@@ -2568,12 +2568,12 @@
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark --report data/eval/benchmark_results.json --policies do_nothing,even_split,greedy,hungarian",
-      "coverage_mean_last_orbit": 0.26980048594736833,
+      "coverage_mean_last_orbit": 0.2697370760101881,
       "duration_s": 17028.0,
-      "gain_vs_do_nothing_pts": 4.934979157190305,
+      "gain_vs_do_nothing_pts": 4.928638163472282,
       "log": "pair_3-4__even_split.jsonl",
-      "log_sha256": "ffae986dbbd41a7096a258375e1a4d0a3747e707804206a3cd35c3e8dc5ee140",
-      "min_sep_survivor_dead_m": 3.3815385442809905e-09,
+      "log_sha256": "6759daff8a709164564ab4d66a56a17ef23b8f0b384a6a452182d5e46f5bb801",
+      "min_sep_survivor_dead_m": 722.7728200558319,
       "n_ticks": 8515,
       "pair": [
         3,
@@ -2582,14 +2582,14 @@
       "per_sat_dv_mps": [
         8.248202501159925e-11,
         104.33784961795222,
-        63.79792024065537,
+        1246.0782969340275,
         1.3475785499582314e-12,
         1.0988073299205856e-12,
         4.74621225937996e-11
       ],
       "policy": "even_split",
       "prefailure_mean_coverage": 0.37957162677766215,
-      "total_dv_mps": 168.13576985874
+      "total_dv_mps": 1350.4161465521122
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark --report data/eval/benchmark_results.json --policies do_nothing,even_split,greedy,hungarian",
@@ -2668,12 +2668,12 @@
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark --report data/eval/benchmark_results.json --policies do_nothing,even_split,greedy,hungarian",
-      "coverage_mean_last_orbit": 0.26980048594736833,
+      "coverage_mean_last_orbit": 0.2697370760101881,
       "duration_s": 17028.0,
-      "gain_vs_do_nothing_pts": -6.654964539916919,
+      "gain_vs_do_nothing_pts": -6.661305533634943,
       "log": "pair_3-5__even_split.jsonl",
-      "log_sha256": "c819fda50c8453854ea605e572ddabfae1193e0913d2fd1e2219734232a8672f",
-      "min_sep_survivor_dead_m": 3.3815385442809905e-09,
+      "log_sha256": "73d6d2fbb615b4b6b42114700e9a10068bebc8c81fc2957f90a17011cb235d5d",
+      "min_sep_survivor_dead_m": 722.7728200558319,
       "n_ticks": 8515,
       "pair": [
         3,
@@ -2682,14 +2682,14 @@
       "per_sat_dv_mps": [
         8.248202501159925e-11,
         104.33784961795222,
-        63.79792024065537,
+        1246.0782969340275,
         1.3475785499582314e-12,
-        104.33784961795224,
+        1246.233173454369,
         1.5459194615994637e-12
       ],
       "policy": "even_split",
       "prefailure_mean_coverage": 0.37957162677766215,
-      "total_dv_mps": 272.4736194766452
+      "total_dv_mps": 2596.649320006434
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark --report data/eval/benchmark_results.json --policies do_nothing,even_split,greedy,hungarian",
@@ -2772,8 +2772,8 @@
       "duration_s": 17028.0,
       "gain_vs_do_nothing_pts": -2.843404211959255,
       "log": "pair_4-5__even_split.jsonl",
-      "log_sha256": "dfd379474b3a70f892bf388990409657099620fa550060bd43314198110b7fe8",
-      "min_sep_survivor_dead_m": 3.6400548185319046e-09,
+      "log_sha256": "fbe935564fa9c3d5b87b43dd9617963df06949b27fdcd86bdeca4e9ab74a5571",
+      "min_sep_survivor_dead_m": 774.7264318798515,
       "n_ticks": 8515,
       "pair": [
         4,
@@ -2783,13 +2783,13 @@
         8.248202501159925e-11,
         104.33784961795222,
         63.79792024065537,
-        190.942947155755,
+        1290.2016513859996,
         8.896296216928492e-13,
         1.5459194615994637e-12
       ],
       "policy": "even_split",
       "prefailure_mean_coverage": 0.37957162677766215,
-      "total_dv_mps": 359.07871701444753
+      "total_dv_mps": 1458.3374212446922
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark --report data/eval/benchmark_results.json --policies do_nothing,even_split,greedy,hungarian",

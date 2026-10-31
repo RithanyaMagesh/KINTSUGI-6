@@ -1,22 +1,44 @@
 import hashlib
 import json
+import math
 import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
-# Golden SHA-256 of the short-run JSONL (nominal.json with duration_s = 600.0,
-# seed 42), pinned per docs/MASTER_PROMPT.md section 3.8 ("nominal.json short run
-# compares against a committed golden hash"). Any change to the sim, the log
-# schema, or nominal.json itself changes this hash and must be acknowledged here.
-GOLDEN_NOMINAL_SHORT_SHA256_MAP = {
-    "win32": "c95f31b872b9134db57c43763d3bc67bb1e42c056beb7378c5177172758696f6",
-    "linux": "5eb0614ddfdf2df252033bc87e7421cb8eb84988e404b9c9f0b1a03978a3c5d6",  # Linux glibc pin
-}
-GOLDEN_NOMINAL_SHORT_SHA256 = GOLDEN_NOMINAL_SHORT_SHA256_MAP.get(
-    sys.platform, GOLDEN_NOMINAL_SHORT_SHA256_MAP["win32"]
+# Canonical golden SHA-256 of the short-run JSONL (nominal.json with duration_s = 600.0,
+# seed 42), pinned per docs/MASTER_PROMPT.md section 3.8.
+# Cross-platform canonicalization: all floats rounded to 9 significant digits before
+# json.dumps(sort_keys=True).
+GOLDEN_NOMINAL_SHORT_CANONICAL_SHA256 = (
+    "ce1a8075f2fd828ca036decd81a5aa3f99afee1a2dd135b8eee8bfa51e22ea52"
 )
+
+
+def _round_floats(obj, sig: int = 9):
+    if isinstance(obj, float):
+        if math.isnan(obj) or math.isinf(obj) or obj == 0.0:
+            return obj
+        return float(f"{obj:.{sig}g}")
+    if isinstance(obj, dict):
+        return {k: _round_floats(v, sig) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_round_floats(v, sig) for v in obj]
+    return obj
+
+
+def canonical_log_hash(raw_bytes: bytes, sig: int = 9) -> str:
+    lines = raw_bytes.decode("utf-8").splitlines()
+    normalized = []
+    for line in lines:
+        if not line.strip():
+            continue
+        obj = json.loads(line)
+        r_obj = _round_floats(obj, sig=sig)
+        normalized.append(json.dumps(r_obj, sort_keys=True))
+    payload = ("\n".join(normalized) + "\n").encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
 
 
 def _short_nominal_scenario(path: Path) -> Path:
@@ -79,9 +101,8 @@ def test_run_writes_valid_jsonl(tmp_path):
 
 
 def test_run_is_byte_deterministic(tmp_path):
-    """Two runs of a short nominal scenario produce byte-identical JSONL, matching the
-    committed golden SHA-256 (docs/MASTER_PROMPT.md sections 3.5 and 3.8: same scenario +
-    seed => byte-identical log; regression vs golden hash)."""
+    """Two runs of a short nominal scenario produce byte-identical JSONL on the same
+    machine (AGENTS.md invariant 2: same scenario + seed => byte-identical log)."""
     scenario = _short_nominal_scenario(tmp_path / "nominal_short.json")
     outs = []
     for name in ("run1.jsonl", "run2.jsonl"):
@@ -92,9 +113,19 @@ def test_run_is_byte_deterministic(tmp_path):
     first = outs[0].read_bytes()
     second = outs[1].read_bytes()
     assert first == second, "two runs of the same scenario + seed differ byte-wise"
-    digest = hashlib.sha256(first).hexdigest()
-    assert digest == GOLDEN_NOMINAL_SHORT_SHA256, (
-        f"golden hash mismatch: got {digest}"
+
+
+def test_run_matches_canonical_golden_hash(tmp_path):
+    """The short nominal scenario log matches the platform-independent canonical golden
+    hash (floats rounded to 9 significant digits before json.dumps(sort_keys=True))."""
+    scenario = _short_nominal_scenario(tmp_path / "nominal_short.json")
+    out = tmp_path / "run.jsonl"
+    result = _run_cli(scenario, out)
+    assert result.returncode == 0, result.stderr
+    raw_bytes = out.read_bytes()
+    digest = canonical_log_hash(raw_bytes, sig=9)
+    assert digest == GOLDEN_NOMINAL_SHORT_CANONICAL_SHA256, (
+        f"canonical golden hash mismatch: got {digest}"
     )
 
 

@@ -266,7 +266,7 @@ def replan(
     )
     if current_slots is not None:
         cov_curr = _coverage_estimate(
-            current_slots, survivor_roles, r_f=r_f, grid=grid, n=n, t_replan=t_replan
+            current_slots, seats, r_f=r_f, grid=grid, n=n, t_replan=t_replan
         )
         if plan.coverage < cov_curr:
             k = len(survivor_roles)

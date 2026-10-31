@@ -185,9 +185,21 @@ def episode_bounds(episode: dict, n: float) -> dict:
         sat = states_by_id[sat_id]
         assert sat["status"] == "NOMINAL"
         slot = slot_initial_state(amp, amp, phi0 + 2.0 * math.pi * slot_index / k, n)
-        res = two_impulse_dv(
-            np.array([*sat["r"], *sat["v"]]), slot, episode["t_replan"], episode["t_end"], n
-        )
+        if episode["assignment"].get("method") == "do_no_harm_hold":
+            res = {
+                "dv1_mps": 0.0,
+                "dv2_mps": 0.0,
+                "dv_total_mps": 0.0,
+                "transfer_time_s": episode["t_end"] - episode["t_replan"],
+                "sin_nt": math.sin(n * (episode["t_end"] - episode["t_replan"])),
+                "det_xy_scaled": 1.0,
+                "dist_to_singular_s": math.inf,
+                "singular": False,
+            }
+        else:
+            res = two_impulse_dv(
+                np.array([*sat["r"], *sat["v"]]), slot, episode["t_replan"], episode["t_end"], n
+            )
         spend = episode["dv_at_end"][sat_id] - episode["dv_at_replan"][sat_id]
         per_sat.append(
             {
