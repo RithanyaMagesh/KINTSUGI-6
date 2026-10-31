@@ -9,6 +9,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from cubesat.roles_v2 import ROLE_SPECS
+
 # Resource bounds (audit: scenarios are uploaded through the API by an
 # unauthenticated console user, so every derived allocation must be bounded --
 # target_grid materializes (2*extent/step+1)^2 points per tick, the sweeps
@@ -308,6 +310,13 @@ class Scenario(BaseModel):
     safety: Safety = Field(default_factory=Safety)
     truth: Truth = Field(default_factory=Truth)
     spacecraft: Spacecraft = Field(default_factory=Spacecraft)
+    role_priority: list[str] = Field(
+        default_factory=lambda: ["downlink", "imager", "leader"],
+        min_length=1,
+        description="Engine v2 only: order in which capability roles are filled each tick "
+        "(cubesat/roles_v2.py). Known names: leader, downlink, imager, relay (spare is the "
+        "leftover). Unique. v1 never reads it.",
+    )
     engine: Literal["v1", "v2"] = Field(
         default="v1",
         description="'v1' = frozen linear-CW engine (every committed log); "
@@ -337,6 +346,16 @@ class Scenario(BaseModel):
                         f'failure mode {f.mode.value} (sat {f.sat_id}) requires engine "v2"; '
                         f'this scenario uses engine "{self.engine}"'
                     )
+        return self
+
+    @model_validator(mode="after")
+    def _role_priority_known_and_unique(self) -> Scenario:
+        known = [r for r in self.role_priority if r in ROLE_SPECS and r != "spare"]
+        if known != self.role_priority or len(set(known)) != len(known):
+            raise ValueError(
+                f"role_priority={self.role_priority} must be unique names from "
+                f"{[r for r in ROLE_SPECS if r != 'spare']}"
+            )
         return self
 
     @model_validator(mode="after")
