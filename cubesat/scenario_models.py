@@ -263,3 +263,35 @@ class Safety(BaseModel):
     evade_ticks: int = Field(
         default=25, ge=1, description="Ticks per evasion episode (bounded burn length)"
     )
+
+
+class LaserTerminal(BaseModel):
+    """One optical crosslink terminal (engine v2, comms.model "laser"). Fields mirror
+    cubesat/isl.py Terminal 1:1. CLICK-class (MIT/NASA CLICK-B/C) power, wavelength and rate cap;
+    apertures, eta, photons/bit, pointing error, acquisition time, sun cone and terminal count
+    are ASSUMPTIONS of this simulator, not hardware figures."""
+
+    wavelength_m: float = Field(default=1.55e-6, gt=0, le=1e-3)
+    p_tx_w: float = Field(default=0.2, gt=0, le=1e3)
+    d_tx_m: float = Field(default=0.02, gt=0, le=10, description="assumption")
+    d_rx_m: float = Field(default=0.02, gt=0, le=10, description="assumption")
+    eta: float = Field(default=0.3, gt=0, le=1, description="optics x detector, assumption")
+    photons_per_bit: float = Field(default=300.0, gt=0, le=1e9, description="assumption")
+    max_rate_bps: float = Field(default=20e6, gt=0, le=1e12, description="modem cap")
+    pointing_error_rad: float = Field(default=5e-6, ge=0, le=1, description="assumption")
+    acquire_s: float = Field(default=30.0, ge=0, le=MAX_DURATION_S, description="assumption")
+    sun_exclusion_rad: float = Field(default=0.05235987755982989, ge=0, le=1.5707963267948966,
+                                     description="3 deg receive sun cone, assumption")
+    terminals_per_sat: int = Field(default=2, ge=1, le=MAX_SATS, description="assumption")
+
+
+class Comms(BaseModel):
+    """Inter-satellite comms (track C). "ideal" = instant, lossless (every committed log);
+    "laser" = point-to-point optical links (cubesat/comms_v2.py, engine v2 only): heartbeats
+    travel only over LOCKED links. topology "mesh" = shortest-range greedy under the terminal
+    cap; "star" = every sat links to the current leader (the hub carries n-1 terminals:
+    assumption, the centralised layout)."""
+
+    model: Literal["ideal", "laser"] = "ideal"
+    topology: Literal["mesh", "star"] = "mesh"
+    terminal: LaserTerminal = Field(default_factory=LaserTerminal)

@@ -22,7 +22,7 @@ from collections.abc import Iterator
 
 import numpy as np
 
-from cubesat import geo_v2, truth
+from cubesat import comms_v2, geo_v2, truth
 from cubesat.coverage import coverage_fraction, footprint_radius, target_grid
 from cubesat.faults_v2 import STATUS_REENTERED, Faults
 from cubesat.hcw import mean_motion, stm
@@ -82,6 +82,8 @@ class EngineV2:
         self.cov: list[tuple[float, float]] = []
         self.roles = [[r] for r in scenario.roles]  # holders now = incumbents (Phase 5a)
         self.believed = [["NOMINAL", True, True] for _ in scenario.roles]
+        laser = scenario.comms is not None and scenario.comms.model == "laser"
+        self.comms = comms_v2.CommsState(scenario) if laser else None  # track C2
         for f in injections:
             self.inject(f)
 
@@ -119,7 +121,9 @@ class EngineV2:
         t = self.k * self.dt
         c = self.X[0]
         lvlh = truth.eci_to_lvlh(self.X[1:, :3], self.X[1:, 3:], c[:3], c[3:])
-        events = self._reentries(t, lvlh) + self.faults.tick(t, self.X[1:, 3:])
+        events = self._reentries(t, lvlh)  # before faults: detection reads the new status
+        ev, links = comms_v2.fault_tick(self, t, lvlh)  # = faults.tick() without laser comms
+        events += ev
         events += self._update_roles()
         draw_tick(self.rng, self.n_sats)  # Phases 3-4 use these rows; ignored for now
         status = self.faults.status
@@ -153,6 +157,7 @@ class EngineV2:
             "coverage": cov,
             "min_sep": self._min_sep(lvlh[:, :3]),
             **geo_v2.tick_fields(c[:3], self.scenario.chief.epoch_utc, t),  # Earth view (v2 only)
+            **links,  # laser comms only: links, components
         }
         if events:
             line["event"], line["events"] = events[0], events
@@ -180,7 +185,8 @@ class EngineV2:
 
     # -- snapshot: JSON data (not code), guarded by a scenario fingerprint -----------------------
     def _fingerprint(self) -> dict:
-        digest = hashlib.sha256(self.scenario.model_dump_json().encode()).hexdigest()
+        dump = self.scenario.model_dump_json(exclude_none=True)  # no `comms` key = old print
+        digest = hashlib.sha256(dump.encode()).hexdigest()
         return {"scenario_sha256": digest, "n_sats": self.n_sats, "schema": LOG_SCHEMA_VERSION}
 
     def snapshot(self) -> bytes:
@@ -196,6 +202,7 @@ class EngineV2:
             "believed": self.believed,
             "faults": self.faults.state(),
             "rng": self.rng.bit_generator.state,
+            **({"comms": self.comms.state()} if self.comms else {}),
         }
         doc = {"fingerprint": self._fingerprint(), "state": state}
         return json.dumps(doc, sort_keys=True).encode()
@@ -218,12 +225,14 @@ class EngineV2:
                 raise ValueError(f"roles/believed lists must hold {self.n_sats} entries")
             rng = make_rng(self.scenario)
             rng.bit_generator.state = state["rng"]
+            if comms := self.comms and comms_v2.CommsState(self.scenario):
+                comms.load(state["comms"], self.n_sats)
             self.faults.load(state["faults"])  # atomic itself; raises ValueError first
         except (KeyError, TypeError, ValueError) as exc:
             raise ValueError(f"bad EngineV2 snapshot: {exc!r}") from exc
         self.k, self.X, self.refs, self.dv, self.hold, self.cov = k, X, refs, dv, hold, cov
         self.roles, self.believed = roles, believed
-        self.rng = rng
+        self.rng, self.comms = rng, comms
 
     # -- internals ---------------------------------------------------------------------------------
     def _reentries(self, t: float, lvlh: np.ndarray) -> list[dict]:
