@@ -299,10 +299,10 @@ class CountingEvent(threading.Event):
 
 
 def _crowded_keepout(m=3000):
-    free = _free()
+    """A smooth obstacle shadowing the free plan 100 m off in x for 3000 samples: many violated
+    grid times, but a well-defined normal (not head-on)."""
     ts = np.linspace(0.3 * T_S, 0.7 * T_S, m)
-    pos = np.array([propagate_plan(SLOT0, free, N_MM, t)[:3] for t in ts[::50]])
-    pos = np.repeat(pos, 50, axis=0)[:m] + 10.0
+    pos = tf._plan_positions(SLOT0, _free(), N_MM, ts) + np.array([100.0, 0.0, 0.0])
     return [(ts, pos, 300.0)]
 
 
@@ -453,3 +453,24 @@ def test_keepout_assembly_loop_checks_cancel_between_chunks(monkeypatch):
     ev2 = CountingEvent(limit=2)
     with pytest.raises(TransferCancelled):
         plan(keepout=ko, cancel_event=ev2, N=24)
+
+
+def test_degenerate_candidate_set_is_the_six_axes_plus_two_perpendiculars():
+    ts = np.linspace(0.0, T_S, 41)
+    free = _free()
+    pos = np.array(
+        [propagate_plan(SLOT0, free, N_MM, t)[:3] + [0.0, 0.0, 3.0 * (t - 2000.0)] for t in ts]
+    )
+    ko = tf.KeepoutGrid([(ts, pos, 300.0)], SLOT0, N_MM, T_S, free.times)
+    p = tf.plan_positions(SLOT0, free.times, free.dv, N_MM, ko.grid)
+    dist, bad = ko.verify(p)
+    cands = ko.degenerate(p, dist, bad)[0]
+    assert len(cands) == 8
+    for axis in np.vstack([np.eye(3), -np.eye(3)]):
+        assert any(np.allclose(c, axis) for c in cands[:6])
+    rel = p - ko.obs[0]
+    g = int(np.nanargmin(np.where(bad[0], dist[0], np.nan)))
+    v = np.gradient(rel, ko.grid, axis=0)[g]
+    for u in cands[6:]:
+        assert np.linalg.norm(u) == pytest.approx(1.0) and abs(u @ v) < 1e-9 * np.linalg.norm(v)
+    assert np.allclose(cands[6], -cands[7])
