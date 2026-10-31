@@ -96,3 +96,17 @@ def test_certify_does_not_mutate_its_inputs():
     assert np.array_equal(state.refs, before.refs)
     assert state.status == before.status and state.roles == before.roles
     assert [s.to_dict() for s in state.sats] == [s.to_dict() for s in before.sats]
+
+
+def test_hold_plan_matches_the_engine_short_run():
+    """Not slow: 0.3 orbit of a healthy hold equals the engine run (min separation to 1 m, final
+    ECI state to 1e-6 m), so the fast loop notices if the stepper copy drifts from the engine."""
+    sc, ticks = CASES["healthy"]
+    state = swarm_state_from_engine(engine_at(sc, ticks))
+    cert = certify(Plan((), "hold", state.t_s), state, sc, d_safe_m=500.0, horizon_orbits=0.3)
+    steps = round(cert.horizon_s / sc.dt_s)
+    engine_sep, _ = _run_engine(engine_at(sc, ticks), steps)
+    assert abs(cert.min_sep_m - engine_sep) < 1.0
+    _, eng = _run_engine(engine_at(sc, ticks), steps - 1)  # engine.X after `steps` ticks
+    res = simulate(sc, state, state.refs, {}, steps)
+    assert np.abs(res.final_eci - eng.X).max() < 1e-6
