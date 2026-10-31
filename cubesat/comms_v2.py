@@ -171,7 +171,9 @@ def fault_tick(eng, t: float, lvlh: np.ndarray) -> tuple[list[dict], dict]:
     events += link_events + faults.detect(t, isolated)
     if eng.functions is not None:
         locked = [e for e, link in sorted(eng.comms.links.items()) if link[0] == isl.LOCKED]
-        fn_events, fn_fields = eng.functions.tick(eng.k, locked, eng.comms.up, faults.sats)
+        fn_events, fn_fields = eng.functions.tick(
+            eng.k, locked, eng.comms.up, faults.sats, t, lvlh[:, 1]
+        )
         events += fn_events
         fields.update(fn_fields)
     return events, fields

@@ -460,3 +460,27 @@ Leader and downlink each held by one capable sat in **15/15** pairs (a consisten
 | M47 seats not capped by `min(want, eligible)` | SURVIVED: equivalent (ineligible rows cost 1e6 and are dropped, so the cap changes nothing); the `min` stays as documentation of the rule |
 
 **Honest limits.** M40's `VACANT` reason cannot occur in the engine (a role is only ever vacated by a death, never refilled from vacancy, and roles the scenario does not label are not assigned); it is tested on `handoff_events` directly. The believed-state rule models the heartbeat declaration only, not a detector (Phase 4).
+
+## Track C: laser crosslinks and decentralised leader functions (2026-11-01; `cubesat/isl.py`, `comms_v2.py`, `decentral.py`)
+Opt-in, engine v2 only: `comms: {model: "laser", topology: "mesh" | "star"}` and `recovery: {authority: "decentral"}` (needs laser). Without these keys every log is byte-identical to before (GATES.md C2, C4).
+- **Link model** (`isl.py`): diffraction-limited aperture gain, free-space loss, Gaussian pointing loss, photon-limited rate capped at 20 Mbps (CLICK-class). Per link, the state machine goes DOWN → ACQUIRING → LOCKED (30 s), and any state drops to DOWN the tick the link becomes unusable: partner dark, the budget does not close, or the sun is inside either receive cone (3°, sun from `geo_v2`, rotated to LVLH).
+- **Topology:**
+  - mesh = shortest-range greedy under 2 terminals per sat;
+  - star = every sat to the leader holder, or to the lowest talking sat when there is none or under decentral.
+  - The topology is replanned only on a topology event: the set of talking sats changes, a LOCKED link is lost, or the hub moves.
+- **Heartbeats** travel only over LOCKED links. A talking sat alone in its component is declared after K missed ticks with `cause: "isolated"`, and un-declared when it is heard again.
+- **Consensus auction** (`decentral.auction`, CBBA family): the six leader functions are auctioned in a fixed order with synchronous max-consensus over the LOCKED link graph, and each component elects its own holder (split-brain is real, not a bug).
+  - Bids: degree, tank fraction (0 if the sat cannot thrust), and the wait to the next ground pass from `ground.py`. A sat y m ahead along track sees the pass y / v_orbit earlier, which is at most ~3 s across a km formation, so the ground wait only decides ground_relay ties.
+- **One consensus hop per tick (assumption):** each max-consensus round costs one engine tick (dt = 2 s), so an auction lands `consensus_rounds × dt` after it starts. Real laser hops take milliseconds, so every decentral vacancy figure in seconds scales with this assumption. `consensus_rounds` is logged as a count so that it can be re-priced. Auctions run one at a time; an input change during convergence re-runs the auction when the current one lands.
+- **Other assumptions:**
+  - 2 cm apertures, η 0.3, 300 photons/bit, 5 µrad pointing, 30 s acquisition, 3° sun cone, 2 terminals per sat;
+  - the run starts in steady state (first topology LOCKED, first auction in effect at t = 0);
+  - a dark terminal is visible to the planner;
+  - the star hub carries n−1 terminals;
+  - heartbeats cross a component within one tick;
+  - self-reports reach ground over the unmodelled RF link;
+  - bids use true state.
+- **Measured** (commands and every number in GATES.md C2, C4 and the C4 scenario entry):
+  - the sun splits the default 2-terminal ring twice per orbit (320 s per orbit);
+  - a ring leader kill leaves a function vacant for 36–38 s (18–19 rounds), against the 4 s heartbeat latency of the central role;
+  - a star hub kill leaves every function split-brain for 46 s.

@@ -24,6 +24,8 @@ import math
 
 import numpy as np
 
+from cubesat import ground
+from cubesat.hcw import mean_motion
 from cubesat.isl import components
 
 LEADER_FUNCTIONS = (
@@ -125,23 +127,29 @@ class FunctionState:
     holders keep their functions; a holder that stopped talking performs nothing, so its
     functions are VACANT. The first auction (t = 0) takes effect at once (steady-state start:
     assumption). Bids (default_bids): degree over LOCKED links, fuel fraction of the tank at
-    the auction start (0 for a sat that cannot thrust), ground wait 0 for every sat
-    (assumption: sats km apart under a ~1000 km pass footprint share one wait, which leaves
-    the argmax unchanged). The inputs are TRUE state (talking sats, thrust), not believed
+    the auction start (0 for a sat that cannot thrust), and the wait to the next ground pass
+    (cubesat/ground.py, its own model orbit at the scenario RAAN; a sat y metres ahead along
+    track sees the pass y / v_orbit seconds earlier: at most ~3 s apart in a km formation, so
+    ground_relay goes to the sat nearest the next pass and otherwise only breaks ties;
+    assumption). The inputs are TRUE state (talking sats, thrust), not believed
     state: a sat learns its neighbour's thruster loss with no detection delay (assumption).
     Holder lists are sorted, so FUNCTION_HANDOFF `from` / `to` compare as sets."""
 
     def __init__(self, scenario) -> None:
         self.m_prop0 = scenario.spacecraft.m_prop_kg
+        alt = scenario.chief.altitude_km * 1000.0
+        self.v_orbit = (ground.EARTH_RADIUS_M + alt) * mean_motion(alt)
+        self.raan0 = math.radians(scenario.chief.raan_deg)
         self.holders: dict[str, list[int]] = {}
         self.pending: dict | None = None  # {"k_done", "holders", "rounds"}
         self.rounds = 0  # consensus rounds of the auction now in effect
         self.key: list | None = None  # [locked links, up, can thrust] last seen
         self.dirty = False  # inputs changed since the running auction started
 
-    def tick(self, k: int, locked, up: list[bool], sats):
+    def tick(self, k: int, locked, up: list[bool], sats, t: float = 0.0, along_m=None):
         """-> (FUNCTION_HANDOFF events, {"functions": per sat, consensus_rounds, split_brain,
-        functions_vacant}). locked: LOCKED links (i, j); up: talking sats; sats: SatState."""
+        functions_vacant}). locked: LOCKED links (i, j); up: talking sats; sats: SatState;
+        t: sim time, s; along_m: each sat's LVLH along-track offset y, m (None = all 0)."""
         n = len(up)
         key = [[list(e) for e in sorted(locked)], list(up), [s.k > 0 for s in sats]]
         first = self.key is None
@@ -153,7 +161,9 @@ class FunctionState:
                 deg = [sum(i in e for e in locked) for i in range(n)]
                 fuel = [s.m_prop_kg / self.m_prop0 if self.m_prop0 > 0 and s.k > 0 else 0.0
                         for s in sats]
-                res = auction(default_bids(deg, fuel, [0.0] * n, up), set(locked), up)
+                ys = [0.0] * n if along_m is None else [float(y) for y in along_m]
+                wait = [ground.wait_to_next_pass(t + y / self.v_orbit, self.raan0) for y in ys]
+                res = auction(default_bids(deg, fuel, wait, up), set(locked), up)
                 k_done = k if first else k + res["rounds"]
                 self.pending = {"k_done": k_done, "holders": res["holders"],
                                 "rounds": res["rounds"]}
