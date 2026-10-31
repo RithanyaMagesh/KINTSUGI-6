@@ -1,0 +1,12 @@
+{
+  "command": "uv run python -m cubesat.transfer_report --landing-fuzz data/eval/lp_landing_fuzz.json",
+  "seed": 20261031,
+  "cases": 300,
+  "feasible": 259,
+  "none": 41,
+  "worst_abs_position_residual_m": 1.6669582691974938e-07,
+  "worst_abs_velocity_residual_mps": 3.501732237509714e-11,
+  "worst_rel_residual": 1.304667133969677e-11,
+  "norm_x_target_at_worst_rel": 12825.000045833336,
+  "post_check_tolerance": "1e-6 * max(1, |x_target|) on the 6-vector 2-norm"
+}
