@@ -12,12 +12,12 @@ def test_role_spec_table():
     assert ROLE_SPECS["downlink"]["critical"] and not ROLE_SPECS["downlink"]["stackable"]
     imager = ROLE_SPECS["imager"]
     assert imager["critical"] is False and imager["needs"] == ("payload",)
-    assert set(ROLE_SPECS) == {"leader", "downlink", "imager", "relay", "spare"}
+    assert set(ROLE_SPECS) == {"leader", "downlink", "imager", "spare"}  # no relay
 
 
 @pytest.mark.parametrize("status", ["NOMINAL", "DEGRADED", "FUEL_DEPLETED", "THRUSTER_OUT"])
 def test_thrust_independent_roles_survive_lost_thrust(status):
-    for role in ("imager", "downlink", "leader", "relay", "spare"):
+    for role in ("imager", "downlink", "leader", "spare"):
         assert capability(status, True, True, role)
 
 
@@ -32,13 +32,13 @@ def test_imager_needs_payload_flag_even_when_status_is_nominal():
 
 
 def test_radio_silent_holds_nothing_that_needs_radio_but_is_still_a_spare():
-    for role in ("downlink", "leader", "relay", "imager"):
+    for role in ("downlink", "leader", "imager"):
         assert not capability("RADIO_SILENT", True, False, role)
     assert capability("RADIO_SILENT", True, False, "spare")
 
 
 def test_radio_flag_gates_radio_roles_whatever_the_status():
-    for role in ("downlink", "leader", "relay"):
+    for role in ("downlink", "leader"):
         assert not capability("NOMINAL", True, False, role)
 
 

@@ -9,8 +9,6 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from cubesat.roles_v2 import ROLE_SPECS
-
 # Resource bounds (audit: scenarios are uploaded through the API by an
 # unauthenticated console user, so every derived allocation must be bounded --
 # target_grid materializes (2*extent/step+1)^2 points per tick, the sweeps
@@ -24,6 +22,7 @@ MAX_SWEEP_ENTRIES = 64
 MAX_SATS = 32
 MAX_FAILURES = 64
 MAX_DURATION_S = 86_400.0
+ROLE_PRIORITY = ("downlink", "imager", "leader")  # = roles_v2.DEFAULT_PRIORITY (test-pinned)
 MAX_TICKS = 100_000
 
 
@@ -311,11 +310,10 @@ class Scenario(BaseModel):
     truth: Truth = Field(default_factory=Truth)
     spacecraft: Spacecraft = Field(default_factory=Spacecraft)
     role_priority: list[str] = Field(
-        default_factory=lambda: ["downlink", "imager", "leader"],
-        min_length=1,
+        default_factory=lambda: list(ROLE_PRIORITY),
         description="Engine v2 only: order in which capability roles are filled each tick "
-        "(cubesat/roles_v2.py). Known names: leader, downlink, imager, relay (spare is the "
-        "leftover). Unique. v1 never reads it.",
+        "(cubesat/roles_v2.py). Must be a permutation of downlink, imager, leader (spare is "
+        "only an output label). v1 never reads it.",
     )
     engine: Literal["v1", "v2"] = Field(
         default="v1",
@@ -349,12 +347,11 @@ class Scenario(BaseModel):
         return self
 
     @model_validator(mode="after")
-    def _role_priority_known_and_unique(self) -> Scenario:
-        known = [r for r in self.role_priority if r in ROLE_SPECS and r != "spare"]
-        if known != self.role_priority or len(set(known)) != len(known):
+    def _role_priority_is_a_permutation(self) -> Scenario:
+        if sorted(self.role_priority) != sorted(ROLE_PRIORITY):
             raise ValueError(
-                f"role_priority={self.role_priority} must be unique names from "
-                f"{[r for r in ROLE_SPECS if r != 'spare']}"
+                f"role_priority={self.role_priority} must be a permutation of "
+                f"{', '.join(sorted(ROLE_PRIORITY))}"
             )
         return self
 

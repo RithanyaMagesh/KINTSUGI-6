@@ -18,7 +18,6 @@ ROLE_SPECS: dict[str, dict] = {
     "leader": {"critical": True, "stackable": True, "needs": ("radio",)},  # software role
     "downlink": {"critical": True, "stackable": False, "needs": ("radio",)},  # + power (unmodelled)
     "imager": {"critical": False, "stackable": False, "needs": ("payload",)},  # counts to SLA
-    "relay": {"critical": False, "stackable": True, "needs": ("radio",)},
     "spare": {"critical": False, "stackable": True, "needs": ()},
 }
 # A sat in one of these statuses is flying AND reporting. THRUSTER_OUT and FUEL_DEPLETED sats
@@ -67,10 +66,11 @@ def assign_roles(sats: list[dict], priority: Sequence[str] = DEFAULT_PRIORITY) -
     1e-9 row-major index epsilon (ties go to the lowest id). A seat that lands on an incapable
     sat stays VACANT: see vacant_roles. A capable sat left with nothing holds ["spare"]; an
     incapable or dead one []."""
-    priority = tuple(dict.fromkeys(r for r in priority if r != "spare"))
+    priority = tuple(dict.fromkeys(priority))
     for role in priority:
-        capability("NOMINAL", True, True, role)  # raises ValueError for an unknown role
-    n = len(sats)
+        if role not in ROLE_SPECS or role == "spare":
+            raise ValueError(f"unknown role {role!r} in priority; known: {list(DEFAULT_PRIORITY)}")
+        n = len(sats)
     held: list[list[str]] = [[] for _ in range(n)]
     for role in priority if n else ():
         ok = [capability(s["status"], s["payload_ok"], s["radio_ok"], role) for s in sats]
@@ -95,8 +95,19 @@ def assign_roles(sats: list[dict], priority: Sequence[str] = DEFAULT_PRIORITY) -
     return held
 
 
-def vacant_roles(
-    assignment: list[list[str]], priority: Sequence[str] = DEFAULT_PRIORITY
-) -> list[str]:
-    """Roles of `priority` that no sat holds (reported, never given to an incapable sat)."""
-    return [r for r in priority if r != "spare" and not any(r in roles for roles in assignment)]
+def handoff_events(
+    old_roles: list[list[str]], new_roles: list[list[str]], statuses: list[str],
+    priority: Sequence[str] = DEFAULT_PRIORITY,
+) -> list[dict]:
+    """ROLE_HANDOFF payloads {role, from_sat, to_sat, reason}, one per critical role whose
+    holder (lowest sat id holding it) changed between `old_roles` and `new_roles`, in priority
+    order. to_sat None = vacant now, from_sat None = was vacant (reason "VACANT"); otherwise
+    reason = the old holder's status. Non-critical roles (imager) never hand off."""
+    out = []
+    for role in (r for r in priority if ROLE_SPECS[r]["critical"]):
+        old_i = next((i for i, rs in enumerate(old_roles) if role in rs), None)
+        new_i = next((i for i, rs in enumerate(new_roles) if role in rs), None)
+        if old_i != new_i:
+            reason = "VACANT" if old_i is None else statuses[old_i]
+            out.append({"role": role, "from_sat": old_i, "to_sat": new_i, "reason": reason})
+    return out

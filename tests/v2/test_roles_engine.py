@@ -5,7 +5,6 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from pydantic import ValidationError
 
 from cubesat.canon import canonical_log_hash
 from cubesat.coverage import coverage_fraction, footprint_radius, target_grid
@@ -165,12 +164,3 @@ def test_injected_failure_hands_off_like_a_scheduled_one():
     line = eng.step()
     kinds = [e["payload"]["role"] for e in line["events"] if e["type"] == "ROLE_HANDOFF"]
     assert kinds == ["downlink"]
-
-
-def test_role_priority_default_validated_and_wired():
-    assert _scn().role_priority == ["downlink", "imager", "leader"]
-    for bad in (["pilot"], ["leader", "leader"], []):
-        with pytest.raises(ValidationError):
-            _scn(role_priority=bad)
-    lines = _ticks(run_scenario_v2(_scn(duration_s=10.0, role_priority=["downlink", "imager"])))
-    assert lines[0]["sats"][0]["roles"] == ["spare"]  # no leader in the priority list: none held

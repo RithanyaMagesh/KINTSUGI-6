@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 import cubesat.roles_v2 as roles_v2
-from cubesat.roles_v2 import assign_roles, vacant_roles
+from cubesat.roles_v2 import assign_roles
 
 V1 = ["leader", "imager", "imager", "imager", "imager", "downlink"]
 DEAD = ("DEAD", False, False)
@@ -19,6 +19,10 @@ def sats(kinds, incumbents=V1):
         {"status": s, "payload_ok": p, "radio_ok": r, "roles": [inc] if inc else []}
         for (s, p, r), inc in zip(kinds, incumbents, strict=True)
     ]
+
+
+def vacant(out, priority=("downlink", "imager", "leader")):
+    return [r for r in priority if not any(r in roles for roles in out)]
 
 
 def holders(out, role):
@@ -36,7 +40,7 @@ def test_four_of_six_dead_keeps_imager():
     assert holders(out, "downlink") == [5]
     assert holders(out, "leader") == [0]
     assert holders(out, "imager") == [0]  # the leader's sat takes the imaging; leader stays
-    assert vacant_roles(out) == []
+    assert vacant(out) == []
 
 
 def test_four_dead_with_the_critical_holders_among_the_dead():
@@ -61,7 +65,7 @@ def test_single_survivor_holds_every_role_it_can_without_crashing():
 
 def test_all_dead_everything_vacant_no_crash():
     out = assign_roles(sats([DEAD] * 6))
-    assert out == [[]] * 6 and vacant_roles(out) == ["downlink", "imager", "leader"]
+    assert out == [[]] * 6 and vacant(out) == ["downlink", "imager", "leader"]
     assert assign_roles([]) == []
 
 

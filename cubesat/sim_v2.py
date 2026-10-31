@@ -3,10 +3,9 @@
 Log schema = cubesat/sim.py (v1) plus optional keys: `chief` + `station` on every tick (Earth
 view, cubesat/geo_v2.py), `events` (every event of the tick), INIT `engine` and per sat
 `roles` / `role` / `original_role` (cubesat/roles_v2.py, Phase 5a, plus ROLE_HANDOFF events).
-Consumers that
-read only `frame["event"]` (wire.py, dv_bound.py) see just the FIRST of several simultaneous
-events; `events` carries all of them. Phase 1 scope: truth propagation, v1 PDController seat
-holding on the LVLH state (until Phase 5), failures coast in the truth model
+Consumers that read only `frame["event"]` (wire.py, dv_bound.py) see just the FIRST of several
+simultaneous events; `events` carries all of them. Phase 1 scope: truth propagation, v1
+PDController seat holding on the LVLH state (until Phase 5), failures coast in the truth model
 (cubesat/faults_v2.py), a re-entry guard, NO recovery.
 
 Contract: EngineV2(scenario, injections) replayed from t=0 gives the identical log; the
@@ -29,7 +28,7 @@ from cubesat.faults_v2 import STATUS_REENTERED, Faults
 from cubesat.hcw import mean_motion, stm
 from cubesat.pd import PDController
 from cubesat.rng_v2 import draw_tick, make_rng
-from cubesat.roles_v2 import ROLE_SPECS, assign_roles
+from cubesat.roles_v2 import assign_roles, handoff_events
 from cubesat.scenario import Failure, Scenario
 from cubesat.sim import (
     LOG_SCHEMA_VERSION,
@@ -236,25 +235,19 @@ class EngineV2:
         return events
 
     def _update_roles(self) -> list[dict]:
-        """Re-assign capability roles from the live statuses (cubesat/roles_v2.py; no motion
-        is touched) and return a ROLE_HANDOFF event for every critical role that changed holder
-        (to_sat None = vacant, from_sat None = was vacant; reason = the old holder's status)."""
+        """Re-assign capability roles from the live statuses (cubesat/roles_v2.py; no motion is
+        touched) and return the ROLE_HANDOFF events of this tick. Only roles the scenario
+        labels exist at all: a scenario without a downlink has that role vacant from the start."""
         status, sats = self.faults.status, self.faults.sats
         view = [
             {"status": status[i], "payload_ok": s.payload_ok, "radio_ok": s.radio_ok, "roles": rs}
             for i, (s, rs) in enumerate(zip(sats, self.roles, strict=True))
         ]
-        new = assign_roles(view, self.scenario.role_priority)
-        events = []
-        for role in (r for r in self.scenario.role_priority if ROLE_SPECS[r]["critical"]):
-            old_i = next((i for i, rs in enumerate(self.roles) if role in rs), None)
-            new_i = next((i for i, rs in enumerate(new) if role in rs), None)
-            if old_i != new_i:
-                payload = {"role": role, "from_sat": old_i, "to_sat": new_i}
-                payload["reason"] = "VACANT" if old_i is None else status[old_i]
-                events.append({"type": "ROLE_HANDOFF", "payload": payload})
+        priority = [r for r in self.scenario.role_priority if r in self.scenario.roles]
+        new = assign_roles(view, priority)
+        payloads = handoff_events(self.roles, new, status, priority)
         self.roles = new
-        return events
+        return [{"type": "ROLE_HANDOFF", "payload": p} for p in payloads]
 
     def _min_sep(self, rho: np.ndarray) -> float:
         """Minimum pairwise LVLH distance among sats not re-entered (all sats if fewer than 2)."""
