@@ -33,10 +33,26 @@ import sys
 from pathlib import Path
 
 import cubesat.sim as sim_module
-from cubesat.benchmark_policies import even_split_replan, hungarian_keepout_replan
-from cubesat.scenario import Failure, FailureMode, Scenario
+from cubesat import ground
+from cubesat.benchmark_policies import (
+    even_split_replan,
+    hungarian_keepout_replan,
+    role_swap_only_replan,
+)
+from cubesat.hcw import mean_motion
+from cubesat.scenario import MAX_DURATION_S, MAX_TICKS, Failure, FailureMode, Scenario
+
+# illustrative: 4 kg, 0.2 kg propellant, Isp 40 s  (Tsiolkovsky: Isp * g0 * ln(m0 / m1))
+CUBESAT_TANK_DV_MPS = 40 * 9.80665 * math.log(4 / 3.8)
 
 POLICY_ORDER = ("do_nothing", "even_split", "greedy", "hungarian", "hungarian_keepout")
+# Pre-registered baselines (GATES.md 2026-10-31). Kept OUT of POLICY_ORDER so the
+# default P0 sweep (and its committed 60-row report) is unchanged; selectable via
+# --policies and run by --mode baselines.
+BASELINE_POLICIES = ("role_swap_only", "wait_for_ground")
+ALL_POLICIES = POLICY_ORDER + BASELINE_POLICIES
+# `--mode baselines`: the four-policy vacancy comparison (PR-3), fixed order.
+BASELINES_MODE_POLICIES = ("do_nothing", "role_swap_only", "wait_for_ground", "hungarian")
 
 # The demo's own failure times (two_failure.json:12-15) -- every pair is
 # directly comparable to the committed G4 numbers (ENDGAME_PLAN 3.1).
@@ -59,7 +75,31 @@ def scenario_for_pair(
     return base.model_copy(update={"name": f"bench_pair_{pair[0]}-{pair[1]}", "failures": failures})
 
 
+def wait_for_ground_plan(scenario: Scenario) -> dict:
+    """`wait_for_ground` timing (GATES.md 2026-10-31 pre-registration): recovery is
+    held for the ground-model wait from the first failure instant (default pass
+    start RAAN 0 / phase 0; sim.py counts the delay from detection, i.e. ~4 s
+    after the failure -- a documented offset), and the run is extended to
+    first_failure_t + delay + 3 orbit periods, capped at MAX_TICKS ticks and
+    MAX_DURATION_S (then `truncated` is True and the caller must flag the row)."""
+    first_failure_t = min(f.t for f in scenario.failures)
+    delay = ground.wait_to_next_pass(first_failure_t)
+    period = 2.0 * math.pi / mean_motion(scenario.chief.altitude_km * 1000.0)
+    wanted = first_failure_t + delay + 3.0 * period
+    cap = min(MAX_DURATION_S, (MAX_TICKS - 1) * scenario.dt_s)
+    return {
+        "recovery_delay_s": delay,
+        "duration_s": min(wanted, cap),
+        "truncated": wanted > cap,
+    }
+
+
 def _scenario_for_policy(scenario: Scenario, policy: str) -> Scenario:
+    if policy == "wait_for_ground":
+        plan = wait_for_ground_plan(scenario)
+        return scenario.model_copy(
+            update={"recovery_delay_s": plan["recovery_delay_s"], "duration_s": plan["duration_s"]}
+        )
     if policy == "do_nothing":
         # Existing no-recovery baseline knob (scenario.py recovery_enabled).
         return scenario.model_copy(update={"recovery_enabled": False})
@@ -76,6 +116,8 @@ def _replanner_for(policy: str):
         return even_split_replan
     if policy == "hungarian_keepout":
         return hungarian_keepout_replan
+    if policy == "role_swap_only":
+        return role_swap_only_replan
     return None
 
 
@@ -101,9 +143,17 @@ def _write_log(lines: list[dict], path: Path) -> None:
 
 
 def metrics_from_log(
-    path: Path, *, first_failure_t: float, dead_ids: list[int], duration_s: float
+    path: Path,
+    *,
+    first_failure_t: float,
+    dead_ids: list[int],
+    duration_s: float,
+    dv_budget_mps: float | None = None,
 ) -> dict:
-    """Post-hoc metrics from the written log bytes (ENDGAME_PLAN 3.4)."""
+    """Post-hoc metrics from the written log bytes (ENDGAME_PLAN 3.4). The dv_*
+    budget fields compare the WORST per-sat delta-v with the scenario's
+    allocation.dv_budget_mps (None when not given) and with the illustrative
+    CubeSat tank CUBESAT_TANK_DV_MPS."""
     raw = path.read_bytes()
     lines = [json.loads(line) for line in raw.decode("utf-8").splitlines()]
     ticks = [line for line in lines if line["state"] not in ("INIT", "SUMMARY")]
@@ -133,7 +183,16 @@ def metrics_from_log(
     post = [line for line in ticks if line["t"] >= first_failure_t - 1e-9]
     dt = ticks[1]["t"] - ticks[0]["t"] if len(ticks) > 1 else 0.0
     vacant = sum(1 for line in post if not crit_held(line))
+    worst_dv = max(per_sat_dv)
     return {
+        "dv_pct_of_scenario_budget": (
+            100.0 * worst_dv / dv_budget_mps if dv_budget_mps is not None else None
+        ),
+        "dv_within_scenario_budget": (
+            worst_dv <= dv_budget_mps if dv_budget_mps is not None else None
+        ),
+        "dv_pct_of_cubesat_tank": 100.0 * worst_dv / CUBESAT_TANK_DV_MPS,
+        "dv_within_cubesat_tank": worst_dv <= CUBESAT_TANK_DV_MPS,
         "critical_roles_held_end": crit_held(final_tick),
         "critical_seat_frac": (len(post) - vacant) / len(post) if post else 1.0,
         "critical_vacancy_s": vacant * dt,
@@ -170,6 +229,7 @@ def run_benchmark(
         pair_scenario = scenario_for_pair(base, pair, failure_times)
         dead_ids = list(pair)
         for policy in policies:
+            policy_scenario = _scenario_for_policy(pair_scenario, policy)
             lines = run_one(pair_scenario, policy)
             filename = f"pair_{pair[0]}-{pair[1]}__{policy}.jsonl"
             log_path = out_dir / filename
@@ -186,9 +246,14 @@ def run_benchmark(
                     log_path,
                     first_failure_t=first_failure_t,
                     dead_ids=dead_ids,
-                    duration_s=pair_scenario.duration_s,
+                    duration_s=policy_scenario.duration_s,
+                    dv_budget_mps=pair_scenario.allocation.dv_budget_mps,
                 ),
             }
+            if policy == "wait_for_ground":
+                wfg = wait_for_ground_plan(pair_scenario)
+                row["recovery_delay_s"] = wfg["recovery_delay_s"]
+                row["truncated"] = wfg["truncated"]
             if policy == "do_nothing":
                 do_nothing_coverage[pair] = row["coverage_mean_last_orbit"]
             rows.append(row)
@@ -242,6 +307,10 @@ def _policies_summary(rows: list[dict], policies: list[str]) -> dict[str, dict]:
             "worst_min_sep_survivor_dead_m": min(seps),
             "mean_gain_vs_do_nothing_pts": (sum(gains) / len(gains)) if gains else None,
             "pairs_critical_roles_held": sum(1 for row in sel if row["critical_roles_held_end"]),
+            "pairs_within_scenario_budget": sum(
+                1 for row in sel if row.get("dv_within_scenario_budget")
+            ),
+            "pairs_within_cubesat_tank": sum(1 for row in sel if row.get("dv_within_cubesat_tank")),
             "mean_critical_seat_frac": sum(row["critical_seat_frac"] for row in sel) / len(sel),
             "mean_critical_vacancy_s": sum(row["critical_vacancy_s"] for row in sel) / len(sel),
             "worst_critical_vacancy_s": max(row["critical_vacancy_s"] for row in sel),
@@ -284,6 +353,26 @@ def _run_monte_carlo(args) -> int:
         f"worst-case protection {comp['worst_case_coverage_gain_pts']:+.2f} pts, "
         f"mean {comp['mean_coverage_gain_pts']:+.2f} pts, "
         f"paired mean {comp['paired_gain_pts']['mean']:+.2f} pts"
+    )
+    return 0
+
+
+def _run_ground_passes(args) -> int:
+    """Ground-pass statistics (cubesat/ground.py): one station, 48 deterministic
+    starts; machine-writes the report with its own command + model parameters.
+    No sim involvement (--base is accepted for CLI uniformity and unused)."""
+    from cubesat.ground import pass_statistics
+
+    report = {
+        "command": "uv run python -m cubesat.benchmark " + " ".join(sys.argv[1:]),
+        **pass_statistics(),
+    }
+    args.report.parent.mkdir(parents=True, exist_ok=True)
+    args.report.write_text(json.dumps(report, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    print(
+        f"wrote {args.report}: {report['passes_per_day']:.2f} passes/day, wait mean "
+        f"{report['wait_mean_s'] / 3600:.2f} h / median {report['wait_median_s'] / 3600:.2f} h / "
+        f"p90 {report['wait_p90_s'] / 3600:.2f} h, max gap {report['max_gap_s'] / 3600:.2f} h"
     )
     return 0
 
@@ -409,11 +498,14 @@ def main(argv: list[str] | None = None) -> int:
         prog="cubesat.benchmark", description="P0 exhaustive recovery benchmark"
     )
     parser.add_argument(
-        "--mode", choices=("benchmark", "keepout-report", "pareto", "cw-curve", "monte-carlo"),
+        "--mode", choices=("benchmark", "keepout-report", "pareto", "cw-curve", "monte-carlo",
+                 "ground-passes", "baselines"),
         default="benchmark",
         help="benchmark: run the P0 sweep; keepout-report: P2 post-hoc log analysis; "
         "pareto: P1 w2 x dv_budget sweep; cw-curve: P3 CW-vs-Kepler error curves; "
-        "monte-carlo: P4 deterministic parameter-jitter robustness ensemble",
+        "monte-carlo: P4 deterministic parameter-jitter robustness ensemble; "
+        "ground-passes: single-station pass statistics (cubesat/ground.py); "
+        "baselines: 15 pairs x do_nothing,role_swap_only,wait_for_ground,hungarian",
     )
     parser.add_argument("--base", required=True, type=Path, help="base scenario JSON")
     parser.add_argument(
@@ -431,7 +523,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--policies",
         default=",".join(POLICY_ORDER),
-        help="comma-separated subset of " + ",".join(POLICY_ORDER),
+        help="comma-separated subset of " + ",".join(ALL_POLICIES),
+    )
+    parser.add_argument(
+        "--pairs", default=None,
+        help="benchmark/baselines mode: comma-separated failure pairs like 0-5,1-2 "
+        "(default: all C(n,2) pairs)",
     )
     parser.add_argument(
         "--runs",
@@ -483,6 +580,8 @@ def main(argv: list[str] | None = None) -> int:
     ):
         if value is not None:
             _confine_output_path(parser, label, value)
+    if args.mode == "ground-passes":
+        return _run_ground_passes(args)
     if args.mode == "keepout-report":
         return _run_keepout_report(args)
     if args.mode == "cw-curve":
@@ -499,16 +598,30 @@ def main(argv: list[str] | None = None) -> int:
         if args.svg is None:
             args.svg = args.report.with_name("pareto_curve.svg")
         return _run_pareto(args)
+    if args.mode == "baselines" and args.out is None:
+        args.out = Path("data/eval/baselines")
     if args.mode == "benchmark" and args.out is None:
         parser.error("--out is required for benchmark mode")
     policies = [p for p in args.policies.split(",") if p]
-    unknown = [p for p in policies if p not in POLICY_ORDER]
+    if args.mode == "baselines":
+        policies = list(BASELINES_MODE_POLICIES)
+    unknown = [p for p in policies if p not in ALL_POLICIES]
     if unknown:
         parser.error(f"unknown policies: {unknown}")
-    command = "uv run python -m cubesat.benchmark " + " ".join(sys.argv[1:])
+    # argv when called programmatically (tests), else the real command line.
+    command = "uv run python -m cubesat.benchmark " + " ".join(
+        argv if argv is not None else sys.argv[1:]
+    )
     base = Scenario.model_validate_json(args.base.read_text(encoding="utf-8"))
     pairs = enumerate_pairs(base.n_sats)
-    manifest_path = args.manifest or args.report.with_name("benchmark_manifest.json")
+    if args.pairs:
+        pairs = [tuple(int(x) for x in spec.split("-")) for spec in args.pairs.split(",")]
+        if any(len(pr) != 2 or not all(0 <= i < base.n_sats for i in pr) for pr in pairs):
+            parser.error(f"--pairs must be a-b ids below {base.n_sats}: {args.pairs!r}")
+    manifest_name = (
+        "baselines_manifest.json" if args.mode == "baselines" else "benchmark_manifest.json"
+    )
+    manifest_path = args.manifest or args.report.with_name(manifest_name)
     report = run_benchmark(
         base=base,
         pairs=pairs,
