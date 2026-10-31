@@ -181,11 +181,11 @@ def episode_bounds(episode: dict, n: float) -> dict:
     per_sat = []
     for a in assigns:
         sat_id, slot_index = int(a["sat_id"]), int(a["slot_index"])
-        assert 0 <= slot_index < k
         sat = states_by_id[sat_id]
         assert sat["status"] == "NOMINAL"
-        slot = slot_initial_state(amp, amp, phi0 + 2.0 * math.pi * slot_index / k, n)
         if episode["assignment"].get("method") == "do_no_harm_hold":
+            # A hold keeps each sat's ORIGINAL seat index (can be >= k): nobody moves,
+            # so there is no slot to rebuild and the transfer bound is exactly zero.
             res = {
                 "dv1_mps": 0.0,
                 "dv2_mps": 0.0,
@@ -197,6 +197,8 @@ def episode_bounds(episode: dict, n: float) -> dict:
                 "singular": False,
             }
         else:
+            assert 0 <= slot_index < k
+            slot = slot_initial_state(amp, amp, phi0 + 2.0 * math.pi * slot_index / k, n)
             res = two_impulse_dv(
                 np.array([*sat["r"], *sat["v"]]), slot, episode["t_replan"], episode["t_end"], n
             )

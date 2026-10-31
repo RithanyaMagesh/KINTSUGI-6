@@ -124,7 +124,22 @@ def metrics_from_log(
                 if d < min_sep:
                     min_sep = d
     pre = [line["coverage"] for line in ticks if line["t"] < first_failure_t - 1e-9]
+
+    def crit_held(line: dict) -> bool:
+        # NOMINAL holders only: a DEAD/DEGRADED sat's role label is not service.
+        nominal = {s["role"] for s in line["sats"] if s["status"] == "NOMINAL"}
+        return "leader" in nominal and "downlink" in nominal
+
+    post = [line for line in ticks if line["t"] >= first_failure_t - 1e-9]
+    dt = ticks[1]["t"] - ticks[0]["t"] if len(ticks) > 1 else 0.0
+    vacant = sum(1 for line in post if not crit_held(line))
     return {
+        "critical_roles_held_end": crit_held(final_tick),
+        "critical_seat_frac": (len(post) - vacant) / len(post) if post else 1.0,
+        "critical_vacancy_s": vacant * dt,
+        "imagers_end": sum(
+            1 for s in final_tick["sats"] if s["status"] == "NOMINAL" and s["role"] == "imager"
+        ),
         "coverage_mean_last_orbit": float(summary["coverage_mean_last_orbit"]),
         "total_dv_mps": float(sum(per_sat_dv)),
         "per_sat_dv_mps": per_sat_dv,
@@ -226,6 +241,10 @@ def _policies_summary(rows: list[dict], policies: list[str]) -> dict[str, dict]:
             "mean_min_sep_survivor_dead_m": sum(seps) / len(seps),
             "worst_min_sep_survivor_dead_m": min(seps),
             "mean_gain_vs_do_nothing_pts": (sum(gains) / len(gains)) if gains else None,
+            "pairs_critical_roles_held": sum(1 for row in sel if row["critical_roles_held_end"]),
+            "mean_critical_seat_frac": sum(row["critical_seat_frac"] for row in sel) / len(sel),
+            "mean_critical_vacancy_s": sum(row["critical_vacancy_s"] for row in sel) / len(sel),
+            "worst_critical_vacancy_s": max(row["critical_vacancy_s"] for row in sel),
         }
     return summary
 

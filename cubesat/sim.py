@@ -487,17 +487,37 @@ def run_scenario(
             if method == "do_no_harm_hold":
                 pairs = [(idx, idx) for idx in range(len(assignable))]
                 max_transfer = 0.0
-            preserved: list[np.ndarray] = []
-            for i in range(n_sats):
-                if status[i] == STATUS_DEGRADED:
-                    preserved.append(formation[seat_of[i]])
-                    seat_of[i] = len(plan.slots) + len(preserved) - 1
-            formation = list(plan.slots) + preserved
-            for row, col in pairs:
-                sat_id = assignable[row]
-                seat_of[sat_id] = col
-                roles[sat_id] = plan.seat_roles[col]
-            if scenario.oracle.enabled and scenario.oracle.lead_s > 0:
+                for row, col in pairs:
+                    sat_id = assignable[row]
+                    roles[sat_id] = plan.seat_roles[col]
+            else:
+                # DEGRADED sats are excluded from assignable (status != NOMINAL) but
+                # keep PD-holding their assigned seat (Addendum v1.2, module
+                # docstring) -- so when a replan shrinks the formation to the
+                # survivors' k seats, each DEGRADED sat keeps its pre-replan seat:
+                # its formation entry is appended after plan.slots (ascending sat
+                # id, deterministic) and seat_of is re-pointed. Without this the
+                # stale seat index either crashes the step loop (index >= k, first
+                # hit by the v2 oracle sweep on eps_downlink_6sat) or silently
+                # double-books a survivor's seat (eps_leader_6sat, seat 0).
+                # Reached only when a replan fires while a sat is DEGRADED: via the
+                # oracle hook, or reactively when a DEAD sat's missed-heartbeat
+                # detection fires while another sat is mid-fade (mixed failures --
+                # the DEGRADED sat then lands in `preserved` below). No committed
+                # scenario does either (the EPS_DEGRADE ones are single-failure
+                # with the oracle off), so this block never fires on a canonical
+                # run and the golden pins stay byte-identical.
+                preserved: list[np.ndarray] = []
+                for i in range(n_sats):
+                    if status[i] == STATUS_DEGRADED:
+                        preserved.append(formation[seat_of[i]])
+                        seat_of[i] = len(plan.slots) + len(preserved) - 1
+                formation = list(plan.slots) + preserved
+                for row, col in pairs:
+                    sat_id = assignable[row]
+                    seat_of[sat_id] = col
+                    roles[sat_id] = plan.seat_roles[col]
+                if scenario.oracle.enabled and scenario.oracle.lead_s > 0:
                     lead = scenario.oracle.lead_s
                     failing_soon = {
                         f.sat_id

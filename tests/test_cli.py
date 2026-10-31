@@ -1,44 +1,19 @@
-import hashlib
 import json
-import math
 import subprocess
 import sys
 from pathlib import Path
+
+from cubesat.canon import canonical_log_hash
 
 ROOT = Path(__file__).resolve().parents[1]
 
 # Canonical golden SHA-256 of the short-run JSONL (nominal.json with duration_s = 600.0,
 # seed 42), pinned per docs/MASTER_PROMPT.md section 3.8.
-# Cross-platform canonicalization: all floats rounded to 9 significant digits before
-# json.dumps(sort_keys=True).
+# Cross-platform pin: cubesat.canon.canonical_log_hash (floats zeroed below 1e-6,
+# else 5 significant digits); pinned on macOS arm64, 2026-10-31.
 GOLDEN_NOMINAL_SHORT_CANONICAL_SHA256 = (
-    "ce1a8075f2fd828ca036decd81a5aa3f99afee1a2dd135b8eee8bfa51e22ea52"
+    "64b88c46843f99cdeaff654c4eccef1bf9e94e500d5171b236c17ce9d8def3a8"
 )
-
-
-def _round_floats(obj, sig: int = 9):
-    if isinstance(obj, float):
-        if math.isnan(obj) or math.isinf(obj) or obj == 0.0:
-            return obj
-        return float(f"{obj:.{sig}g}")
-    if isinstance(obj, dict):
-        return {k: _round_floats(v, sig) for k, v in obj.items()}
-    if isinstance(obj, list):
-        return [_round_floats(v, sig) for v in obj]
-    return obj
-
-
-def canonical_log_hash(raw_bytes: bytes, sig: int = 9) -> str:
-    lines = raw_bytes.decode("utf-8").splitlines()
-    normalized = []
-    for line in lines:
-        if not line.strip():
-            continue
-        obj = json.loads(line)
-        r_obj = _round_floats(obj, sig=sig)
-        normalized.append(json.dumps(r_obj, sort_keys=True))
-    payload = ("\n".join(normalized) + "\n").encode("utf-8")
-    return hashlib.sha256(payload).hexdigest()
 
 
 def _short_nominal_scenario(path: Path) -> Path:
@@ -117,13 +92,13 @@ def test_run_is_byte_deterministic(tmp_path):
 
 def test_run_matches_canonical_golden_hash(tmp_path):
     """The short nominal scenario log matches the platform-independent canonical golden
-    hash (floats rounded to 9 significant digits before json.dumps(sort_keys=True))."""
+    hash (cubesat.canon.canonical_log_hash)."""
     scenario = _short_nominal_scenario(tmp_path / "nominal_short.json")
     out = tmp_path / "run.jsonl"
     result = _run_cli(scenario, out)
     assert result.returncode == 0, result.stderr
     raw_bytes = out.read_bytes()
-    digest = canonical_log_hash(raw_bytes, sig=9)
+    digest = canonical_log_hash(raw_bytes)
     assert digest == GOLDEN_NOMINAL_SHORT_CANONICAL_SHA256, (
         f"canonical golden hash mismatch: got {digest}"
     )
