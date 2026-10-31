@@ -56,7 +56,7 @@ def test_dead_sat_shows_no_role_but_keeps_original_role():
     s0 = lines[-1]["sats"][0]
     assert (s0["roles"], s0["role"], s0["original_role"]) == ([], "none", "leader")
     s1 = lines[-1]["sats"][1]  # the leader moved to the lowest imager and stacks on it
-    assert s1["roles"] == ["imager", "leader"] and s1["role"] == "imager"
+    assert s1["roles"] == ["imager", "leader"] and s1["role"] == "leader"  # display order
 
 
 def test_motion_is_byte_identical_to_the_phase2_engine():

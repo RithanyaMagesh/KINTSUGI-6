@@ -28,7 +28,7 @@ from cubesat.faults_v2 import STATUS_REENTERED, Faults
 from cubesat.hcw import mean_motion, stm
 from cubesat.pd import PDController
 from cubesat.rng_v2 import draw_tick, make_rng
-from cubesat.roles_v2 import assign_roles, believe, handoff_events, imaging_sats
+from cubesat.roles_v2 import assign_roles, believe, handoff_events, imaging_sats, primary_role
 from cubesat.scenario import Failure, Scenario
 from cubesat.sim import (
     LOG_SCHEMA_VERSION,
@@ -134,7 +134,7 @@ class EngineV2:
             "sats": [
                 {
                     "id": i,
-                    "role": self.roles[i][0] if self.roles[i] else "none",  # primary role
+                    "role": primary_role(self.roles[i]),  # display label (fixed order)
                     "roles": list(self.roles[i]),
                     "original_role": self.scenario.roles[i],
                     "status": status[i],

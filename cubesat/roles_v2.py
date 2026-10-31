@@ -95,6 +95,13 @@ def assign_roles(sats: list[dict], priority: Sequence[str] = DEFAULT_PRIORITY) -
     return held
 
 
+def primary_role(roles: list[str]) -> str:
+    """The one role label a UI shows for a sat: fixed display order leader, downlink, imager,
+    then anything else ("spare"); "none" when it holds nothing. `roles` stays the truth."""
+    order = ("leader", "downlink", "imager")
+    return next((r for r in order if r in roles), roles[0] if roles else "none")
+
+
 def believe(believed: list[list], statuses: list[str], sats: list, declared: list[bool]) -> list:
     """The swarm's belief about each sat as [status, payload_ok, radio_ok]: a silent failure
     (DEAD, dead radio, REENTERED) is believed only once the heartbeat rule has declared it; a

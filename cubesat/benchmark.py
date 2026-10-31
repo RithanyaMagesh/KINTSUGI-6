@@ -175,9 +175,13 @@ def metrics_from_log(
                     min_sep = d
     pre = [line["coverage"] for line in ticks if line["t"] < first_failure_t - 1e-9]
 
+    def held(sat: dict) -> list[str]:
+        # v2 logs carry every role a sat holds (a leader stacks on an imager); v1 has one label
+        return sat["roles"] if "roles" in sat else [sat["role"]]
+
     def crit_held(line: dict) -> bool:
         # NOMINAL holders only: a DEAD/DEGRADED sat's role label is not service.
-        nominal = {s["role"] for s in line["sats"] if s["status"] == "NOMINAL"}
+        nominal = {r for s in line["sats"] if s["status"] == "NOMINAL" for r in held(s)}
         return "leader" in nominal and "downlink" in nominal
 
     post = [line for line in ticks if line["t"] >= first_failure_t - 1e-9]
@@ -197,7 +201,7 @@ def metrics_from_log(
         "critical_seat_frac": (len(post) - vacant) / len(post) if post else 1.0,
         "critical_vacancy_s": vacant * dt,
         "imagers_end": sum(
-            1 for s in final_tick["sats"] if s["status"] == "NOMINAL" and s["role"] == "imager"
+            1 for s in final_tick["sats"] if s["status"] == "NOMINAL" and "imager" in held(s)
         ),
         "coverage_mean_last_orbit": float(summary["coverage_mean_last_orbit"]),
         "total_dv_mps": float(sum(per_sat_dv)),
