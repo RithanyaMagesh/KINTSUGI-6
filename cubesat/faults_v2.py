@@ -103,6 +103,10 @@ class Faults:
         """Fade onsets, failures due at t, heartbeats and detection; returns this tick's events.
         vel_eci (N, 3): sat ECI velocities now; a stuck-open thruster fires along the failing
         sat's velocity direction at that instant (fixed in ECI afterwards)."""
+        return self.fire(t, vel_eci) + self.detect(t)
+
+    def fire(self, t: float, vel_eci: np.ndarray) -> list[dict]:
+        """tick() without the heartbeat step (laser comms step between the two)."""
         events: list[dict] = []
         for f in [*self.scenario.failures, *self.injections]:
             fades = f.mode == FailureMode.EPS_DEGRADE and f.degrade_s > 0
@@ -155,9 +159,18 @@ class Faults:
                     payload.update(t_detect=t, self_report=True)
                     events.append({"type": "FAILURE_DETECTED", "payload": payload})
                     events.append({"type": "FUEL_DEPLETED", "payload": {"sat_id": i, "t": t}})
+        return events
+
+    def detect(self, t: float, isolated: list[bool] | None = None) -> list[dict]:
+        """Heartbeat rule: K missed ticks -> FAILURE_DETECTED. `isolated[i]` (laser comms): a
+        talking sat no other sat can hear (cubesat/comms_v2.py) also misses its heartbeat. A sat
+        heard again is un-declared (never happens with ideal comms: silence there is final)."""
+        events: list[dict] = []
         for i, status in enumerate(self.status):
-            silent = status == STATUS_REENTERED or not self.sats[i].radio_ok
+            cut = isolated is not None and isolated[i]
+            silent = status == STATUS_REENTERED or not self.sats[i].radio_ok or cut
             self.missed[i] = self.missed[i] + 1 if silent else 0
+            self.declared[i] = self.declared[i] and silent
             if (
                 silent
                 and not self.declared[i]
@@ -167,6 +180,8 @@ class Faults:
                 self.mission = STATE_FAILURE_DETECTED
                 payload = {"sat_id": i, "mode": self.fail_mode[i], "t_fail": self.t_fail[i]}
                 payload["t_detect"] = t
+                if cut and self.sats[i].radio_ok and status != STATUS_REENTERED:
+                    payload["cause"] = "isolated"  # healthy, but no locked link reaches it
                 events.append({"type": "FAILURE_DETECTED", "payload": payload})
         return events
 

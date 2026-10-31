@@ -21,11 +21,13 @@ from cubesat.scenario_models import (  # noqa: F401  (re-exports: the public sce
     V2_ONLY_MODES,
     Allocation,
     ChiefOrbit,
+    Comms,
     Detection,
     Failure,
     FailureMode,
     Formation,
     Gains,
+    LaserTerminal,
     Oracle,
     Safety,
     Sensor,
@@ -92,6 +94,10 @@ class Scenario(BaseModel):
         "'v2' = truth-dynamics engine (cubesat/sim_v2.py)",
     )
 
+    comms: Comms | None = Field(
+        default=None, description="Inter-satellite links (track C); absent = ideal comms"
+    )
+
     @property
     def n_sats(self) -> int:
         return len(self.roles)
@@ -115,6 +121,12 @@ class Scenario(BaseModel):
                         f'failure mode {f.mode.value} (sat {f.sat_id}) requires engine "v2"; '
                         f'this scenario uses engine "{self.engine}"'
                     )
+        return self
+
+    @model_validator(mode="after")
+    def _laser_comms_needs_v2(self) -> Scenario:
+        if self.comms is not None and self.comms.model == "laser" and self.engine != "v2":
+            raise ValueError('comms.model "laser" requires engine "v2"')
         return self
 
     @model_validator(mode="after")
