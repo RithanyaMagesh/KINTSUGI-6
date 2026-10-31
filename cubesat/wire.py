@@ -64,7 +64,11 @@ class StartRequest(BaseModel):
 
 class InjectRequest(BaseModel):
     sat_id: str
-    mode: Literal["DEAD", "THRUSTER_OUT", "EPS_DEGRADE"] = "DEAD"
+    # the four engine-v2 modes are refused (422) by the session unless the run uses engine "v2"
+    mode: Literal[
+        "DEAD", "THRUSTER_OUT", "EPS_DEGRADE",
+        "PAYLOAD_FAIL", "PARTIAL_THRUST", "THRUSTER_STUCK_OPEN", "RADIO_FAIL",
+    ] = "DEAD"
     degrade_s: float = Field(
         default=600.0, ge=0, allow_inf_nan=False,
         description="EPS_DEGRADE fade length, s (ignored otherwise)",
@@ -92,11 +96,19 @@ _STATUS_TO_WIRE = {
     "DEGRADED": "degraded",
     "DEAD": "failed",
     "THRUSTER_OUT": "failed",
+    # engine v2 (faults_v2): the sat still flies in all but REENTERED, so the UI shows amber
+    "REENTERED": "failed",
+    "FUEL_DEPLETED": "degraded",  # flies, cannot maneuver
+    "PAYLOAD_FAILED": "degraded",  # flies, cannot image
+    "RADIO_SILENT": "degraded",  # flies, silent
 }
 
 # Keys _sat_to_wire requires; id must be a 0-based int (display_sat_id does i + 1
 # and assignment_map needs a hashable key), status must be hashable.
 _SAT_REQUIRED_KEYS = ("role", "r", "v", "dv_used")
+
+# Engine-v2 per-sat resource keys: optional passthrough, only when the log carries them.
+_SAT_V2_KEYS = ("fuel_kg", "fuel_mps_left", "k", "payload_ok", "radio_ok", "stuck")
 
 
 def sat_row_ok(sat: object) -> bool:
@@ -107,6 +119,36 @@ def sat_row_ok(sat: object) -> bool:
         and isinstance(sat.get("status"), str)
         and all(k in sat for k in _SAT_REQUIRED_KEYS)
     )
+
+
+def _frame_events(frame: dict) -> list:
+    """The events a log line carries. v2 lines add an `events` list beside `event` (the first
+    entry); it only differs from [event] when several events share a tick. v1 lines have none."""
+    events = frame.get("events")
+    if isinstance(events, list) and len(events) > 1:
+        return events
+    event = frame.get("event")
+    return [] if event is None else [event]
+
+
+def _event_ok(event: object) -> bool:
+    if not isinstance(event, dict):
+        return False
+    payload = event.get("payload")
+    if payload is not None and not isinstance(payload, dict):
+        return False
+    if event.get("type") == "ASSIGNMENT":
+        assignments = (payload or {}).get("assignments") or []
+        if not isinstance(assignments, list):
+            return False
+        for a in assignments:
+            if (
+                not isinstance(a, dict)
+                or not isinstance(a.get("sat_id"), int)
+                or "slot_index" not in a
+            ):
+                return False
+    return True
 
 
 def tick_frame_ok(frame: dict) -> bool:
@@ -120,25 +162,7 @@ def tick_frame_ok(frame: dict) -> bool:
     sats = frame.get("sats")
     if not isinstance(sats, list) or not all(sat_row_ok(s) for s in sats):
         return False
-    event = frame.get("event")
-    if event is not None:
-        if not isinstance(event, dict):
-            return False
-        payload = event.get("payload")
-        if payload is not None and not isinstance(payload, dict):
-            return False
-        if event.get("type") == "ASSIGNMENT":
-            assignments = (payload or {}).get("assignments") or []
-            if not isinstance(assignments, list):
-                return False
-            for a in assignments:
-                if (
-                    not isinstance(a, dict)
-                    or not isinstance(a.get("sat_id"), int)
-                    or "slot_index" not in a
-                ):
-                    return False
-    return True
+    return all(_event_ok(e) for e in _frame_events(frame))
 
 
 def to_event(level: str, sim_time: float, message: str) -> dict:
@@ -170,6 +194,9 @@ def _sat_to_wire(sat: dict, enrich: SessionEnrich) -> dict:
         out["target_slot"] = slot
     if "risk" in sat:  # Appendix B optional passthrough; never synthesized
         out["risk"] = sat["risk"]
+    for key in _SAT_V2_KEYS:
+        if key in sat:
+            out[key] = sat[key]
     return out
 
 
@@ -243,12 +270,41 @@ def _mmss(seconds: object) -> str | None:
     return f"{m:02d}:{s:02d}"
 
 
+# Engine-v2 failure sentences: mode (FAILURE_DETECTED payload, or the REENTRY / FUEL_DEPLETED
+# event type) -> (level, text after the sat label). Benign losses warn; a runaway thruster
+# and re-entry are critical. v1 modes are not here and keep their original wording.
+_V2_WORDING = {
+    "PAYLOAD_FAIL": ("warning", "camera failed; it keeps flying but can no longer image"),
+    "RADIO_FAIL": ("warning", "lost its radio; it keeps flying but is silent"),
+    "THRUSTER_STUCK_OPEN": (
+        "critical", "thruster stuck open; it is burning fuel it cannot control"
+    ),
+    "PARTIAL_THRUST": ("warning", "lost half its thrust"),
+    "FUEL_DEPLETED": ("warning", "ran out of propellant and can no longer maneuver"),
+    "REENTRY": ("critical", "re-entered the atmosphere"),
+}
+
+
+def _v2_event(frame: dict, key: object, sat: object) -> dict | None:
+    """The v2 sentence for `key`, or None when it is not a v2 mode (junk keys included)."""
+    wording = _V2_WORDING.get(key) if isinstance(key, str) else None
+    if wording is None:
+        return None
+    label = _sat_label(sat)
+    level, text = wording
+    msg = f"{label or 'A satellite'} {text}"
+    return _with_sat(to_event(level, frame.get("t", 0.0), msg), label)
+
+
 def _failure_event(frame: dict, payload: dict, enrich: SessionEnrich) -> dict:
     if isinstance(payload.get("t_fail"), (int, float)) and isinstance(
         payload.get("t_detect"), (int, float)
     ):
         enrich.detection_latency_s = payload["t_detect"] - payload["t_fail"]
     sat = payload.get("sat_id")
+    v2 = _v2_event(frame, payload.get("mode"), sat)
+    if v2 is not None:
+        return v2
     who = display_sat_id(sat) if isinstance(sat, int) else sat
     mode = payload.get("mode")
     message = f"{who} {mode} failure detected" if mode else f"{who} failure detected"
@@ -361,6 +417,8 @@ def _plain_event(frame: dict, etype: str, payload: dict) -> dict:
             ev.update({"from": frm, "to": to, "label": label})
         return ev
     t = frame.get("t", 0.0)
+    if etype in ("FUEL_DEPLETED", "REENTRY"):  # {sat_id, t, ...}
+        return _v2_event(frame, etype, payload.get("sat_id"))
     if etype == "DEGRADE_START":  # {sat_id, t_fail, degrade_s}
         who = _sat_label(payload.get("sat_id"))
         msg = f"{who or 'A satellite'} battery fading"
@@ -412,30 +470,30 @@ def to_messages(frame: dict, enrich: SessionEnrich) -> list[dict]:
             to_event("info", frame.get("t", 0.0), "Run complete"),
         ]
 
-    event = frame.get("event")
-    reassignment: dict | None = None
-    event_msg: dict | None = None
-    if event:
+    reassignments: list[dict] = []
+    event_msgs: list[dict] = []
+    for event in _frame_events(frame):
+        if not event:  # `"event": null` / {} = no event (as before)
+            continue
         etype = event.get("type", "")
         payload = event.get("payload") or {}
         if etype == "FAILURE_DETECTED":
-            event_msg = _failure_event(frame, payload, enrich)
+            msg = _failure_event(frame, payload, enrich)
         elif etype == "EVASIVE_MANEUVER":
-            event_msg = _evasive_event(frame, payload)
+            msg = _evasive_event(frame, payload)
         elif etype == "ASSIGNMENT":
-            reassignment = _role_reassignment(frame, payload, enrich)
+            reassignments.append(_role_reassignment(frame, payload, enrich))
+            continue
         else:
-            event_msg = _plain_event(frame, etype, payload)
+            msg = _plain_event(frame, etype, payload)
+        if msg not in event_msgs:  # v2 logs FUEL_DEPLETED twice for one sat: same sentence
+            event_msgs.append(msg)
 
     old_roles, handoffs = _track_roles(frame, enrich)
     msgs = [to_sim_state(frame, enrich)]
     for row, sat in zip(msgs[0]["sats"], frame.get("sats", []), strict=True):
         if sat["id"] in old_roles:
             row["old_role"] = old_roles[sat["id"]]
-    if reassignment is not None and handoffs:
-        reassignment["role_handoffs"] = handoffs
-    if event_msg is not None:
-        msgs.append(event_msg)
-    if reassignment is not None:
-        msgs.append(reassignment)
-    return msgs
+    if reassignments and handoffs:
+        reassignments[0]["role_handoffs"] = handoffs
+    return msgs + event_msgs + reassignments
