@@ -91,9 +91,9 @@ def test_rk4_dt2_vs_rk45_two_body_j2_3orbits_500km():
     assert max(err) < 1e-2
 
 
-def _decay_one_rev(area_m2):
+def _decay_one_rev(area_m2, inc_deg=90.0):
     B = 2.2 * area_m2 / 4.0
-    s = truth.chief_initial(ALT, 90.0, 0.0)  # polar: omega_E x r is perpendicular to v
+    s = truth.chief_initial(ALT, inc_deg, 0.0)  # 90: omega_E x r is perpendicular to v
 
     def sma(x):
         return -truth.MU / (2.0 * (x[3:] @ x[3:] / 2.0 - truth.MU / np.linalg.norm(x[:3])))
@@ -121,3 +121,14 @@ def test_rk4_batch_matches_single():
     out = truth.rk4_step(batch, 2.0, _grav_j2)
     for k in range(2):
         assert np.allclose(out[k], truth.rk4_step(batch[k], 2.0, _grav_j2), rtol=0, atol=1e-9)
+
+
+def test_drag_decay_numeric_per_rev_at_scenario_inclination():
+    """97.4 deg (scenario default): the co-rotating atmosphere makes the decay ~1.8% larger than
+    the polar value; the ratio check (1.010..1.030) fails if Earth rotation is dropped."""
+    active, dead = _decay_one_rev(0.010, 97.4), _decay_one_rev(0.035, 97.4)
+    ratio = active / _decay_one_rev(0.010, 90.0)
+    print(f"97.4 deg decay per rev: active {active:.4f} m, dead {dead:.4f} m, ratio {ratio:.4f}")
+    assert abs(active - (-1.14)) / 1.14 < 0.05
+    assert abs(dead - (-3.99)) / 3.99 < 0.05
+    assert 1.010 < ratio < 1.030

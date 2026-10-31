@@ -130,3 +130,34 @@ def test_truth_block_defaults_are_illustrative_and_v1_neutral():
         1.0,
     )
     assert t.j2_enabled is True
+
+
+def test_density_uses_largest_h0_not_nearest_row():
+    """M2b: 470 km is nearer the 500 km row but belongs to the 450 km row; 475.1 km likewise."""
+    for h_km in (470.0, 475.1, 499.9):
+        want = 1.585e-12 * math.exp(-(h_km - 450.0) / 60.828)
+        assert math.isclose(truth.density(h_km * 1e3), want, rel_tol=1e-12)
+
+
+def test_drag_includes_earth_rotation_on_an_equatorial_orbit():
+    """M16: v_rel = v - omega x r; equatorial prograde |v_rel| = vc - OMEGA_E a (not vc)."""
+    a = truth.RE + 500e3
+    vc = math.sqrt(truth.MU / a)
+    acc = truth.accel_drag(np.array([a, 0.0, 0.0]), np.array([0.0, vc, 0.0]), 0.0055)
+    v_rel = vc - truth.OMEGA_E * a
+    assert np.allclose(acc, [0.0, -0.5 * truth.density(500e3) * 0.0055 * v_rel**2, 0.0], rtol=1e-12)
+
+
+def test_thrust_eci_accepts_a_batch_of_rows():
+    r_c, v_c = _polar_circular(500e3)
+    batch = np.array([[0.01, 0.0, 0.0], [0.0, 0.01, 0.0], [0.0, 0.0, 0.01]])
+    rows = truth.thrust_eci(batch, r_c, v_c)
+    for k in range(3):
+        assert np.allclose(rows[k], truth.thrust_eci(batch[k], r_c, v_c), atol=1e-18)
+    assert np.allclose(
+        rows[1],
+        0.01
+        * np.cross(np.cross(r_c, v_c), r_c)
+        / np.linalg.norm(np.cross(np.cross(r_c, v_c), r_c)),
+        atol=1e-15,
+    )  # +y_hat is along-track
