@@ -8,9 +8,11 @@ to `--base` (the cartwheel file):
   orbits): the drift hazard of a dead sat (0 = some drift puts it on a neighbour);
 - coverage: CW (mean over the 1441 samples, scenario imagers) and truth (mean of the logged
   `coverage` over the 2 orbits);
-- hold fuel per orbit: truth dv_used after 2 orbits / 2 (per sat max, and swarm total);
+- hold fuel per orbit: truth dv_used after 2 orbits / 2 (per sat max, and swarm total), also
+  with J2 and drag off: the PD holds linear-HCW (rectilinear) slots, which are not natural
+  orbits in nonlinear truth, so part of the fuel is that model mismatch, not J2 or drag;
 - switch from cartwheel: transfer.lp_transfer (CW planning model, T = 1 orbit, N = 48 nodes,
-  a_max and k = 1 from the scenario). Seats by Hungarian on the free-plan L1 delta-v (rows =
+  a_max from the scenario, health k = 1). Seats by Hungarian on the free-plan L1 delta-v (rows =
   sats, cols = shape slots, index-epsilon ties). Then sequential priority planning: sat i
   avoids the planned paths of sats 0..i-1 with d_safe = allocation.min_sep_km, so every pair is
   checked once. The pairwise separation of the final plans is verified on a 1 s grid.
@@ -64,12 +66,20 @@ def _cw_metrics(sc: Scenario, n: float) -> dict:
     }
 
 
+def _hold(sc: Scenario, **truth) -> tuple[list[dict], np.ndarray]:
+    """Tick lines and per-sat hold delta-v per orbit of a TRUTH_ORBITS-long EngineV2 run."""
+    upd = {"duration_s": TRUTH_ORBITS * 2.0 * math.pi / EngineV2(sc).n}
+    if truth:
+        upd["truth"] = sc.truth.model_copy(update=truth)
+    lines = [ln for ln in EngineV2(sc.model_copy(update=upd)).run() if "sats" in ln]
+    return lines, np.array([s["dv_used"] for s in lines[-1]["sats"]]) / TRUTH_ORBITS
+
+
 def _truth_metrics(sc: Scenario) -> dict:
-    eng = EngineV2(sc)
-    sc = sc.model_copy(update={"duration_s": TRUTH_ORBITS * 2.0 * math.pi / eng.n})
-    lines = [ln for ln in EngineV2(sc).run() if "sats" in ln]
-    dv = np.array([s["dv_used"] for s in lines[-1]["sats"]]) / TRUTH_ORBITS
+    lines, dv = _hold(sc)
+    _, dv_off = _hold(sc, j2_enabled=False, density_factor=0.0)
     return {
+        "hold_dv_per_orbit_j2_drag_off_per_sat_mps": dv_off.tolist(),
         "truth_orbits": TRUTH_ORBITS,
         "truth_min_sep_m": min(ln["min_sep"] for ln in lines),
         "truth_coverage": float(np.mean([ln["coverage"] for ln in lines])),
@@ -91,7 +101,7 @@ def _switch(sc_from: Scenario, sc_to: Scenario, n: float) -> dict:
     cost = np.array([[math.inf if p is None else p.total_dv_mps for p in row] for row in free])
     big = np.where(np.isfinite(cost), cost, 1e9)  # no free plan: only taken if nothing else fits
     rows, cols = linear_sum_assignment(big + TIE_EPS * np.arange(k * k).reshape(k, k))
-    obs_t = np.arange(0.0, T + OBSTACLE_STEP_S, OBSTACLE_STEP_S).clip(max=T)
+    obs_t = np.append(np.arange(0.0, T, OBSTACLE_STEP_S), T)
     grid = np.arange(0.0, T, 1.0)
     keepout, paths, sats = [], [], []
     for i, j in zip(rows, cols, strict=True):
@@ -125,9 +135,9 @@ def _switch(sc_from: Scenario, sc_to: Scenario, n: float) -> dict:
 
 def build_report(base_path: Path, command: str) -> dict:
     files = {s: base_path.with_name(f"formation_{s}_6sat.json") for s in F.SHAPES}
+    if base_path.resolve() != files["cartwheel"].resolve():
+        raise ValueError(f"--base must be a formation_cartwheel_6sat.json, got {base_path}")
     scen = {s: load_scenario(p) for s, p in files.items()}
-    if scen["cartwheel"].formation.shape != "cartwheel":
-        raise ValueError(f"--base must be the cartwheel formation file, got {base_path}")
     n = EngineV2(scen["cartwheel"]).n
     shapes = {}
     for s, sc in scen.items():
