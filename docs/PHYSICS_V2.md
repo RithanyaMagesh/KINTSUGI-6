@@ -487,3 +487,47 @@ A PURE LIBRARY: it is NOT wired into the engine (Phase 5d-2 does that after revi
 - Runtime (`... test_certify_review.py -s -k 32_sats`): 2 orbits (5677 steps) of 6 sats about 2.4 s, 32 sats about 3.9 s on the dev machine (one core, unmeasured elsewhere).
 
 **Known limits.** (1) No failure during the horizon; (2) transfers are flown open loop (no MPC inside the certificate, by design: the landing check tells the planner to correct); (3) coverage uses seats (CW slots), not the truth positions of the sats; (4) PD hold fuel is not budgeted; (5) the horizon is stepped, so the minimum separation between steps is not resolved (the engine has the same sampling); (6) the plan's seats are assumed to be passive slots, so PD holds cost little.
+
+**Mutation check (2026-11-01).** Each mutant applied to a copy of the tree under `/tmp/certmut_*` (never the original), the certificate tests run with `-x`: 39 mutants, 39 killed, 0 survivors, 0 equivalents. Three rounds: the first 34 left M30 (pair ids after excluding a re-entered sat), M32 (seat not propagated to the plan start) and M33 (hold coverage with the plan's roles) alive; M35 (a pre-re-entered sat had no frozen state, a real bug found while writing the M30 test: the fewer-than-two-flying fallback used zeros), M36 and M39 (silent sat flown) survived at first; a test was added for each (and the bug fixed, test first) and all were killed. Final table:
+
+| Mutant | Killed by (`tests/v2/`) |
+|---|---|
+| M01 separation ignores dead sats | `test_certify_checks.py::test_separation_fails_when_a_dead_sat_drifts_through_a_slot[0.0-...]` |
+| M02 separation only at plan end | `test_certify_checks.py::test_hold_plan_passes_on_a_healthy_2km_formation` (minimum is at 6774 s) |
+| M03 horizon halved | same test (the minimum lies beyond one orbit) |
+| M04 dead drag area = active | `test_separation_fails_when_a_dead_sat_drifts_through_a_slot` |
+| M05 fuel reserve ignored | `test_fuel_fails_with_a_small_tank` |
+| M06 fuel from the launch mass | `test_fuel_margin_uses_the_current_mass_not_the_launch_mass` |
+| M07 roles check skipped | `test_roles_fail_when_leader_vacant_or_incapable` |
+| M08 coverage compared with 0, not hold | `test_coverage_fails_when_plan_is_worse_than_hold` |
+| M09 landing against CW (zero error) | `test_landing_fails_for_cw_planned_transfers_but_1km_impulsive[8.0-0.04-697.1]` |
+| M10 landing tolerance x100 | same |
+| M11 `passed` ignores the coverage check | `test_coverage_fails_when_plan_is_worse_than_hold` |
+| M12 reasons not populated | `test_separation_fails_when_a_dead_sat_drifts_through_a_slot` |
+| M13 payload NaN accepted | `test_event_payload_is_json_safe_and_complete` |
+| M14 NaN dv unchecked | `test_certify_review.py::test_malformed_transfer_raises[nan dv]` |
+| M15 mover seat ignored | `test_coverage_fails_when_plan_is_worse_than_hold` |
+| M16 burn in one step (no thrust limit) | `test_landing_fails_for_cw_planned_transfers_but_1km_impulsive[8.0-0.04-697.1]` |
+| M17 no PD hold after the plan | `test_fuel_fails_with_a_small_tank` |
+| M18 re-entry guard removed | `test_certify_engine.py::test_certificate_executes_a_plan_like_the_engine[dead_sat_reenters]` |
+| M19 chief feels drag | `test_separation_fails_when_a_dead_sat_drifts_through_a_slot` |
+| M20 seat references not advanced | same |
+| M21 `t_start_s` vs state time unchecked | `test_certify_review.py::test_malformed_seat_role_and_time_raise` |
+| M22 cancel check removed | `test_cancel_event_raises` |
+| M23 vacant role ignores capability | `test_roles_fail_when_leader_vacant_or_incapable` |
+| M24 incapable-role check skipped | same |
+| M25 coverage counts incapable imagers | `test_coverage_counts_only_capable_imagers_and_hold_uses_current_roles` |
+| M26 `density_factor` ignored | `test_separation_fails_when_a_dead_sat_drifts_through_a_slot` |
+| M27 worst margin is the best | `test_fuel_worst_margin_is_over_all_movers` |
+| M28 cannot-move reason skipped | `test_k_zero_sat_cannot_move` |
+| M29 stuck-open thruster ignored | `test_certificate_executes_a_plan_like_the_engine[mixed_storm]` |
+| M30 pair ids of the filtered list | `test_certify_review.py::test_pair_indices_are_sat_ids_when_a_reentered_sat_is_excluded` |
+| M31 J2 dropped | `test_separation_fails_when_a_dead_sat_drifts_through_a_slot` |
+| M32 item seat not propagated to the plan start | `test_item_seats_are_propagated_to_the_plan_start` |
+| M33 hold coverage with the plan's roles | `test_dropping_an_imager_role_is_worse_than_holding_the_current_roles` |
+| M34 fuel check ignores "cannot be commanded" | `test_dead_or_silent_sat_cannot_be_a_mover[silent sat ...]` |
+| M35 pre-re-entered sat without frozen state | `test_with_fewer_than_two_flying_sats_the_separation_uses_every_sat_at_its_frozen_state` |
+| M36 silent mover still burns | `test_dead_or_silent_sat_cannot_be_a_mover[dead sat]` and `[silent sat ...]` (landing error 0.0) |
+| M37 PD between bursts instead of coasting | `test_landing_fails_for_cw_planned_transfers_but_1km_impulsive[8.0-0.04-697.1]` |
+| M38 burn one step late | same |
+| M39 silent holder flies the item seat | `test_a_silent_sat_keeps_its_old_seat_whatever_the_plan_says` |

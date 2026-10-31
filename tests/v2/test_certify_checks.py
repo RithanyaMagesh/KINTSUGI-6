@@ -53,7 +53,7 @@ def test_hold_plan_passes_on_a_healthy_2km_formation():
           f"coverage {cert.coverage:.5f}, hold {cert.hold_coverage:.5f}")
     assert cert.passed and cert.reasons == [] and cert.roles_ok and cert.vacant_roles == []
     assert cert.horizon_s == pytest.approx(2.0 * PERIOD, abs=sc.dt_s)
-    assert cert.min_sep_m == pytest.approx(2566.0, abs=40.0)  # pinned, measured
+    assert cert.min_sep_m == pytest.approx(2589.96, abs=0.5)  # pinned, measured
     assert cert.coverage == cert.hold_coverage == pytest.approx(0.42353, abs=1e-3)  # pinned
     assert cert.landing_error_m == 0.0 and cert.worst_fuel_sat is None
 
