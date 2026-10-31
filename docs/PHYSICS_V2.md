@@ -164,7 +164,7 @@ Method: copy the worktree to a scratch directory (never the original), apply one
 ## Earth view data (2026-10-31; `cubesat/geo_v2.py`)
 Fields (all v2-only, additive; the v1 wire and logs are unchanged):
 - tick line / `sim_state`: `chief: {r_eci [x,y,z] m, lat_deg, lon_deg, alt_m}`, `station: {elevation_deg, visible}`.
-- hello: `epoch_utc`, `inclination_deg`, `raan_deg`, `orbit_ring` (256 ECI points, m, 3 decimals), `ground_track` (257 [lat, lon], 4 decimals), `sun_vector_eci` (unit, 6 decimals), `ground_station {name, lat_deg, lon_deg, min_elevation_deg}`. No `time_warp` (no existing field to carry).
+- hello: `epoch_utc`, `inclination_deg`, `raan_deg`, `orbit_ring` (256 ECI points, m, 3 decimals), `ground_track` (257 [lat, lon], 4 decimals), `sun_vector_eci` (unit, 6 decimals), `ground_station {name, lat_deg, lon_deg, min_elevation_deg}`, `formation_shape` (track C6, run-constant, not an Earth-view key). No `time_warp` (no existing field to carry).
 
 Models: GMST = IAU-1982 polynomial at the epoch (UT1 = UTC, < 0.9 s) + 7.2921159e-5 rad/s * t; geodetic on a spherical Earth of 6378.137 km; sun = Astronomical Almanac low-precision formula (~0.01 deg); ring and ground track are integrated with the engine's chief dynamics (gravity + J2, RK4 at `dt_s`; the negative half of the track uses negative steps); the station pass uses `cubesat/ground.py` constants and `elevation_deg`.
 
@@ -179,7 +179,7 @@ Measured (command: `uv run python -m cubesat.geo_v2`, scenario `two_failure.json
 | Ring vs engine chief, samples on engine ticks, max abs diff | 0.0 m (bit identical; `tests/v2/test_geo_v2.py::test_ring_equals_engine_chief_at_matching_ticks`, tolerance 1e-6 m) |
 | Sun declination 2000-06-21T01:48Z | 23.4389 deg (obliquity 23.4393) |
 | Sun angle to +x at the 2000-03-20T07:35Z equinox | 0.0062 deg |
-| hello Earth keys, compact JSON | 14798 bytes (limit tested < 60000) |
+| hello Earth keys, compact JSON | 14828 bytes (limit tested < 60000; 14798 before C6 added `formation_shape`) |
 | `chief` + `station` per tick | 162 bytes |
 
 Tests: GMST 2000-01-01T12:00Z = 280.46061837 deg and Meeus ex. 12.b; sun within 0.5 deg of +x at the 2000 equinox and declination 23.44 +- 0.1 deg at the June solstice (`uv run python -m pytest tests/v2/test_geo_v2.py`).

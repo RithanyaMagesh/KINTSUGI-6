@@ -174,3 +174,22 @@ What the backend delivers, so the console can size its work: at most 30 `sim_sta
 8. **Keep `historyStore` bounded (it already is): 900 samples, 24 markers (`historyStore.ts:28-29`); `push` copies the whole array at 2 Hz (`:48-52`).** Use a ring buffer instead of `[...samples, sample].slice(-900)` if the cost shows up in the profile. Other caps hold: events 200 (`simStore.ts:13`), role history 250 per satellite (`roleHistoryStore.ts:102`), recovery phases 48 (`recoveryStore.ts:45`). Memory: unmeasured. Separate correctness item: the history only resets on events 1 -> 0 (audit A-5).
 9. **Show what is decimated.** At speed 1000 the console receives one frame per about 17 ticks (30 Hz cap) and at speed 60 irregular spacing; the time axis and the "frames received" readout should come from `sim_time`, never from a frame count. Cost: none; this is a labelling request.
 10. **Ask for a measured budget before the L3 pass.** Target from the master map: 60 fps at 1920x1080, no long task above 50 ms. Baseline: unmeasured. Bundle size (audit A-18, one 1.28 MB chunk) and gzip (audit B-21) are separate and also unmeasured on the wire.
+
+### Track C — C6 wire (2026-11-01, branch `evidence`; backend only, build later)
+Source: `cubesat/wire_comms.py` (hooks in `cubesat/wire.py`), `cubesat/geo_v2.py`. Everything is additive: v1 and non-laser v2 streams are byte-identical (wire sha256 of `data/logs/*.jsonl` and a v2 ideal-comms run unchanged).
+- **`sim_state.links`** (laser runs only): `[[from, to, state, range_m, rate_bps], ...]` with display ids (`"SAT-1"`), `state` `LOCKED | ACQUIRING | DOWN`, `range_m` / `rate_bps` numbers or `null` (a non-finite value is sent as null so the frame is never dropped). `rate_bps` is 0 unless LOCKED. Acquisition time (30 s) is an assumption: label it.
+- **`sim_state.components`** (laser runs only): `[["SAT-1", "SAT-2"], ["SAT-3"]]`, groups of talking sats that can hear each other over LOCKED links. More than one entry = the swarm is split. A cut-off sat that is heard again gets NO event; read the reconnect from `components`.
+- **Events** (all `type: "event"`; the structured fields are optional extras):
+  | source | level | message | extra |
+  |---|---|---|---|
+  | `LINK_LOCKED` | info | `Laser link SAT-1 to SAT-2 locked` | `link: ["SAT-1", "SAT-2"]` |
+  | `LINK_LOST` reason `sun` | warning | `Laser link SAT-1 to SAT-2 lost: the sun is in a receiver's view` | `link`, `reason` |
+  | `LINK_LOST` reason `partner_down` | warning | `... lost: a partner is down` | `link`, `reason` |
+  | `LINK_LOST` reason `budget` | warning | `... lost: out of link budget` | `link`, `reason` |
+  | `LINK_LOST` reason `replan` | info | `... dropped: the network re-routed` | `link`, `reason` |
+  | `PARTITION` | warning | `Swarm split into 2 groups: SAT-1, SAT-2 \| SAT-3` | `components` |
+  | `FAILURE_DETECTED{cause: "isolated"}` | warning | `SAT-3 cut off: no laser link reaches it, so the swarm cannot hear it` | `sat_id`, `cause: "isolated"` |
+  Show "cut off" as its own state, not as failed. It does NOT update `metrics.detection_latency_s` (that stays the failure-detection latency).
+- **`hello.formation_shape`** (`cartwheel | pco | gco | helix | string`): v2 LIVE hellos only (all v2 live runs, laser or not). v1 hellos never carry it (v1 is cartwheel-only). **Replay hellos do not carry it yet** (the key rides on the live source; replay needs a session-side hook, owned by the perf track): until then treat a missing key as unknown, and keep the ghost/deviation layer off when unknown on a v2 replay.
+- Size: mean `sim_state` on a 600 s 6-sat laser run (nominal, DEAD sat 0 at 100 s) grows 2694.6 → 3055.1 bytes/frame (mesh, +13.4 %) and 2694.6 → 2995.3 (star, +11.2 %).
+- C4 fields (`functions`, `consensus_rounds`, `split_brain`, `FUNCTION_HANDOFF`) are NOT on the wire yet; they come with C4.

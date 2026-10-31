@@ -154,8 +154,8 @@ def tick_fields(r_eci, epoch_utc: str, t_s: float) -> dict:
 
 
 def hello_fields(scenario: Scenario) -> dict:
-    """Run-constant Earth-view keys of the v2 hello (ring in m, 3 decimals; track in deg, 4;
-    sun unit vector at the epoch, 6). Compute once per run, not per tick."""
+    """Run-constant keys of the v2 live hello: Earth view (ring in m, 3 decimals; track in deg, 4;
+    sun unit vector at the epoch, 6) plus formation_shape. Compute once per run, not per tick."""
     cfg = scenario.chief
     return {
         "epoch_utc": cfg.epoch_utc,
@@ -170,6 +170,7 @@ def hello_fields(scenario: Scenario) -> dict:
             "lon_deg": ground.STATION_LON_DEG,
             "min_elevation_deg": ground.MIN_ELEVATION_DEG,
         },
+        "formation_shape": scenario.formation.shape,  # track C6; v1 hellos never carry it
     }
 
 
