@@ -265,7 +265,10 @@ export function createLandingScene(
   // the rest of the ring stays in dim shade. No directional light and no
   // environment reflections, so nothing glints on the far side.
   scene.add(camera);
-  scene.add(new THREE.AmbientLight(col("--hero-light-rim"), 0.26));
+  // Soft sky fill (hemisphere light: diffuse only, no specular) keeps every
+  // satellite readable without adding glints away from the sun.
+  scene.add(new THREE.HemisphereLight(col("--hero-ink-muted"), col("--hero-bg"), 1.3));
+  scene.add(new THREE.AmbientLight(col("--hero-light-rim"), 0.2));
   const sunLight = new THREE.PointLight(col("--hero-sun"), 95, 15, 2);
   camera.add(sunLight);
   const sun = buildSun();
@@ -341,6 +344,11 @@ export function createLandingScene(
   const sats: Array<{ group: THREE.Group; mats: SatMaterials; halo: THREE.Mesh }> = [];
   for (let j = 0; j < N_SATS; j += 1) {
     const mats = makeMaterials(panelMap);
+    // No environment to mirror out here, so very metallic frames render
+    // black: tone them down to read as brushed aluminium.
+    mats.frame.metalness = 0.45;
+    mats.frame.roughness = 0.4;
+    mats.cap.metalness = 0.3;
     const group = buildCubeSat(geoms, mats);
     scene.add(group);
     const halo = new THREE.Mesh(
@@ -408,6 +416,7 @@ export function createLandingScene(
     cardMeshes.length = 0;
     for (const c of cards) {
       const mat = new THREE.MeshBasicMaterial({ map: cardTexture(c), transparent: true, opacity: 0, depthWrite: false, toneMapped: false });
+      mat.color.setScalar(0.78); // under the 0.82 bloom threshold: crisp text, no glow
       const mesh = new THREE.Mesh(cardGeo, mat);
       scene.add(mesh);
       cardMeshes.push(mesh);
