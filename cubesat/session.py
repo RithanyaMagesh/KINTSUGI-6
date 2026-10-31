@@ -281,6 +281,28 @@ class Session:
         if epoch != self._epoch:
             raise SessionError(409, "superseded by a newer start, load or reset")
 
+    def _load_scenario(self, scenario_name: str | None, seed: int | None) -> Scenario:
+        """Resolve + parse the requested scenario WITHOUT touching session state, so
+        a bad request never tears down the running session (B-17)."""
+        name = scenario_name
+        if name is None:
+            found = sorted(self.scenario_dir.glob("*.json"))
+            if not found:
+                raise SessionError(409, "no scenarios available")
+            name = found[0].name
+        if Path(name).name != name:
+            raise SessionError(404, "scenario not found")
+        path = self.scenario_dir / name
+        if not path.is_file():
+            raise SessionError(404, "scenario not found")
+        try:
+            scenario = load_scenario(path)
+        except ValueError:
+            raise SessionError(422, f"scenario file {name} is not a valid scenario") from None
+        if seed is not None and seed != scenario.seed:
+            scenario = scenario.model_copy(update={"seed": seed})
+        return scenario
+
     async def start_live(
         self,
         scenario_name: str | None = None,
@@ -298,24 +320,11 @@ class Session:
             raise SessionError(
                 422, f"unknown policy {policy!r}; expected one of: {', '.join(POLICY_VALUES)}"
             )
+        scenario = self._load_scenario(scenario_name, seed)  # 404/409/422 before any teardown
         epoch = self._supersede()
         async with self._mutex():
             self._check_epoch(epoch)
             self._teardown()
-            name = scenario_name
-            if name is None:
-                found = sorted(self.scenario_dir.glob("*.json"))
-                if not found:
-                    raise SessionError(409, "no scenarios available")
-                name = found[0].name
-            if Path(name).name != name:
-                raise SessionError(404, "scenario not found")
-            path = self.scenario_dir / name
-            if not path.is_file():
-                raise SessionError(404, "scenario not found")
-            scenario = load_scenario(path)
-            if seed is not None and seed != scenario.seed:
-                scenario = scenario.model_copy(update={"seed": seed})
             self.mode = "live"
             self.speed = speed
             self._prepare(
@@ -360,15 +369,15 @@ class Session:
         self, filename: str, speed: float = 100.0, predictor: bool = False
     ) -> int:
         """Returns the skipped (unparseable) line count (section 7.1)."""
+        path = self.log_dir / Path(filename).name  # section 7.2 path safety
+        if not path.is_file():  # before any teardown (B-17)
+            raise SessionError(404, "replay file not found")
         epoch = self._supersede()
         async with self._mutex():
             self._check_epoch(epoch)
-            self._teardown()
-            path = self.log_dir / Path(filename).name  # section 7.2 path safety
-            if not path.is_file():
-                raise SessionError(404, "replay file not found")
             log = await asyncio.to_thread(load_jsonl, path)
             self._check_epoch(epoch)
+            self._teardown()
             self.mode = "replay"
             self.speed = speed
             self._prepare(
