@@ -1,0 +1,12 @@
+{
+  "command": "uv run python -m cubesat.transfer_report --keepout-fuzz data/eval/lp_keepout_fuzz.json",
+  "seed": 20261031,
+  "cases": 100,
+  "planned": 96,
+  "none": 4,
+  "free_plan_collides_cases": 100,
+  "worst_true_shortfall_m": -43.31295283143447,
+  "worst_verified_grid_shortfall_m": 0.0,
+  "worst_shortfall_over_half_vrel": 0.0,
+  "note": "shortfall = d_safe - true minimum distance (0.05 s grid, linear obstacle); the 1 s verification grid bounds it by v_rel * 0.5 s (ratio <= 1)"
+}

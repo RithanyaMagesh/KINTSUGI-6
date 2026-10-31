@@ -3,9 +3,9 @@
   "definitions": {
     "lp_total_l1_mps": "LP objective: sum over nodes and axes of |dv| (minimised)",
     "lp_total_l2_mps": "sum over nodes of ||dv_k||_2 (physical delta-v), same plan",
-    "reference_start": "sat 0 logged state at the ASSIGNMENT tick (t_replan + dt); alt_start uses the REPLANNING-tick state",
-    "pd": "cubesat.pd.PDController wn=0.01 zeta=1 a_max, dt 2 s, 4 orbits, moving slot",
-    "two_impulse": "cubesat.dv_bound.two_impulse_dv, L2 sum; null when its singularity guard fires (T = k*pi/n kills the z / xy velocity solve)",
+    "reference_start": "sat 0 logged state at the ASSIGNMENT tick (t_replan + dt = 1208 s, after the first PD step: dv_already_spent_mps); the lp_alt_start_* columns use the REPLANNING-tick state (1206 s), the pure planning state",
+    "pd_dv_l2_mps": "cubesat.pd.PDController dv_used (integral of ||u|| dt, an L2 figure) wn=0.01 zeta=1 a_max, dt 2 s, 4 orbits, moving slot",
+    "two_impulse_*_l2_mps": "cubesat.dv_bound.two_impulse_dv, L2 sum; null when its singularity guard fires (T = k*pi/n: at 0.5 orbit the xy block of Phi_rv is regular, det = 16/n^2, but sin(nT)/n = 0 makes the z velocity term and so the full 3x3 singular; at 1 and 2 orbits the xy block is singular too)",
     "wall_time": "lp_runtime_ms_machine_dependent is wall time on the generating machine"
   },
   "reference_case": {
@@ -23,7 +23,8 @@
     "amp_m": 8000.0,
     "k_survivors": 5,
     "slot_index": 1,
-    "t_replan": 1206.0
+    "t_replan": 1206.0,
+    "dv_already_spent_mps": 0.2
   },
   "n_default": 48,
   "rows": [
@@ -38,14 +39,16 @@
       "feasible": true,
       "lp_total_l1_mps": 24.83850856018183,
       "lp_total_l2_mps": 24.83850856018183,
-      "lp_runtime_ms_machine_dependent": 50.35541600227589,
-      "two_impulse_same_T_mps": null,
+      "lp_runtime_ms_machine_dependent": 9.033834001456853,
+      "two_impulse_same_T_l2_mps": null,
       "two_impulse_same_T_singular": true,
       "pd_status": "settled",
-      "pd_dv_mps": 93.83885316855309,
+      "pd_dv_l2_mps": 93.83885316855309,
       "pd_settle_s": 1038.0,
       "pd_residual_m": 708.7825792481218,
-      "two_impulse_at_pd_settle_T_mps": 35.91639047640828
+      "two_impulse_at_pd_settle_T_l2_mps": 35.91639047640828,
+      "lp_alt_start_t_replan_l1_mps": 25.001369797663195,
+      "lp_alt_start_t_replan_l2_mps": 25.001369797663187
     },
     {
       "case": "reference_8km_leader",
@@ -58,14 +61,16 @@
       "feasible": true,
       "lp_total_l1_mps": 15.707151774505608,
       "lp_total_l2_mps": 15.707151774505608,
-      "lp_runtime_ms_machine_dependent": 5.891542001336347,
-      "two_impulse_same_T_mps": null,
+      "lp_runtime_ms_machine_dependent": 2.8718750036205165,
+      "two_impulse_same_T_l2_mps": null,
       "two_impulse_same_T_singular": true,
       "pd_status": "settled",
-      "pd_dv_mps": 93.83885316855309,
+      "pd_dv_l2_mps": 93.83885316855309,
       "pd_settle_s": 1038.0,
       "pd_residual_m": 708.7825792481218,
-      "two_impulse_at_pd_settle_T_mps": 35.91639047640828
+      "two_impulse_at_pd_settle_T_l2_mps": 35.91639047640828,
+      "lp_alt_start_t_replan_l1_mps": 15.77669300994881,
+      "lp_alt_start_t_replan_l2_mps": 15.776693009948811
     },
     {
       "case": "reference_8km_leader",
@@ -78,14 +83,16 @@
       "feasible": true,
       "lp_total_l1_mps": 15.557300247850943,
       "lp_total_l2_mps": 15.557300247850945,
-      "lp_runtime_ms_machine_dependent": 16.210707995924167,
-      "two_impulse_same_T_mps": null,
+      "lp_runtime_ms_machine_dependent": 2.737875001912471,
+      "two_impulse_same_T_l2_mps": null,
       "two_impulse_same_T_singular": true,
       "pd_status": "settled",
-      "pd_dv_mps": 93.83885316855309,
+      "pd_dv_l2_mps": 93.83885316855309,
       "pd_settle_s": 1038.0,
       "pd_residual_m": 708.7825792481218,
-      "two_impulse_at_pd_settle_T_mps": 35.91639047640828
+      "two_impulse_at_pd_settle_T_l2_mps": 35.91639047640828,
+      "lp_alt_start_t_replan_l1_mps": 15.625783252568542,
+      "lp_alt_start_t_replan_l2_mps": 15.625783252568539
     },
     {
       "case": "reference_8km_leader",
@@ -94,18 +101,20 @@
       "T_s": 2838.4890142629297,
       "N": 48,
       "solver": "scipy linprog highs",
-      "solver_status": "infeasible",
+      "solver_status": "no_plan",
       "feasible": false,
       "lp_total_l1_mps": null,
       "lp_total_l2_mps": null,
-      "lp_runtime_ms_machine_dependent": 6.792833002691623,
-      "two_impulse_same_T_mps": null,
+      "lp_runtime_ms_machine_dependent": 2.643959000124596,
+      "two_impulse_same_T_l2_mps": null,
       "two_impulse_same_T_singular": true,
       "pd_status": "diverged",
-      "pd_dv_mps": 227.06000000004235,
+      "pd_dv_l2_mps": 227.06000000004235,
       "pd_settle_s": null,
       "pd_residual_m": 7066218.285144657,
-      "two_impulse_at_pd_settle_T_mps": null
+      "two_impulse_at_pd_settle_T_l2_mps": null,
+      "lp_alt_start_t_replan_l1_mps": null,
+      "lp_alt_start_t_replan_l2_mps": null
     },
     {
       "case": "reference_8km_leader",
@@ -118,14 +127,16 @@
       "feasible": true,
       "lp_total_l1_mps": 16.309522839324526,
       "lp_total_l2_mps": 16.30952283932453,
-      "lp_runtime_ms_machine_dependent": 5.334749999747146,
-      "two_impulse_same_T_mps": null,
+      "lp_runtime_ms_machine_dependent": 2.921999999671243,
+      "two_impulse_same_T_l2_mps": null,
       "two_impulse_same_T_singular": true,
       "pd_status": "diverged",
-      "pd_dv_mps": 227.06000000004235,
+      "pd_dv_l2_mps": 227.06000000004235,
       "pd_settle_s": null,
       "pd_residual_m": 7066218.285144657,
-      "two_impulse_at_pd_settle_T_mps": null
+      "two_impulse_at_pd_settle_T_l2_mps": null,
+      "lp_alt_start_t_replan_l1_mps": 16.39767441188244,
+      "lp_alt_start_t_replan_l2_mps": 16.39767441188244
     },
     {
       "case": "reference_8km_leader",
@@ -138,14 +149,16 @@
       "feasible": true,
       "lp_total_l1_mps": 15.693531297988475,
       "lp_total_l2_mps": 15.693531297988477,
-      "lp_runtime_ms_machine_dependent": 5.3843339992454275,
-      "two_impulse_same_T_mps": null,
+      "lp_runtime_ms_machine_dependent": 2.77779099997133,
+      "two_impulse_same_T_l2_mps": null,
       "two_impulse_same_T_singular": true,
       "pd_status": "diverged",
-      "pd_dv_mps": 227.06000000004235,
+      "pd_dv_l2_mps": 227.06000000004235,
       "pd_settle_s": null,
       "pd_residual_m": 7066218.285144657,
-      "two_impulse_at_pd_settle_T_mps": null
+      "two_impulse_at_pd_settle_T_l2_mps": null,
+      "lp_alt_start_t_replan_l1_mps": 15.770060011828345,
+      "lp_alt_start_t_replan_l2_mps": 15.770060011828345
     },
     {
       "case": "reference_8km_leader",
@@ -154,18 +167,20 @@
       "T_s": 2838.4890142629297,
       "N": 48,
       "solver": "scipy linprog highs",
-      "solver_status": "infeasible",
+      "solver_status": "no_plan",
       "feasible": false,
       "lp_total_l1_mps": null,
       "lp_total_l2_mps": null,
-      "lp_runtime_ms_machine_dependent": 2.74958299996797,
-      "two_impulse_same_T_mps": null,
+      "lp_runtime_ms_machine_dependent": 1.331792002019938,
+      "two_impulse_same_T_l2_mps": null,
       "two_impulse_same_T_singular": true,
       "pd_status": "diverged",
-      "pd_dv_mps": 45.41199999999659,
+      "pd_dv_l2_mps": 45.41199999999659,
       "pd_settle_s": null,
       "pd_residual_m": 1389802.412036914,
-      "two_impulse_at_pd_settle_T_mps": null
+      "two_impulse_at_pd_settle_T_l2_mps": null,
+      "lp_alt_start_t_replan_l1_mps": null,
+      "lp_alt_start_t_replan_l2_mps": null
     },
     {
       "case": "reference_8km_leader",
@@ -174,18 +189,20 @@
       "T_s": 5676.978028525859,
       "N": 48,
       "solver": "scipy linprog highs",
-      "solver_status": "infeasible",
+      "solver_status": "no_plan",
       "feasible": false,
       "lp_total_l1_mps": null,
       "lp_total_l2_mps": null,
-      "lp_runtime_ms_machine_dependent": 2.5992090013460256,
-      "two_impulse_same_T_mps": null,
+      "lp_runtime_ms_machine_dependent": 1.3500419954652898,
+      "two_impulse_same_T_l2_mps": null,
       "two_impulse_same_T_singular": true,
       "pd_status": "diverged",
-      "pd_dv_mps": 45.41199999999659,
+      "pd_dv_l2_mps": 45.41199999999659,
       "pd_settle_s": null,
       "pd_residual_m": 1389802.412036914,
-      "two_impulse_at_pd_settle_T_mps": null
+      "two_impulse_at_pd_settle_T_l2_mps": null,
+      "lp_alt_start_t_replan_l1_mps": null,
+      "lp_alt_start_t_replan_l2_mps": null
     },
     {
       "case": "reference_8km_leader",
@@ -194,18 +211,20 @@
       "T_s": 11353.956057051719,
       "N": 48,
       "solver": "scipy linprog highs",
-      "solver_status": "infeasible",
+      "solver_status": "no_plan",
       "feasible": false,
       "lp_total_l1_mps": null,
       "lp_total_l2_mps": null,
-      "lp_runtime_ms_machine_dependent": 2.6442499947734177,
-      "two_impulse_same_T_mps": null,
+      "lp_runtime_ms_machine_dependent": 1.3228750030975789,
+      "two_impulse_same_T_l2_mps": null,
       "two_impulse_same_T_singular": true,
       "pd_status": "diverged",
-      "pd_dv_mps": 45.41199999999659,
+      "pd_dv_l2_mps": 45.41199999999659,
       "pd_settle_s": null,
       "pd_residual_m": 1389802.412036914,
-      "two_impulse_at_pd_settle_T_mps": null
+      "two_impulse_at_pd_settle_T_l2_mps": null,
+      "lp_alt_start_t_replan_l1_mps": null,
+      "lp_alt_start_t_replan_l2_mps": null
     },
     {
       "case": "formation_2km_slot0_to_slot1",
@@ -218,14 +237,14 @@
       "feasible": true,
       "lp_total_l1_mps": 5.037851179987532,
       "lp_total_l2_mps": 5.037851179987532,
-      "lp_runtime_ms_machine_dependent": 10.524417004489806,
-      "two_impulse_same_T_mps": null,
+      "lp_runtime_ms_machine_dependent": 3.0329169967444614,
+      "two_impulse_same_T_l2_mps": null,
       "two_impulse_same_T_singular": true,
       "pd_status": "settled",
-      "pd_dv_mps": 27.55660981281189,
+      "pd_dv_l2_mps": 27.55660981281189,
       "pd_settle_s": 542.0,
       "pd_residual_m": 210.94306838858924,
-      "two_impulse_at_pd_settle_T_mps": 14.594966726681982
+      "two_impulse_at_pd_settle_T_l2_mps": 14.594966726681982
     },
     {
       "case": "formation_2km_slot0_to_slot1",
@@ -236,16 +255,16 @@
       "solver": "scipy linprog highs",
       "solver_status": "optimal",
       "feasible": true,
-      "lp_total_l1_mps": 4.178279819403904,
+      "lp_total_l1_mps": 4.178279819403903,
       "lp_total_l2_mps": 4.178279819403904,
-      "lp_runtime_ms_machine_dependent": 10.095791003550403,
-      "two_impulse_same_T_mps": null,
+      "lp_runtime_ms_machine_dependent": 2.948207998997532,
+      "two_impulse_same_T_l2_mps": null,
       "two_impulse_same_T_singular": true,
       "pd_status": "settled",
-      "pd_dv_mps": 27.55660981281189,
+      "pd_dv_l2_mps": 27.55660981281189,
       "pd_settle_s": 542.0,
       "pd_residual_m": 210.94306838858924,
-      "two_impulse_at_pd_settle_T_mps": 14.594966726681982
+      "two_impulse_at_pd_settle_T_l2_mps": 14.594966726681982
     },
     {
       "case": "formation_2km_slot0_to_slot1",
@@ -258,14 +277,14 @@
       "feasible": true,
       "lp_total_l1_mps": 3.906722312358715,
       "lp_total_l2_mps": 3.906722312358715,
-      "lp_runtime_ms_machine_dependent": 8.71904200175777,
-      "two_impulse_same_T_mps": null,
+      "lp_runtime_ms_machine_dependent": 2.7591250036493875,
+      "two_impulse_same_T_l2_mps": null,
       "two_impulse_same_T_singular": true,
       "pd_status": "settled",
-      "pd_dv_mps": 27.55660981281189,
+      "pd_dv_l2_mps": 27.55660981281189,
       "pd_settle_s": 542.0,
       "pd_residual_m": 210.94306838858924,
-      "two_impulse_at_pd_settle_T_mps": 14.594966726681982
+      "two_impulse_at_pd_settle_T_l2_mps": 14.594966726681982
     },
     {
       "case": "formation_2km_slot0_to_slot1",
@@ -278,14 +297,14 @@
       "feasible": true,
       "lp_total_l1_mps": 5.311990118258178,
       "lp_total_l2_mps": 5.311990118258178,
-      "lp_runtime_ms_machine_dependent": 5.113167004310526,
-      "two_impulse_same_T_mps": null,
+      "lp_runtime_ms_machine_dependent": 2.7129170048283413,
+      "two_impulse_same_T_l2_mps": null,
       "two_impulse_same_T_singular": true,
       "pd_status": "settled",
-      "pd_dv_mps": 27.264593573086017,
+      "pd_dv_l2_mps": 27.264593573086017,
       "pd_settle_s": 2732.0,
       "pd_residual_m": 212.94010062884652,
-      "two_impulse_at_pd_settle_T_mps": 24.008716148133075
+      "two_impulse_at_pd_settle_T_l2_mps": 24.008716148133075
     },
     {
       "case": "formation_2km_slot0_to_slot1",
@@ -296,16 +315,16 @@
       "solver": "scipy linprog highs",
       "solver_status": "optimal",
       "feasible": true,
-      "lp_total_l1_mps": 4.184007617558389,
+      "lp_total_l1_mps": 4.18400761755839,
       "lp_total_l2_mps": 4.18400761755839,
-      "lp_runtime_ms_machine_dependent": 4.872375000559259,
-      "two_impulse_same_T_mps": null,
+      "lp_runtime_ms_machine_dependent": 2.7476659961394034,
+      "two_impulse_same_T_l2_mps": null,
       "two_impulse_same_T_singular": true,
       "pd_status": "settled",
-      "pd_dv_mps": 27.264593573086017,
+      "pd_dv_l2_mps": 27.264593573086017,
       "pd_settle_s": 2732.0,
       "pd_residual_m": 212.94010062884652,
-      "two_impulse_at_pd_settle_T_mps": 24.008716148133075
+      "two_impulse_at_pd_settle_T_l2_mps": 24.008716148133075
     },
     {
       "case": "formation_2km_slot0_to_slot1",
@@ -316,16 +335,16 @@
       "solver": "scipy linprog highs",
       "solver_status": "optimal",
       "feasible": true,
-      "lp_total_l1_mps": 3.9071618748031396,
+      "lp_total_l1_mps": 3.90716187480314,
       "lp_total_l2_mps": 3.9071618748031396,
-      "lp_runtime_ms_machine_dependent": 5.3919999991194345,
-      "two_impulse_same_T_mps": null,
+      "lp_runtime_ms_machine_dependent": 2.692458998353686,
+      "two_impulse_same_T_l2_mps": null,
       "two_impulse_same_T_singular": true,
       "pd_status": "settled",
-      "pd_dv_mps": 27.264593573086017,
+      "pd_dv_l2_mps": 27.264593573086017,
       "pd_settle_s": 2732.0,
       "pd_residual_m": 212.94010062884652,
-      "two_impulse_at_pd_settle_T_mps": 24.008716148133075
+      "two_impulse_at_pd_settle_T_l2_mps": 24.008716148133075
     },
     {
       "case": "formation_2km_slot0_to_slot1",
@@ -334,18 +353,18 @@
       "T_s": 2838.4890142629297,
       "N": 48,
       "solver": "scipy linprog highs",
-      "solver_status": "infeasible",
+      "solver_status": "no_plan",
       "feasible": false,
       "lp_total_l1_mps": null,
       "lp_total_l2_mps": null,
-      "lp_runtime_ms_machine_dependent": 4.978915996616706,
-      "two_impulse_same_T_mps": null,
+      "lp_runtime_ms_machine_dependent": 2.739167000981979,
+      "two_impulse_same_T_l2_mps": null,
       "two_impulse_same_T_singular": true,
       "pd_status": "diverged",
-      "pd_dv_mps": 45.41199999999659,
+      "pd_dv_l2_mps": 45.41199999999659,
       "pd_settle_s": null,
       "pd_residual_m": 905795.1307579911,
-      "two_impulse_at_pd_settle_T_mps": null
+      "two_impulse_at_pd_settle_T_l2_mps": null
     },
     {
       "case": "formation_2km_slot0_to_slot1",
@@ -358,14 +377,14 @@
       "feasible": true,
       "lp_total_l1_mps": 4.5460389746216405,
       "lp_total_l2_mps": 4.149969031702967,
-      "lp_runtime_ms_machine_dependent": 4.598583000188228,
-      "two_impulse_same_T_mps": null,
+      "lp_runtime_ms_machine_dependent": 2.9312920014490373,
+      "two_impulse_same_T_l2_mps": null,
       "two_impulse_same_T_singular": true,
       "pd_status": "diverged",
-      "pd_dv_mps": 45.41199999999659,
+      "pd_dv_l2_mps": 45.41199999999659,
       "pd_settle_s": null,
       "pd_residual_m": 905795.1307579911,
-      "two_impulse_at_pd_settle_T_mps": null
+      "two_impulse_at_pd_settle_T_l2_mps": null
     },
     {
       "case": "formation_2km_slot0_to_slot1",
@@ -376,16 +395,16 @@
       "solver": "scipy linprog highs",
       "solver_status": "optimal",
       "feasible": true,
-      "lp_total_l1_mps": 3.9641154041459354,
+      "lp_total_l1_mps": 3.964115404145936,
       "lp_total_l2_mps": 3.964115404145936,
-      "lp_runtime_ms_machine_dependent": 6.272875005379319,
-      "two_impulse_same_T_mps": null,
+      "lp_runtime_ms_machine_dependent": 2.807041004416533,
+      "two_impulse_same_T_l2_mps": null,
       "two_impulse_same_T_singular": true,
       "pd_status": "diverged",
-      "pd_dv_mps": 45.41199999999659,
+      "pd_dv_l2_mps": 45.41199999999659,
       "pd_settle_s": null,
       "pd_residual_m": 905795.1307579911,
-      "two_impulse_at_pd_settle_T_mps": null
+      "two_impulse_at_pd_settle_T_l2_mps": null
     }
   ],
   "convergence": [
@@ -400,19 +419,13 @@
         96
       ],
       "l1_mps": [
-        16.494061647688827,
+        16.494061647688824,
         16.264446403281482,
         16.309522839324526,
         16.333317701502388
       ],
-      "l2_mps": [
-        16.494061647688827,
-        16.264446403281482,
-        16.30952283932453,
-        16.333317701502388
-      ],
       "rel_change_on_halving": [
-        0.01411761819086681,
+        0.014117618190866592,
         0.002763810841501616,
         0.0014568296908639305
       ]
@@ -428,21 +441,15 @@
         96
       ],
       "l1_mps": [
-        15.843892466557644,
+        15.843892466557648,
         15.745502747411338,
-        15.707151774505608,
-        15.69998846598893
-      ],
-      "l2_mps": [
-        15.843892466557644,
-        15.745502747411336,
         15.707151774505608,
         15.699988465988929
       ],
       "rel_change_on_halving": [
-        0.006248750562282428,
+        0.0062487505622826536,
         0.0024416249015928064,
-        0.000456262024153413
+        0.0004562620241535262
       ]
     },
     {
@@ -456,20 +463,14 @@
         96
       ],
       "l1_mps": [
-        4.496374920269748,
-        4.532878513455062,
+        4.496374920269749,
+        4.532878513455063,
         4.5460389746216405,
         4.5591370841477605
       ],
-      "l2_mps": [
-        4.094281292338541,
-        4.138610304106212,
-        4.149969031702967,
-        4.129361472835991
-      ],
       "rel_change_on_halving": [
-        0.008053071150475214,
-        0.00289492924280837,
+        0.008053071150475212,
+        0.0028949292428081743,
         0.0028729361026810264
       ]
     }
@@ -481,7 +482,7 @@
       "measured_l1_mps": 16.309522839324526,
       "measured_l2_mps": 16.30952283932453,
       "alt_start_t_replan_l1_mps": 16.39767441188244,
-      "definition": "LP, N=48, k=1, T = 1 orbit, CW planning model; compared as measured (no tuning of N, caps or T). L1 = LP objective, L2 = sum of impulse magnitudes.",
+      "definition": "LP, N=48, k=1, T = 1 orbit, CW planning model, L1-optimal plan; compared as measured (no tuning of N, caps or T). L1 = LP objective, L2 = sum of impulse magnitudes.",
       "difference_l1_mps": -0.09047716067547285
     },
     {
@@ -489,8 +490,70 @@
       "claimed_mps": 4.0,
       "measured_l1_mps": 4.5460389746216405,
       "measured_l2_mps": 4.149969031702967,
-      "definition": "LP, N=48, k=1, T = 1 orbit, CW planning model; compared as measured (no tuning of N, caps or T). L1 = LP objective, L2 = sum of impulse magnitudes.",
+      "definition": "LP, N=48, k=1, T = 1 orbit, CW planning model, L1-optimal plan; compared as measured (no tuning of N, caps or T). L1 = LP objective, L2 = sum of impulse magnitudes.",
       "difference_l1_mps": 0.5460389746216405
     }
-  ]
+  ],
+  "l2_optimum_check": [
+    {
+      "a_max_mps2": 0.1,
+      "T_orbits": 1.0,
+      "N": 48,
+      "lp_l2_mps": 15.707151774505608,
+      "lp_l1_mps": 15.707151774505608,
+      "slsqp_box_l2_mps": 14.142647941141188,
+      "slsqp_sphere_l2_mps": 14.142647941140194,
+      "slsqp_box_success": true,
+      "slsqp_sphere_success": true,
+      "slsqp_box_landing_residual_m": 4.1202118317756523e-10,
+      "slsqp_sphere_landing_residual_m": 4.737245321547751e-10,
+      "dual_lower_bound_uncapped_l2_mps": 14.142647941132362,
+      "gap_box_pct": 11.062311950884762,
+      "gap_sphere_pct": 11.062311950892578
+    },
+    {
+      "a_max_mps2": 0.01,
+      "T_orbits": 1.0,
+      "N": 48,
+      "lp_l2_mps": 16.30952283932453,
+      "lp_l1_mps": 16.309522839324526,
+      "slsqp_box_l2_mps": 14.142647941135941,
+      "slsqp_sphere_l2_mps": 14.14264794113624,
+      "slsqp_box_success": true,
+      "slsqp_sphere_success": true,
+      "slsqp_box_landing_residual_m": 4.660608012245539e-10,
+      "slsqp_sphere_landing_residual_m": 3.9923503099742043e-10,
+      "dual_lower_bound_uncapped_l2_mps": 14.142647941132362,
+      "gap_box_pct": 15.321564301165402,
+      "gap_sphere_pct": 15.32156430116296
+    }
+  ],
+  "cap_shape_comparison": {
+    "case": "reference_8km_leader",
+    "T_orbits": 1.0,
+    "N": 48,
+    "min_feasible_a_max_mps2": {
+      "box": 0.005049628186697208,
+      "octahedron": 0.0033780642486217326,
+      "sphere_slsqp": 0.003065908901938255,
+      "box_cap_dt_T_over_N_minus_1": 0.00494442759947436
+    },
+    "min_feasible_a_max_sphere_success": true,
+    "totals_at_a_max_0.01": {
+      "box": {
+        "l1_mps": 16.309522839324526,
+        "l2_mps": 16.30952283932453
+      },
+      "octahedron": {
+        "l1_mps": 15.883319287307291,
+        "l2_mps": 15.883319287307291
+      },
+      "sphere_slsqp": {
+        "l1_mps": 21.229423222157187,
+        "l2_mps": 14.14264794113624
+      }
+    },
+    "box_extra_l1_vs_octahedron_pct": 2.683340580818161,
+    "note": "sphere = ||dv_k||_2 <= a_max*T/N (true vector cap), sphere_slsqp totals are the SLSQP L2 optimum under it; the default cap stays 'box'; the choice is made later."
+  }
 }
