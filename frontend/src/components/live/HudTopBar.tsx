@@ -19,6 +19,8 @@ interface Props {
   onToggleTelemetry(): void;
   onToggleFullscreen(): void;
   onHideHud(): void;
+  spectating: boolean;
+  onToggleSpectate(): void;
   isFullscreen: boolean;
 }
 
@@ -118,6 +120,15 @@ export default function HudTopBar(p: Props) {
             Formation
           </button>
         </div>
+        <button
+          type="button"
+          className={styles.hudBtn}
+          aria-pressed={p.spectating}
+          onClick={p.onToggleSpectate}
+          title="Ride along with each satellite (← → to switch)"
+        >
+          Spectate <kbd className={styles.kbd}>V</kbd>
+        </button>
         <button type="button" className={styles.hudBtn} aria-pressed={p.setupOpen} onClick={p.onToggleSetup}>
           Setup <kbd className={styles.kbd}>S</kbd>
         </button>

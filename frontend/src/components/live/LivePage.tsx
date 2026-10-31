@@ -19,6 +19,7 @@ import HudMetrics from "./HudMetrics";
 import PhaseRail from "./PhaseRail";
 import TelemetryDrawer from "./TelemetryDrawer";
 import SceneControls from "./SceneControls";
+import SpectatorBar, { spectateStart, spectateStep } from "./SpectatorBar";
 import styles from "./ImmersiveLive.module.css";
 
 function typingTarget(el: EventTarget | null): boolean {
@@ -31,6 +32,7 @@ export default function LivePage() {
   const [setupOpen, setSetupOpen] = useState(false);
   const [telemetryOpen, setTelemetryOpen] = useState(false);
   const [hudHidden, setHudHidden] = useState(false);
+  const [spectating, setSpectating] = useState(false);
   const [isFs, setIsFs] = useState(false);
   const controllerRef = useRef<SwarmSceneController | null>(null);
   const [controller, setController] = useState<SwarmSceneController | null>(null);
@@ -59,6 +61,16 @@ export default function LivePage() {
     if (useSimStore.getState().satellites.length === 0) setSetupOpen(true);
   }, []);
 
+  const exitSpectate = useCallback(() => {
+    setSpectating(false);
+    useUiStore.getState().selectSatellite(null); // flies back out to the Earth
+  }, []);
+  const enterSpectate = useCallback(() => {
+    if (useSimStore.getState().satellites.length === 0) return;
+    setSpectating(true);
+    spectateStart();
+  }, []);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey || typingTarget(e.target)) return;
@@ -68,10 +80,17 @@ export default function LivePage() {
           setSetupOpen(false);
           setTelemetryOpen(false);
         } else if (hudHidden) setHudHidden(false);
+        else if (spectating) exitSpectate();
         else useUiStore.getState().selectSatellite(null);
         return;
       }
-      if (k === "h") setHudHidden((v) => !v);
+      if (k === "v") {
+        if (spectating) exitSpectate();
+        else enterSpectate();
+      } else if (k === "arrowright" || k === "arrowleft") {
+        if (!spectating) enterSpectate();
+        spectateStep(k === "arrowright" ? 1 : -1);
+      } else if (k === "h") setHudHidden((v) => !v);
       else if (k === "s") setSetupOpen((v) => !v);
       else if (k === "t") setTelemetryOpen((v) => !v);
       else if (k === "f") toggleFullscreen();
@@ -84,7 +103,7 @@ export default function LivePage() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [setupOpen, telemetryOpen, hudHidden, toggleFullscreen]);
+  }, [setupOpen, telemetryOpen, hudHidden, spectating, toggleFullscreen, exitSpectate, enterSpectate]);
 
   const showSelected = selectedId !== null && !telemetryOpen && !hudHidden;
 
@@ -104,10 +123,14 @@ export default function LivePage() {
           onToggleTelemetry={() => setTelemetryOpen((v) => !v)}
           onToggleFullscreen={toggleFullscreen}
           onHideHud={() => setHudHidden(true)}
+          spectating={spectating}
+          onToggleSpectate={() => (spectating ? exitSpectate() : enterSpectate())}
           isFullscreen={isFs}
         />
 
         <SceneControls controller={controller} />
+
+        {spectating && <SpectatorBar onExit={exitSpectate} />}
 
         <aside className={styles.drawerLeft} data-open={setupOpen || undefined} aria-label="Setup">
           <div className={styles.drawerHead}>
