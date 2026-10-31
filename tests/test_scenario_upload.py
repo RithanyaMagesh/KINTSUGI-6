@@ -90,7 +90,8 @@ def test_upload_invalid_payload_422_dir_untouched(tmp_path, monkeypatch):
     monkeypatch.setattr(cubesat.api, "scenarios_dir", lambda: directory)
     r = client.post("/scenarios/upload", json={"name": "bad", "scenario": {"name": "bad"}})
     assert r.status_code == 422
-    assert "validation error" in r.json()["detail"]
+    assert "invalid scenario" in r.json()["detail"]
+    assert "seed: Field required" in r.json()["detail"]  # field named, plain English
     assert not directory.exists()  # untouched on failure
 
     # a non-dict scenario never reaches the loader: the request model 422s first

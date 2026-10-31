@@ -12,7 +12,7 @@ are frontend-derived -- the backend only reports what the log carries.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field
 
@@ -42,10 +42,18 @@ POLICY_VALUES = ("hungarian", "even_split", "hungarian_keepout")
 Policy = Literal["hungarian", "even_split", "hungarian_keepout"]
 
 
+# Playback speed bounds (sim-seconds per wall-second). 1e6 is the pacing-neutralised
+# ceiling every test and the console use; the floor rejects values that stall the
+# driver for hours (audit B-13: 1e-9 was accepted and froze the stream).
+SPEED_MIN = 0.01
+SPEED_MAX = 1e6
+Speed = Annotated[float, Field(ge=SPEED_MIN, le=SPEED_MAX, allow_inf_nan=False)]
+
+
 class StartRequest(BaseModel):
     scenario: str | None = None
     seed: int | None = None
-    speed: float = Field(default=100.0, gt=0)
+    speed: Speed = 100.0
     policy: Policy = "hungarian"
     predictor: bool = False  # display-only sats[].risk overlay (session.py seam)
 
@@ -54,21 +62,22 @@ class InjectRequest(BaseModel):
     sat_id: str
     mode: Literal["DEAD", "THRUSTER_OUT", "EPS_DEGRADE"] = "DEAD"
     degrade_s: float = Field(
-        default=600.0, ge=0, description="EPS_DEGRADE fade length, s (ignored otherwise)"
+        default=600.0, ge=0, allow_inf_nan=False,
+        description="EPS_DEGRADE fade length, s (ignored otherwise)",
     )
 
 
 class SeekRequest(BaseModel):
-    t: float
+    t: float = Field(allow_inf_nan=False)
 
 
 class SpeedRequest(BaseModel):
-    speed: float = Field(gt=0)
+    speed: Speed
 
 
 class ReplayLoadRequest(BaseModel):
     filename: str
-    speed: float = Field(default=100.0, gt=0)
+    speed: Speed = 100.0
     predictor: bool = False  # same display-only overlay, resolved via the log's scenario
 
 

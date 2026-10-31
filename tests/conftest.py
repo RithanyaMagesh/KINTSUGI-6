@@ -71,3 +71,31 @@ def write_log(log_dir: Path, name: str, lines: list[dict]) -> Path:
         newline="\n",
     )
     return path
+
+
+# ---- session-lifecycle test helpers (tests/test_session_*.py) -----------------
+
+
+def make_session(tmp_path):
+    from cubesat.session import Hub, Session
+
+    hub = Hub()
+    return hub, Session(
+        scenario_dir=tmp_path / "scenarios", log_dir=tmp_path / "logs", hub=hub,
+        min_emit_interval=0.0,
+    )
+
+
+def write_scenario(tmp_path, fname, **overrides):
+    """TINY_SCENARIO_NO_FAILURES variant written as scenarios/<fname>."""
+    d = tmp_path / "scenarios"
+    d.mkdir(parents=True, exist_ok=True)
+    body = dict(TINY_SCENARIO_NO_FAILURES, **overrides)
+    (d / fname).write_text(json.dumps(body), encoding="utf-8", newline="\n")
+
+
+def drain(q) -> list[dict]:
+    out = []
+    while not q.empty():
+        out.append(q.get_nowait())
+    return out

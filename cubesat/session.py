@@ -19,7 +19,7 @@ import cubesat.sim as sim_module
 from cubesat.benchmark_policies import even_split_replan, hungarian_keepout_replan
 from cubesat.replay import ReplayLog, index_at, load_jsonl
 from cubesat.scenario import Failure, FailureMode, Scenario, load_scenario
-from cubesat.sim import run_scenario
+from cubesat.sim import RunCancelled, run_scenario
 from cubesat.wire import POLICY_VALUES, SessionEnrich, to_event, to_messages, to_sim_state
 
 
@@ -196,10 +196,17 @@ class Session:
         self._anchor_wall = 0.0
         self._last_emit_wall: float | None = None
         self._seam_original = None  # cubesat.sim.replan before the policy seam rebind
-        # Display-only predictor risk map (see _install_predictor): t_s -> sat_id -> [0,1].
+        # Mutation serialization (audit B-1/B-2/B-3). start/replay/inject/reset hold
+        # _mutex for their whole duration. _epoch identifies the current RUN: start,
+        # replay and reset bump it BEFORE queueing for the lock, so anything queued
+        # or computing for an older run sees the change and gives up with 409.
+        self._epoch = 0
+        self._cancel: threading.Event | None = None  # cancel flag of the in-flight compute
+        self._lock: asyncio.Lock | None = None
+        self._lock_loop: asyncio.AbstractEventLoop | None = None
+        # Display-only predictor risk map (see _score_risk): t_s -> sat_id -> [0,1].
         self._risk_by_t: dict[float, dict[int, float]] | None = None
         self._risk_times: list[float] = []  # sorted _risk_by_t keys, for bisect carry-forward
-        self._predictor_note: str | None = None
 
     # ---- read-only view (hello / snapshot / health) -----------------------
 
@@ -244,22 +251,45 @@ class Session:
 
     # ---- lifecycle ---------------------------------------------------------
 
-    async def start_live(
-        self,
-        scenario_name: str | None = None,
-        seed: int | None = None,
-        speed: float = 100.0,
-        policy: str = "hungarian",
-        predictor: bool = False,
-    ) -> None:
-        # Input validation before any state change: a bad policy never clobbers
-        # a running session. The API's pydantic Literal already 422s at the
-        # boundary; this mirrors it for direct session callers (section 5.3).
-        if policy not in POLICY_VALUES:
-            raise SessionError(
-                422, f"unknown policy {policy!r}; expected one of: {', '.join(POLICY_VALUES)}"
-            )
+    def _mutex(self) -> asyncio.Lock:
+        # ponytail: one lock per Session, re-made per event loop (TestClient runs a
+        # loop per request); upgrade to per-session locks lives with the L1 rewrite.
+        loop = asyncio.get_running_loop()
+        if self._lock_loop is not loop:
+            self._lock, self._lock_loop = asyncio.Lock(), loop
+        return self._lock
+
+    def _supersede(self) -> int:
+        """New run identity: older queued/in-flight work gives up, and the thread
+        computing for it is told to stop at its next tick (B-5)."""
+        self._epoch += 1
+        self._cancel_compute()
+        return self._epoch
+
+    def _cancel_compute(self) -> None:
+        if self._cancel is not None:
+            self._cancel.set()
+            self._cancel = None
+
+    def _announce_stopped(self) -> None:
+        """Tell every viewer the run is gone (B-19): hello(mode=stopped) then the
+        empty sim_state. Both are existing message types -- no new wire shape; the
+        console treats the empty state as "no satellites"."""
+        self.hub.publish(self.hello())
+        self.hub.publish(self.snapshot())
+
+    def shutdown(self) -> None:
+        """Server stop: drop the run and cancel any in-flight compute thread."""
+        self._supersede()
         self._teardown()
+
+    def _check_epoch(self, epoch: int) -> None:
+        if epoch != self._epoch:
+            raise SessionError(409, "superseded by a newer start, load or reset")
+
+    def _load_scenario(self, scenario_name: str | None, seed: int | None) -> Scenario:
+        """Resolve + parse the requested scenario WITHOUT touching session state, so
+        a bad request never tears down the running session (B-17)."""
         name = scenario_name
         if name is None:
             found = sorted(self.scenario_dir.glob("*.json"))
@@ -271,71 +301,118 @@ class Session:
         path = self.scenario_dir / name
         if not path.is_file():
             raise SessionError(404, "scenario not found")
-        scenario = load_scenario(path)
+        try:
+            scenario = load_scenario(path)
+        except ValueError:
+            raise SessionError(422, f"scenario file {name} is not a valid scenario") from None
         if seed is not None and seed != scenario.seed:
             scenario = scenario.model_copy(update={"seed": seed})
-        self.mode = "live"
-        self.speed = speed
-        self._prepare(SessionEnrich(scenario=scenario.name, seed=scenario.seed, policy=policy))
-        # Cooperative cancellation for the timeout below: wait_for cancels only
-        # the await -- without the event the run_scenario thread would keep
-        # running to completion as an orphan, pinning CPU in the shared server
-        # process (audit, medium). The event is set on timeout and the thread
-        # exits at its next tick (sim.run_scenario contract, zero effect on any
-        # canonical run).
-        cancel = threading.Event()
-        try:
-            lines = await asyncio.wait_for(
-                asyncio.to_thread(run_scenario, scenario, cancel), self.run_timeout_s
+        return scenario
+
+    async def start_live(
+        self,
+        scenario_name: str | None = None,
+        seed: int | None = None,
+        speed: float = 100.0,
+        policy: str = "hungarian",
+        predictor: bool = False,
+    ) -> None:
+        """Last accepted start wins: an earlier or queued start is cancelled and
+        fails 409 "superseded" (B-1)."""
+        # Input validation before any state change: a bad policy never clobbers
+        # a running session. The API's pydantic Literal already 422s at the
+        # boundary; this mirrors it for direct session callers (section 5.3).
+        if policy not in POLICY_VALUES:
+            raise SessionError(
+                422, f"unknown policy {policy!r}; expected one of: {', '.join(POLICY_VALUES)}"
             )
-        except TimeoutError:
-            cancel.set()  # the abandoned thread stops at its next tick
-            self._teardown()  # also closes the policy seam
-            raise SessionError(504, "scenario computation timed out") from None
-        except BaseException:
-            # Never leak the process-global replan seam on a failed start
-            # (the abandoned thread's output is discarded either way).
-            self._restore_seam()
-            raise
-        self._source = LiveSource(scenario, lines)
-        if predictor:
-            # DISPLAY-only scoring against the run's own scenario + seed (the
-            # source holds both); failure -> exactly one warning, run unaffected.
-            self._install_predictor(self._source.scenario, self._source.seed)
-            self._warn_predictor_down()
-        await self._spawn_driver()
+        scenario = self._load_scenario(scenario_name, seed)  # 404/409/422 before any teardown
+        # The predictor needs only the scenario + seed, so an unavailable one is a
+        # 422 BEFORE the running session is touched (never a silent run without it).
+        risk = (
+            await asyncio.to_thread(self._score_risk, scenario, scenario.seed)
+            if predictor
+            else None
+        )
+        epoch = self._supersede()
+        async with self._mutex():
+            self._check_epoch(epoch)
+            self._teardown()
+            self.mode = "live"
+            self.speed = speed
+            self._prepare(
+                SessionEnrich(scenario=scenario.name, seed=scenario.seed, policy=policy)
+            )
+            # Cooperative cancellation for the timeout below: wait_for cancels only
+            # the await -- without the event the run_scenario thread would keep
+            # running to completion as an orphan, pinning CPU in the shared server
+            # process (audit, medium). The event is set on timeout and the thread
+            # exits at its next tick (sim.run_scenario contract, zero effect on any
+            # canonical run).
+            cancel = self._cancel = threading.Event()
+            try:
+                lines = await asyncio.wait_for(
+                    asyncio.to_thread(run_scenario, scenario, cancel), self.run_timeout_s
+                )
+            except TimeoutError:
+                cancel.set()  # the abandoned thread stops at its next tick
+                self._teardown()  # also closes the policy seam
+                self._announce_stopped()
+                raise SessionError(504, "scenario computation timed out") from None
+            except RunCancelled:
+                self._restore_seam()
+                raise SessionError(409, "superseded by a newer start, load or reset") from None
+            except BaseException:
+                # Never leak the process-global replan seam on a failed start
+                # (the abandoned thread's output is discarded either way).
+                cancel.set()  # client abort / any failure: stop the thread
+                self._restore_seam()
+                if epoch == self._epoch:
+                    self._teardown()  # no zombie "live" session without a source
+                raise
+            self._check_epoch(epoch)  # a newer start/reset arrived during the compute
+            self._source = LiveSource(scenario, lines)
+            self._set_risk(risk)  # DISPLAY-only overlay, scored above
+            await self._spawn_driver()
 
     async def load_replay(
         self, filename: str, speed: float = 100.0, predictor: bool = False
     ) -> int:
         """Returns the skipped (unparseable) line count (section 7.1)."""
-        self._teardown()
         path = self.log_dir / Path(filename).name  # section 7.2 path safety
-        if not path.is_file():
+        if not path.is_file():  # before any teardown (B-17)
             raise SessionError(404, "replay file not found")
         log = await asyncio.to_thread(load_jsonl, path)
-        self.mode = "replay"
-        self.speed = speed
-        self._prepare(
-            SessionEnrich(
-                scenario=log.header.get("scenario") if log.header else None,
-                seed=log.header.get("seed") if log.header else None,
-            )
-        )
-        if log.skipped:
-            self.hub.publish(
-                to_event("warning", 0.0, f"{log.skipped} unparseable lines skipped in {filename}")
-            )
-        if not log.frames:
-            self.hub.publish(
-                to_event("critical", 0.0, f"replay file {filename} has no usable frames")
-            )
-        self._source = ReplaySource(log)
+        risk = None
         if predictor:
-            self._install_replay_predictor()
-            self._warn_predictor_down()
-        await self._spawn_driver()
-        return log.skipped
+            scored_scenario, scored_seed = self._replay_scenario(log)
+            risk = await asyncio.to_thread(self._score_risk, scored_scenario, scored_seed)
+        epoch = self._supersede()
+        async with self._mutex():
+            self._check_epoch(epoch)
+            self._teardown()
+            self.mode = "replay"
+            self.speed = speed
+            self._prepare(
+                SessionEnrich(
+                    scenario=log.header.get("scenario") if log.header else None,
+                    seed=log.header.get("seed") if log.header else None,
+                )
+            )
+            if log.skipped:
+                self.hub.publish(
+                    to_event(
+                        "warning", 0.0, f"{log.skipped} unparseable lines skipped in {filename}"
+                    )
+                )
+            if not log.frames:
+                self.hub.publish(
+                    to_event("critical", 0.0, f"replay file {filename} has no usable frames")
+                )
+            self._source = ReplaySource(log)
+            self._set_risk(risk)
+            await self._spawn_driver()
+            return log.skipped
 
     async def pause(self) -> None:
         self._require_running()
@@ -350,7 +427,13 @@ class Session:
                 await self._spawn_driver()
 
     async def reset(self) -> None:
-        self._teardown()
+        epoch = self._supersede()
+        async with self._mutex():
+            if epoch == self._epoch:  # a start queued after this reset keeps the floor
+                was_running = self.mode != "stopped"
+                self._teardown()
+                if was_running:
+                    self._announce_stopped()
 
     async def set_speed(self, speed: float) -> None:
         self._require_running()
@@ -381,48 +464,66 @@ class Session:
         self, sat_display_id: str, mode: str, degrade_s: float = 600.0
     ) -> None:
         """Live only (section 5.3). 409: not live / run finished / unknown sat /
-        already failed (section 7.1). The recompute (LiveSource.with_failure ->
-        run_scenario) replans under the session's active policy: the replan
-        seam opened in _prepare is still installed across the live lifetime.
-        degrade_s is the EPS_DEGRADE fade length (Addendum v1.2); other modes
-        ignore it."""
-        if self.mode != "live":
-            raise SessionError(409, "failure injection requires a live run")
-        source = self._source
-        if source is None or self.finished or self._cursor >= len(source.frames):
-            raise SessionError(409, "run finished")
-        idx = _parse_sat_id(sat_display_id)
-        if idx >= source.scenario.n_sats:
-            raise SessionError(409, f"unknown satellite {sat_display_id!r}")
-        if any(f.sat_id == idx for f in source.scenario.failures):
-            raise SessionError(409, f"{sat_display_id} already failed")
-        t_now = self._last_frame_t if self._last_frame_t is not None else 0.0
-        self.hub.publish(
-            to_event(
-                "warning", t_now,
-                f"{sat_display_id} {mode} failure injected; recomputing trajectory...",
+        already failed / the run was replaced or reset meanwhile (section 7.1).
+        Injects are serialized: a second one waits and recomputes on top of the
+        first. Playback is HELD for the recompute (no frames stream from the
+        pre-injection source), so the cursor never moves backwards (B-3). The
+        recompute (LiveSource.with_failure -> run_scenario) replans under the
+        session's active policy: the replan seam opened in _prepare is still
+        installed across the live lifetime. degrade_s is the EPS_DEGRADE fade
+        length (Addendum v1.2); other modes ignore it."""
+        epoch = self._epoch
+        async with self._mutex():
+            self._check_epoch(epoch)
+            if self.mode != "live":
+                raise SessionError(409, "failure injection requires a live run")
+            source = self._source
+            if source is None or self.finished or self._cursor >= len(source.frames):
+                raise SessionError(409, "run finished")
+            idx = _parse_sat_id(sat_display_id)
+            if idx >= source.scenario.n_sats:
+                raise SessionError(409, f"unknown satellite {sat_display_id!r}")
+            if any(f.sat_id == idx for f in source.scenario.failures):
+                raise SessionError(409, f"{sat_display_id} already failed")
+            t_now = self._last_frame_t if self._last_frame_t is not None else 0.0
+            self._cancel_driver()  # hold playback at t_now until the recompute lands
+            self.hub.publish(
+                to_event(
+                    "warning", t_now,
+                    f"{sat_display_id} {mode} failure injected; recomputing trajectory...",
+                )
             )
-        )
-        cancel = threading.Event()  # same orphan-thread guard as start_live
-        try:
-            new_source = await asyncio.wait_for(
-                asyncio.to_thread(
-                    LiveSource.with_failure, source.scenario, sat_display_id,
-                    mode, t_now, degrade_s, cancel,
-                ),
-                self.run_timeout_s,
-            )
-        except TimeoutError:
-            cancel.set()  # the abandoned recompute thread stops at its next tick
-            raise SessionError(504, "failure recomputation timed out") from None
-        self._cancel_driver()
-        self._source = new_source
-        # frames before t_now already streamed and are byte-identical: resume
-        # strictly AFTER t_now (bisect_right)
-        self._cursor = min(bisect_right(new_source.times, t_now), len(new_source.times))
-        self.finished = False
-        if not self.paused:
-            await self._spawn_driver()
+            cancel = self._cancel = threading.Event()  # same guard as start_live
+            applied = False
+            try:
+                new_source = await asyncio.wait_for(
+                    asyncio.to_thread(
+                        LiveSource.with_failure, source.scenario, sat_display_id,
+                        mode, t_now, degrade_s, cancel,
+                    ),
+                    self.run_timeout_s,
+                )
+                self._check_epoch(epoch)  # stale recompute: its run was replaced
+                applied = True
+            except TimeoutError:
+                cancel.set()  # the abandoned recompute thread stops at its next tick
+                raise SessionError(504, "failure recomputation timed out") from None
+            except RunCancelled:
+                raise SessionError(409, "superseded by a newer start, load or reset") from None
+            except BaseException:
+                cancel.set()
+                raise
+            finally:
+                if not applied and epoch == self._epoch and not self.paused:
+                    self._start_driver()  # failed inject: the old run plays on
+            self._source = new_source
+            # frames up to t_now already streamed and are byte-identical: resume
+            # strictly AFTER t_now (bisect_right); the driver was held, so this is
+            # exactly where the cursor already stood
+            self._cursor = min(bisect_right(new_source.times, t_now), len(new_source.times))
+            self.finished = False
+            if not self.paused:
+                await self._spawn_driver()
 
     # ---- internals ---------------------------------------------------------
 
@@ -452,54 +553,61 @@ class Session:
             sim_module.replan = self._seam_original
             self._seam_original = None
 
-    def _install_predictor(self, scenario: Scenario, seed: int) -> None:
+    @staticmethod
+    def _score_risk(scenario: Scenario, seed: int) -> dict[float, dict[int, float]]:
         """Score the sealed LightGBM predictor over this scenario and build the
         display-only risk map t_s -> sat_id -> [0,1] (boundary: see _advance).
         Rows are STRIDE=10 scored ticks apart; frames between scored ticks carry
         forward the most recent earlier score at lookup time (_frame_with_risk),
         never by pre-filling. ood rows (past the pipeline's T_TICKS training
-        range) are excluded. Any failure -- missing model file, lightgbm import,
-        scoring -- leaves the map OFF and records the reason in _predictor_note,
-        so a broken predictor can never break a run."""
+        range) are excluded. Pure: touches no session state. Any failure -- missing
+        package, model file, scoring -- is a 422 (never a silent run without the
+        requested predictor); the reason names the cause class, never a path."""
         try:
             from predictor.runtime import score_run, telemetry_from_schedule
 
             rows = score_run(telemetry_from_schedule(scenario, seed))
-            risk: dict[float, dict[int, float]] = {}
-            for row in rows:
-                if row.ood:
-                    continue
-                risk.setdefault(row.t_s, {})[row.sat_id] = min(1.0, max(0.0, row.score))
-            self._risk_by_t = risk
-            self._risk_times = sorted(risk)  # explicit order: no dict-order reliance
-            self._predictor_note = None
-        except Exception as exc:  # noqa: BLE001 -- the predictor is strictly optional
-            self._risk_by_t = None
-            self._risk_times = []
-            self._predictor_note = f"{type(exc).__name__}: {exc}"
+        except ImportError:
+            raise SessionError(
+                422, "predictor: unavailable on this server (package not installed)"
+            ) from None
+        except Exception as exc:  # noqa: BLE001 -- any scoring failure is the same 422
+            raise SessionError(
+                422, f"predictor: unavailable on this server (scoring failed: {type(exc).__name__})"
+            ) from None
+        risk: dict[float, dict[int, float]] = {}
+        for row in rows:
+            if row.ood:
+                continue
+            risk.setdefault(row.t_s, {})[row.sat_id] = min(1.0, max(0.0, row.score))
+        return risk
 
-    def _install_replay_predictor(self) -> None:
+    def _replay_scenario(self, log: ReplayLog) -> tuple[Scenario, int]:
         """Resolve the replay's Scenario from scenarios_dir by the log's INIT
         scenario name + seed; a missing file (or a header without scenario/seed)
-        leaves the predictor off with the reason recorded."""
-        name = self._source.scenario_name if self._source else None
-        seed = self._source.seed if self._source else None
+        is a 422 for a predictor request."""
+        name = log.header.get("scenario") if log.header else None
+        seed = log.header.get("seed") if log.header else None
         if not name or seed is None:
-            self._predictor_note = "log header lacks scenario/seed"
-            return
+            raise SessionError(
+                422, "predictor: unavailable for this log (header has no scenario/seed)"
+            )
         fname = name if name.endswith(".json") else f"{name}.json"
         path = self.scenario_dir / Path(fname).name  # basename: traversal-safe
         if not path.is_file():
-            self._predictor_note = f"scenario file {path.name} not found"
-            return
-        self._install_predictor(load_scenario(path), seed)
-
-    def _warn_predictor_down(self) -> None:
-        """Publish the ONE predictor-unavailable warning when an install failed."""
-        if self._predictor_note is not None:
-            self.hub.publish(
-                to_event("warning", 0.0, "Predictor unavailable: " + self._predictor_note)
+            raise SessionError(
+                422, f"predictor: unavailable for this log (scenario {path.name} not on server)"
             )
+        try:
+            return load_scenario(path), seed
+        except ValueError:
+            raise SessionError(
+                422, f"predictor: unavailable for this log (scenario {path.name} is invalid)"
+            ) from None
+
+    def _set_risk(self, risk: dict[float, dict[int, float]] | None) -> None:
+        self._risk_by_t = risk
+        self._risk_times = sorted(risk) if risk else []  # explicit order: no dict-order reliance
 
     def _frame_with_risk(self, frame: dict) -> dict:
         """Display-only predictor overlay for one source frame. Sats scored at
@@ -539,6 +647,7 @@ class Session:
         self._install_seam()
 
     def _teardown(self) -> None:
+        self._cancel_compute()
         self._cancel_driver()
         self._restore_seam()
         self.mode = "stopped"
@@ -550,7 +659,6 @@ class Session:
         self._last_emit_wall = None
         self._risk_by_t = None  # display-only risk map never outlives its run
         self._risk_times = []
-        self._predictor_note = None
         self.enrich = SessionEnrich()
         self._snapshot = to_sim_state({"state": "INIT", "t": 0.0}, self.enrich)
 
@@ -559,11 +667,16 @@ class Session:
             self._driver.cancel()
             self._driver = None
 
-    async def _spawn_driver(self) -> None:
+    def _start_driver(self) -> None:
         self._cancel_driver()
         if self.mode == "stopped" or self._source is None:
             return
         self._driver = asyncio.get_running_loop().create_task(self._drive())
+
+    async def _spawn_driver(self) -> None:
+        self._start_driver()
+        if self._driver is None:
+            return
         # Yield one loop slice so the driver's first (synchronous) frames are
         # published before the caller's response returns. Deterministic under
         # per-request TestClient portals (section 14.3): a run paced to emit
