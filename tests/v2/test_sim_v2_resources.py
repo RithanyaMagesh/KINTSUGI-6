@@ -57,7 +57,14 @@ def test_fuel_never_negative_and_depleted_status_and_event_once():
     first = next(t for t in sorted(track) if track[t]["fuel_kg"] == 0.0)
     assert track[first]["status"] == "FUEL_DEPLETED"
     assert track[first - 2.0]["status"] == "NOMINAL"
-    assert track[first]["k"] == 1.0  # the thruster is healthy, the tank is empty
+    assert track[first]["k"] == 0.0 and track[first - 2.0]["k"] == 1.0  # k = 0 at depletion
+    det = [(t, e["payload"]) for t, e in _events(lines, "FAILURE_DETECTED")]
+    assert det == [
+        (first, {"sat_id": 1, "mode": "FUEL_DEPLETED", "t_fail": first, "t_detect": first,
+                 "self_report": True})
+    ]  # self-reported once, like THRUSTER_OUT
+    assert next(x for x in lines if x.get("t") == first)["state"] == "FAILURE_DETECTED"
+    assert next(x for x in lines if x.get("t") == first - 2.0)["state"] == "NOMINAL"
     ev = [(t, e) for t, e in _events(lines, "FUEL_DEPLETED") if e["payload"]["sat_id"] == 1]
     assert [t for t, _ in ev] == [first]  # once, on the first tick the tank reads empty
     assert track[first]["dv_used"] == track[400.0]["dv_used"]  # no thrust afterwards
@@ -195,3 +202,42 @@ def test_inject_partial_and_stuck_open_replays_identically():
     assert json.dumps(lines, sort_keys=True) == json.dumps(replay, sort_keys=True)
     track = _track(lines, 3)
     assert track[100.0]["status"] == "DEGRADED" and track[198.0]["status"] == "FUEL_DEPLETED"
+
+
+def test_zero_fuel_start_is_announced_at_t0_with_k_zero():
+    s = _scn(duration_s=10.0, spacecraft={"m_prop_kg": 0.0})
+    lines = list(EngineV2(s).run())
+    first = lines[1]
+    assert first["state"] == "FAILURE_DETECTED" and first["t"] == 0.0
+    assert [x["k"] for x in first["sats"]] == [0.0] * 6
+    got = sorted(e["payload"]["sat_id"] for _, e in _events(lines, "FAILURE_DETECTED"))
+    assert got == list(range(6))  # each sat announces once, nothing repeats
+
+
+def test_radio_silent_sat_that_runs_dry_stays_silent_and_announces_nothing():
+    s = _scn(
+        duration_s=60.0,
+        failures=[{"t": 0.0, "sat_id": 1, "mode": "RADIO_FAIL"}],
+        spacecraft={"m_prop_kg": 0.0005},
+    )
+    lines = list(EngineV2(s, initial_lvlh=_displaced(s)).run())
+    track = _track(lines, 1)
+    assert track[0.0]["status"] == track[58.0]["status"] == "RADIO_SILENT"  # label not lowered
+    assert track[58.0]["fuel_kg"] == 0.0 and track[58.0]["k"] == 0.0
+    mine = [e for _, e in _events(lines, "FUEL_DEPLETED") if e["payload"]["sat_id"] == 1]
+    assert mine == []  # a silent sat cannot self-report
+    det = [(t, e["payload"]["mode"]) for t, e in _events(lines, "FAILURE_DETECTED")
+           if e["payload"]["sat_id"] == 1]
+    assert det == [(4.0, "RADIO_FAIL")]  # only the heartbeat rule speaks for it
+
+
+def test_depleted_then_dead_is_still_declared():
+    s = _scn(
+        duration_s=300.0,
+        spacecraft={"m_prop_kg": 0.0005},
+        failures=[{"t": 200.0, "sat_id": 1, "mode": "DEAD"}],
+    )
+    lines = list(EngineV2(s, initial_lvlh=_displaced(s)).run())
+    det = [(e["payload"]["mode"], e["payload"].get("self_report"))
+           for _, e in _events(lines, "FAILURE_DETECTED") if e["payload"]["sat_id"] == 1]
+    assert det == [("FUEL_DEPLETED", True), ("DEAD", None)]

@@ -55,7 +55,9 @@ def _order(f: Failure) -> tuple[float, int]:
 
 
 class Faults:
-    """Status, failure schedule and detection bookkeeping for n sats (JSON-serialisable)."""
+    """Status, failure schedule and detection bookkeeping for n sats (JSON-serialisable).
+    `declared[i]` latches only the heartbeat (silence) declaration; a self-report never sets
+    it, so a benign self-reported fault cannot hide a later death or radio loss."""
 
     def __init__(self, scenario: Scenario) -> None:
         n = scenario.n_sats
@@ -132,17 +134,24 @@ class Faults:
             thruster_lost = f.mode == FailureMode.THRUSTER_OUT and was_ok[0]
             payload_lost = f.mode == FailureMode.PAYLOAD_FAIL and was_ok[1]
             if sat.radio_ok and (thruster_lost or payload_lost):  # self-reported, like v1
-                self.declared[i] = True
                 self.mission = STATE_FAILURE_DETECTED
                 payload = {"sat_id": i, "mode": f.mode.value, "t_fail": f.t, "t_detect": t}
                 payload["self_report"] = True
                 events.append({"type": "FAILURE_DETECTED", "payload": payload})
         for i, sat in enumerate(self.sats):
             if sat.depleted and not self.fuel_out[i] and self.status[i] not in _TERMINAL:
-                self.fuel_out[i] = True  # reported once, plain (the mission state is untouched)
-                if _RANK[STATUS_FUEL_DEPLETED] > _RANK[self.status[i]]:
+                self.fuel_out[i] = True  # reported once; an empty tank means no thrust (k = 0)
+                sat.k = 0.0
+                raised = _RANK[STATUS_FUEL_DEPLETED] > _RANK[self.status[i]]
+                if raised:
                     self.status[i] = STATUS_FUEL_DEPLETED
+                if raised or not self.fail_mode[i]:
+                    self.t_fail[i], self.fail_mode[i] = t, STATUS_FUEL_DEPLETED
                 if sat.radio_ok:  # self-reported like THRUSTER_OUT; a silent sat cannot
+                    self.mission = STATE_FAILURE_DETECTED
+                    payload = {"sat_id": i, "mode": STATUS_FUEL_DEPLETED, "t_fail": t}
+                    payload.update(t_detect=t, self_report=True)
+                    events.append({"type": "FAILURE_DETECTED", "payload": payload})
                     events.append({"type": "FUEL_DEPLETED", "payload": {"sat_id": i, "t": t}})
         for i, status in enumerate(self.status):
             silent = status == STATUS_REENTERED or not self.sats[i].radio_ok

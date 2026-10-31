@@ -250,3 +250,56 @@ def test_self_reported_and_silent_modes():
     assert got == [(10.0, 1, True), (24.0, 4, None)]  # sat 4: silent from t=20, K=3 misses
     assert _track(lines, 4)[100.0]["status"] == "RADIO_SILENT"  # label stays the higher rank
     assert _track(lines, 2)[100.0]["status"] == _track(lines, 3)[100.0]["status"] == "DEGRADED"
+
+
+# --- a benign self-report must not hide a later fatal failure (review fix A1) -------------------
+def _detections(lines):
+    return [
+        (t, e["payload"]["sat_id"], e["payload"]["mode"], e["payload"].get("self_report"))
+        for t, e in _events(lines, "FAILURE_DETECTED")
+    ]
+
+
+def test_self_report_then_eps_fade_death_is_still_declared():
+    s = _scn(
+        duration_s=500.0,
+        failures=[
+            {"t": 400.0, "sat_id": 0, "mode": "EPS_DEGRADE", "degrade_s": 100.0},
+            {"t": 100.0, "sat_id": 0, "mode": "PAYLOAD_FAIL"},
+        ],
+    )
+    lines = list(EngineV2(s).run())
+    assert _detections(lines) == [
+        (100.0, 0, "PAYLOAD_FAIL", True),
+        (404.0, 0, "EPS_DEGRADE", None),  # DEAD at 400, K=3 misses
+    ]
+    assert lines[-2]["state"] == "FAILURE_DETECTED"
+
+
+def test_payload_then_radio_then_dead_declares_the_silence():
+    s = _scn(
+        duration_s=100.0,
+        failures=[
+            {"t": 20.0, "sat_id": 0, "mode": "PAYLOAD_FAIL"},
+            {"t": 30.0, "sat_id": 0, "mode": "RADIO_FAIL"},
+            {"t": 60.0, "sat_id": 0, "mode": "DEAD"},
+        ],
+    )
+    assert _detections(list(EngineV2(s).run())) == [
+        (20.0, 0, "PAYLOAD_FAIL", True),
+        (34.0, 0, "RADIO_FAIL", None),  # silent from 30, K=3 misses
+    ]
+
+
+def test_thruster_out_then_dead_declares_the_death():
+    s = _scn(
+        duration_s=150.0,
+        failures=[
+            {"t": 50.0, "sat_id": 0, "mode": "THRUSTER_OUT"},
+            {"t": 100.0, "sat_id": 0, "mode": "DEAD"},
+        ],
+    )
+    assert _detections(list(EngineV2(s).run())) == [
+        (50.0, 0, "THRUSTER_OUT", True),
+        (104.0, 0, "DEAD", None),
+    ]

@@ -76,6 +76,7 @@ def thrust_limited(sat: SatState, a_cmd: np.ndarray, dt: float) -> tuple[np.ndar
     set to exactly 0 (never negative). Acceleration uses the mass at the start of the step.
     """
     if sat.depleted:
+        sat.k = 0.0
         return np.zeros(3), 0.0
     if sat.stuck_vec is not None:
         a = sat.stuck_vec * (sat.stuck_k * sat.f_max_n / sat.m_kg)
@@ -91,6 +92,8 @@ def thrust_limited(sat: SatState, a_cmd: np.ndarray, dt: float) -> tuple[np.ndar
         dm = sat.m_prop_kg
     sat.m_kg -= dm
     sat.m_prop_kg = 0.0 if dm == sat.m_prop_kg else sat.m_prop_kg - dm
+    if sat.depleted:
+        sat.k = 0.0  # an empty tank cannot thrust (the stuck-open valve is dry too)
     return a, dm
 
 
