@@ -141,3 +141,14 @@ def station_pass(
                                 math.sin(la)])
     el = float(ground.elevation_deg(np.asarray(chief_eci, dtype=float), r_gs))
     return {"elevation_deg": el, "visible": bool(el >= min_el_deg)}
+
+
+def tick_fields(r_eci, epoch_utc: str, t_s: float) -> dict:
+    """The v2 tick-line keys `chief` and `station` for the chief at ECI position r_eci, time t_s."""
+    g = gmst_rad(epoch_utc, t_s)
+    lat, lon, alt = eci_to_geodetic(r_eci, g)
+    return {
+        "chief": {"r_eci": [float(c) for c in r_eci], "lat_deg": lat, "lon_deg": lon, "alt_m": alt},
+        "station": station_pass(r_eci, g),
+    }
+
