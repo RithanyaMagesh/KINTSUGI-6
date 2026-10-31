@@ -275,11 +275,11 @@ Scope: plan Tasks 2.1, 2.3, 2.4. Power/eclipse/safe-off modes (Task 2.2) are NOT
 | Gate | Result | Command |
 |---|---|---|
 | lint | All checks passed | `uv run ruff check .` |
-| fast tests | 466 passed, 2 skipped, 5 deselected (426 before this phase, +40 new) | `uv run python -m pytest -m "not slow"` |
-| slow tests | 5 passed | `uv run python -m pytest -m slow` |
+| fast tests | 504 passed, 2 skipped, 6 deselected (426 before this phase, +78 new, incl. the review-fix round) | `uv run python -m pytest -m "not slow"` |
+| slow tests | 6 passed (5 earlier + the fuel attribution) | `uv run python -m pytest -m slow` |
 | v1 pins unchanged | no edit outside `tests/v2`; sha/hash grep empty | `git diff $(git merge-base backend HEAD)..HEAD -- tests/ ':!tests/v2' \| grep -E 'sha\|hash'` |
 | v1 logs byte-identical to the pre-phase tree | `two_failure` (11,908,333 bytes) and `nominal` (4,042,263 bytes) `cmp` equal against `git archive 75ceac9` | `uv run python -m cubesat.run --scenario data/scenarios/<s>.json --seed 42 --out <f>` in each tree, then `cmp` |
-| determinism | two v2 CLI runs byte-identical (`cmp`), 901 sat rows carry `fuel_kg` | `uv run python -m cubesat.run --scenario <two_failure.json with "engine":"v2","a_max_mps2":0.01,"duration_s":1800> --seed 42 --out a.jsonl` twice |
+| determinism | two v2 CLI runs byte-identical (`cmp`); 901 tick lines (x 6 sats = 5406 sat rows) carry `fuel_kg` | `uv run python -m cubesat.run --scenario <two_failure.json with "engine":"v2","a_max_mps2":0.01,"duration_s":1800> --seed 42 --out a.jsonl` twice |
 
 | Check | Measured | Threshold | Command |
 |---|---|---|---|
@@ -289,10 +289,13 @@ Scope: plan Tasks 2.1, 2.3, 2.4. Power/eclipse/safe-off modes (Task 2.2) are NOT
 | Propellant never negative; empties exactly; once-only FUEL_DEPLETED | holds | exact | `uv run python -m pytest tests/v2/test_sim_v2_resources.py -k "never_negative or exhausted"` |
 | Zero fuel at start; all-but-one depleted; depleted imager still in coverage | no crash; coast bit-identical to all-THRUSTER_OUT run; survivor holds seat | exact | `uv run python -m pytest tests/v2/test_sim_v2_resources.py -k "zero_fuel or all_but_one or imager_in_a_fuel"` |
 | Snapshot/restore and live-inject vs replay carry fuel, stuck, k | identical tails | byte equal | `uv run python -m pytest tests/v2/test_sim_v2_resources.py -k "snapshot or inject"` |
-| Per-mode semantics, v1 rejection of the 4 new modes | 19 tests | all pass | `uv run python -m pytest tests/v2/test_failure_modes_v2.py` |
-| Mutation check (14 mutants, scratch copy) | 13 killed, 1 equivalent survivor | all non-equivalent killed | table in `docs/PHYSICS_V2.md` "Mutation check (Phase 2)" |
+| Per-mode semantics, v1 rejection of the 4 new modes, self-report vs later death | all pass | all pass | `uv run python -m pytest tests/v2/test_failure_modes_v2.py` |
+| Live inject of each of the 4 new modes equals replay of the recorded injections | byte equal | byte equal | `uv run python -m pytest tests/v2/test_sim_v2_resources.py -k live_inject_of_every` |
+| Review-fix pins (DEGRADE_START, `stuck` key, dry-mass floor, atomic restore, REENTRY label) | all pass | all pass | `uv run python -m pytest tests/v2/test_p2_review_fixes.py` |
+| Status-rank / k / fail_mode matrix, frozen ECI stuck vector, empty-tank failures | all pass | all pass | `uv run python -m pytest tests/v2/test_p2_mutant_pins.py` |
+| Mutation check (28 mutants, scratch copy) | 27 killed, 1 equivalent survivor | all non-equivalent killed | table in `docs/PHYSICS_V2.md` "Mutation check (Phase 2)" |
 
-**Measured fuel demonstration** (`data/scenarios/two_failure.json` as engine v2, a_max 0.01, 0.2 kg / Isp 40 s / F_max 0.04 N, 17028 s; v1 PD seat-holder, no recovery; this is a measurement, not a planner claim): command `uv run python -m pytest tests/v2/test_fuel_demo_two_failure.py -s`.
+**Measured fuel demonstration** (`data/scenarios/two_failure.json` as engine v2, a_max 0.01, 0.2 kg / Isp 40 s / F_max 0.04 N, 17028 s; v1 PD seat-holder, no recovery; this is a measurement of what the PD seat-holder spends, not a planner claim; the attribution table below says where it goes): command `uv run python -m pytest tests/v2/test_fuel_demo_two_failure.py -s`.
 
 | sat | dv_used m/s | propellant used kg | tank left m/s | ran dry |
 |---|---|---|---|---|
@@ -303,4 +306,16 @@ Scope: plan Tasks 2.1, 2.3, 2.4. Power/eclipse/safe-off modes (Task 2.2) are NOT
 | 4 | 1.6730 | 0.017023 | 18.4476 | no |
 | 5 (downlink) | 1.6765 | 0.017059 | 18.4441 | no |
 
-**Not claimed:** no lifetime extrapolation; no recovery cost (Phase 5); no power/eclipse; PARTIAL_THRUST and THRUSTER_STUCK_OPEN are never declared (no detector until Phase 4); drag B keeps the wet mass (up to 5% off as the tank empties); FUEL_DEPLETED does not change the mission state; `wire.py`/`session.py`/`api.py` do not yet map the new modes and statuses (outside this change).
+**Where the survivor fuel goes** (same scenario and spacecraft block, three truth configurations; command `uv run python -m pytest tests/v2/test_fuel_attribution.py -s`; survivor dv_used in m/s for sats 0, 3, 4, 5):
+
+| truth | sat 0 | sat 3 | sat 4 | sat 5 |
+|---|---|---|---|---|
+| full (J2 and drag) | 1.6608 | 1.6733 | 1.6730 | 1.6765 |
+| two-body only (J2 off, density_factor 0) | 0.9049 | 0.9049 | 0.9042 | 0.9043 |
+| drag only (J2 off) | 0.9049 | 0.9049 | 0.9042 | 0.9044 |
+
+Drag-only minus two-body-only is at most 1.12e-5 m/s: drag is not what the survivors pay for. About 0.90 m/s is spent with gravity only (the PD tracking a linear HCW slot reference against nonlinear two-body truth at 8 km amplitude: a model mismatch), and J2 adds 0.76-0.77 m/s (smallest gap 0.7559). The earlier wording "seat-holding against drag and J2" was wrong about drag and is replaced by this. The 2 km formation is the planned v2 default because that mismatch shrinks with amplitude squared; its fuel number is UNMEASURED until a run exists.
+
+**Not claimed:** no lifetime extrapolation; no recovery cost (Phase 5); no power/eclipse; PARTIAL_THRUST and THRUSTER_STUCK_OPEN are never declared (no detector until Phase 4); drag B keeps the wet mass (up to 5% off as the tank empties; v2 scenarios must keep the dry mass at least half the wet mass); a radio-silent sat that runs dry announces nothing (silent); `wire.py`/`session.py`/`api.py` do not yet map the new modes and statuses (outside this change).
+
+**Review-fix round (2026-10-31, same branch).** A1: a self-report no longer latches `declared`, so a later death or radio loss on the same sat is declared by the heartbeat rule. A2: FUEL_DEPLETED behaves like THRUSTER_OUT (self-report FAILURE_DETECTED mode FUEL_DEPLETED, k = 0, mission state FAILURE_DETECTED); the `FUEL_DEPLETED` event is still emitted. B3-B7: DEGRADE_START after earlier damage, `stuck` log key, dry mass at least half the wet mass (v2), atomic restore (ValueError, engine unchanged), re-entry silence labelled REENTRY. Red tests and fixes: `tests/v2/test_failure_modes_v2.py` (A1), `tests/v2/test_sim_v2_resources.py` (A2), `tests/v2/test_p2_review_fixes.py` (B3-B7).
