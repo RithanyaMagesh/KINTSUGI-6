@@ -2,6 +2,7 @@
 // kept visible (auto-scroll). Collapsible with stable dimensions: collapsed,
 // the latest event stays as one 14px line. Rows come only from "event"
 // messages on the wire; the empty state says what to do next.
+import { eventText } from "../live/hudFormat";
 import { useEffect, useRef, useState } from "react";
 import { useSimStore } from "../../stores/simStore";
 import { eventLevelColor } from "../../utils/colors";
@@ -49,7 +50,7 @@ export default function EventLog() {
               <span className={styles.level} style={{ color: eventLevelColor(latest.level) }}>
                 {latest.level}
               </span>
-              <span className={styles.message}>{latest.message}</span>
+              <span className={styles.message}>{eventText(latest.message)}</span>
             </>
           ) : (
             <span className={chrome.hint}>No events yet.</span>
@@ -69,7 +70,7 @@ export default function EventLog() {
                 <span className={styles.level} style={{ color: eventLevelColor(event.level) }}>
                   {event.level}
                 </span>
-                <span className={styles.message}>{event.message}</span>
+                <span className={styles.message}>{eventText(event.message)}</span>
               </li>
             ))}
           </ol>

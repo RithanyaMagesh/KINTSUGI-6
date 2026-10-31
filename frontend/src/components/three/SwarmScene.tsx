@@ -11,7 +11,15 @@ import { SwarmSceneController, type CameraPreset } from "./swarmScene";
 import chrome from "../../styles/chrome.module.css";
 import styles from "./SwarmScene.module.css";
 
-export default function SwarmScene() {
+interface SwarmSceneProps {
+  /** Full-screen live view: the HUD owns the controls, captions and banner,
+   * so the scene renders only the canvas and the empty/connection notice. */
+  immersive?: boolean;
+  /** Hands the controller to the HUD (camera presets, layer toggles). */
+  onController?: (controller: SwarmSceneController | null) => void;
+}
+
+export default function SwarmScene({ immersive = false, onController }: SwarmSceneProps = {}) {
   const hostRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<SwarmSceneController | null>(null);
   const lastBannerRef = useRef<string | null>(null);
@@ -47,7 +55,9 @@ export default function SwarmScene() {
         if (mode === "stopped") {
           setNotice({
             title: "Simulation ready",
-            body: "Configure your swarm on the left and press Start live simulation.",
+            body: immersive
+              ? "Open Setup (S) and press Start live simulation."
+              : "Configure your swarm on the left and press Start live simulation.",
           });
         } else {
           setNotice({ title: "Waiting for simulation data", body: "" });
@@ -58,7 +68,7 @@ export default function SwarmScene() {
     };
     render();
     return useSimStore.subscribe(render);
-  }, []);
+  }, [immersive]);
 
   // Scene lifetime + imperative data feed (no per-message React render).
   useEffect(() => {
@@ -68,6 +78,7 @@ export default function SwarmScene() {
       useUiStore.getState().selectSatellite(id);
     });
     sceneRef.current = controller;
+    onController?.(controller);
     controller.setOrbitViewMode(useSceneStore.getState().viewMode);
 
     let prevOrbitMode = useSceneStore.getState().viewMode;
@@ -138,6 +149,7 @@ export default function SwarmScene() {
       unsubSim();
       unsubScene();
       unsubUi();
+      onController?.(null);
       controller.dispose();
       sceneRef.current = null;
     };
@@ -175,6 +187,26 @@ export default function SwarmScene() {
     } catch (err) {
       setReplayError(err instanceof Error ? err.message : "Replay could not be loaded");
     }
+  }
+
+  if (immersive) {
+    return (
+      <div className={`${styles.viewport} ${styles.viewportImmersive}`}>
+        <div ref={hostRef} className={styles.canvasHost} />
+        {notice !== null && (
+          <div className={`${styles.stateNotice} ${styles.stateNoticeImmersive}`}>
+            <strong>{notice.title}</strong>
+            {notice.body !== "" && <span>{notice.body}</span>}
+            {notice.title.startsWith("Backend disconnected") && (
+              <button className={chrome.btn} onClick={() => void openReplay()}>
+                Open replay mode
+              </button>
+            )}
+            {replayError !== null && <span>{replayError}</span>}
+          </div>
+        )}
+      </div>
+    );
   }
 
   return (

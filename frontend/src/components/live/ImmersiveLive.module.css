@@ -1,0 +1,833 @@
+/* Full-screen live view. The 3D stage owns the window; the HUD is glass laid
+   over it. Tokens only (§13.1): colours, glass and gold come from tokens.css.
+   One bold move: kintsugi gold means "recovered" and appears nowhere else. */
+
+.stage {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: var(--space-void);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transition: opacity 240ms var(--motion-ease);
+}
+
+.hud > * {
+  pointer-events: auto;
+}
+
+.hud[data-hidden] {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 240ms var(--motion-ease), visibility 0s linear 240ms;
+}
+
+.glass {
+  background: var(--glass);
+  backdrop-filter: blur(14px) saturate(1.2);
+  border: 1px solid var(--glass-line);
+}
+
+/* ---- top edge ------------------------------------------------------------ */
+
+.top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  pointer-events: none;
+}
+
+.top > * {
+  pointer-events: auto;
+}
+
+.topLeft,
+.topRight {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.topRight {
+  justify-content: flex-end;
+}
+
+.wordmark {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  text-decoration: none;
+  padding: var(--space-2) 0;
+}
+
+.wordmark:hover {
+  color: var(--hero-gold);
+}
+
+.stateBlock {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 6px var(--space-4) 6px var(--space-3);
+  border-radius: 999px;
+  background: var(--glass);
+  backdrop-filter: blur(14px) saturate(1.2);
+  border: 1px solid var(--glass-line);
+}
+
+.stateDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.stage[data-state="FAILURE_DETECTED"] .stateDot {
+  animation: beat 1s ease-in-out infinite;
+}
+
+@keyframes beat {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.stateText {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.clock {
+  font-size: 20px;
+  color: var(--ink-muted);
+  padding-left: var(--space-3);
+  border-left: 1px solid var(--glass-line-strong);
+}
+
+.scenario {
+  color: var(--ink-muted);
+  font-size: 14px;
+}
+
+.conn {
+  display: inline-flex;
+  align-items: center;
+}
+
+.connDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.topErr {
+  position: absolute;
+  top: 64px;
+  right: var(--space-5);
+  color: var(--status-failed);
+  font-size: 14px;
+  background: var(--glass-strong);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-control);
+}
+
+.group {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  border-radius: 8px;
+  background: var(--glass);
+  backdrop-filter: blur(14px) saturate(1.2);
+  border: 1px solid var(--glass-line);
+}
+
+.hudBtn,
+.seg,
+.iconBtn {
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  cursor: pointer;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 6px;
+  padding: 6px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  transition: background var(--motion-duration) var(--motion-ease),
+    border-color var(--motion-duration) var(--motion-ease);
+}
+
+.hudBtn,
+.iconBtn {
+  background: var(--glass);
+  backdrop-filter: blur(14px) saturate(1.2);
+  border-color: var(--glass-line);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.iconBtn {
+  padding: 8px;
+}
+
+.seg {
+  color: var(--ink-muted);
+}
+
+.hudBtn:hover,
+.iconBtn:hover,
+.seg:hover {
+  background: var(--glass-line);
+  color: var(--ink);
+}
+
+.seg[aria-pressed="true"],
+.seg[aria-selected="true"],
+.hudBtn[aria-pressed="true"] {
+  background: var(--glass-line-strong);
+  color: var(--ink);
+}
+
+.kbd {
+  font: inherit;
+  font-size: 11px;
+  line-height: 1;
+  color: var(--ink-faint);
+  border: 1px solid var(--glass-line-strong);
+  border-radius: 4px;
+  padding: 2px 5px;
+}
+
+/* ---- camera stack, right edge ----------------------------------------- */
+
+.camStack {
+  position: absolute;
+  right: var(--space-5);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.camGroup {
+  display: flex;
+  flex-direction: column;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--glass);
+  backdrop-filter: blur(14px) saturate(1.2);
+  border: 1px solid var(--glass-line);
+}
+
+.camBtn {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  font: inherit;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--ink);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.camBtn + .camBtn {
+  border-top: 1px solid var(--glass-line);
+}
+
+.camBtn:hover {
+  background: var(--glass-line);
+}
+
+.camBtn:disabled {
+  color: var(--ink-faint);
+  cursor: default;
+  background: transparent;
+}
+
+.camBtn[aria-expanded="true"] {
+  background: var(--glass-line-strong);
+}
+
+.layers {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border-radius: 8px;
+  background: var(--glass-strong);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--glass-line);
+}
+
+.layer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 14px;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+/* ---- bottom edge -------------------------------------------------------- */
+
+.bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  pointer-events: none;
+}
+
+.bottom > * {
+  pointer-events: auto;
+}
+
+.narration {
+  align-self: center;
+  width: min(760px, 100%);
+}
+
+.narration > section {
+  background: var(--glass);
+  backdrop-filter: blur(14px) saturate(1.2);
+  border-color: var(--glass-line);
+  border-left-width: 3px;
+  border-radius: 8px;
+  text-align: left;
+}
+
+.bottomRow {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-5);
+  flex-wrap: wrap;
+  pointer-events: none;
+}
+
+.bottomRow > * {
+  pointer-events: auto;
+}
+
+.metrics {
+  display: flex;
+  gap: 0;
+  border-radius: 12px;
+  background: var(--glass);
+  backdrop-filter: blur(14px) saturate(1.2);
+  border: 1px solid var(--glass-line);
+  padding: var(--space-3) var(--space-2);
+}
+
+.readout {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 var(--space-4);
+  min-width: 128px;
+}
+
+.readout + .readout {
+  border-left: 1px solid var(--glass-line);
+}
+
+.readoutLabel {
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+
+.readoutValue {
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 1.1;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.readoutUnit {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--ink-muted);
+  margin-left: 0.35em;
+}
+
+.readoutNote {
+  font-size: 12px;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+
+/* Recovery sequence rail */
+.rail {
+  list-style: none;
+  display: flex;
+  align-items: flex-start;
+  padding: var(--space-3) var(--space-4);
+  border-radius: 12px;
+  background: var(--glass);
+  backdrop-filter: blur(14px) saturate(1.2);
+  border: 1px solid var(--glass-line);
+}
+
+.railStep {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 104px;
+  color: var(--ink-faint);
+  font-size: 13px;
+  text-align: center;
+}
+
+.railStep + .railStep::before {
+  content: "";
+  position: absolute;
+  top: 5px;
+  right: calc(50% + 9px);
+  width: calc(100% - 18px);
+  height: 1px;
+  background: var(--glass-line-strong);
+}
+
+.railTick {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 1px solid var(--ink-faint);
+  background: transparent;
+}
+
+.railStep[data-reached] {
+  color: var(--ink-muted);
+}
+
+.railStep[data-reached] .railTick {
+  background: var(--ink-muted);
+  border-color: var(--ink-muted);
+}
+
+.railStep[data-current] {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.railStep[data-current] .railTick {
+  background: var(--ink);
+  border-color: var(--ink);
+  box-shadow: 0 0 0 4px var(--glass-line-strong);
+}
+
+.railStep[data-repaired],
+.railStep[data-repaired] .railTime {
+  color: var(--status-repaired);
+}
+
+.railStep[data-repaired] .railTick {
+  background: var(--status-repaired);
+  border-color: var(--status-repaired);
+  box-shadow: 0 0 0 4px var(--glass-line), 0 0 14px var(--status-repaired);
+}
+
+.railTime {
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+
+/* ---- drawers --------------------------------------------------------------- */
+
+.drawerLeft,
+.drawerRight,
+.selectedCard {
+  position: absolute;
+  top: 76px;
+  bottom: 136px; /* clear of the readout bar */
+  width: min(420px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  background: var(--glass-strong);
+  backdrop-filter: blur(18px) saturate(1.2);
+  border: 1px solid var(--glass-line);
+  transition: transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 200ms var(--motion-ease),
+    visibility 0s linear 260ms;
+  z-index: 2;
+}
+
+.drawerLeft {
+  left: var(--space-5);
+  transform: translateX(calc(-100% - 40px));
+  opacity: 0;
+  visibility: hidden;
+}
+
+.drawerRight {
+  right: var(--space-5);
+  width: min(560px, calc(100vw - 32px));
+  transform: translateX(calc(100% + 40px));
+  opacity: 0;
+  visibility: hidden;
+}
+
+.drawerLeft[data-open],
+.drawerRight[data-open] {
+  transform: none;
+  opacity: 1;
+  visibility: visible;
+  transition: transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 200ms var(--motion-ease);
+}
+
+.selectedCard {
+  right: 76px;
+  top: auto;
+  bottom: 200px;
+  width: min(360px, calc(100vw - 32px));
+  max-height: calc(100vh - 300px);
+}
+
+.drawerHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--glass-line);
+}
+
+.drawerTitle {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.closeBtn {
+  font: inherit;
+  font-size: 22px;
+  line-height: 1;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+
+.closeBtn:hover {
+  background: var(--glass-line);
+  color: var(--ink);
+}
+
+.drawerScroll,
+.selectedScroll {
+  overflow-y: auto;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-height: 0;
+}
+
+.drawerInner {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+.tabs {
+  display: flex;
+  gap: 2px;
+  padding: var(--space-2) var(--space-3) 0;
+  border-bottom: 1px solid var(--glass-line);
+}
+
+.tab {
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink-muted);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+}
+
+.tab:hover {
+  color: var(--ink);
+}
+
+.tab[aria-selected="true"] {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+}
+
+.tabScroll {
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+  padding: var(--space-4);
+}
+
+.tabBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.subTabs {
+  display: inline-flex;
+  align-self: flex-start;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid var(--glass-line);
+}
+
+.groupTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-muted);
+  margin-top: var(--space-2);
+}
+
+.params {
+  display: flex;
+  flex-direction: column;
+}
+
+.paramRow {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 7px 0;
+  border-bottom: 1px solid var(--glass-line);
+  font-size: 15px;
+}
+
+.paramRow dt {
+  color: var(--ink-muted);
+}
+
+.paramRow dd {
+  color: var(--ink);
+  text-align: right;
+  white-space: pre;
+}
+
+.empty {
+  color: var(--ink-muted);
+  font-size: 14px;
+}
+
+/* per-satellite table */
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.table th,
+.table td {
+  padding: 7px 6px;
+  border-bottom: 1px solid var(--glass-line);
+  text-align: left;
+  white-space: nowrap;
+  font-weight: 400;
+}
+
+.table thead th {
+  color: var(--ink-muted);
+  font-size: 12px;
+  font-weight: 500;
+  border-bottom-color: var(--glass-line-strong);
+  position: sticky;
+  top: 0;
+  background: var(--glass-strong);
+}
+
+.table tbody tr {
+  cursor: pointer;
+}
+
+.table tbody tr:hover {
+  background: var(--glass-line);
+}
+
+.table tbody tr[data-selected] {
+  background: var(--glass-line-strong);
+}
+
+.num {
+  text-align: right !important;
+}
+
+.satId {
+  font-weight: 600;
+  display: block;
+}
+
+.satRole {
+  color: var(--ink-muted);
+  font-size: 12px;
+}
+
+.statusPip {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: 1px;
+}
+
+.fault {
+  display: block;
+  color: var(--status-failed);
+  font-size: 12px;
+}
+
+/* ---- hidden-HUD return button ----------------------------------------- */
+
+.showHud {
+  position: absolute;
+  right: var(--space-5);
+  bottom: var(--space-5);
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid var(--glass-line);
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity var(--motion-duration) var(--motion-ease);
+}
+
+.showHud:hover,
+.showHud:focus-visible {
+  opacity: 1;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---- narrow screens ------------------------------------------------------ */
+
+@media (max-width: 1100px) {
+  .rail {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .top {
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .scenario,
+  .clock {
+    display: none;
+  }
+
+  .metrics {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .readout {
+    min-width: 108px;
+    padding: 0 var(--space-3);
+  }
+
+  .readoutValue {
+    font-size: 24px;
+  }
+
+  .bottom {
+    padding: var(--space-4);
+  }
+
+  .narration {
+    display: none;
+  }
+
+  .camStack {
+    right: var(--space-4);
+  }
+
+  .selectedCard {
+    right: var(--space-4);
+    left: var(--space-4);
+    width: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hud,
+  .drawerLeft,
+  .drawerRight {
+    transition: none !important;
+  }
+
+  .stage[data-state="FAILURE_DETECTED"] .stateDot {
+    animation: none;
+  }
+}
+
+/* NarrationStrip renders values in mono spans; the HUD reads as one voice. */
+.narration span {
+  font-family: inherit;
+}
+
+/* With a drawer open the stage is busy enough: drop the narration line. */
+.stage[data-drawer] .narration {
+  display: none;
+}
+
+@media (max-height: 640px) {
+  .drawerLeft,
+  .drawerRight {
+    bottom: var(--space-5);
+    z-index: 3;
+  }
+}
