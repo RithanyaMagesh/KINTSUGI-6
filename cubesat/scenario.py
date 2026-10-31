@@ -29,6 +29,7 @@ from cubesat.scenario_models import (  # noqa: F401  (re-exports: the public sce
     Gains,
     LaserTerminal,
     Oracle,
+    Recovery,
     Safety,
     Sensor,
     Spacecraft,
@@ -97,6 +98,9 @@ class Scenario(BaseModel):
     comms: Comms | None = Field(
         default=None, description="Inter-satellite links (track C); absent = ideal comms"
     )
+    recovery: Recovery | None = Field(
+        default=None, description="Leader authority (track C4); absent = central"
+    )
 
     @property
     def n_sats(self) -> int:
@@ -127,6 +131,9 @@ class Scenario(BaseModel):
     def _laser_comms_needs_v2(self) -> Scenario:
         if self.comms is not None and self.comms.model == "laser" and self.engine != "v2":
             raise ValueError('comms.model "laser" requires engine "v2"')
+        laser = self.comms is not None and self.comms.model == "laser"
+        if self.recovery is not None and self.recovery.authority == "decentral" and not laser:
+            raise ValueError('recovery.authority "decentral" requires comms.model "laser"')
         return self
 
     @model_validator(mode="after")

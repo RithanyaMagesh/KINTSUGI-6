@@ -295,3 +295,11 @@ class Comms(BaseModel):
     model: Literal["ideal", "laser"] = "ideal"
     topology: Literal["mesh", "star"] = "mesh"
     terminal: LaserTerminal = Field(default_factory=LaserTerminal)
+
+
+class Recovery(BaseModel):
+    """Who does the leader's job (track C4). "central" = one `leader` role (cubesat/roles_v2.py);
+    "decentral" = the leader's six functions are spread over the swarm by a consensus auction
+    over the LOCKED laser links (cubesat/decentral.py); needs comms.model "laser"."""
+
+    authority: Literal["central", "decentral"] = "central"

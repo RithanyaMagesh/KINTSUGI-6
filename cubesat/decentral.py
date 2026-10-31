@@ -1,6 +1,6 @@
 """Leaderless recovery: the leader's job split into functions, auctioned over the laser mesh.
 
-Pure, deterministic. Not wired into the engines yet (track C plan, step C4).
+Pure, deterministic; FunctionState (end of file) is the EngineV2 glue (track C4).
 
 Mechanism (consensus-based auction, the CBBA family; Choi, Brunet & How 2009):
   tasks are auctioned in a fixed priority order; for each task every sat bids
@@ -112,3 +112,90 @@ def auction(
         "split_brain": sorted(k for k, v in holders.items() if len(v) > 1),
         "vacant": sorted(k for k, v in holders.items() if not v),
     }
+
+
+# -- engine state (track C4: EngineV2 with recovery.authority = "decentral") ------------------
+class FunctionState:
+    """Who holds each leader function inside EngineV2, plus the auction still converging.
+
+    The auction inputs are the LOCKED link set, the talking sats and who can thrust. When they
+    change an auction starts; its result takes effect `rounds` ticks later (one consensus hop
+    per tick: assumption). Auctions run one at a time: a change while one converges marks the
+    state dirty and the next auction starts the tick the current one lands. Until then the old
+    holders keep their functions; a holder that stopped talking performs nothing, so its
+    functions are VACANT. The first auction (t = 0) takes effect at once (steady-state start:
+    assumption). Bids (default_bids): degree over LOCKED links, fuel fraction of the tank at
+    the auction start (0 for a sat that cannot thrust), ground wait 0 for every sat
+    (assumption: sats km apart under a ~1000 km pass footprint share one wait, which leaves
+    the argmax unchanged)."""
+
+    def __init__(self, scenario) -> None:
+        self.m_prop0 = scenario.spacecraft.m_prop_kg
+        self.holders: dict[str, list[int]] = {}
+        self.pending: dict | None = None  # {"k_done", "holders", "rounds"}
+        self.rounds = 0  # consensus rounds of the auction now in effect
+        self.key: list | None = None  # [locked links, up, can thrust] last seen
+        self.dirty = False  # inputs changed since the running auction started
+
+    def tick(self, k: int, locked, up: list[bool], sats):
+        """-> (FUNCTION_HANDOFF events, {"functions": per sat, consensus_rounds, split_brain,
+        functions_vacant}). locked: LOCKED links (i, j); up: talking sats; sats: SatState."""
+        n = len(up)
+        key = [[list(e) for e in sorted(locked)], list(up), [s.k > 0 for s in sats]]
+        first = self.key is None
+        if key != self.key:
+            self.key, self.dirty = key, True
+        out: list[dict] = []
+        for _ in range(2):  # land the running auction, then start the next if dirty
+            if self.pending is None and self.dirty:
+                deg = [sum(i in e for e in locked) for i in range(n)]
+                fuel = [s.m_prop_kg / self.m_prop0 if self.m_prop0 > 0 and s.k > 0 else 0.0
+                        for s in sats]
+                res = auction(default_bids(deg, fuel, [0.0] * n, up), set(locked), up)
+                k_done = k if first else k + res["rounds"]
+                self.pending = {"k_done": k_done, "holders": res["holders"],
+                                "rounds": res["rounds"]}
+                self.dirty = False
+            if self.pending is None or k < self.pending["k_done"]:
+                break
+            new = self.pending["holders"]
+            for f in LEADER_FUNCTIONS if self.holders else ():
+                if self.holders[f] != new[f]:
+                    payload = {"function": f, "from": self.holders[f], "to": new[f]}
+                    out.append({"type": "FUNCTION_HANDOFF", "payload": payload})
+            self.holders, self.rounds, self.pending = new, self.pending["rounds"], None
+        live = {f: [i for i in h if up[i]] for f, h in self.holders.items()}
+        return out, {
+            "functions": [[f for f in LEADER_FUNCTIONS if i in live[f]] for i in range(n)],
+            "consensus_rounds": self.rounds,
+            "split_brain": [f for f in LEADER_FUNCTIONS if len(live[f]) > 1],
+            "functions_vacant": [f for f in LEADER_FUNCTIONS if not live[f]],
+        }
+
+    def state(self) -> dict:
+        return {"holders": self.holders, "pending": self.pending, "rounds": self.rounds,
+                "key": self.key, "dirty": self.dirty}
+
+    def load(self, state: dict, n: int) -> None:
+        """Replace every field; raises ValueError and leaves self unchanged on a bad state."""
+        try:
+            def holders(h):
+                if sorted(h) != sorted(LEADER_FUNCTIONS) or any(
+                        not 0 <= int(i) < n for v in h.values() for i in v):
+                    raise ValueError("holders must map every leader function to sat ids")
+                return {f: [int(i) for i in h[f]] for f in LEADER_FUNCTIONS}
+
+            hold = holders(state["holders"]) if state["holders"] else {}
+            p = state["pending"]
+            pending = None if p is None else {"k_done": int(p["k_done"]),
+                                              "holders": holders(p["holders"]),
+                                              "rounds": int(p["rounds"])}
+            rounds, key, dirty = int(state["rounds"]), state["key"], bool(state["dirty"])
+            if key is not None:
+                links, up, thrust = key
+                key = [[[int(i), int(j)] for i, j in links], [bool(u) for u in up],
+                       [bool(c) for c in thrust]]
+        except (KeyError, TypeError, ValueError, AttributeError) as exc:
+            raise ValueError(f"bad function state in snapshot: {exc!r}") from exc
+        self.holders, self.pending, self.rounds, self.key = hold, pending, rounds, key
+        self.dirty = dirty
