@@ -37,6 +37,7 @@ from cubesat import ground
 from cubesat.benchmark_policies import (
     even_split_replan,
     hungarian_keepout_replan,
+    role_swap_best_replan,
     role_swap_only_replan,
 )
 from cubesat.hcw import mean_motion
@@ -49,7 +50,7 @@ POLICY_ORDER = ("do_nothing", "even_split", "greedy", "hungarian", "hungarian_ke
 # Pre-registered baselines (GATES.md 2026-10-31). Kept OUT of POLICY_ORDER so the
 # default P0 sweep (and its committed 60-row report) is unchanged; selectable via
 # --policies and run by --mode baselines.
-BASELINE_POLICIES = ("role_swap_only", "wait_for_ground")
+BASELINE_POLICIES = ("role_swap_only", "wait_for_ground", "role_swap_best")
 ALL_POLICIES = POLICY_ORDER + BASELINE_POLICIES
 # `--mode baselines`: the four-policy vacancy comparison (PR-3), fixed order.
 BASELINES_MODE_POLICIES = ("do_nothing", "role_swap_only", "wait_for_ground", "hungarian")
@@ -118,6 +119,8 @@ def _replanner_for(policy: str):
         return hungarian_keepout_replan
     if policy == "role_swap_only":
         return role_swap_only_replan
+    if policy == "role_swap_best":
+        return role_swap_best_replan
     return None
 
 
