@@ -254,12 +254,41 @@ def _mmss(seconds: object) -> str | None:
     return f"{m:02d}:{s:02d}"
 
 
+# Engine-v2 failure sentences: mode (FAILURE_DETECTED payload, or the REENTRY / FUEL_DEPLETED
+# event type) -> (level, text after the sat label). Benign losses warn; a runaway thruster
+# and re-entry are critical. v1 modes are not here and keep their original wording.
+_V2_WORDING = {
+    "PAYLOAD_FAIL": ("warning", "camera failed; it keeps flying but can no longer image"),
+    "RADIO_FAIL": ("warning", "lost its radio; it keeps flying but is silent"),
+    "THRUSTER_STUCK_OPEN": (
+        "critical", "thruster stuck open; it is burning fuel it cannot control"
+    ),
+    "PARTIAL_THRUST": ("warning", "lost half its thrust"),
+    "FUEL_DEPLETED": ("warning", "ran out of propellant and can no longer maneuver"),
+    "REENTRY": ("critical", "re-entered the atmosphere"),
+}
+
+
+def _v2_event(frame: dict, key: object, sat: object) -> dict | None:
+    """The v2 sentence for `key`, or None when it is not a v2 mode (junk keys included)."""
+    wording = _V2_WORDING.get(key) if isinstance(key, str) else None
+    if wording is None:
+        return None
+    label = _sat_label(sat)
+    level, text = wording
+    msg = f"{label or 'A satellite'} {text}"
+    return _with_sat(to_event(level, frame.get("t", 0.0), msg), label)
+
+
 def _failure_event(frame: dict, payload: dict, enrich: SessionEnrich) -> dict:
     if isinstance(payload.get("t_fail"), (int, float)) and isinstance(
         payload.get("t_detect"), (int, float)
     ):
         enrich.detection_latency_s = payload["t_detect"] - payload["t_fail"]
     sat = payload.get("sat_id")
+    v2 = _v2_event(frame, payload.get("mode"), sat)
+    if v2 is not None:
+        return v2
     who = display_sat_id(sat) if isinstance(sat, int) else sat
     mode = payload.get("mode")
     message = f"{who} {mode} failure detected" if mode else f"{who} failure detected"
@@ -372,6 +401,8 @@ def _plain_event(frame: dict, etype: str, payload: dict) -> dict:
             ev.update({"from": frm, "to": to, "label": label})
         return ev
     t = frame.get("t", 0.0)
+    if etype in ("FUEL_DEPLETED", "REENTRY"):  # {sat_id, t, ...}
+        return _v2_event(frame, etype, payload.get("sat_id"))
     if etype == "DEGRADE_START":  # {sat_id, t_fail, degrade_s}
         who = _sat_label(payload.get("sat_id"))
         msg = f"{who or 'A satellite'} battery fading"
