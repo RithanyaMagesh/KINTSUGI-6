@@ -89,16 +89,19 @@ app = FastAPI(title="cubesat-swarm", version=__version__, lifespan=lifespan)
 # strips the port before matching. Token auth was considered and intentionally
 # NOT added: it would need frontend changes to stay usable, and frontend/src
 # is out of bounds -- the localhost bind remains the demo's real boundary.
-app.add_middleware(
-    TrustedHostMiddleware,
-    allowed_hosts=[
-        host.strip()
-        for host in os.environ.get(
-            "CUBESAT_ALLOWED_HOSTS", "localhost,127.0.0.1,testserver"
-        ).split(",")
-        if host.strip()
-    ],
-)
+def _allowed_hosts() -> list[str]:
+    """Always localhost / 127.0.0.1 / [::1] (container healthchecks and local use must
+    never break, audit B-8); CUBESAT_ALLOWED_HOSTS adds more (comma-separated), `*`
+    allows any. "testserver" (the TestClient host) is kept only when the env is unset,
+    exactly as before."""
+    extra = os.environ.get("CUBESAT_ALLOWED_HOSTS")
+    base = ["localhost", "127.0.0.1", "[::1]"]
+    if extra is None:
+        return [*base, "testserver"]
+    return base + [host.strip() for host in extra.split(",") if host.strip()]
+
+
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=_allowed_hosts())
 
 
 def _describe_errors(errors, skip: int = 0) -> str:
