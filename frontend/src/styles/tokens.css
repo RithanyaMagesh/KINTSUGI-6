@@ -49,6 +49,8 @@
   --hero-red: #e5484d; /* the broken satellite */
   --hero-star: #c9d2de;
   --hero-light-key: #ffffff;
+  --hero-sun: #fff1d6; /* warm-white sun: the landing's single key light */
+  --hero-sun-glow: #ffb766; /* outer corona of the sun sprite */
   --hero-light-rim: #6f9bff;
   --cubesat-frame: #c3c8cf; /* anodized aluminium rails */
   --cubesat-cap: #2a2f36;
