@@ -1,0 +1,81 @@
+{
+  "altitude_km": 500.0,
+  "cases": [
+    {
+      "drag": false,
+      "j2": false,
+      "max_pos_diff_m": 18.54322602273149,
+      "orbits": 3.0,
+      "radial_amp_km": 1.0
+    },
+    {
+      "drag": true,
+      "j2": false,
+      "max_pos_diff_m": 49.320737819411896,
+      "orbits": 3.0,
+      "radial_amp_km": 1.0
+    },
+    {
+      "drag": false,
+      "j2": true,
+      "max_pos_diff_m": 131.33611934906025,
+      "orbits": 3.0,
+      "radial_amp_km": 1.0
+    },
+    {
+      "drag": true,
+      "j2": true,
+      "max_pos_diff_m": 184.59155068322002,
+      "orbits": 3.0,
+      "radial_amp_km": 1.0
+    },
+    {
+      "drag": false,
+      "j2": false,
+      "max_pos_diff_m": 1189.1305132014302,
+      "orbits": 3.0,
+      "radial_amp_km": 8.0
+    },
+    {
+      "drag": true,
+      "j2": false,
+      "max_pos_diff_m": 1144.6751906763297,
+      "orbits": 3.0,
+      "radial_amp_km": 8.0
+    },
+    {
+      "drag": false,
+      "j2": true,
+      "max_pos_diff_m": 1993.2686673344722,
+      "orbits": 3.0,
+      "radial_amp_km": 8.0
+    },
+    {
+      "drag": true,
+      "j2": true,
+      "max_pos_diff_m": 1944.89574067415,
+      "orbits": 3.0,
+      "radial_amp_km": 8.0
+    }
+  ],
+  "command": "uv run python -m cubesat.cw_truth --report data/eval/cw_vs_truth_report.json",
+  "control": "none (a_max 1e-12 m/s^2): v1 path = analytic CW STM",
+  "dt_s": 2.0,
+  "formation": "6 ring slots, planar (z amplitude = x)",
+  "g1_state": {
+    "cw_vs_two_body_rk45_max_m": 3.100885134325124,
+    "note": "1 km radial / 500 m cross-track state, J2 off, drag off; GATES.md G1: 3.101 m",
+    "orbits": 3.0,
+    "v2_vs_cw_max_m": 3.102584936253433
+  },
+  "inclination_deg": 97.4,
+  "metric": "max over sats and ticks of |r_v2 - r_CW| in LVLH, m",
+  "orbits": 3.0,
+  "period_s": 5676.978028525859,
+  "truth_defaults": {
+    "area_active_m2": 0.01,
+    "cd": 2.2,
+    "illustrative": true,
+    "mass_kg": 4.0
+  }
+}
