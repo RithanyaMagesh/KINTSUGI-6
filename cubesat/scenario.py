@@ -52,6 +52,26 @@ class ChiefOrbit(BaseModel):
     )
 
 
+class Truth(BaseModel):
+    """Truth-model constants (engine v2 only). ALL defaults are illustrative, not measured
+    hardware: Cd 2.2 is the usual flat-plate value, areas follow a 10x10x30 cm 3U box
+    (end-on 0.010 m^2; tumbling mean projected area = surface/4 = 0.035 m^2), 4 kg mass."""
+
+    cd: float = Field(default=2.2, gt=0, description="Drag coefficient (illustrative)")
+    area_active_m2: float = Field(
+        default=0.010, gt=0, description="Drag area, active attitude-held sat, m^2 (illustrative)"
+    )
+    area_dead_m2: float = Field(
+        default=0.035, gt=0, description="Mean drag area, dead tumbling sat, m^2 (illustrative)"
+    )
+    mass_kg: float = Field(default=4.0, gt=0, description="Spacecraft mass, kg (illustrative)")
+    density_factor: float = Field(
+        default=1.0, ge=0, description="Multiplier on the exponential-atmosphere density "
+        "(1 = table, 0 = drag off, >1 = storm); illustrative"
+    )
+    j2_enabled: bool = Field(default=True, description="False = two-body gravity only (validation)")
+
+
 class Formation(BaseModel):
     n_slots: int = Field(
         ge=2, le=MAX_SATS, description="Number of phase-spaced passive-ellipse slots"
@@ -221,6 +241,7 @@ class Scenario(BaseModel):
     allocation: Allocation = Field(default_factory=Allocation)
     oracle: Oracle = Field(default_factory=Oracle)
     safety: Safety = Field(default_factory=Safety)
+    truth: Truth = Field(default_factory=Truth)
     engine: Literal["v1", "v2"] = Field(
         default="v1",
         description="'v1' = frozen linear-CW engine (every committed log); "
