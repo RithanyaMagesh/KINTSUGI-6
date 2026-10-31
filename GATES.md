@@ -197,3 +197,13 @@ Output 2026-10-31: run_scenario two_failure min 1.744 s / median 1.749 s; live_6
 - Coverage-hours (ΔH_saved) headline: no committed command produces it; audit scratch (not committed) measured the opposite sign in 11/15 pairs; removed everywhere, unmeasured.
 - Thrust arithmetic (audit C-13): 150 mN / 8 kg = 0.0188 m/s², not 0.01 m/s² (0.01 m/s² = 80 mN at 8 kg); a_max = 0.1 m/s² is 800 mN at 8 kg, 10x the 0.01 default and 5.3x the 150 mN figure; the "~150 mN cold-gas" assumption and a_max = 1e-2 are inconsistent and only one of them should be quoted.
 
+
+## 2026-10-31 — Pre-registration: ladder claim and baselines (recorded BEFORE any v2 or role_swap_only/wait_for_ground number exists)
+
+Source: docs/superpowers/specs/KINTSUGI-6_replan_and_judge_kit.md §2.5 and §6. Thresholds below cannot change after this commit; a result is reported pass/fail as measured, whichever way it goes.
+
+- **PR-1 (ladder dominance).** On every one of the 15 two-failure pairs of `data/scenarios/two_failure.json` (failure times 1200 s / 1500 s, DEAD), the v2 recovery policy (L1 role swap first; a move only if certified AND better than L1 like-for-like) satisfies `coverage_mean_last_orbit(v2) ≥ max(coverage(role_swap_only), coverage(hungarian)) − 1e-4`.
+- **PR-2 (mission metric).** v2 holds both critical roles (leader AND downlink on NOMINAL sats, final tick) on 15/15 pairs.
+- **PR-3 (baselines reported side by side).** `critical_vacancy_s` (mean and worst over the 15 pairs) is reported for `do_nothing`, `wait_for_ground`, `role_swap_only`, `hungarian` and v2, from one committed artifact with its command. `wait_for_ground`'s delay comes from the ground-pass model (cubesat/ground.py; station Bengaluru 13.03 N 77.51 E, elevation ≥ 10°), not a constant.
+- **Baseline definitions fixed now.** `role_swap_only`: re-elect the lost critical roles in place among surviving sats (zero Δv, no seat change, no formation sweep). `wait_for_ground`: autonomous recovery (hungarian) is held until the first ground pass after detection (`recovery_delay_s` from the pass model).
+- **Out of scope for these claims:** coverage is secondary; no coverage-hours headline (measured: wait-for-ground ≥ autonomous in 10-11 of 15 pairs, docs/audit/2026-10-31-c.md C-8).
