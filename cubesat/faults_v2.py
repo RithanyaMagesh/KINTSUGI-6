@@ -73,6 +73,7 @@ class Faults:
         self.injections: list[Failure] = []
         self.sats = [SatState.from_scenario(scenario) for _ in range(n)]
         self.fuel_out = [False] * n  # FUEL_DEPLETED already reported
+        self.fade_done = [False] * n  # DEGRADE_START already announced
 
     def inject(self, failure: Failure, now: float) -> None:
         """Resolve `failure` against `now` and record the RESOLVED failure.
@@ -95,7 +96,7 @@ class Faults:
 
     def mark_reentered(self, i: int, t: float, altitude_m: float) -> dict:
         self.status[i] = STATUS_REENTERED
-        if not self.fail_mode[i]:
+        if self.sats[i].radio_ok:  # a sat that was still talking goes silent because of re-entry
             self.t_fail[i], self.fail_mode[i] = t, "REENTRY"
         return {"type": "REENTRY", "payload": {"sat_id": i, "t": t, "altitude_m": altitude_m}}
 
@@ -110,8 +111,10 @@ class Faults:
                 fades
                 and f.t - f.degrade_s <= t + _EPS
                 and f.t > t + _EPS
-                and self.status[f.sat_id] == STATUS_NOMINAL
+                and not self.fade_done[f.sat_id]
+                and _RANK[self.status[f.sat_id]] <= _RANK[STATUS_DEGRADED]  # not yet worse
             ):
+                self.fade_done[f.sat_id] = True
                 self.status[f.sat_id] = STATUS_DEGRADED
                 payload = {"sat_id": f.sat_id, "t_fail": f.t, "degrade_s": f.degrade_s}
                 events.append({"type": "DEGRADE_START", "payload": payload})
@@ -182,12 +185,21 @@ class Faults:
             "injections": dump(self.injections),
             "sats": [sat.to_dict() for sat in self.sats],
             "fuel_out": self.fuel_out,
+            "fade_done": self.fade_done,
         }
 
     def load(self, state: dict) -> None:
-        for name in ("status", "missed", "declared", "t_fail", "fail_mode", "mission", "fired"):
-            setattr(self, name, state[name])
-        self.pending = [Failure.model_validate(f) for f in state["pending"]]
-        self.injections = [Failure.model_validate(f) for f in state["injections"]]
-        self.sats = [SatState.from_dict(d) for d in state["sats"]]
-        self.fuel_out = state["fuel_out"]
+        """Replace every field from `state`; raises ValueError and leaves self unchanged when
+        a key is missing or malformed (old or partial snapshot)."""
+        try:
+            plain = {
+                name: state[name]
+                for name in ("status", "missed", "declared", "t_fail", "fail_mode", "mission")
+                + ("fired", "fuel_out", "fade_done")
+            }
+            pending = [Failure.model_validate(f) for f in state["pending"]]
+            injections = [Failure.model_validate(f) for f in state["injections"]]
+            sats = [SatState.from_dict(d) for d in state["sats"]]
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(f"bad faults state in snapshot: {exc!r}") from exc
+        self.__dict__.update(plain, pending=pending, injections=injections, sats=sats)

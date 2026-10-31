@@ -140,6 +140,7 @@ class EngineV2:
                     "r": lvlh[i, :3].tolist(),
                     "v": lvlh[i, 3:].tolist(),
                     "dv_used": float(self.dv[i]),
+                    "stuck": self.faults.sats[i].stuck_vec is not None,
                     "fuel_kg": self.faults.sats[i].m_prop_kg,
                     "fuel_mps_left": self.faults.sats[i].fuel_mps_left,
                     "k": self.faults.sats[i].k,
@@ -204,14 +205,17 @@ class EngineV2:
             raise ValueError(f"not an EngineV2 snapshot: {exc}") from exc
         if fingerprint != self._fingerprint():
             raise ValueError("snapshot fingerprint mismatch: different scenario, n_sats or schema")
-        self.k = state["k"]
-        self.X = np.array(state["X"])
-        self.refs = np.array(state["refs"])
-        self.dv = np.array(state["dv"])
-        self.hold = np.array(state["hold"])
-        self.cov = [(t, c) for t, c in state["cov"]]
-        self.faults.load(state["faults"])
-        self.rng.bit_generator.state = state["rng"]
+        try:  # parse everything first: a bad snapshot must leave the engine untouched
+            k, X, refs = int(state["k"]), np.array(state["X"]), np.array(state["refs"])
+            dv, hold = np.array(state["dv"]), np.array(state["hold"])
+            cov = [(t, c) for t, c in state["cov"]]
+            rng = make_rng(self.scenario)
+            rng.bit_generator.state = state["rng"]
+            self.faults.load(state["faults"])  # atomic itself; raises ValueError first
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(f"bad EngineV2 snapshot: {exc!r}") from exc
+        self.k, self.X, self.refs, self.dv, self.hold, self.cov = k, X, refs, dv, hold, cov
+        self.rng = rng
 
     # -- internals ---------------------------------------------------------------------------------
     def _reentries(self, t: float, lvlh: np.ndarray) -> list[dict]:

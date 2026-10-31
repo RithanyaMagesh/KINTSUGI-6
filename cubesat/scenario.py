@@ -334,10 +334,11 @@ class Scenario(BaseModel):
     @model_validator(mode="after")
     def _propellant_fits_in_wet_mass(self) -> Scenario:
         # v2 only: v1 never reads the block, and a v1 scenario with a tiny truth.mass_kg stays valid
-        if self.engine == "v2" and self.spacecraft.m_prop_kg >= self.truth.mass_kg:
+        if self.engine == "v2" and self.spacecraft.m_prop_kg > 0.5 * self.truth.mass_kg:
             raise ValueError(
-                f"spacecraft.m_prop_kg={self.spacecraft.m_prop_kg} must be below the wet mass "
-                f"truth.mass_kg={self.truth.mass_kg}"
+                f"spacecraft.m_prop_kg={self.spacecraft.m_prop_kg} exceeds half the wet mass "
+                f"truth.mass_kg={self.truth.mass_kg}: the dry mass must be at least half the "
+                f"wet mass (the drag model keeps the wet mass)"
             )
         return self
 
