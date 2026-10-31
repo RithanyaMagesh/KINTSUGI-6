@@ -10,8 +10,9 @@ sig=5 is measured, not chosen by taste: a two_failure log holds ~357k floats and
 sats drift to ~1.25e6 m, so noise of 1e-13 relative is already 1e-7 m there. Perturbing
 every float of that log (rel 1e-13, abs 1e-10, 20 seeds) flipped the hash 0/20 times at
 sig=5 but 12/20 at sig=6 and 20/20 at sig=9. A real behaviour change moves values by
-far more than 1e-5 relative, so the pin still catches it. CI confirmed the pins on ubuntu-latest and windows-latest
-(GitHub Actions run 41190818716, 2026-10-31) as well as macOS arm64.
+far more than 1e-5 relative, so the pin still catches it. CI confirmed the pins on
+ubuntu-latest and windows-latest (GitHub Actions run 41190818716, 2026-10-31) as well as
+macOS arm64.
 """
 
 from __future__ import annotations
