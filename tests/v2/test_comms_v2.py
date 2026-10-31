@@ -221,3 +221,21 @@ def test_partition_at_the_first_tick_is_reported():
     start[1, :3] = start[0, :3] + 5000.0 * sun
     lines = _ticks(list(EngineV2(s, initial_lvlh=start).run()))
     assert _events(lines, "PARTITION")[0] == (0.0, {"components": [[0], [1]]})
+
+
+@pytest.mark.slow
+def test_one_orbit_of_nominal_sun_splits_the_ring_and_isolates_a_star_leaf():
+    """Measured (GATES.md C2): one orbit of data/scenarios/nominal.json, engine v2, laser, no
+    failures. The 2-terminal ring loses two parallel links to the 3 deg sun cone twice per
+    orbit and splits in two for 160 s each time; the star isolates sat 3 (declared, cause
+    isolated). A finding against the "ring survives" story, reported, not tuned away."""
+    full = {"duration_s": NOMINAL["duration_s"], "sensor": NOMINAL["sensor"]}
+    mesh = _ticks(run_scenario_v2(_scn(**full)))
+    star = _ticks(run_scenario_v2(_scn(comms={"model": "laser", "topology": "star"}, **full)))
+    split = [t for t, _ in _events(mesh, "PARTITION")]
+    assert split == [1352.0, 4190.0]
+    assert _events(mesh, "PARTITION")[0][1] == {"components": [[0, 1, 5], [2, 3, 4]]}
+    assert sum(len(x["components"]) > 1 for x in mesh) * 2.0 == 320.0
+    assert not _events(mesh, "FAILURE_DETECTED")
+    det = [(t, p["sat_id"], p.get("cause")) for t, p in _events(star, "FAILURE_DETECTED")]
+    assert det == [(1356.0, 3, "isolated"), (4194.0, 3, "isolated")]
