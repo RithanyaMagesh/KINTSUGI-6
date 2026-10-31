@@ -242,3 +242,28 @@ All five are within 5% of the user's numbers. The model was not adjusted to matc
 **role_swap_only vs hungarian, coverage (`coverage_mean_last_orbit`)**: `role_swap_only >= hungarian - 1e-4` on **1 of 15** pairs (only (2,3)); mean 0.2350 vs 0.2698. The audit (docs/audit/2026-10-31-c.md C-4) measured 6/15 and 0.2570 vs 0.2698, but with an oracle-best promotee in a scratch script (its own stated upper bound); the committed policy uses the pre-registered deterministic rule (lowest-id surviving non-critical sat, duplicated roles first), which promotes an imager and so costs imaging. The audit figure is therefore not reproduced by this policy. Under this rule `role_swap_only` is also below `do_nothing` on mean coverage (0.2350 vs 0.2911).
 
 **Not claimed:** no v2 number; no coverage-hours result; the ground model describes one station and is illustrative.
+
+## 2026-10-31 — v2 Physics Phase 1: truth dynamics (branch `backend-engine`, engine `v2` only; v1 untouched)
+
+Every number below is the printed output of the command beside it (macOS arm64, 2026-10-31); formulas, defaults, sources and limits: `docs/PHYSICS_V2.md`. Pytest commands add `-p no:cacheprovider`.
+
+| Gate | Result | Command |
+|---|---|---|
+| lint | All checks passed | `uv run ruff check .` |
+| fast tests | 316 passed, 2 skipped, 5 deselected | `uv run python -m pytest -m "not slow"` |
+| slow tests | 5 passed (3 v1, 2 v2) | `uv run python -m pytest -m slow` |
+| v1 pins unchanged | no edit to any test outside `tests/v2`, grep for sha/hash empty | `git diff $(git merge-base backend HEAD)..HEAD -- tests/ ':!tests/v2' \| grep -E 'sha\|hash'` |
+| determinism | two v2 CLI runs byte-identical (`cmp`) | `uv run python -m cubesat.run --scenario <two_failure.json with "engine":"v2","duration_s":1800> --seed 42 --out a.jsonl` twice |
+| CW-vs-truth report | unchanged on re-run (8 cases + G1 state, `data/eval/cw_vs_truth_report.json`) | `uv run python -m cubesat.cw_truth --report data/eval/cw_vs_truth_report.json` |
+
+| Check | Measured | Threshold | Command |
+|---|---|---|---|
+| J2 vs central-difference gradient, rel. error | 2.680e-11 | < 1e-5 | `uv run python -m pytest tests/v2/test_truth_accel.py::test_j2_matches_potential_gradient -s` |
+| King-Hele decay per rev at 500 km, polar, active / dead (formula) | -1.1415 m / -3.9952 m | -1.14 / -3.99 m, 5% | `uv run python -m pytest tests/v2/test_truth_accel.py::test_drag_decay_per_rev_king_hele -s` |
+| RK4 numeric decay per rev, polar, active / dead | -1.1401 m / -3.9903 m | 5% | `uv run python -m pytest tests/v2/test_truth_integrate.py::test_drag_decay_numeric_per_rev -s` |
+| same at 97.4 deg | -1.1595 m / -4.0582 m | 5% | `uv run python -m pytest tests/v2/test_truth_integrate.py::test_drag_decay_numeric_per_rev_at_scenario_inclination -s` |
+| LVLH round trip, worst abs error | 4.502e-10 m | < 1e-6 m | `uv run python -m pytest tests/v2/test_truth_integrate.py::test_lvlh_roundtrip_under_1e6_m -s` |
+| RK4 dt=2 s vs RK45 (rtol 1e-12) / vs DOP853 (rtol 1e-13), 3 orbits | 6.278e-04 m / 7.737e-05 m | < 1e-2 m | `uv run python -m pytest tests/v2/test_truth_integrate.py -k rk45 -s` |
+| v2 vs CW, G1 state, J2/drag off, 3 orbits | 3.1026 m (recorded 3.101 m) | 3.411 m | `uv run python -m pytest tests/v2/test_sim_v2_truth.py -m slow -s -k "3p1_m and not 1orbit"` |
+| v2 vs CW, G1 state, J2 on, 1 orbit | 44.8058 m | finite | `uv run python -m pytest tests/v2/test_sim_v2_truth.py -s -k j2_on` |
+| Review fixes: inject/replay, draw order, schema bounds, re-entry, snapshot | 17 of 17 mutants killed | all killed | mutation method and table in `docs/PHYSICS_V2.md` "Mutation check" |

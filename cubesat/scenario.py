@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 # Resource bounds (audit: scenarios are uploaded through the API by an
 # unauthenticated console user, so every derived allocation must be bounded --
@@ -38,6 +39,58 @@ class ChiefOrbit(BaseModel):
     altitude_km: float = Field(
         gt=160, lt=2000, description="Circular chief altitude above Earth, km"
     )
+    inclination_deg: float = Field(
+        default=97.4, ge=0, le=180, allow_inf_nan=False,
+        description="Chief inclination, deg (engine v2 only; SSO-like, illustrative default)",
+    )
+    raan_deg: float = Field(
+        default=0.0, ge=-360, le=360, allow_inf_nan=False,
+        description="Chief right ascension of ascending node, deg, in [-360, 360] "
+        "(engine v2 only)",
+    )
+    epoch_utc: str = Field(
+        default="2026-03-20T12:00:00Z",
+        description="Fixed ISO-8601 UTC epoch of t=0 (engine v2 only; reserved for the sun "
+        "direction; illustrative fixed date, never the wall clock)",
+    )
+
+    @field_validator("epoch_utc")
+    @classmethod
+    def _epoch_is_iso(cls, value: str) -> str:
+        try:
+            datetime.fromisoformat(value)
+        except ValueError as exc:
+            raise ValueError(f"epoch_utc must be an ISO-8601 timestamp: {exc}") from exc
+        return value
+
+
+class Truth(BaseModel):
+    """Truth-model constants (engine v2 only). ALL defaults are illustrative, not measured
+    hardware: Cd 2.2 is the usual flat-plate value, areas follow a 10x10x30 cm 3U box
+    (end-on 0.010 m^2; tumbling mean projected area = surface/4 = 0.035 m^2), 4 kg mass.
+    Bounds only keep every log finite; they are not claims about real spacecraft."""
+
+    cd: float = Field(
+        default=2.2, gt=0, le=10, allow_inf_nan=False, description="Drag coefficient (illustrative)"
+    )
+    area_active_m2: float = Field(
+        default=0.010, gt=0, le=100, allow_inf_nan=False,
+        description="Drag area, active attitude-held sat, m^2 (illustrative)",
+    )
+    area_dead_m2: float = Field(
+        default=0.035, gt=0, le=100, allow_inf_nan=False,
+        description="Mean drag area, dead tumbling sat, m^2 (illustrative)",
+    )
+    mass_kg: float = Field(
+        default=4.0, ge=1e-3, le=1e4, allow_inf_nan=False,
+        description="Spacecraft mass, kg (illustrative)",
+    )
+    density_factor: float = Field(
+        default=1.0, ge=0, le=1e4, allow_inf_nan=False,
+        description="Multiplier on the exponential-atmosphere density (1 = table, 0 = drag off, "
+        ">1 = storm); illustrative",
+    )
+    j2_enabled: bool = Field(default=True, description="False = two-body gravity only (validation)")
 
 
 class Formation(BaseModel):
@@ -209,6 +262,12 @@ class Scenario(BaseModel):
     allocation: Allocation = Field(default_factory=Allocation)
     oracle: Oracle = Field(default_factory=Oracle)
     safety: Safety = Field(default_factory=Safety)
+    truth: Truth = Field(default_factory=Truth)
+    engine: Literal["v1", "v2"] = Field(
+        default="v1",
+        description="'v1' = frozen linear-CW engine (every committed log); "
+        "'v2' = truth-dynamics engine (cubesat/sim_v2.py)",
+    )
 
     @property
     def n_sats(self) -> int:
