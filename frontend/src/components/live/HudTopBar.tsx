@@ -1,7 +1,7 @@
 // Full-screen live HUD — top edge. Left: wordmark home link, mission state,
 // sim clock. Right: run transport, view switch and the buttons that open the
 // hidden layers (Setup, Telemetry), fullscreen and hide-HUD.
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSimStore } from "../../stores/simStore";
 import { useSceneStore, type SceneViewMode } from "../../stores/sceneStore";
 import { useUiStore } from "../../stores/uiStore";
@@ -10,7 +10,7 @@ import { missionStateColor } from "../../utils/colors";
 import { clock, stateLabel } from "./hudFormat";
 import styles from "./ImmersiveLive.module.css";
 
-const SPEEDS = [10, 40, 100] as const;
+const SPEEDS = [10, 20, 50, 100, 200] as const;
 
 interface Props {
   setupOpen: boolean;
@@ -32,10 +32,32 @@ export default function HudTopBar(p: Props) {
   const connection = useSimStore((s) => s.connection);
   const view = useSceneStore((s) => s.viewMode);
   const [paused, setPaused] = useState(false);
-  const [speed, setSpeed] = useState<number | null>(null);
+  const speed = useUiStore((s) => s.runSpeed);
+  const setSpeed = useUiStore((s) => s.setRunSpeed);
   const [err, setErr] = useState<string | null>(null);
 
   const live = mode === "live";
+  const replay = mode === "replay";
+
+  // Pause can also be toggled from Setup or another tab: mirror the backend.
+  useEffect(() => {
+    if (!live && !replay) return;
+    let alive = true;
+    const poll = async (): Promise<void> => {
+      try {
+        const h = (await backend.health()) as { paused?: unknown };
+        if (alive && typeof h.paused === "boolean") setPaused(h.paused);
+      } catch {
+        // backend unreachable: the connection dot already says so
+      }
+    };
+    void poll();
+    const t = window.setInterval(() => void poll(), 2000);
+    return () => {
+      alive = false;
+      window.clearInterval(t);
+    };
+  }, [live, replay]);
   const color = missionStateColor(missionState);
   const connColor =
     connection === "connected"
@@ -52,8 +74,8 @@ export default function HudTopBar(p: Props) {
   async function togglePause(): Promise<void> {
     setErr(null);
     try {
-      if (paused) await backend.simulationResume();
-      else await backend.simulationPause();
+      if (replay) await (paused ? backend.replayResume() : backend.replayPause());
+      else await (paused ? backend.simulationResume() : backend.simulationPause());
       setPaused(!paused);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Could not reach the simulator");
@@ -63,7 +85,8 @@ export default function HudTopBar(p: Props) {
   async function pickSpeed(v: number): Promise<void> {
     setErr(null);
     try {
-      await simulationSpeed(v);
+      if (replay) await backend.replaySpeed(v);
+      else await simulationSpeed(v);
       setSpeed(v);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Could not change speed");
@@ -93,7 +116,7 @@ export default function HudTopBar(p: Props) {
       </div>
 
       <div className={styles.topRight}>
-        {live && (
+        {(live || replay) && (
           <div className={styles.group} role="group" aria-label="Run speed">
             <button type="button" className={styles.hudBtn} onClick={() => void togglePause()}>
               {paused ? "Resume" : "Pause"}
