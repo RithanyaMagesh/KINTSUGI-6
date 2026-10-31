@@ -140,6 +140,9 @@ class EngineV2:
                     "r": lvlh[i, :3].tolist(),
                     "v": lvlh[i, 3:].tolist(),
                     "dv_used": float(self.dv[i]),
+                    "fuel_kg": self.faults.sats[i].m_prop_kg,
+                    "fuel_mps_left": self.faults.sats[i].fuel_mps_left,
+                    "k": self.faults.sats[i].k,
                     "payload_ok": self.faults.sats[i].payload_ok,
                     "radio_ok": self.faults.sats[i].radio_ok,
                 }

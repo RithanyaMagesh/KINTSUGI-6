@@ -26,6 +26,7 @@ from cubesat.spacecraft import SatState, apply_failure
 STATUS_REENTERED = "REENTERED"
 STATUS_PAYLOAD_FAILED = "PAYLOAD_FAILED"  # still flies, no imaging
 STATUS_RADIO_SILENT = "RADIO_SILENT"  # flies, silent heartbeat
+STATUS_FUEL_DEPLETED = "FUEL_DEPLETED"  # flies and images, cannot thrust (tank empty)
 _EPS = 1e-9
 # A new failure only ever raises the label; DEAD and REENTERED are terminal.
 _RANK = {
@@ -33,6 +34,7 @@ _RANK = {
     STATUS_DEGRADED: 1,
     STATUS_PAYLOAD_FAILED: 2,
     STATUS_THRUSTER_OUT: 3,
+    STATUS_FUEL_DEPLETED: 4,
     STATUS_RADIO_SILENT: 5,
     STATUS_DEAD: 6,
     STATUS_REENTERED: 7,
@@ -68,6 +70,7 @@ class Faults:
         self.fired = 0
         self.injections: list[Failure] = []
         self.sats = [SatState.from_scenario(scenario) for _ in range(n)]
+        self.fuel_out = [False] * n  # FUEL_DEPLETED already reported
 
     def inject(self, failure: Failure, now: float) -> None:
         """Resolve `failure` against `now` and record the RESOLVED failure.
@@ -134,6 +137,13 @@ class Faults:
                 payload = {"sat_id": i, "mode": f.mode.value, "t_fail": f.t, "t_detect": t}
                 payload["self_report"] = True
                 events.append({"type": "FAILURE_DETECTED", "payload": payload})
+        for i, sat in enumerate(self.sats):
+            if sat.depleted and not self.fuel_out[i] and self.status[i] not in _TERMINAL:
+                self.fuel_out[i] = True  # reported once, plain (the mission state is untouched)
+                if _RANK[STATUS_FUEL_DEPLETED] > _RANK[self.status[i]]:
+                    self.status[i] = STATUS_FUEL_DEPLETED
+                if sat.radio_ok:  # self-reported like THRUSTER_OUT; a silent sat cannot
+                    events.append({"type": "FUEL_DEPLETED", "payload": {"sat_id": i, "t": t}})
         for i, status in enumerate(self.status):
             silent = status == STATUS_REENTERED or not self.sats[i].radio_ok
             self.missed[i] = self.missed[i] + 1 if silent else 0
@@ -162,6 +172,7 @@ class Faults:
             "fired": self.fired,
             "injections": dump(self.injections),
             "sats": [sat.to_dict() for sat in self.sats],
+            "fuel_out": self.fuel_out,
         }
 
     def load(self, state: dict) -> None:
@@ -170,3 +181,4 @@ class Faults:
         self.pending = [Failure.model_validate(f) for f in state["pending"]]
         self.injections = [Failure.model_validate(f) for f in state["injections"]]
         self.sats = [SatState.from_dict(d) for d in state["sats"]]
+        self.fuel_out = state["fuel_out"]
