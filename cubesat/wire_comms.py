@@ -1,4 +1,4 @@
-"""Laser-comms pass-through for the wire (track C6; engine v2 runs with `comms.model = "laser"`).
+"""Laser-comms and decentral-authority pass-through for the wire (track C6; engine v2, laser).
 
 Additive only: a log line without `links` / `components` gains no key, so v1 and non-laser v2
 wire bytes are unchanged. Sat ids become display ids ("SAT-n") like every other wire id. A
@@ -47,7 +47,8 @@ def _components(comps: object) -> list[list[str]] | None:
 
 
 def tick_fields(frame: dict) -> dict:
-    """{links, components} for sim_state, only for the keys the log line carries."""
+    """{links, components, consensus_rounds, split_brain, functions_vacant} for sim_state, only
+    for the keys the log line carries."""
     out: dict = {}
     if isinstance(frame.get("links"), list):
         out["links"] = [r for r in map(_link_row, frame["links"]) if r is not None]
@@ -55,6 +56,11 @@ def tick_fields(frame: dict) -> dict:
         comps = _components(frame["components"])
         if comps is not None:
             out["components"] = comps
+    if "consensus_rounds" in frame:  # decentral authority (C4): a count, not seconds
+        out["consensus_rounds"] = _num(frame["consensus_rounds"])
+    for key in ("split_brain", "functions_vacant"):
+        if isinstance(frame.get(key), list):
+            out[key] = [f for f in frame[key] if isinstance(f, str)]
     return out
 
 
@@ -71,8 +77,34 @@ def _ev(t: object, level: str, message: str, **extra) -> dict:
     return {"type": "event", "sim_time": t, "level": level, "message": message, **extra}
 
 
-def link_event(t: object, etype: str, payload: dict) -> dict | None:
-    """LINK_LOCKED / LINK_LOST / PARTITION -> event message; None for any other type."""
+def _sats(ids: object) -> list[str] | None:
+    if not isinstance(ids, list):
+        return None
+    out = [_sat(i) for i in ids]
+    return None if None in out else out
+
+
+def _handoff(t: object, payload: dict) -> dict:
+    """FUNCTION_HANDOFF{function, from: [ids], to: [ids]} (C4; one holder per component)."""
+    f, a, b = payload.get("function"), _sats(payload.get("from")), _sats(payload.get("to"))
+    if not isinstance(f, str) or a is None or b is None:
+        return _ev(t, "info", "Consensus auction: a leader function changed holder")
+    name, extra = f.replace("_", " "), {"function": f, "from": a, "to": b}
+    if not b:
+        was = f" (was {', '.join(a)})" if a else ""
+        return _ev(t, "warning", f"{name} is vacant: no satellite holds it{was}", **extra)
+    if not a:
+        return _ev(t, "info", f"Consensus auction: {', '.join(b)} took over {name}", **extra)
+    msg = f"Consensus auction: {name} moved from {', '.join(a)} to {', '.join(b)}"
+    if len(b) > 1:
+        return _ev(t, "warning", msg + " (split-brain: one holder per group)", **extra)
+    return _ev(t, "info", msg, **extra)
+
+
+def comms_event(t: object, etype: str, payload: dict) -> dict | None:
+    """LINK_LOCKED / LINK_LOST / PARTITION / FUNCTION_HANDOFF -> event message; None otherwise."""
+    if etype == "FUNCTION_HANDOFF":
+        return _handoff(t, payload)
     if etype == "PARTITION":
         comps = _components(payload.get("components"))
         if len(comps or []) < 2:  # a split needs two groups

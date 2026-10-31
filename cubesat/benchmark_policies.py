@@ -12,6 +12,7 @@ wall clock (AGENTS.md invariant 2). SI units (invariant 3), LVLH (invariant 4).
 
 from __future__ import annotations
 
+import itertools
 import math
 
 import numpy as np
@@ -241,3 +242,41 @@ def role_swap_only_replan(
     coverage = _coverage_estimate(slots, roles, r_f=r_f, grid=grid, n=n, t_replan=t_replan)
     plan = FormationPlan(base_amp_m, 0.0, slots, roles, coverage, "role_swap_only")
     return plan, _identity_pairs(k), 0.0, "role_swap_only", 0.0, np.zeros((k, k))
+
+
+def role_swap_best_replan(
+    survivor_states: list,
+    survivor_roles: list[str],
+    survivor_fuel: list[float],
+    obstacle_states: list,
+    original_roles: list[str],
+    allocation,
+    base_amp_m: float,
+    r_f: float,
+    grid: np.ndarray,
+    n: float,
+    a_max: float,
+    t_replan: float,
+    current_slots: list | None = None,
+) -> tuple[FormationPlan, list[tuple[int, int]], float, str, float, np.ndarray]:
+    """Baseline `role_swap_best` (audit C-4 check, NOT pre-registered): role_swap_only with the
+    best-case promotee. Same zero-Delta-v in-place re-election, same pool (surviving sats with a
+    non-critical role), but the lost critical roles (leader, then downlink) go to the distinct
+    pool members that maximise the coverage estimate; ties keep the first (lowest ids)
+    choice. An upper bound on what any in-place promotion rule can keep."""
+    if current_slots is None:
+        raise ValueError("role_swap_best needs current_slots (the sim seam passes them)")
+    slots = list(current_slots)
+    lost = [c for c in _CRITICAL_ROLES if c in original_roles and c not in survivor_roles]
+    pool = [i for i, r in enumerate(survivor_roles) if r not in _CRITICAL_ROLES]
+    best_roles, best = list(survivor_roles), -1.0
+    for pick in itertools.permutations(pool, min(len(lost), len(pool))):
+        trial = list(survivor_roles)
+        for i, crit in zip(pick, lost, strict=False):
+            trial[i] = crit
+        cov = _coverage_estimate(slots, trial, r_f=r_f, grid=grid, n=n, t_replan=t_replan)
+        if cov > best:
+            best_roles, best = trial, cov
+    k = len(best_roles)
+    plan = FormationPlan(base_amp_m, 0.0, slots, best_roles, best, "role_swap_best")
+    return plan, _identity_pairs(k), 0.0, "role_swap_best", 0.0, np.zeros((k, k))

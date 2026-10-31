@@ -1,0 +1,365 @@
+{
+  "command": "uv run python -m cubesat.benchmark --mode benchmark --base data/scenarios/two_failure.json --policies role_swap_only,role_swap_best,hungarian --out data/eval/baselines --report data/eval/role_swap_best_results.json --manifest data/eval/role_swap_best_manifest.json",
+  "logs": {
+    "pair_0-1__hungarian.jsonl": {
+      "pair": [
+        0,
+        1
+      ],
+      "policy": "hungarian",
+      "sha256": "376745704646c6f29b90b7d0467bc7f1cbcadfe6f5bb1f4374db9bc9164ed460"
+    },
+    "pair_0-1__role_swap_best.jsonl": {
+      "pair": [
+        0,
+        1
+      ],
+      "policy": "role_swap_best",
+      "sha256": "fffad9a63a5698c24bcebb7aafa299a31fb84892f060c56bbe3f7c4929091ae3"
+    },
+    "pair_0-1__role_swap_only.jsonl": {
+      "pair": [
+        0,
+        1
+      ],
+      "policy": "role_swap_only",
+      "sha256": "7565e4a332e702715bf5d9c43f10b26d589da27f5d49854900f95171a8ff5e21"
+    },
+    "pair_0-2__hungarian.jsonl": {
+      "pair": [
+        0,
+        2
+      ],
+      "policy": "hungarian",
+      "sha256": "5cb4884095c17300908252872e25813f87e82739b7c4f657b41b5a265b53759c"
+    },
+    "pair_0-2__role_swap_best.jsonl": {
+      "pair": [
+        0,
+        2
+      ],
+      "policy": "role_swap_best",
+      "sha256": "337714781edd7bb25b2fa4a2f027735e45d71e4b8abe7c0eee123287c46b3448"
+    },
+    "pair_0-2__role_swap_only.jsonl": {
+      "pair": [
+        0,
+        2
+      ],
+      "policy": "role_swap_only",
+      "sha256": "441e24c3cb80809967bcb7a742eea0fd9604d9fada651a24327929766183f694"
+    },
+    "pair_0-3__hungarian.jsonl": {
+      "pair": [
+        0,
+        3
+      ],
+      "policy": "hungarian",
+      "sha256": "c107cce566403278e55b64f588aa8cc4a2be7b65fb3edb446dd39ec2ea532430"
+    },
+    "pair_0-3__role_swap_best.jsonl": {
+      "pair": [
+        0,
+        3
+      ],
+      "policy": "role_swap_best",
+      "sha256": "ac542e0a4f478b991474a6931f443896c9ca2fc12043b912858dfaa9b821bac8"
+    },
+    "pair_0-3__role_swap_only.jsonl": {
+      "pair": [
+        0,
+        3
+      ],
+      "policy": "role_swap_only",
+      "sha256": "2a212ee524bee2a76bdac80f1bc2ae4330fe70660579a55885ab2ae4a187f81c"
+    },
+    "pair_0-4__hungarian.jsonl": {
+      "pair": [
+        0,
+        4
+      ],
+      "policy": "hungarian",
+      "sha256": "8bd568b5136b5f0bb0889b54c291433349d3e149cdcb6f2e486192ea07508c04"
+    },
+    "pair_0-4__role_swap_best.jsonl": {
+      "pair": [
+        0,
+        4
+      ],
+      "policy": "role_swap_best",
+      "sha256": "d48580f192cdf56df3a8f372c025070eeb10a55ba8f2606ac7dba9691c10bfc4"
+    },
+    "pair_0-4__role_swap_only.jsonl": {
+      "pair": [
+        0,
+        4
+      ],
+      "policy": "role_swap_only",
+      "sha256": "6487a43a18a8483c2dc7fa8a452ee8dc6bf29ec0c826c9f5781e37331095ddd5"
+    },
+    "pair_0-5__hungarian.jsonl": {
+      "pair": [
+        0,
+        5
+      ],
+      "policy": "hungarian",
+      "sha256": "d419eab67c4a79b354eeca9750dfffb79bc145e7e037812beb4127973a1e95bb"
+    },
+    "pair_0-5__role_swap_best.jsonl": {
+      "pair": [
+        0,
+        5
+      ],
+      "policy": "role_swap_best",
+      "sha256": "91e9572f95ff36a84c7d0217e9d1ee1327694d9e1131309b458eaede4e8a63be"
+    },
+    "pair_0-5__role_swap_only.jsonl": {
+      "pair": [
+        0,
+        5
+      ],
+      "policy": "role_swap_only",
+      "sha256": "0b49911655dbcb74d0e002bea766442c43de3e264bd36b30c5c74e80a49c06a4"
+    },
+    "pair_1-2__hungarian.jsonl": {
+      "pair": [
+        1,
+        2
+      ],
+      "policy": "hungarian",
+      "sha256": "86a9a3ab15f17327f56ac94dac173d3fcc9e4a25c052bc86d860d33e2dcc0244"
+    },
+    "pair_1-2__role_swap_best.jsonl": {
+      "pair": [
+        1,
+        2
+      ],
+      "policy": "role_swap_best",
+      "sha256": "6851cba1edad72d66e2741f62a22667a32fe0b64f30796ed6b3216d435232246"
+    },
+    "pair_1-2__role_swap_only.jsonl": {
+      "pair": [
+        1,
+        2
+      ],
+      "policy": "role_swap_only",
+      "sha256": "fdc652c3098c6f7d1ab22a1e6b479664615604c547ed0e3b6adf6f0c2e4f8cc6"
+    },
+    "pair_1-3__hungarian.jsonl": {
+      "pair": [
+        1,
+        3
+      ],
+      "policy": "hungarian",
+      "sha256": "510784f5818cbab23ab8ad844af9d2133ac0182739df62ddca0b6b09675d131f"
+    },
+    "pair_1-3__role_swap_best.jsonl": {
+      "pair": [
+        1,
+        3
+      ],
+      "policy": "role_swap_best",
+      "sha256": "0d54e1379b2a275e437a35a25125cb5c58aec2352f045c4ea60477d5007667ca"
+    },
+    "pair_1-3__role_swap_only.jsonl": {
+      "pair": [
+        1,
+        3
+      ],
+      "policy": "role_swap_only",
+      "sha256": "d85b414ab1ba1c2caa1f364b39a3bf52d2a17f65bdac944f568e86f7955dc633"
+    },
+    "pair_1-4__hungarian.jsonl": {
+      "pair": [
+        1,
+        4
+      ],
+      "policy": "hungarian",
+      "sha256": "617ee7bad54d81de8a466109bdfaaf36fbd5cf60afefe3cff8f4584c4d26cbf9"
+    },
+    "pair_1-4__role_swap_best.jsonl": {
+      "pair": [
+        1,
+        4
+      ],
+      "policy": "role_swap_best",
+      "sha256": "c2d64862b77ec7e4647003bc078ce6c496b068db8f87d50381e84b89ff7c5222"
+    },
+    "pair_1-4__role_swap_only.jsonl": {
+      "pair": [
+        1,
+        4
+      ],
+      "policy": "role_swap_only",
+      "sha256": "f922536bc537a413c8a4e87d012ce77bcb66d38475c95d4e953d922c1eeef872"
+    },
+    "pair_1-5__hungarian.jsonl": {
+      "pair": [
+        1,
+        5
+      ],
+      "policy": "hungarian",
+      "sha256": "4db487ffa1b62256c5ab93fd458321ce985573466da967c6686f78ee820aeda5"
+    },
+    "pair_1-5__role_swap_best.jsonl": {
+      "pair": [
+        1,
+        5
+      ],
+      "policy": "role_swap_best",
+      "sha256": "89bd61aabddffd30b25c71e09d6a1881da4dc88f031f37b21bb3568f6921c4b4"
+    },
+    "pair_1-5__role_swap_only.jsonl": {
+      "pair": [
+        1,
+        5
+      ],
+      "policy": "role_swap_only",
+      "sha256": "a500e519f1163518efb72e398c9bc937402be626419834fb8f1d988b590dc512"
+    },
+    "pair_2-3__hungarian.jsonl": {
+      "pair": [
+        2,
+        3
+      ],
+      "policy": "hungarian",
+      "sha256": "8f72013db68948f23776465bfd663dc726d97e5e9f90a64f2b0cb0b96a019136"
+    },
+    "pair_2-3__role_swap_best.jsonl": {
+      "pair": [
+        2,
+        3
+      ],
+      "policy": "role_swap_best",
+      "sha256": "0618cf89978b240ecd88acaae07cc70aae207e04b8e4d2bdc4683c9c76876845"
+    },
+    "pair_2-3__role_swap_only.jsonl": {
+      "pair": [
+        2,
+        3
+      ],
+      "policy": "role_swap_only",
+      "sha256": "099c12dfaaa3b0d7a903d8ed8049062ab966fa644da9eb8b1e9a0e554d6695ba"
+    },
+    "pair_2-4__hungarian.jsonl": {
+      "pair": [
+        2,
+        4
+      ],
+      "policy": "hungarian",
+      "sha256": "889c08dfabc99b7544333f152e7ad3e268388f05d20350dea44b6d6b2c192216"
+    },
+    "pair_2-4__role_swap_best.jsonl": {
+      "pair": [
+        2,
+        4
+      ],
+      "policy": "role_swap_best",
+      "sha256": "70f136eb2252dd3cffa119353206086859bdac9da3687385d538f096e2bb2c2f"
+    },
+    "pair_2-4__role_swap_only.jsonl": {
+      "pair": [
+        2,
+        4
+      ],
+      "policy": "role_swap_only",
+      "sha256": "0efccfe9c9bae901f33f5377d2239c73737e2b9127a9d07ffa12131f46abcc6c"
+    },
+    "pair_2-5__hungarian.jsonl": {
+      "pair": [
+        2,
+        5
+      ],
+      "policy": "hungarian",
+      "sha256": "558fe9ac4d8ef68ddf96d25eda663a9c3f50030d9e5d91b8143b747f582ede63"
+    },
+    "pair_2-5__role_swap_best.jsonl": {
+      "pair": [
+        2,
+        5
+      ],
+      "policy": "role_swap_best",
+      "sha256": "055d963b818886f46cb4885b8fe4fa55e84e7eeb8e1c958702f5b8e4033a54cc"
+    },
+    "pair_2-5__role_swap_only.jsonl": {
+      "pair": [
+        2,
+        5
+      ],
+      "policy": "role_swap_only",
+      "sha256": "466adc13af5866ddf77c2ad2b1b7be5b0bc21ad7fc601eb2d146e776f6c2d736"
+    },
+    "pair_3-4__hungarian.jsonl": {
+      "pair": [
+        3,
+        4
+      ],
+      "policy": "hungarian",
+      "sha256": "151b6f175e9862817e49fd4c1c8d2098a8331035070475fdf3d453dbdce50ce3"
+    },
+    "pair_3-4__role_swap_best.jsonl": {
+      "pair": [
+        3,
+        4
+      ],
+      "policy": "role_swap_best",
+      "sha256": "3aa0d69d2382917c0ec34dabf47745f96b6573aea0041f23363fb6655433d8bc"
+    },
+    "pair_3-4__role_swap_only.jsonl": {
+      "pair": [
+        3,
+        4
+      ],
+      "policy": "role_swap_only",
+      "sha256": "1c464217cef9e195620c756933ad4d9764a47da6eedd6360bb1752257361aed4"
+    },
+    "pair_3-5__hungarian.jsonl": {
+      "pair": [
+        3,
+        5
+      ],
+      "policy": "hungarian",
+      "sha256": "9c2512db252598f756bb9a176ff35bcd5f58e909e4cfe0aa0266d617bbf23b67"
+    },
+    "pair_3-5__role_swap_best.jsonl": {
+      "pair": [
+        3,
+        5
+      ],
+      "policy": "role_swap_best",
+      "sha256": "b5cd4679bfea9279e6f5c54c1ac5dcbcf0d42cee5f16f129b44ac2f0cd81832b"
+    },
+    "pair_3-5__role_swap_only.jsonl": {
+      "pair": [
+        3,
+        5
+      ],
+      "policy": "role_swap_only",
+      "sha256": "431821a418d69a4aa2a3b53cbda33de7c2a77de64c98dd9a4bf769fef88d3525"
+    },
+    "pair_4-5__hungarian.jsonl": {
+      "pair": [
+        4,
+        5
+      ],
+      "policy": "hungarian",
+      "sha256": "c983def02fae67b45e9e519ddf73d18e0042ed07f1a1075906056d7cb5b0f04b"
+    },
+    "pair_4-5__role_swap_best.jsonl": {
+      "pair": [
+        4,
+        5
+      ],
+      "policy": "role_swap_best",
+      "sha256": "9d9eb904e54fdc978843307d7eea4328fea8c93882fe3a626a9ccbe146de8dc3"
+    },
+    "pair_4-5__role_swap_only.jsonl": {
+      "pair": [
+        4,
+        5
+      ],
+      "policy": "role_swap_only",
+      "sha256": "0332e92e01c52762cd8c97de7e165b80b7face5bd8e72c7f6c57526cd13d8803"
+    }
+  }
+}

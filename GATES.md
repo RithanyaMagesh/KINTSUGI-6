@@ -478,7 +478,7 @@ Branch `perf`, audit finding F3 (`docs/audit/2026-11-01-perf.md`). Files: `cubes
 - Review: fresh adversarial reviewer on the diff, 0 Critical, 2 Important (star + decentral with the leader label off sat 0 gave a false partition and false isolation at t = 2 s: fixed, hub ignores roles under decentral; an empty `holders` restore crashed the next tick: fixed, strict load), 3 Minor (coercing load, unsorted `from` / `to`: fixed; docs: fixed; `benchmark.metrics_from_log` would report 100 % critical vacancy on a decentral log because it looks for a `leader` role: not changed (benchmark.py is not this track's file), flagged for C5).
 - Gates: `uv run ruff check .` → All checks passed!; `uv run python -m pytest -p no:cacheprovider` (fast + slow) → **951 passed, 2 skipped**, exit 0 (5 min 46 s, on accc561). Files: sim_v2.py 305, scenario_models.py 305 (budget 310), decentral.py 223, comms_v2.py 204 lines. Not claimed: bits delivered, flight consensus latency, any central-vs-decentral ranking (C5).
 
-**2026-11-01 — Track C6 gate, part 1 (laser comms on the wire; branch `evidence`, base `backend` 2a4c57f).** New `cubesat/wire_comms.py` (98 lines) with three hook lines in `cubesat/wire.py`: `sim_state.links` (`[from, to, state, range_m, rate_bps]`, display ids, non-finite numbers → null, malformed rows dropped) and `sim_state.components` (display ids) only when the log line carries them; plain-sentence events for `LINK_LOCKED` (info), `LINK_LOST` (warning; `replan` = info) with `link` + `reason`, `PARTITION` (warning, `components`), and `FAILURE_DETECTED{cause: "isolated"}` → warning "SAT-n cut off: …" with `cause`, which no longer overwrites `metrics.detection_latency_s` (isolation is not a failure). `hello.formation_shape` on v2 live hellos (`geo_v2.hello_fields`; v1 hellos unchanged; replay hellos do not carry it: needs a session.py hook, owned by the perf track, not added). C4 keys (`functions`, `consensus_rounds`, `split_brain`, `FUNCTION_HANDOFF`) are NOT added: they come with C4. Pinned in `tests/test_wire_comms.py` (13 tests, incl. one real 160 s star laser run end to end).
+**2026-11-01 — Track C6 gate, part 1 (laser comms on the wire; branch `evidence`, base `backend` 2a4c57f).** New `cubesat/wire_comms.py` (102 lines) with three hook lines in `cubesat/wire.py`: `sim_state.links` (`[from, to, state, range_m, rate_bps]`, display ids, non-finite numbers → null, malformed rows dropped) and `sim_state.components` (display ids) only when the log line carries them; plain-sentence events for `LINK_LOCKED` (info), `LINK_LOST` (warning; `replan` = info) with `link` + `reason`, `PARTITION` (warning, `components`), and `FAILURE_DETECTED{cause: "isolated"}` → warning "SAT-n cut off: …" with `cause`, which no longer overwrites `metrics.detection_latency_s` (isolation is not a failure). `hello.formation_shape` on v2 live hellos (`geo_v2.hello_fields`; v1 hellos unchanged; replay hellos do not carry it: needs a session.py hook, owned by the perf track, not added). C4 keys (`functions`, `consensus_rounds`, `split_brain`, `FUNCTION_HANDOFF`) are NOT added: they come with C4. Pinned in `tests/test_wire_comms.py` (13 tests, incl. one real 160 s star laser run end to end).
 - v1 / non-laser bytes unchanged: sha256 (first 16 hex) of the whole wire stream (`to_messages`, compact JSON) of `data/logs/nominal.jsonl` `6f3bbab2674f96f8`, `data/logs/two_failure.jsonl` `d3ad9275d9949fd5` and a two_failure engine-v2 ideal-comms 1600 s run `0785ff0bb0b50f81` identical before (stash) and after (scratch script `wire_sha.py`, `diff` → IDENTICAL); `tests/test_wire.py` golden fixture and `tests/test_session.py` live = replay unchanged and green; no existing test edited.
 - Per-frame size (scratch script: mean compact `sim_state` bytes, `data/scenarios/nominal.json` engine v2, 600 s, DEAD sat 0 at 100 s, 301 frames): mesh **2694.6 → 3055.1** bytes/frame (+360.5, +13.4 %), star **2694.6 → 2995.3** (+300.7, +11.2 %). v2 hello Earth keys 14798 → **14828** bytes (`uv run python -m cubesat.geo_v2`, docs/PHYSICS_V2.md updated).
 - Review (fresh adversarial subagent): 0 Critical; 2 Important fixed red-first (a 400-digit JSON integer in a link row raised OverflowError in `to_messages` while `tick_frame_ok` passed the line; an isolated detection overwrote `detection_latency_s`); Minor fixed: "Swarm split into 1 groups" (now plain "Swarm split" when < 2 valid groups), stale doc number and docstring; Minor kept: replay hellos lack `formation_shape` (documented in docs/frontend-requests.md), no event when a cut-off sat is heard again (documented: read `components`), `isolated_event` does not accept an already-display id (logs always carry ints). 6000 s mesh and star runs by the reviewer: live = JSON round-tripped replay, every frame `allow_nan=False`-encodable and `tick_frame_ok`.
@@ -515,3 +515,107 @@ Branch `perf`, audit finding F3 (`docs/audit/2026-11-01-perf.md`). Files: `cubes
   - `uv run ruff check .` → All checks passed!
   - `uv run python -m pytest -p no:cacheprovider` (fast + slow) → **991 passed, 2 skipped**, exit 0 (9 min 59 s, on ca10098).
   - The full-log sha256 probe of 5 scenarios (v1 + v2, no track-C keys) is identical to the pre-C2 baseline.
+
+## 2026-11-01 — C5 pre-registration: comms benchmark (recorded BEFORE any C5 run; branch `evidence`)
+
+Nothing below has been run yet. The thresholds will not change after the run; the result section will quote this section's commit hash. Already known before this was written (from C2/C4 development, not from C5): the 3° sun cone splits the 6-sat mesh ring 320 s per orbit (nominal, no failures, 1 orbit); in T2's development runs decentral leader-function vacancy on a ring leader kill was about 40 s vs 4 s central, because one consensus round costs one 2 s tick; star + decentral showed about 46 s of split-brain. Some thresholds below are therefore not blind; each says so.
+
+**Run matrix.** Base `data/scenarios/two_failure.json` with `engine: "v2"`, full duration (17028 s), dt 2 s, K = 3. Kill sets (16): the 15 DEAD pairs (first at 1200 s, second at 1500 s, `benchmark.scenario_for_pair` convention) plus the leader (sat 0) alone at 1200 s. The 6 kill sets that contain sat 0 are the "leader kills". Cells:
+| cell | comms | topology | authority | status |
+|---|---|---|---|---|
+| ideal-central | ideal (no `comms` key) | none | central | runs now |
+| laser-mesh-central | laser | mesh | central | runs now |
+| laser-star-central | laser | star | central | runs now |
+| laser-mesh-decentral | laser | mesh | decentral (`recovery.authority`) | after C4 is on `backend` |
+| laser-star-decentral | laser | star | decentral | after C4 is on `backend` |
+
+N/A, not run: ideal × decentral (C4 refuses decentral authority without laser comms: an auction over ideal links has no topology to decentralise over); ideal × mesh/star (ideal comms has no links, so topology is not read). Laser parameters are the C2 defaults, all assumptions (2 cm apertures, η 0.3, 300 photons/bit, 5 µrad pointing, 30 s acquisition, 3° sun cone, 2 terminals per sat).
+
+**Metrics per run** (`cubesat/comms_bench.py::run_metrics`, from the log lines):
+- `detection_latency_s`: mean over the killed sats of `t_detect − t_fail` of their first `FAILURE_DETECTED` without `cause: "isolated"`.
+- `false_isolations`: count of `FAILURE_DETECTED{cause: "isolated"}` for a sat that was never killed.
+- `isolated_sat_s`: Σ dt × (number of never-killed sats alone in their component) over all ticks.
+- `partition_s`, `partition_s_per_orbit`: Σ dt over ticks with more than one component; divided by (logged ticks × dt / chief period).
+- `locked_frac`: LOCKED link rows / all link rows over the run.
+- `critical_vacancy_s`: dt × ticks at or after 1200 s without a NOMINAL leader holder AND a NOMINAL downlink holder (the `benchmark.metrics_from_log` rule). **Decentral rule (pre-registered here, per T2's note that `metrics_from_log` looks for the `leader` role):** on a log line that carries `functions_vacant`, the leader counts as held iff `functions_vacant` is empty; the downlink rule is unchanged.
+- decentral only: `function_vacancy_s` = dt × post-failure ticks with a non-empty `functions_vacant`; `split_brain_s` = dt × post-failure ticks with a non-empty `split_brain`; `consensus_rounds` = total rounds as C4 logs them (definition fixed when C4 lands, before the authority run; reported, no threshold).
+- `coverage_mean_last_orbit` for context (no threshold).
+
+**Hypotheses (PASS iff the condition holds; anything not run = "unmeasured").**
+- **C5-H1 (links do not slow failure detection, mesh).** |`detection_latency_s`(laser-mesh-central) − `detection_latency_s`(ideal-central)| ≤ 2 s (one tick) on 16/16 kill sets.
+- **C5-H2 (no spurious isolation in the mesh).** laser-mesh-central `false_isolations` = 0 on ≥ 15/16 kill sets. (Not blind: the C2 sun finding showed 3-sat halves, no singletons, in the nominal mesh.)
+- **C5-H3 (the star hub is a single point of failure).** laser-star-central `false_isolations` ≥ 1 on 6/6 leader kills.
+- **C5-H4 (partition budget, mesh).** mean over the 16 kill sets of laser-mesh-central `partition_s_per_orbit` ≤ 400 s (not blind: 1.25 × the C2 nominal 320 s/orbit).
+- **C5-H5 (central role recovery is not hurt by the mesh).** laser-mesh-central `critical_vacancy_s` ≤ ideal-central + 2 s on 16/16 kill sets.
+- **C5-H6 (link availability, mesh).** mean laser-mesh-central `locked_frac` ≥ 0.95.
+- **C5-H7 (decentral mesh has no split-brain).** laser-mesh-decentral `split_brain_s` = 0 on ≥ 15/16 kill sets.
+- **C5-H8 (decentral over a star split-brains on hub loss).** laser-star-decentral `split_brain_s` > 0 on 6/6 leader kills (not blind: T2 saw about 46 s).
+- **C5-H9 (the story's claim: decentral fills the leader's work at least as fast).** laser-mesh-decentral `critical_vacancy_s` ≤ laser-mesh-central on ≥ 5/6 leader kills. Expected to FAIL under the engine's one-round-per-tick assumption (T2's 40 s vs 4 s); pre-registered anyway because it is the claim the pitch would want.
+- **Sensitivity (reported, no threshold).** If C4 logs rounds per handoff, the decentral vacancy is re-stated with round time τ ∈ {0.1, 0.5, 2.0} s as `vacancy − rounds × dt + rounds × τ` (a model, labelled as such, not a simulation); otherwise "unmeasured". No ranking claim follows from it.
+
+Command (to be run once, after this section is committed): `uv run python -m cubesat.benchmark --mode comms --base data/scenarios/two_failure.json --report data/eval/comms_report.json`.
+
+## 2026-11-01 — C5 results, part 1: laser vs ideal comms, central authority (branch `evidence`)
+
+Pre-registered in commit **c26de11** (section above; thresholds unchanged). Command: `uv run python -m cubesat.benchmark --mode comms --base data/scenarios/two_failure.json --report data/eval/comms_report.json` → `data/eval/comms_report.json` (command, input sha256s of the base scenario and of comms_bench / comms_v2 / isl / faults_v2 / sim_v2, every row, verdicts). 3 cells × 16 kill sets = 48 runs of 17028 s (chief period 5677.0 s, 3.0 orbits). Reproduced the laser-star-central leader-kill row exactly in a second run (all metrics equal). The decentral cells are reported as `unmeasured: scenario has no field ['recovery'] (needs C4)`: the harness refuses unknown cell fields, because pydantic would silently ignore `recovery` and run them as central.
+
+| hypothesis | threshold | measured | verdict |
+|---|---|---|---|
+| C5-H1 detection latency, mesh vs ideal | 16/16 within 2 s | 16/16 (4.0 s in every cell and kill set) | **PASS** |
+| C5-H2 no spurious isolation, mesh | ≥ 15/16 with 0 | **10/16** | **FAIL** |
+| C5-H3 star hub loss isolates leaves | 6/6 leader kills ≥ 1 | 6/6 (4-11 per run) | **PASS** |
+| C5-H4 mesh partition | mean ≤ 400 s/orbit | 94.76 s/orbit (max 321.4) | **PASS** |
+| C5-H5 mesh critical vacancy ≤ ideal + 2 s | 16/16 | 16/16 | **PASS** |
+| C5-H6 mesh LOCKED fraction | mean ≥ 0.95 | 0.9849 | **PASS** |
+| C5-H7, H8, H9 (decentral) | — | — | **unmeasured** (C4 not on `backend`) |
+
+Per cell, mean / worst over the 16 kill sets:
+| cell | detection s | false isolations | isolated sat-s | partition s/orbit | LOCKED fraction | critical vacancy s | coverage, last orbit |
+|---|---|---|---|---|---|---|---|
+| ideal-central | 4 / 4 | 0 / 0 | n/a | n/a | n/a | 3.0 / 8 | 0.3352 / 0.3712 |
+| laser-mesh-central | 4 / 4 | 0.44 / 2 | 5.75 / 26 | 94.76 / 321.4 | 0.9849 (best 0.9971) | 3.0 / 8 | 0.3352 / 0.3712 |
+| laser-star-central | 4 / 4 | 5.56 / 11 | 672.1 / 1132 | 217.7 / 332.0 | 0.9875 (best 1.0) | 3.0 / 8 | 0.3352 / 0.3712 |
+
+Honest notes:
+1. **H2 failed, and the cause is a compound event, not tuning.** All 6 mesh kill sets with false isolations ((0,1), (0,3), (0,5), (1,3), (2,3), (3,4); 1-2 each, 12-26 isolated sat-s) follow the same pattern. The second death lands while the sun cone has already cut the ring, or a death leaves a neighbour with no planned partner. The neighbour is then alone until the replacement link acquires (30 s, assumption), so the swarm declares it after K = 3 ticks. Example (0,3): sun splits [1,5]/[2,3,4] at 1352 s; sat 3 dies at 1500 s, leaving 2 and 4 as singletons, both declared `isolated` at 1504 s, and 2-4 locks about 30 s later.
+2. **In this engine, comms change detection and isolation only, not recovery.** Critical vacancy, coverage and the killed sats' detection latency are identical per kill set in all three cells (checked row by row). EngineV2 re-elects roles from the believed state, and central role recovery does not route over the links. So H5's PASS is real, but it is structural: it says the link layer does not delay the central solve, and it says nothing in favour of laser comms. The star's up to 11 false isolations per run do not move critical vacancy either. That is measured; why the role layer is not affected was not traced (unmeasured).
+3. The star is far worse on connectivity than the mesh: 217.7 vs 94.76 s/orbit partitioned, 672.1 vs 5.75 isolated sat-s, and false isolations on 12/16 kill sets. It is also worse without any leader kill, because a sun-blinded spoke isolates its leaf. That is the topology argument for decentralising. Whether decentral *recovery* is better is H7-H9, still unmeasured.
+4. Mesh partition varies a lot by kill set (0-321.4 s/orbit). The sun cut of the ring parallels persists when the dead sats break the cycle into a chain ((0,3), (1,2), (4,5) and leader-only ≈ 271-321 s/orbit); it heals when the replan picks other pairs ((1,4), (1,5), (2,4), (2,5) = 0).
+5. Laser parameters are the C2 defaults, and all of them are assumptions. Detection latency 4.0 s = (K − 1) dt everywhere.
+
+## 2026-11-01 — Best-case promotion baseline `role_swap_best` (audit C-4 question; branch `evidence`; NOT pre-registered)
+
+Question: does `role_swap_only`'s 1/15 result understate in-place role swapping? `role_swap_best` (`cubesat/benchmark_policies.py`) uses the same zero-Δv in-place re-election, the same pool (survivors with a non-critical role) and the same seats. The difference: the lost critical roles (leader, then downlink) go to the distinct pool members that maximise the allocator's coverage estimate (`allocate._coverage_estimate`, one orbit from t_replan, 72 samples), ties to the lowest ids. This is an upper bound for any in-place promotion rule under that estimate. Command: `uv run python -m cubesat.benchmark --mode benchmark --base data/scenarios/two_failure.json --policies role_swap_only,role_swap_best,hungarian --out data/eval/baselines --report data/eval/role_swap_best_results.json --manifest data/eval/role_swap_best_manifest.json` → `data/eval/role_swap_best_results.json` + manifest (45 log sha256s); same 15 pairs, DEAD at 1200 s / 1500 s, engine v1. The role_swap_only and hungarian rows match `data/eval/baselines_results.json` exactly (coverage and vacancy, every pair).
+
+| policy | coverage mean (last orbit) | coverage worst | pairs ≥ hungarian − 1e-4 | critical roles held (end) | critical vacancy mean / worst s | worst per-sat Δv m/s |
+|---|---|---|---|---|---|---|
+| hungarian | 0.2698 | 0.2698 | — | 15/15 | 5.9 / 16.0 | 251.2 |
+| role_swap_only (pre-registered rule) | 0.2350 | 0.2205 | 1/15 ((2,3)) | 15/15 | 5.9 / 16.0 | 0.0 |
+| role_swap_best (best-case promotee) | 0.2542 | 0.2205 | **6/15** ((0,2), (0,3), (0,5), (2,3), (2,5), (3,5)) | 15/15 | 5.9 / 16.0 | 0.0 |
+
+Reading: **yes, the 1/15 understates role swapping.** With the best promotee, a zero-Δv swap ties or beats hungarian on 6/15 pairs, which is the audit's 6/15. Its mean coverage is 0.2542; the audit's scratch script gave 0.2570, so the mean is not reproduced exactly, and the difference was not traced. It still loses on mean coverage (0.2542 vs 0.2698, −1.56 pts), and on 9/15 pairs. On the mission metric the three are identical (vacancy 5.9 / 16.0 s, 15/15 held), so on these runs hungarian's 251.2 m/s worst-sat Δv buys coverage only. The gain over role_swap_only is 0 on 8 pairs, and +0.0073 to +0.0493 on 7 pairs (the pairs that lose a critical role while a better promotee exists). On (0,4) role_swap_best is 7.7e-6 below role_swap_only: the rule maximises the plan-time estimate, not the measured last-orbit coverage, and here the two choices tie on the estimate. The best promotee is chosen with hindsight over all candidates, so `role_swap_best` is a bound, not a deployable rule. Tests: `tests/test_role_swap_best.py` (3: brute-force optimality on the real (0,5) geometry with both roles forced lost, zero Δv and seats kept, runnable from the benchmark).
+
+## 2026-11-01 — C5 amendment: decentral metric definitions (recorded BEFORE the authority run; thresholds H1-H9 unchanged)
+
+C4 is now on `backend` (f0a393e). `evidence` was rebased onto it, so the pre-registration commit c26de11 is now **62e70b3**; the pre-registration text is byte-identical (sha256 of the section `f9dd1127…7fec` in both). The definitions the pre-registration left open are fixed here from what C4 logs: `consensus_rounds` on a tick = the rounds of the most recently landed auction.
+- `consensus_rounds_max` = the maximum per-tick `consensus_rounds` at or after 1200 s (a count, not seconds; reported, no threshold).
+- `function_handoffs` = the count of `FUNCTION_HANDOFF` events in the run (reported, no threshold).
+- `function_vacancy_s_by_round_time` (the pre-registered sensitivity). It is a **model, not a simulation**: each window of consecutive post-failure ticks with a non-empty `functions_vacant`, closed on a tick whose `consensus_rounds` is r, is re-stated as max(0, window − r × 2 s + r × τ) for τ ∈ {0.1, 0.5, 2.0} s; a window still open at the end is kept as is. τ = 2.0 s reproduces `function_vacancy_s`.
+- Unchanged from the pre-registration: in decentral cells `critical_vacancy_s` counts the leader as held iff `functions_vacant` is empty. The authority run is the same command on the C4 base. It re-runs the three central cells, and those rows are compared one by one with part 1 (commit d03f53b). Any difference is reported.
+
+**2026-11-01 — Track C6 gate, part 2 (decentral authority on the wire; branch `evidence` on C4).** `cubesat/wire_comms.py` (134 lines) adds `sim_state.consensus_rounds` (a count; non-finite → null), `split_brain` and `functions_vacant` (string lists), and `sats[].functions` (passthrough, `wire._SAT_V2_KEYS`), each only when the log line carries it. `FUNCTION_HANDOFF{function, from, to}` becomes "Consensus auction: …" sentences: moved / took over (info); vacant / split-brain, i.e. several new holders (warning); malformed → generic. Extras `function`, `from`, `to` in display ids. The hook is renamed `link_event` → `comms_event`. User text never says "CBBA". Tests: `tests/test_wire_comms.py` now 18, incl. a real 200 s decentral mesh run end to end. v1 / central bytes: the same wire-stream sha256 probe as part 1 (`data/logs/nominal.jsonl` `6f3bbab2674f96f8`, `two_failure.jsonl` `d3ad9275d9949fd5`, v2 ideal `0785ff0bb0b50f81`) is identical to the pre-C6 baseline. Size (600 s 6-sat laser run, decentral authority): mesh **3047.2 → 3304.0** bytes/frame (+8.4 %), star **2989.6 → 3288.9** (+10.0 %). Review (fresh adversarial subagent, together with the C5 harness): wire 0 Critical / 0 Important. Minor documented: split-heal wording added to the frontend table. Minor kept: raw `functions` passthrough, like every other v2 sat key (a NaN there drops the frame, no crash). Gates (with the C5 harness fixes in the same tree): `uv run ruff check .` → All checks passed!; `uv run python -m pytest -p no:cacheprovider` (fast + slow) → **1019 passed, 2 skipped**, exit 0 (12 min 47 s, shared machine).
+
+**2026-11-01 — C5 harness review fixes and a correction to part 1 (pre-registered numbers unchanged).** The fresh reviewer found 3 Important problems, each fixed red-first in `cubesat/comms_bench.py`:
+- (1) A killed sat that is declared isolated before it dies stays declared, so its death never produces a non-isolated `FAILURE_DETECTED`. `detection_latency_s` then averages only the other killed sat, and `false_isolations` (pre-registered: never-killed sats only) does not see it. New, not pre-registered: `killed_sat_isolations` and `killed_detected`.
+- (2) The unknown-field guard checked only top-level keys. A nested typo (`comms.topolgy`) ran silently with the default. Now every nested key must exist in the validated scenario.
+- (3) `inputs_sha256` now also hashes `decentral.py`, `scenario.py`, `scenario_models.py` and `scenario_comms.py`.
+
+**Correction to C5 part 1, star cell** (re-measured with the new keys: scratch script over the 16 kill sets of laser-mesh-central and laser-star-central, base 43a6954):
+- laser-star-central has **8** isolations of a sat before it was killed: 1 each on (0,1), (0,3), (0,4), (0,5), (1,3), (2,3), and 2 on (0,2).
+- In **3/16** runs a death is **never detected**: (0,2), (1,3), (2,3). On those runs the "4.0 s" detection latency is the other killed sat's alone. So "detection 4 / 4" for the star hides 3 undetected deaths.
+- Counting isolations of any healthy sat (before it was killed or never killed), the star isolates someone on **14/16** kill sets, not 12/16.
+- laser-mesh-central: 0 such isolations, every killed sat detected on 16/16. H1, H2 and H5 stand as reported; H3 (≥ 1 on 6/6 leader kills) only gets stronger.
+
+Smaller correctness notes from the same review: the decentral leader rule counts any talking holder, central needs NOMINAL; the two agree for DEAD-only kills. `_round_time_model` credits only the auction that closes a window; every window in the data equals r × dt. Both are ledgered, not changed.
+
+**C5 commit hashes across rebases** (`evidence` is rebased onto `backend` before each gate, which rewrites the hashes; the content does not change). Pre-registration: **c26de11** (original, kept reachable by the local tag `c5-preregistration-c26de11`) → 62e70b3 → **ca1e304** on `backend` 43a6954 + d6879f3. The sha256 of the pre-registration section (from its heading to the end of GATES.md at that commit) is `f9dd1127…7fec` at c26de11, 62e70b3 and ca1e304. Part 1 results: d03f53b → 416d659. Amendment: 7e5171b → 67f66dd.

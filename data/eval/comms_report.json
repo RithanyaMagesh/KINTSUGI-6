@@ -1,0 +1,1151 @@
+{
+ "cells": [
+  "ideal-central",
+  "laser-mesh-central",
+  "laser-star-central",
+  "laser-mesh-decentral",
+  "laser-star-decentral"
+ ],
+ "command": "uv run python -m cubesat.benchmark --mode comms --base data/scenarios/two_failure.json --report data/eval/comms_report.json",
+ "dt_s": 2.0,
+ "failure_times_s": [
+  1200.0,
+  1500.0
+ ],
+ "inputs_sha256": {
+  "cubesat/comms_bench.py": "caef81679942908b23da769fc733b4db4b70bcfe7f8be6d9583904897c4c3f78",
+  "cubesat/comms_v2.py": "63af3d743d6dcfeaad983a8a02e70dcef90d654069f116b14e6012b982da9f21",
+  "cubesat/faults_v2.py": "cc7b9b627c6cd8b99ace1bf646b56bd2e09d4ca74fc8a7f45b5ac34f6cd54d84",
+  "cubesat/isl.py": "76d14d1d5b99b6fa768918b52da53a1f039412704f8b65a6c658ac4b9330374a",
+  "cubesat/sim_v2.py": "03f38067dd269f12c5951197ec24f857ddf62bc0d146831a152a655d90670a9d",
+  "data/scenarios/two_failure.json": "84bf8027f2c0ab962b4a5363f8c556cbc9c5a405cdf79519ce9885d02c2e639f"
+ },
+ "na_cells": [
+  {
+   "name": "ideal-decentral",
+   "why": "the scenario refuses decentral authority without laser comms: an auction over ideal, instant links has no topology to decentralise over"
+  },
+  {
+   "name": "ideal-mesh/ideal-star",
+   "why": "ideal comms has no links, so topology is not read; ideal-central is the single ideal cell"
+  }
+ ],
+ "period_s": 5676.978028525859,
+ "preregistration": "GATES.md, 2026-11-01 C5 pre-registration",
+ "rows": [
+  {
+   "cell": "ideal-central",
+   "coverage_mean_last_orbit": 0.29823929297553514,
+   "critical_vacancy_s": 8.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 0,
+   "function_vacancy_s": null,
+   "isolated_sat_s": null,
+   "killed": [
+    0,
+    1
+   ],
+   "locked_frac": null,
+   "partition_s": null,
+   "partition_s_per_orbit": null,
+   "split_brain_s": null
+  },
+  {
+   "cell": "ideal-central",
+   "coverage_mean_last_orbit": 0.33634903175225117,
+   "critical_vacancy_s": 4.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 0,
+   "function_vacancy_s": null,
+   "isolated_sat_s": null,
+   "killed": [
+    0,
+    2
+   ],
+   "locked_frac": null,
+   "partition_s": null,
+   "partition_s_per_orbit": null,
+   "split_brain_s": null
+  },
+  {
+   "cell": "ideal-central",
+   "coverage_mean_last_orbit": 0.3363449999065345,
+   "critical_vacancy_s": 4.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 0,
+   "function_vacancy_s": null,
+   "isolated_sat_s": null,
+   "killed": [
+    0,
+    3
+   ],
+   "locked_frac": null,
+   "partition_s": null,
+   "partition_s_per_orbit": null,
+   "split_brain_s": null
+  },
+  {
+   "cell": "ideal-central",
+   "coverage_mean_last_orbit": 0.29823306194124577,
+   "critical_vacancy_s": 4.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 0,
+   "function_vacancy_s": null,
+   "isolated_sat_s": null,
+   "killed": [
+    0,
+    4
+   ],
+   "locked_frac": null,
+   "partition_s": null,
+   "partition_s_per_orbit": null,
+   "split_brain_s": null
+  },
+  {
+   "cell": "ideal-central",
+   "coverage_mean_last_orbit": 0.33634903175225117,
+   "critical_vacancy_s": 8.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 0,
+   "function_vacancy_s": null,
+   "isolated_sat_s": null,
+   "killed": [
+    0,
+    5
+   ],
+   "locked_frac": null,
+   "partition_s": null,
+   "partition_s_per_orbit": null,
+   "split_brain_s": null
+  },
+  {
+   "cell": "ideal-central",
+   "coverage_mean_last_orbit": 0.33634903175225117,
+   "critical_vacancy_s": 0.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 0,
+   "function_vacancy_s": null,
+   "isolated_sat_s": null,
+   "killed": [
+    1,
+    2
+   ],
+   "locked_frac": null,
+   "partition_s": null,
+   "partition_s_per_orbit": null,
+   "split_brain_s": null
+  },
+  {
+   "cell": "ideal-central",
+   "coverage_mean_last_orbit": 0.3669261831359623,
+   "critical_vacancy_s": 0.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 0,
+   "function_vacancy_s": null,
+   "isolated_sat_s": null,
+   "killed": [
+    1,
+    3
+   ],
+   "locked_frac": null,
+   "partition_s": null,
+   "partition_s_per_orbit": null,
+   "split_brain_s": null
+  },
+  {
+   "cell": "ideal-central",
+   "coverage_mean_last_orbit": 0.33634793215796477,
+   "critical_vacancy_s": 0.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 0,
+   "function_vacancy_s": null,
+   "isolated_sat_s": null,
+   "killed": [
+    1,
+    4
+   ],
+   "locked_frac": null,
+   "partition_s": null,
+   "partition_s_per_orbit": null,
+   "split_brain_s": null
+  },
+  {
+   "cell": "ideal-central",
+   "coverage_mean_last_orbit": 0.33634903175225117,
+   "critical_vacancy_s": 4.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 0,
+   "function_vacancy_s": null,
+   "isolated_sat_s": null,
+   "killed": [
+    1,
+    5
+   ],
+   "locked_frac": null,
+   "partition_s": null,
+   "partition_s_per_orbit": null,
+   "split_brain_s": null
+  },
+  {
+   "cell": "ideal-central",
+   "coverage_mean_last_orbit": 0.33634793215796477,
+   "critical_vacancy_s": 0.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 0,
+   "function_vacancy_s": null,
+   "isolated_sat_s": null,
+   "killed": [
+    2,
+    3
+   ],
+   "locked_frac": null,
+   "partition_s": null,
+   "partition_s_per_orbit": null,
+   "split_brain_s": null
+  },
+  {
+   "cell": "ideal-central",
+   "coverage_mean_last_orbit": 0.3363464660322496,
+   "critical_vacancy_s": 0.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 0,
+   "function_vacancy_s": null,
+   "isolated_sat_s": null,
+   "killed": [
+    2,
+    4
+   ],
+   "locked_frac": null,
+   "partition_s": null,
+   "partition_s_per_orbit": null,
+   "split_brain_s": null
+  },
+  {
+   "cell": "ideal-central",
+   "coverage_mean_last_orbit": 0.33634903175225117,
+   "critical_vacancy_s": 4.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 0,
+   "function_vacancy_s": null,
+   "isolated_sat_s": null,
+   "killed": [
+    2,
+    5
+   ],
+   "locked_frac": null,
+   "partition_s": null,
+   "partition_s_per_orbit": null,
+   "split_brain_s": null
+  },
+  {
+   "cell": "ideal-central",
+   "coverage_mean_last_orbit": 0.29823122928410184,
+   "critical_vacancy_s": 0.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 0,
+   "function_vacancy_s": null,
+   "isolated_sat_s": null,
+   "killed": [
+    3,
+    4
+   ],
+   "locked_frac": null,
+   "partition_s": null,
+   "partition_s_per_orbit": null,
+   "split_brain_s": null
+  },
+  {
+   "cell": "ideal-central",
+   "coverage_mean_last_orbit": 0.3669261831359623,
+   "critical_vacancy_s": 4.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 0,
+   "function_vacancy_s": null,
+   "isolated_sat_s": null,
+   "killed": [
+    3,
+    5
+   ],
+   "locked_frac": null,
+   "partition_s": null,
+   "partition_s_per_orbit": null,
+   "split_brain_s": null
+  },
+  {
+   "cell": "ideal-central",
+   "coverage_mean_last_orbit": 0.33634793215796477,
+   "critical_vacancy_s": 4.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 0,
+   "function_vacancy_s": null,
+   "isolated_sat_s": null,
+   "killed": [
+    4,
+    5
+   ],
+   "locked_frac": null,
+   "partition_s": null,
+   "partition_s_per_orbit": null,
+   "split_brain_s": null
+  },
+  {
+   "cell": "ideal-central",
+   "coverage_mean_last_orbit": 0.3712039714413372,
+   "critical_vacancy_s": 4.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 0,
+   "function_vacancy_s": null,
+   "isolated_sat_s": null,
+   "killed": [
+    0
+   ],
+   "locked_frac": null,
+   "partition_s": null,
+   "partition_s_per_orbit": null,
+   "split_brain_s": null
+  },
+  {
+   "cell": "laser-mesh-central",
+   "coverage_mean_last_orbit": 0.29823929297553514,
+   "critical_vacancy_s": 8.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 1,
+   "function_vacancy_s": null,
+   "isolated_sat_s": 14.0,
+   "killed": [
+    0,
+    1
+   ],
+   "locked_frac": 0.9835074837616492,
+   "partition_s": 162.0,
+   "partition_s_per_orbit": 54.00296186853724,
+   "split_brain_s": null
+  },
+  {
+   "cell": "laser-mesh-central",
+   "coverage_mean_last_orbit": 0.33634903175225117,
+   "critical_vacancy_s": 4.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 0,
+   "function_vacancy_s": null,
+   "isolated_sat_s": 0.0,
+   "killed": [
+    0,
+    2
+   ],
+   "locked_frac": 0.9835074837616492,
+   "partition_s": 162.0,
+   "partition_s_per_orbit": 54.00296186853724,
+   "split_brain_s": null
+  },
+  {
+   "cell": "laser-mesh-central",
+   "coverage_mean_last_orbit": 0.3363449999065345,
+   "critical_vacancy_s": 4.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 2,
+   "function_vacancy_s": null,
+   "isolated_sat_s": 26.0,
+   "killed": [
+    0,
+    3
+   ],
+   "locked_frac": 0.9720135554927987,
+   "partition_s": 964.0,
+   "partition_s_per_orbit": 321.35095827944383,
+   "split_brain_s": null
+  },
+  {
+   "cell": "laser-mesh-central",
+   "coverage_mean_last_orbit": 0.29823306194124577,
+   "critical_vacancy_s": 4.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 0,
+   "function_vacancy_s": null,
+   "isolated_sat_s": 0.0,
+   "killed": [
+    0,
+    4
+   ],
+   "locked_frac": 0.9835357243716464,
+   "partition_s": 160.0,
+   "partition_s_per_orbit": 53.33625863559234,
+   "split_brain_s": null
+  },
+  {
+   "cell": "laser-mesh-central",
+   "coverage_mean_last_orbit": 0.33634903175225117,
+   "critical_vacancy_s": 8.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 1,
+   "function_vacancy_s": null,
+   "isolated_sat_s": 12.0,
+   "killed": [
+    0,
+    5
+   ],
+   "locked_frac": 0.9835357243716464,
+   "partition_s": 160.0,
+   "partition_s_per_orbit": 53.33625863559234,
+   "split_brain_s": null
+  },
+  {
+   "cell": "laser-mesh-central",
+   "coverage_mean_last_orbit": 0.33634903175225117,
+   "critical_vacancy_s": 0.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 0,
+   "function_vacancy_s": null,
+   "isolated_sat_s": 0.0,
+   "killed": [
+    1,
+    2
+   ],
+   "locked_frac": 0.9742728042925727,
+   "partition_s": 816.0,
+   "partition_s_per_orbit": 272.0149190415209,
+   "split_brain_s": null
+  },
+  {
+   "cell": "laser-mesh-central",
+   "coverage_mean_last_orbit": 0.3669261831359623,
+   "critical_vacancy_s": 0.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 1,
+   "function_vacancy_s": null,
+   "isolated_sat_s": 14.0,
+   "killed": [
+    1,
+    3
+   ],
+   "locked_frac": 0.9855972889014403,
+   "partition_s": 14.0,
+   "partition_s_per_orbit": 4.666922630614329,
+   "split_brain_s": null
+  },
+  {
+   "cell": "laser-mesh-central",
+   "coverage_mean_last_orbit": 0.33634793215796477,
+   "critical_vacancy_s": 0.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 0,
+   "function_vacancy_s": null,
+   "isolated_sat_s": 0.0,
+   "killed": [
+    1,
+    4
+   ],
+   "locked_frac": 0.9971194577802881,
+   "partition_s": 0.0,
+   "partition_s_per_orbit": 0.0,
+   "split_brain_s": null
+  },
+  {
+   "cell": "laser-mesh-central",
+   "coverage_mean_last_orbit": 0.33634903175225117,
+   "critical_vacancy_s": 4.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 0,
+   "function_vacancy_s": null,
+   "isolated_sat_s": 0.0,
+   "killed": [
+    1,
+    5
+   ],
+   "locked_frac": 0.9971194577802881,
+   "partition_s": 0.0,
+   "partition_s_per_orbit": 0.0,
+   "split_brain_s": null
+  },
+  {
+   "cell": "laser-mesh-central",
+   "coverage_mean_last_orbit": 0.33634793215796477,
+   "critical_vacancy_s": 0.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 1,
+   "function_vacancy_s": null,
+   "isolated_sat_s": 14.0,
+   "killed": [
+    2,
+    3
+   ],
+   "locked_frac": 0.9855972889014403,
+   "partition_s": 14.0,
+   "partition_s_per_orbit": 4.666922630614329,
+   "split_brain_s": null
+  },
+  {
+   "cell": "laser-mesh-central",
+   "coverage_mean_last_orbit": 0.3363464660322496,
+   "critical_vacancy_s": 0.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 0,
+   "function_vacancy_s": null,
+   "isolated_sat_s": 0.0,
+   "killed": [
+    2,
+    4
+   ],
+   "locked_frac": 0.9971194577802881,
+   "partition_s": 0.0,
+   "partition_s_per_orbit": 0.0,
+   "split_brain_s": null
+  },
+  {
+   "cell": "laser-mesh-central",
+   "coverage_mean_last_orbit": 0.33634903175225117,
+   "critical_vacancy_s": 4.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 0,
+   "function_vacancy_s": null,
+   "isolated_sat_s": 0.0,
+   "killed": [
+    2,
+    5
+   ],
+   "locked_frac": 0.9971194577802881,
+   "partition_s": 0.0,
+   "partition_s_per_orbit": 0.0,
+   "split_brain_s": null
+  },
+  {
+   "cell": "laser-mesh-central",
+   "coverage_mean_last_orbit": 0.29823122928410184,
+   "critical_vacancy_s": 0.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 1,
+   "function_vacancy_s": null,
+   "isolated_sat_s": 12.0,
+   "killed": [
+    3,
+    4
+   ],
+   "locked_frac": 0.9835357243716464,
+   "partition_s": 160.0,
+   "partition_s_per_orbit": 53.33625863559234,
+   "split_brain_s": null
+  },
+  {
+   "cell": "laser-mesh-central",
+   "coverage_mean_last_orbit": 0.3669261831359623,
+   "critical_vacancy_s": 4.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 0,
+   "function_vacancy_s": null,
+   "isolated_sat_s": 0.0,
+   "killed": [
+    3,
+    5
+   ],
+   "locked_frac": 0.9835357243716464,
+   "partition_s": 160.0,
+   "partition_s_per_orbit": 53.33625863559234,
+   "split_brain_s": null
+  },
+  {
+   "cell": "laser-mesh-central",
+   "coverage_mean_last_orbit": 0.33634793215796477,
+   "critical_vacancy_s": 4.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 0,
+   "function_vacancy_s": null,
+   "isolated_sat_s": 0.0,
+   "killed": [
+    4,
+    5
+   ],
+   "locked_frac": 0.9743010449025699,
+   "partition_s": 814.0,
+   "partition_s_per_orbit": 271.348215808576,
+   "split_brain_s": null
+  },
+  {
+   "cell": "laser-mesh-central",
+   "coverage_mean_last_orbit": 0.3712039714413372,
+   "critical_vacancy_s": 4.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 0,
+   "function_vacancy_s": null,
+   "isolated_sat_s": 0.0,
+   "killed": [
+    0
+   ],
+   "locked_frac": 0.9773711638679792,
+   "partition_s": 962.0,
+   "partition_s_per_orbit": 320.6842550464989,
+   "split_brain_s": null
+  },
+  {
+   "cell": "laser-star-central",
+   "coverage_mean_last_orbit": 0.29823929297553514,
+   "critical_vacancy_s": 8.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 8,
+   "function_vacancy_s": null,
+   "isolated_sat_s": 420.0,
+   "killed": [
+    0,
+    1
+   ],
+   "locked_frac": 0.9935997618516038,
+   "partition_s": 216.0,
+   "partition_s_per_orbit": 72.00394915804965,
+   "split_brain_s": null
+  },
+  {
+   "cell": "laser-star-central",
+   "coverage_mean_last_orbit": 0.33634903175225117,
+   "critical_vacancy_s": 4.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 4,
+   "function_vacancy_s": null,
+   "isolated_sat_s": 136.0,
+   "killed": [
+    0,
+    2
+   ],
+   "locked_frac": 0.9951642301826433,
+   "partition_s": 182.0,
+   "partition_s_per_orbit": 60.66999419798628,
+   "split_brain_s": null
+  },
+  {
+   "cell": "laser-star-central",
+   "coverage_mean_last_orbit": 0.3363449999065345,
+   "critical_vacancy_s": 4.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 10,
+   "function_vacancy_s": null,
+   "isolated_sat_s": 1098.0,
+   "killed": [
+    0,
+    3
+   ],
+   "locked_frac": 0.9800245508313804,
+   "partition_s": 996.0,
+   "partition_s_per_orbit": 332.0182100065623,
+   "split_brain_s": null
+  },
+  {
+   "cell": "laser-star-central",
+   "coverage_mean_last_orbit": 0.29823306194124577,
+   "critical_vacancy_s": 4.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 10,
+   "function_vacancy_s": null,
+   "isolated_sat_s": 1098.0,
+   "killed": [
+    0,
+    4
+   ],
+   "locked_frac": 0.9800245508313804,
+   "partition_s": 996.0,
+   "partition_s_per_orbit": 332.0182100065623,
+   "split_brain_s": null
+  },
+  {
+   "cell": "laser-star-central",
+   "coverage_mean_last_orbit": 0.33634903175225117,
+   "critical_vacancy_s": 8.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 10,
+   "function_vacancy_s": null,
+   "isolated_sat_s": 1098.0,
+   "killed": [
+    0,
+    5
+   ],
+   "locked_frac": 0.9800245508313804,
+   "partition_s": 996.0,
+   "partition_s_per_orbit": 332.0182100065623,
+   "split_brain_s": null
+  },
+  {
+   "cell": "laser-star-central",
+   "coverage_mean_last_orbit": 0.33634903175225117,
+   "critical_vacancy_s": 0.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 6,
+   "function_vacancy_s": null,
+   "isolated_sat_s": 962.0,
+   "killed": [
+    1,
+    2
+   ],
+   "locked_frac": 0.9821156348763711,
+   "partition_s": 962.0,
+   "partition_s_per_orbit": 320.6842550464989,
+   "split_brain_s": null
+  },
+  {
+   "cell": "laser-star-central",
+   "coverage_mean_last_orbit": 0.3669261831359623,
+   "critical_vacancy_s": 0.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 0,
+   "function_vacancy_s": null,
+   "isolated_sat_s": 0.0,
+   "killed": [
+    1,
+    3
+   ],
+   "locked_frac": 0.9972485592117494,
+   "partition_s": 148.0,
+   "partition_s_per_orbit": 49.33603923792291,
+   "split_brain_s": null
+  },
+  {
+   "cell": "laser-star-central",
+   "coverage_mean_last_orbit": 0.33634793215796477,
+   "critical_vacancy_s": 0.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 6,
+   "function_vacancy_s": null,
+   "isolated_sat_s": 962.0,
+   "killed": [
+    1,
+    4
+   ],
+   "locked_frac": 0.9821156348763711,
+   "partition_s": 962.0,
+   "partition_s_per_orbit": 320.6842550464989,
+   "split_brain_s": null
+  },
+  {
+   "cell": "laser-star-central",
+   "coverage_mean_last_orbit": 0.33634903175225117,
+   "critical_vacancy_s": 4.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 6,
+   "function_vacancy_s": null,
+   "isolated_sat_s": 962.0,
+   "killed": [
+    1,
+    5
+   ],
+   "locked_frac": 0.9821156348763711,
+   "partition_s": 962.0,
+   "partition_s_per_orbit": 320.6842550464989,
+   "split_brain_s": null
+  },
+  {
+   "cell": "laser-star-central",
+   "coverage_mean_last_orbit": 0.33634793215796477,
+   "critical_vacancy_s": 0.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 0,
+   "function_vacancy_s": null,
+   "isolated_sat_s": 0.0,
+   "killed": [
+    2,
+    3
+   ],
+   "locked_frac": 0.9972485592117494,
+   "partition_s": 148.0,
+   "partition_s_per_orbit": 49.33603923792291,
+   "split_brain_s": null
+  },
+  {
+   "cell": "laser-star-central",
+   "coverage_mean_last_orbit": 0.3363464660322496,
+   "critical_vacancy_s": 0.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 6,
+   "function_vacancy_s": null,
+   "isolated_sat_s": 962.0,
+   "killed": [
+    2,
+    4
+   ],
+   "locked_frac": 0.9821156348763711,
+   "partition_s": 962.0,
+   "partition_s_per_orbit": 320.6842550464989,
+   "split_brain_s": null
+  },
+  {
+   "cell": "laser-star-central",
+   "coverage_mean_last_orbit": 0.33634903175225117,
+   "critical_vacancy_s": 4.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 6,
+   "function_vacancy_s": null,
+   "isolated_sat_s": 962.0,
+   "killed": [
+    2,
+    5
+   ],
+   "locked_frac": 0.9821156348763711,
+   "partition_s": 962.0,
+   "partition_s_per_orbit": 320.6842550464989,
+   "split_brain_s": null
+  },
+  {
+   "cell": "laser-star-central",
+   "coverage_mean_last_orbit": 0.29823122928410184,
+   "critical_vacancy_s": 0.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 0,
+   "function_vacancy_s": null,
+   "isolated_sat_s": 0.0,
+   "killed": [
+    3,
+    4
+   ],
+   "locked_frac": 1.0,
+   "partition_s": 0.0,
+   "partition_s_per_orbit": 0.0,
+   "split_brain_s": null
+  },
+  {
+   "cell": "laser-star-central",
+   "coverage_mean_last_orbit": 0.3669261831359623,
+   "critical_vacancy_s": 4.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 0,
+   "function_vacancy_s": null,
+   "isolated_sat_s": 0.0,
+   "killed": [
+    3,
+    5
+   ],
+   "locked_frac": 1.0,
+   "partition_s": 0.0,
+   "partition_s_per_orbit": 0.0,
+   "split_brain_s": null
+  },
+  {
+   "cell": "laser-star-central",
+   "coverage_mean_last_orbit": 0.33634793215796477,
+   "critical_vacancy_s": 4.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 6,
+   "function_vacancy_s": null,
+   "isolated_sat_s": 962.0,
+   "killed": [
+    4,
+    5
+   ],
+   "locked_frac": 0.9821156348763711,
+   "partition_s": 962.0,
+   "partition_s_per_orbit": 320.6842550464989,
+   "split_brain_s": null
+  },
+  {
+   "cell": "laser-star-central",
+   "coverage_mean_last_orbit": 0.3712039714413372,
+   "critical_vacancy_s": 4.0,
+   "detection_latency_s": 4.0,
+   "false_isolations": 11,
+   "function_vacancy_s": null,
+   "isolated_sat_s": 1132.0,
+   "killed": [
+    0
+   ],
+   "locked_frac": 0.9845012699145694,
+   "partition_s": 996.0,
+   "partition_s_per_orbit": 332.0182100065623,
+   "split_brain_s": null
+  },
+  {
+   "cell": "laser-mesh-decentral",
+   "error": "unmeasured: scenario has no field ['recovery'] (needs C4)",
+   "killed": [
+    0,
+    1
+   ]
+  },
+  {
+   "cell": "laser-mesh-decentral",
+   "error": "unmeasured: scenario has no field ['recovery'] (needs C4)",
+   "killed": [
+    0,
+    2
+   ]
+  },
+  {
+   "cell": "laser-mesh-decentral",
+   "error": "unmeasured: scenario has no field ['recovery'] (needs C4)",
+   "killed": [
+    0,
+    3
+   ]
+  },
+  {
+   "cell": "laser-mesh-decentral",
+   "error": "unmeasured: scenario has no field ['recovery'] (needs C4)",
+   "killed": [
+    0,
+    4
+   ]
+  },
+  {
+   "cell": "laser-mesh-decentral",
+   "error": "unmeasured: scenario has no field ['recovery'] (needs C4)",
+   "killed": [
+    0,
+    5
+   ]
+  },
+  {
+   "cell": "laser-mesh-decentral",
+   "error": "unmeasured: scenario has no field ['recovery'] (needs C4)",
+   "killed": [
+    1,
+    2
+   ]
+  },
+  {
+   "cell": "laser-mesh-decentral",
+   "error": "unmeasured: scenario has no field ['recovery'] (needs C4)",
+   "killed": [
+    1,
+    3
+   ]
+  },
+  {
+   "cell": "laser-mesh-decentral",
+   "error": "unmeasured: scenario has no field ['recovery'] (needs C4)",
+   "killed": [
+    1,
+    4
+   ]
+  },
+  {
+   "cell": "laser-mesh-decentral",
+   "error": "unmeasured: scenario has no field ['recovery'] (needs C4)",
+   "killed": [
+    1,
+    5
+   ]
+  },
+  {
+   "cell": "laser-mesh-decentral",
+   "error": "unmeasured: scenario has no field ['recovery'] (needs C4)",
+   "killed": [
+    2,
+    3
+   ]
+  },
+  {
+   "cell": "laser-mesh-decentral",
+   "error": "unmeasured: scenario has no field ['recovery'] (needs C4)",
+   "killed": [
+    2,
+    4
+   ]
+  },
+  {
+   "cell": "laser-mesh-decentral",
+   "error": "unmeasured: scenario has no field ['recovery'] (needs C4)",
+   "killed": [
+    2,
+    5
+   ]
+  },
+  {
+   "cell": "laser-mesh-decentral",
+   "error": "unmeasured: scenario has no field ['recovery'] (needs C4)",
+   "killed": [
+    3,
+    4
+   ]
+  },
+  {
+   "cell": "laser-mesh-decentral",
+   "error": "unmeasured: scenario has no field ['recovery'] (needs C4)",
+   "killed": [
+    3,
+    5
+   ]
+  },
+  {
+   "cell": "laser-mesh-decentral",
+   "error": "unmeasured: scenario has no field ['recovery'] (needs C4)",
+   "killed": [
+    4,
+    5
+   ]
+  },
+  {
+   "cell": "laser-mesh-decentral",
+   "error": "unmeasured: scenario has no field ['recovery'] (needs C4)",
+   "killed": [
+    0
+   ]
+  },
+  {
+   "cell": "laser-star-decentral",
+   "error": "unmeasured: scenario has no field ['recovery'] (needs C4)",
+   "killed": [
+    0,
+    1
+   ]
+  },
+  {
+   "cell": "laser-star-decentral",
+   "error": "unmeasured: scenario has no field ['recovery'] (needs C4)",
+   "killed": [
+    0,
+    2
+   ]
+  },
+  {
+   "cell": "laser-star-decentral",
+   "error": "unmeasured: scenario has no field ['recovery'] (needs C4)",
+   "killed": [
+    0,
+    3
+   ]
+  },
+  {
+   "cell": "laser-star-decentral",
+   "error": "unmeasured: scenario has no field ['recovery'] (needs C4)",
+   "killed": [
+    0,
+    4
+   ]
+  },
+  {
+   "cell": "laser-star-decentral",
+   "error": "unmeasured: scenario has no field ['recovery'] (needs C4)",
+   "killed": [
+    0,
+    5
+   ]
+  },
+  {
+   "cell": "laser-star-decentral",
+   "error": "unmeasured: scenario has no field ['recovery'] (needs C4)",
+   "killed": [
+    1,
+    2
+   ]
+  },
+  {
+   "cell": "laser-star-decentral",
+   "error": "unmeasured: scenario has no field ['recovery'] (needs C4)",
+   "killed": [
+    1,
+    3
+   ]
+  },
+  {
+   "cell": "laser-star-decentral",
+   "error": "unmeasured: scenario has no field ['recovery'] (needs C4)",
+   "killed": [
+    1,
+    4
+   ]
+  },
+  {
+   "cell": "laser-star-decentral",
+   "error": "unmeasured: scenario has no field ['recovery'] (needs C4)",
+   "killed": [
+    1,
+    5
+   ]
+  },
+  {
+   "cell": "laser-star-decentral",
+   "error": "unmeasured: scenario has no field ['recovery'] (needs C4)",
+   "killed": [
+    2,
+    3
+   ]
+  },
+  {
+   "cell": "laser-star-decentral",
+   "error": "unmeasured: scenario has no field ['recovery'] (needs C4)",
+   "killed": [
+    2,
+    4
+   ]
+  },
+  {
+   "cell": "laser-star-decentral",
+   "error": "unmeasured: scenario has no field ['recovery'] (needs C4)",
+   "killed": [
+    2,
+    5
+   ]
+  },
+  {
+   "cell": "laser-star-decentral",
+   "error": "unmeasured: scenario has no field ['recovery'] (needs C4)",
+   "killed": [
+    3,
+    4
+   ]
+  },
+  {
+   "cell": "laser-star-decentral",
+   "error": "unmeasured: scenario has no field ['recovery'] (needs C4)",
+   "killed": [
+    3,
+    5
+   ]
+  },
+  {
+   "cell": "laser-star-decentral",
+   "error": "unmeasured: scenario has no field ['recovery'] (needs C4)",
+   "killed": [
+    4,
+    5
+   ]
+  },
+  {
+   "cell": "laser-star-decentral",
+   "error": "unmeasured: scenario has no field ['recovery'] (needs C4)",
+   "killed": [
+    0
+   ]
+  }
+ ],
+ "verdicts": {
+  "C5-H1": {
+   "threshold": "16/16 kill sets |mesh - ideal| <= 2 s",
+   "value": 16,
+   "verdict": "PASS"
+  },
+  "C5-H2": {
+   "threshold": ">= 15/16 kill sets with 0",
+   "value": 10,
+   "verdict": "FAIL"
+  },
+  "C5-H3": {
+   "threshold": "6/6 leader kills with >= 1",
+   "value": 6,
+   "verdict": "PASS"
+  },
+  "C5-H4": {
+   "threshold": "mean <= 400 s/orbit",
+   "value": 94.7551969822945,
+   "verdict": "PASS"
+  },
+  "C5-H5": {
+   "threshold": "16/16 mesh <= ideal + 2 s",
+   "value": 16,
+   "verdict": "PASS"
+  },
+  "C5-H6": {
+   "threshold": "mean >= 0.95",
+   "value": 0.9849243026556148,
+   "verdict": "PASS"
+  },
+  "C5-H7": {
+   "threshold": ">= 15/16 kill sets with 0 s",
+   "value": null,
+   "verdict": "unmeasured"
+  },
+  "C5-H8": {
+   "threshold": "6/6 leader kills with > 0 s",
+   "value": null,
+   "verdict": "unmeasured"
+  },
+  "C5-H9": {
+   "threshold": ">= 5/6 leader kills decentral <= central",
+   "value": null,
+   "verdict": "unmeasured"
+  }
+ }
+}

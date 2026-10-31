@@ -137,3 +137,65 @@ def test_a_real_laser_run_streams_links_and_named_link_events():
     texts = {m["message"].split(" ")[0] for m in msgs if m["type"] == "event"}
     assert not texts & {"LINK_LOCKED", "LINK_LOST", "PARTITION"}  # all got sentences
     assert any(m["message"].startswith("Swarm split") for m in msgs if m["type"] == "event")
+
+
+# --- C4 keys (decentral authority) ---------------------------------------------------------
+def test_decentral_tick_keys_pass_through_and_sats_carry_functions():
+    line = _line(consensus_rounds=20, split_brain=["time_sync"], functions_vacant=[])
+    line["sats"][1]["functions"] = ["time_sync", "ground_relay"]
+    st = _msgs(line)[0]
+    assert (st["consensus_rounds"], st["split_brain"], st["functions_vacant"]) == \
+        (20, ["time_sync"], [])
+    assert st["sats"][1]["functions"] == ["time_sync", "ground_relay"]
+    assert "functions" not in st["sats"][0]
+
+
+def test_central_frames_carry_no_decentral_keys():
+    st = _msgs(_line())[0]
+    assert not {"consensus_rounds", "split_brain", "functions_vacant"} & set(st)
+
+
+def _handoff(**payload):
+    return _events(_line([{"type": "FUNCTION_HANDOFF", "payload": payload}]))[0]
+
+
+def test_function_handoff_sentences():
+    ev = _handoff(function="time_sync", **{"from": [0], "to": [2]})
+    assert ev["level"] == "info"
+    assert ev["message"] == "Consensus auction: time sync moved from SAT-1 to SAT-3"
+    assert (ev["function"], ev["from"], ev["to"]) == ("time_sync", ["SAT-1"], ["SAT-3"])
+    ev = _handoff(function="failure_detection", **{"from": [], "to": [1]})
+    assert ev["message"] == "Consensus auction: SAT-2 took over failure detection"
+    ev = _handoff(function="ground_relay", **{"from": [0], "to": []})
+    assert ev["level"] == "warning"
+    assert ev["message"] == "ground relay is vacant: no satellite holds it (was SAT-1)"
+    ev = _handoff(function="time_sync", **{"from": [0], "to": [1, 3]})
+    assert ev["level"] == "warning"
+    assert ev["message"] == ("Consensus auction: time sync moved from SAT-1 to SAT-2, SAT-4 "
+                             "(split-brain: one holder per group)")
+
+
+def test_junk_function_handoff_degrades_the_message():
+    ev = _handoff(function=5, **{"from": "x"})
+    assert ev["message"] == "Consensus auction: a leader function changed holder"
+    assert "function" not in ev
+
+
+def test_a_real_decentral_run_streams_functions_and_handoff_sentences():
+    from cubesat.scenario import Scenario
+    from cubesat.sim_v2 import run_scenario_v2
+
+    d = json.loads(open("data/scenarios/nominal.json").read())
+    d.update(engine="v2", duration_s=200.0, comms={"model": "laser"},
+             recovery={"authority": "decentral"},
+             failures=[{"sat_id": 0, "t": 100.0, "mode": "DEAD"}])
+    enrich, msgs = SessionEnrich(), []
+    for line in run_scenario_v2(Scenario.model_validate(d)):
+        msgs += to_messages(line, enrich)
+    json.dumps(msgs, allow_nan=False)
+    states = [m for m in msgs if m["type"] == "sim_state" and m["sats"]]
+    assert all("consensus_rounds" in m and "functions" in m["sats"][0] for m in states)
+    events = [m for m in msgs if m["type"] == "event"]
+    assert not any(m["message"] == "FUNCTION_HANDOFF" for m in events)
+    assert any(m["message"].startswith("Consensus auction:") for m in events)
+    assert not any("CBBA" in m["message"] for m in events)
