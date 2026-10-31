@@ -5,6 +5,7 @@ cap minimum, and the two seeded fuzz runs behind `cubesat.transfer_report`. Repo
 from __future__ import annotations
 
 import math
+import time
 
 import numpy as np
 from scipy.optimize import minimize
@@ -211,6 +212,54 @@ def _true_min(s0, tr, ts, pos):
     )
 
 
+def head_on(
+    cases=(
+        (10, 2.0),
+        (10, 10.0),
+        (20, 2.0),
+        (20, 10.0),
+        (50, 2.0),
+        (50, 10.0),
+        (96, 2.0),
+        (96, 10.0),
+    ),
+) -> dict:
+    """The exact head-on geometry: an obstacle moving along z at v through the FREE plan's
+    position at tc (mid-interval), d_safe 300 m, m samples over [T/m, T]; offset 0 (head-on) and
+    +150 m in x (reference). True min distance on a 0.25 s grid within +-60 s of tc."""
+    s0 = slot_initial_state(8000.0, 8000.0, 0.0, N_MM)
+    xt = propagate(slot_initial_state(8000.0, 8000.0, 2 * math.pi / 5, N_MM), PERIOD, N_MM)
+    T, N, a_max, d = PERIOD, 48, 0.05, 300.0
+    free = lp_transfer(s0, xt, T, N_MM, a_max, 1.0, N)
+    rows = []
+    for m, v in cases:
+        ts = np.linspace(T / m, T, m)
+        tc = ts[m // 2] + (ts[1] - ts[0]) / 2
+        pc = _plan_positions(s0, free, N_MM, [tc])[0]
+        row = {"m_samples": m, "v_mps": v, "d_safe_m": d}
+        for name, off in (("head_on", 0.0), ("offset_150m_x", 150.0)):
+            c = pc + np.array([off, 0.0, 0.0])
+            pos = np.array([c + np.array([0.0, 0.0, v]) * (t - tc) for t in ts])
+            t0 = time.perf_counter()
+            tr = lp_transfer(s0, xt, T, N_MM, a_max, 1.0, N, keepout=[(ts, pos, d)])
+            ms = (time.perf_counter() - t0) * 1e3
+            fine = np.arange(tc - 60.0, tc + 60.0, 0.25)
+            obs = c + np.array([0.0, 0.0, v]) * (fine - tc)[:, None]
+            mine = None if tr is None else _plan_positions(s0, tr, N_MM, fine)
+            row[name] = {
+                "planned": tr is not None,
+                "l1_mps": None if tr is None else tr.total_dv_mps,
+                "verified_clearance_m": None if tr is None else tr.min_clearance_m,
+                "true_min_distance_m": None
+                if tr is None
+                else float(np.linalg.norm(mine - obs, axis=1).min()),
+                "lp_solves": None if tr is None else tr.feasible_iterations,
+                "runtime_ms_machine_dependent": ms,
+            }
+        rows.append(row)
+    return {"free_plan_l1_mps": free.total_dv_mps, "rows": rows}
+
+
 def keepout_fuzz(cases: int = 100) -> dict:
     """Seeded random crossings: an obstacle with two samples straddling the free path at
     tc +/- h (far on opposite sides), d_safe 200-1000 m. For each plan the TRUE minimum distance
@@ -249,4 +298,5 @@ def keepout_fuzz(cases: int = 100) -> dict:
         "worst_shortfall_over_half_vrel": worst_ratio,
         "note": "shortfall = d_safe - true minimum distance (0.05 s grid, linear obstacle); the "
         "1 s verification grid bounds it by v_rel * 0.5 s (ratio <= 1)",
+        "head_on": head_on(),
     }

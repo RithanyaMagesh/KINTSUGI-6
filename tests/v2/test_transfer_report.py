@@ -126,19 +126,30 @@ def test_keepout_fuzz_artifact_reports_the_between_grid_residual():
     assert f["worst_verified_grid_shortfall_m"] <= 1e-6
 
 
+def test_head_on_block_has_all_eight_combos_planned_and_clear():
+    f = json.loads(Path("data/eval/lp_keepout_fuzz.json").read_text())["head_on"]
+    assert len(f["rows"]) == 8
+    best_off = min(r["offset_150m_x"]["l1_mps"] for r in f["rows"])
+    for r in f["rows"]:
+        h = r["head_on"]
+        assert h["planned"] and h["verified_clearance_m"] >= r["d_safe_m"] - 1e-6
+        assert h["true_min_distance_m"] >= r["d_safe_m"] - 0.5 * 60.0  # v_rel * 0.5 s
+        assert h["l1_mps"] <= 1.02 * best_off
+
+
+def _strip(o):
+    if isinstance(o, dict):
+        return {
+            k: _strip(v) for k, v in o.items() if "machine_dependent" not in k and k != "command"
+        }
+    return [_strip(v) for v in o] if isinstance(o, list) else o
+
+
 @pytest.mark.slow
 def test_report_regenerates_identically(tmp_path):
     out = tmp_path / "t.json"
     assert main(["--report", str(out)]) == 0
-
-    def strip(o):
-        if isinstance(o, dict):
-            return {
-                k: strip(v) for k, v in o.items() if "machine_dependent" not in k and k != "command"
-            }
-        return [strip(v) for v in o] if isinstance(o, list) else o
-
-    assert strip(json.loads(out.read_text())) == strip(json.loads(ART.read_text()))
+    assert _strip(json.loads(out.read_text())) == _strip(json.loads(ART.read_text()))
 
 
 @pytest.mark.slow
@@ -149,7 +160,6 @@ def test_fuzz_artifacts_regenerate_identically(tmp_path):
     ):
         out = tmp_path / f"{name}.json"
         assert main([flag, str(out)]) == 0
-        new = json.loads(out.read_text())
-        old = json.loads(Path(f"data/eval/{name}.json").read_text())
-        new.pop("command"), old.pop("command")
+        new = _strip(json.loads(out.read_text()))
+        old = _strip(json.loads(Path(f"data/eval/{name}.json").read_text()))
         assert new == old

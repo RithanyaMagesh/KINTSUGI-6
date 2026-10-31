@@ -2,11 +2,184 @@
   "command": "uv run python -m cubesat.transfer_report --keepout-fuzz data/eval/lp_keepout_fuzz.json",
   "seed": 20261031,
   "cases": 100,
-  "planned": 96,
-  "none": 4,
+  "planned": 100,
+  "none": 0,
   "free_plan_collides_cases": 100,
-  "worst_true_shortfall_m": -43.31295283143447,
+  "worst_true_shortfall_m": -0.20665572042213398,
   "worst_verified_grid_shortfall_m": 0.0,
   "worst_shortfall_over_half_vrel": 0.0,
-  "note": "shortfall = d_safe - true minimum distance (0.05 s grid, linear obstacle); the 1 s verification grid bounds it by v_rel * 0.5 s (ratio <= 1)"
+  "note": "shortfall = d_safe - true minimum distance (0.05 s grid, linear obstacle); the 1 s verification grid bounds it by v_rel * 0.5 s (ratio <= 1)",
+  "head_on": {
+    "free_plan_l1_mps": 16.729207326155837,
+    "rows": [
+      {
+        "m_samples": 10,
+        "v_mps": 2.0,
+        "d_safe_m": 300.0,
+        "head_on": {
+          "planned": true,
+          "l1_mps": 16.72956974703723,
+          "verified_clearance_m": 329.42730337779255,
+          "true_min_distance_m": 329.40882803825497,
+          "lp_solves": 2,
+          "runtime_ms_machine_dependent": 518.4252499966533
+        },
+        "offset_150m_x": {
+          "planned": true,
+          "l1_mps": 16.798167650854527,
+          "verified_clearance_m": 790.8065500182365,
+          "true_min_distance_m": 790.8063922107117,
+          "lp_solves": 2,
+          "runtime_ms_machine_dependent": 64.55350000032922
+        }
+      },
+      {
+        "m_samples": 10,
+        "v_mps": 10.0,
+        "d_safe_m": 300.0,
+        "head_on": {
+          "planned": true,
+          "l1_mps": 16.729572632566523,
+          "verified_clearance_m": 323.18765368236706,
+          "true_min_distance_m": 323.1875132059007,
+          "lp_solves": 2,
+          "runtime_ms_machine_dependent": 521.8746250029653
+        },
+        "offset_150m_x": {
+          "planned": true,
+          "l1_mps": 16.800873959019796,
+          "verified_clearance_m": 1054.832954743053,
+          "true_min_distance_m": 1054.8295504316957,
+          "lp_solves": 2,
+          "runtime_ms_machine_dependent": 94.18416600237833
+        }
+      },
+      {
+        "m_samples": 20,
+        "v_mps": 2.0,
+        "d_safe_m": 300.0,
+        "head_on": {
+          "planned": true,
+          "l1_mps": 16.729804820270154,
+          "verified_clearance_m": 337.0204320574924,
+          "true_min_distance_m": 337.0206458085653,
+          "lp_solves": 2,
+          "runtime_ms_machine_dependent": 524.8534999991534
+        },
+        "offset_150m_x": {
+          "planned": true,
+          "l1_mps": 16.92970234727541,
+          "verified_clearance_m": 306.9401926031256,
+          "true_min_distance_m": 306.8954813441091,
+          "lp_solves": 2,
+          "runtime_ms_machine_dependent": 64.427290999447
+        }
+      },
+      {
+        "m_samples": 20,
+        "v_mps": 10.0,
+        "d_safe_m": 300.0,
+        "head_on": {
+          "planned": true,
+          "l1_mps": 16.729804820270154,
+          "verified_clearance_m": 334.2230760566972,
+          "true_min_distance_m": 334.2068403557715,
+          "lp_solves": 2,
+          "runtime_ms_machine_dependent": 510.26933299726807
+        },
+        "offset_150m_x": {
+          "planned": true,
+          "l1_mps": 16.929702269724608,
+          "verified_clearance_m": 306.75311323909705,
+          "true_min_distance_m": 306.7089034576094,
+          "lp_solves": 2,
+          "runtime_ms_machine_dependent": 63.77266700292239
+        }
+      },
+      {
+        "m_samples": 50,
+        "v_mps": 2.0,
+        "d_safe_m": 300.0,
+        "head_on": {
+          "planned": true,
+          "l1_mps": 16.73257833037178,
+          "verified_clearance_m": 352.6565267264013,
+          "true_min_distance_m": 352.62454799989746,
+          "lp_solves": 2,
+          "runtime_ms_machine_dependent": 579.0011249991949
+        },
+        "offset_150m_x": {
+          "planned": true,
+          "l1_mps": 16.82221674931055,
+          "verified_clearance_m": 1889.816829700213,
+          "true_min_distance_m": 1889.8165448169539,
+          "lp_solves": 2,
+          "runtime_ms_machine_dependent": 63.19249999796739
+        }
+      },
+      {
+        "m_samples": 50,
+        "v_mps": 10.0,
+        "d_safe_m": 300.0,
+        "head_on": {
+          "planned": true,
+          "l1_mps": 16.732918894543666,
+          "verified_clearance_m": 374.8263835628879,
+          "true_min_distance_m": 374.8145194785771,
+          "lp_solves": 2,
+          "runtime_ms_machine_dependent": 509.67458299419377
+        },
+        "offset_150m_x": {
+          "planned": true,
+          "l1_mps": 16.793280911556238,
+          "verified_clearance_m": 1863.9362794217861,
+          "true_min_distance_m": 1863.9270051248534,
+          "lp_solves": 2,
+          "runtime_ms_machine_dependent": 62.58499999967171
+        }
+      },
+      {
+        "m_samples": 96,
+        "v_mps": 2.0,
+        "d_safe_m": 300.0,
+        "head_on": {
+          "planned": true,
+          "l1_mps": 16.732714320544854,
+          "verified_clearance_m": 343.2027978871209,
+          "true_min_distance_m": 343.18457773588847,
+          "lp_solves": 2,
+          "runtime_ms_machine_dependent": 650.9445830015466
+        },
+        "offset_150m_x": {
+          "planned": true,
+          "l1_mps": 16.806150898163796,
+          "verified_clearance_m": 1797.7894899495182,
+          "true_min_distance_m": 1797.7848409335706,
+          "lp_solves": 2,
+          "runtime_ms_machine_dependent": 64.85883300047135
+        }
+      },
+      {
+        "m_samples": 96,
+        "v_mps": 10.0,
+        "d_safe_m": 300.0,
+        "head_on": {
+          "planned": true,
+          "l1_mps": 16.733273526794793,
+          "verified_clearance_m": 378.705084982667,
+          "true_min_distance_m": 378.6689655858511,
+          "lp_solves": 2,
+          "runtime_ms_machine_dependent": 515.6340419998742
+        },
+        "offset_150m_x": {
+          "planned": true,
+          "l1_mps": 16.764484547547546,
+          "verified_clearance_m": 1419.3936580054913,
+          "true_min_distance_m": 1419.388180712721,
+          "lp_solves": 2,
+          "runtime_ms_machine_dependent": 63.323791000584606
+        }
+      }
+    ]
+  }
 }
