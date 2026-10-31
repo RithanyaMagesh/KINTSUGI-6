@@ -5,10 +5,12 @@ fail, survivors detect the loss (missed heartbeats), a Hungarian assignment (`li
 reassigns each survivor to a new slot on the formation, and a PD controller with thrust saturation
 flies them there — restoring a measured part of the lost ground coverage, scored against a
 no-recovery baseline. Everything is a deterministic, seeded simulation: same scenario + seed ⇒
-byte-identical JSONL log.
+byte-identical JSONL log on one machine (raw bytes differ in float last bits across operating
+systems; the cross-platform pin is `cubesat.canon.canonical_log_hash`).
 
-**Status:** G0–G4 pass (tags `gate-0-pass` … `gate-4-pass`). G5 (backend + frontend, owned by a
-teammate) and G6 (deploy) are in progress — not landed; no numbers below come from them.
+**Status:** G0–G4 pass (tags `gate-0-pass` … `gate-4-pass`). G5 (backend + frontend) is PASS but
+untagged; G6 (deploy) and G7 are `todo` (GATES.md gate table). The numbers below come from G0–G4
+and the committed `data/eval/` artifacts, each with its command.
 
 ## Quickstart
 
@@ -48,9 +50,12 @@ Each number below comes from the command shown, as recorded in GATES.md. Nothing
   **16.65 pts** (worst pair) to **19.99 pts** (best) (`uv run pytest tests/test_coverage.py -s -q`)
 - Two-failure demo (2 imagers DEAD at t = 1200/1500 s, 3 orbits): with-recovery last-orbit mean
   coverage **0.2698** vs no-recovery **0.2205** (+**4.93 pts** — about 31% of the coverage the
-  failures destroy); no-recovery drop **15.91 pts** from the pre-failure 0.3796 (patch-#2 target
-  ≥ 15); worst min separation **3095.1 m** (threshold 2000 m) including the transfer trajectories;
-  detection latency **4 s**; per-sat Δv up to **193.68 m/s**
+  failures destroy; this pair (1,2) is the best case of the 15 two-failure pairs, the mean gain over
+  all 15 is **−2.13 pts**: `data/eval/benchmark_results.json` `policies_summary.hungarian.mean_gain_vs_do_nothing_pts`); no-recovery drop **15.91 pts** from the pre-failure 0.3796 (patch-#2 target
+  ≥ 15); all-pairs min separation **3095.1 m** for this pair (threshold 2000 m) including the transfer
+  trajectories — the worst survivor-to-dead clearance over the 15 Hungarian pairs is **1852.5 m**,
+  below that 2000 m planning floor (`policies_summary.hungarian.worst_min_sep_survivor_dead_m`);
+  detection latency **4 s** = (K−1)·dt by construction (K = 3 missed ticks, dt = 2 s, ideal comms); per-sat Δv up to **193.68 m/s**
   (`uv run pytest tests/test_fault.py -s -q`; log regenerates with the run command above)
 
 ## Honesty / limitations
@@ -88,11 +93,12 @@ Each number below comes from the command shown, as recorded in GATES.md. Nothing
   command of record)
 - Dead-sat caveat (research patch #5): a dead satellite stays on a bounded relative orbit only in
   linear, unperturbed HCW; J2 and drag would make it drift.
-- The default a_max of 1e-2 m/s^2 assumes an ~8 kg CubeSat with ~150 mN cold-gas thrust — an
-  assumption, not a verified thruster specification.
+- The default a_max of 1e-2 m/s^2 is 80 mN on an assumed 8 kg CubeSat (a 150 mN cold-gas thruster
+  on 8 kg would give 0.019 m/s^2) — an assumption, not a verified thruster specification.
 - **The failure demo needs more thrust than that assumption.** `two_failure.json` carries
   `a_max = 0.1 m/s^2` (~800 mN at 8 kg): at 1e-2 the G2 PD diverges on formation-scale transfers
-  at every spacing swept (4–11 km, measured 2026-09-28 — burn-induced Coriolis radial oscillations
+  at every spacing swept (4–11 km, recorded 2026-09-28 in docs/IMPLEMENTATION_NOTES.md; no committed
+  script regenerates the sweep, so it is not re-measured — burn-induced Coriolis radial oscillations
   exceed the saturated controller's authority), so the demo flies 0.1 m/s^2 with 8 km slots and
   per-sat Δv up to 193.68 m/s — above a realistic cold-gas budget. The proper fix is an
   impulsive/MPC transfer planner (future work). Numbers and commands: GATES.md G4 row.
