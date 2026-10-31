@@ -46,6 +46,16 @@ const MODEL_SCALE = 1.6; // exaggerated on purpose, like NASA Eyes: true scale w
  * view (the 3U body is 3 units tall). */
 const MODEL_PHYS = 0.03;
 
+// Swarm-size scaling: past a handful of satellites, every model shrinks so a
+// 50-satellite swarm reads as a constellation instead of a wall of panels.
+let countScale = 1;
+export function setSwarmCount(n: number): void {
+  countScale = Math.min(1, Math.max(0.3, Math.sqrt(6 / Math.max(n, 1))));
+}
+export function swarmCountScale(): number {
+  return countScale;
+}
+
 export const TRAIL_MAX = 220;
 export const TRAIL_INTERVAL_MS = 150;
 
@@ -406,7 +416,7 @@ export function updateMarkerView(
     extent,
   );
   const pulse = status === "failed" && !reducedMotion ? 1 + 0.22 * Math.sin(elapsed * 5) : 1;
-  const modelScale = Math.max(size.world * MODEL_SCALE, extent * MODEL_PHYS);
+  const modelScale = Math.max(size.world * MODEL_SCALE, extent * MODEL_PHYS) * countScale;
   rec.model.scale.setScalar(modelScale);
   // Pick disc + focus ring wrap the model, so the click target and label
   // offset match what you see.
