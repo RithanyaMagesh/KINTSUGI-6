@@ -33,10 +33,19 @@ import sys
 from pathlib import Path
 
 import cubesat.sim as sim_module
-from cubesat.benchmark_policies import even_split_replan, hungarian_keepout_replan
+from cubesat.benchmark_policies import (
+    even_split_replan,
+    hungarian_keepout_replan,
+    role_swap_only_replan,
+)
 from cubesat.scenario import Failure, FailureMode, Scenario
 
 POLICY_ORDER = ("do_nothing", "even_split", "greedy", "hungarian", "hungarian_keepout")
+# Pre-registered baselines (GATES.md 2026-10-31). Kept OUT of POLICY_ORDER so the
+# default P0 sweep (and its committed 60-row report) is unchanged; selectable via
+# --policies and run by --mode baselines.
+BASELINE_POLICIES = ("role_swap_only", "wait_for_ground")
+ALL_POLICIES = POLICY_ORDER + BASELINE_POLICIES
 
 # The demo's own failure times (two_failure.json:12-15) -- every pair is
 # directly comparable to the committed G4 numbers (ENDGAME_PLAN 3.1).
@@ -76,6 +85,8 @@ def _replanner_for(policy: str):
         return even_split_replan
     if policy == "hungarian_keepout":
         return hungarian_keepout_replan
+    if policy == "role_swap_only":
+        return role_swap_only_replan
     return None
 
 
@@ -453,7 +464,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--policies",
         default=",".join(POLICY_ORDER),
-        help="comma-separated subset of " + ",".join(POLICY_ORDER),
+        help="comma-separated subset of " + ",".join(ALL_POLICIES),
     )
     parser.add_argument(
         "--runs",
@@ -526,7 +537,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.mode == "benchmark" and args.out is None:
         parser.error("--out is required for benchmark mode")
     policies = [p for p in args.policies.split(",") if p]
-    unknown = [p for p in policies if p not in POLICY_ORDER]
+    unknown = [p for p in policies if p not in ALL_POLICIES]
     if unknown:
         parser.error(f"unknown policies: {unknown}")
     command = "uv run python -m cubesat.benchmark " + " ".join(sys.argv[1:])
