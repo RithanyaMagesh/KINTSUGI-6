@@ -21,6 +21,7 @@ from cubesat.keepout import (
     dead_death_states,
     drift_horizon_clearance,
     keepout_report,
+    keepout_verdict,
     secular_drift_rate,
 )
 from cubesat.scenario import Failure, FailureMode, load_scenario
@@ -142,3 +143,68 @@ def test_dead_drift_clearance_reported():
     assert h["effective_horizon_s"] == pytest.approx(1000.0)
     assert h["n_samples_past_log_end_labeled_counterfactual"] > 300
     assert h["counterfactual_min_clearance_full_horizon_m"] <= h["min_clearance_logged_overlap_m"]
+
+
+R = 2000.0
+
+
+def test_verdict_exclusion_helps_is_keep():
+    """Both runs bind, the exclusion RAISES the worst clearance -> KEEP, and the
+    sentence says improves and names both policies with their numbers."""
+    decision, text = keepout_verdict(1500.0, 1800.0, True, True, False, R)
+    assert decision == "KEEP"
+    assert "improves" in text and "worsens" not in text
+    assert "1500.0 m" in text and "1800.0 m" in text
+    assert "hungarian_keepout" in text and "hungarian" in text
+
+
+def test_verdict_exclusion_hurts_is_cut():
+    """C-1 regression: the committed artifact had 1852.5 m without, 1322.6 m with
+    and still printed 'improves' + KEEP. Lower clearance with the exclusion must
+    be CUT and must say worsens."""
+    decision, text = keepout_verdict(1852.5, 1322.6, True, True, False, R)
+    assert decision == "CUT"
+    assert "worsens" in text and "improves" not in text
+    assert "1852.5 m" in text and "1322.6 m" in text
+
+
+def test_verdict_tie_is_cut():
+    """Different trajectories but the same worst clearance: no measured benefit."""
+    decision, text = keepout_verdict(1700.0, 1700.0, True, True, False, R)
+    assert decision == "CUT"
+    assert "improves" not in text and "worsens" not in text
+    assert "unchanged" in text
+
+
+def test_verdict_identical_and_never_binding_are_cut():
+    d1, t1 = keepout_verdict(1322.6, 1322.6, True, True, True, R)
+    assert d1 == "CUT" and "never fired" in t1
+    d2, t2 = keepout_verdict(2500.0, 2600.0, False, False, False, R)
+    assert d2 == "CUT" and "never binding" in t2
+
+
+def test_report_notes_state_do_no_harm_confound(tmp_path):
+    """The A/B changes two things at once (exclusion term AND the do-no-harm
+    hold, which hungarian_keepout lacks): the report must say so."""
+    scenario = load_scenario(TWO_FAILURE).model_copy(
+        update={
+            "name": "keepout_notes",
+            "duration_s": 600.0,
+            "failures": [
+                Failure(t=100.0, sat_id=0, mode=FailureMode.DEAD),
+                Failure(t=150.0, sat_id=1, mode=FailureMode.DEAD),
+            ],
+        }
+    )
+    from cubesat.benchmark import _write_log, run_one
+
+    log = tmp_path / "pair_0-1__hungarian.jsonl"
+    _write_log(run_one(scenario, "hungarian"), log)
+    report = keepout_report(
+        log_paths={"hungarian": [log]},
+        n=mean_motion(scenario.chief.altitude_km * 1000.0),
+        tick_dt=scenario.dt_s,
+        keepout_radius_m=2000.0,
+        command="pytest",
+    )
+    assert "do-no-harm" in report["notes"]
