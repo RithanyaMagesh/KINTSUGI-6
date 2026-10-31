@@ -76,3 +76,47 @@ def lvlh_dcm(r_c: np.ndarray, v_c: np.ndarray) -> np.ndarray:
 def thrust_eci(a_lvlh: np.ndarray, r_c: np.ndarray, v_c: np.ndarray) -> np.ndarray:
     """Commanded LVLH acceleration rotated to ECI: a_I = C^T a_LVLH."""
     return lvlh_dcm(r_c, v_c).T @ np.asarray(a_lvlh, dtype=float)
+
+
+def rk4_step(state: np.ndarray, dt: float, accel_fn) -> np.ndarray:
+    """Classical RK4 on s = [r, v] (shape (6,) or (N, 6)); accel_fn(r, v) -> acceleration."""
+
+    def f(s):
+        return np.concatenate([s[..., 3:], accel_fn(s[..., :3], s[..., 3:])], axis=-1)
+
+    k1 = f(state)
+    k2 = f(state + 0.5 * dt * k1)
+    k3 = f(state + 0.5 * dt * k2)
+    k4 = f(state + dt * k3)
+    return state + dt / 6.0 * (k1 + 2.0 * k2 + 2.0 * k3 + k4)
+
+
+def chief_initial(altitude_m: float, inc_deg: float, raan_deg: float) -> np.ndarray:
+    """Circular ECI [r, v] at the ascending node (argument of latitude 0)."""
+    a = RE + altitude_m
+    vc = np.sqrt(MU / a)
+    i, om = np.radians(inc_deg), np.radians(raan_deg)
+    r = a * np.array([np.cos(om), np.sin(om), 0.0])
+    v = vc * np.array([-np.sin(om) * np.cos(i), np.cos(om) * np.cos(i), np.sin(i)])
+    return np.concatenate([r, v])
+
+
+def _omega_lvlh(r_c: np.ndarray, v_c: np.ndarray) -> np.ndarray:
+    return np.array([0.0, 0.0, np.linalg.norm(np.cross(r_c, v_c)) / (r_c @ r_c)])
+
+
+def eci_to_lvlh(r_d, v_d, r_c, v_c) -> np.ndarray:
+    """LVLH relative state [rho, rho_dot]: rho = C (r_d - r_c), rho_dot = C (v_d - v_c) - w x rho,
+    w = (0, 0, |h|/|r_c|^2). r_d, v_d may be (3,) or (N, 3); returns (6,) or (N, 6)."""
+    c = lvlh_dcm(r_c, v_c)
+    rho = (np.asarray(r_d) - r_c) @ c.T
+    rho_dot = (np.asarray(v_d) - v_c) @ c.T - np.cross(_omega_lvlh(r_c, v_c), rho)
+    return np.concatenate([rho, rho_dot], axis=-1)
+
+
+def lvlh_to_eci(rho6, r_c, v_c) -> tuple[np.ndarray, np.ndarray]:
+    """Inverse of eci_to_lvlh. rho6 is (6,) or (N, 6); returns (r_d, v_d)."""
+    c = lvlh_dcm(r_c, v_c)
+    rho6 = np.asarray(rho6, dtype=float)
+    rho, rho_dot = rho6[..., :3], rho6[..., 3:]
+    return r_c + rho @ c, v_c + (rho_dot + np.cross(_omega_lvlh(r_c, v_c), rho)) @ c
