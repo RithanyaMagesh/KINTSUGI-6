@@ -31,11 +31,10 @@
   left: 0;
   top: 0;
   visibility: hidden;
-  background: var(--glass);
-  backdrop-filter: blur(6px);
-  border: 1px solid var(--glass-line);
-  border-left-width: 3px;
+  background: transparent;
+  border: none !important;
   border-radius: 3px;
+  text-shadow: 0 0 4px var(--space-void), 0 0 2px var(--space-void);
   padding: 1px 6px;
   font-family: var(--font-sans);
   font-size: 13px;

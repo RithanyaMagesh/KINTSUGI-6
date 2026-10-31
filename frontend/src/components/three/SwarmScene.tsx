@@ -83,6 +83,7 @@ export default function SwarmScene({ immersive = false, onController }: SwarmSce
 
     let prevOrbitMode = useSceneStore.getState().viewMode;
     let prevTheme = useUiStore.getState().theme;
+    let prevSel = useUiStore.getState().selectedSatelliteId;
 
     const unsubSim = useSimStore.subscribe((s) => {
       controller.update({
@@ -132,6 +133,10 @@ export default function SwarmScene({ immersive = false, onController }: SwarmSce
         prevOrbitMode = s.orbitViewMode;
         useSceneStore.getState().setViewMode(s.orbitViewMode);
         controller.setOrbitViewMode(s.orbitViewMode);
+      }
+      if (immersive && s.selectedSatelliteId !== prevSel) {
+        prevSel = s.selectedSatelliteId;
+        controller.focusSatellite(prevSel); // click a satellite: fly to it
       }
       if (s.theme !== prevTheme) {
         prevTheme = s.theme;

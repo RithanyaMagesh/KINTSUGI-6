@@ -45,6 +45,9 @@ const EARTH_FRAG = /* glsl */ `
   uniform float uHasNight;
   uniform vec3 uAtmo;
   uniform sampler2D uTopo;
+  uniform sampler2D uClouds;
+  uniform float uCloudAmt;
+  uniform float uCloudShift;
   uniform float uBump;
   uniform mat3 uObjToWorld;
   varying vec2 vUv;
@@ -80,6 +83,12 @@ const EARTH_FRAG = /* glsl */ `
     vec3 h = normalize(uSun + v);
     float spec = pow(max(dot(normalize(vNormalW), h), 0.0), 220.0) * water * 0.14 * day;
     vec3 lit = dayCol * (0.04 + 1.15 * max(ndl, 0.0)) + spec * vec3(1.0, 0.95, 0.85);
+    // Clouds live on the surface shader (no separate transparent shell):
+    // lit white by day, and they dim the city lights by night.
+    float cloud = texture2D(uClouds, vUv + vec2(uCloudShift, 0.0)).r * uCloudAmt;
+    float sunSmooth = max(dot(normalize(vNormalW), uSun), 0.0);
+    lit = mix(lit, vec3(0.03 + 1.05 * sunSmooth), cloud * 0.85);
+    nightCol *= 1.0 - cloud * 0.75;
     vec3 col = mix(nightCol + dayCol * 0.012, lit, day);
     // Limb haze: a thin bright rim on the sunlit edge only.
     float fres = pow(1.0 - max(dot(normalize(vNormalW), v), 0.0), 3.0);
@@ -143,6 +152,9 @@ export function buildGlobe(fallbackDay: THREE.Texture, atmo: THREE.Color): Globe
       uHasNight: { value: 0 },
       uAtmo: { value: atmo.clone() },
       uTopo: { value: black },
+      uClouds: { value: black },
+      uCloudAmt: { value: 0 },
+      uCloudShift: { value: 0 },
       uBump: { value: 0 },
       uObjToWorld: { value: new THREE.Matrix3() },
     },
@@ -150,18 +162,6 @@ export function buildGlobe(fallbackDay: THREE.Texture, atmo: THREE.Color): Globe
     fragmentShader: EARTH_FRAG,
   });
   surface.add(new THREE.Mesh(earthGeo, earthMat));
-
-  const cloudGeo = new THREE.SphereGeometry(1.008, 96, 72);
-  // Clouds use a stock lit material (alpha from the cloud mask), lit by the
-  // scene's sun light — the night side's clouds fall dark on their own.
-  const cloudMat = new THREE.MeshLambertMaterial({
-    color: new THREE.Color(1, 1, 1),
-    transparent: true,
-    opacity: 0,
-    depthWrite: false,
-  });
-  const clouds = new THREE.Mesh(cloudGeo, cloudMat);
-  group.add(clouds);
 
   const atmoGeo = new THREE.SphereGeometry(1.1, 96, 72);
   const atmoMat = new THREE.ShaderMaterial({
@@ -199,11 +199,9 @@ export function buildGlobe(fallbackDay: THREE.Texture, atmo: THREE.Color): Globe
   });
   load(loader, "earth-clouds.jpg", false, (t) => {
     loaded.push(t);
-    t.generateMipmaps = false;
-    t.minFilter = THREE.LinearFilter;
-    cloudMat.alphaMap = t;
-    cloudMat.opacity = 0.8;
-    cloudMat.needsUpdate = true;
+    t.wrapS = THREE.RepeatWrapping;
+    earthMat.uniforms.uClouds.value = t;
+    earthMat.uniforms.uCloudAmt.value = 1;
   });
 
   let cloudSpin = 0;
@@ -221,16 +219,14 @@ export function buildGlobe(fallbackDay: THREE.Texture, atmo: THREE.Color): Globe
       surface.updateMatrixWorld();
       (earthMat.uniforms.uObjToWorld.value as THREE.Matrix3).getNormalMatrix(surface.matrixWorld);
       if (reducedMotion) return;
-      cloudSpin += dt * 0.006;
-      clouds.rotation.y = surface.rotation.y + cloudSpin;
+      cloudSpin += dt * 0.0008;
+      earthMat.uniforms.uCloudShift.value = cloudSpin % 1;
     },
     dispose() {
       for (const t of loaded) t.dispose();
       black.dispose();
       earthGeo.dispose();
       earthMat.dispose();
-      cloudGeo.dispose();
-      cloudMat.dispose();
       atmoGeo.dispose();
       atmoMat.dispose();
     },

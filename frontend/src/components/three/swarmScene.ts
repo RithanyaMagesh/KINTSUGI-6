@@ -24,7 +24,7 @@ import { SlotLayer } from "./sceneSlots";
 import { LabelLayer, labelPriority, type LabelItem } from "./sceneLabels";
 import { AutoFitController, earthFitRadius, FIT_FILL } from "./sceneCamera";
 import { FormationLines } from "./sceneLines";
-import { createEnvironment, type Environment } from "./sceneEarth";
+import { createEnvironment, EARTH_RADIUS_FACTOR, type Environment } from "./sceneEarth";
 import { SCENE_TOKENS, tokenColor } from "./sceneColors";
 import { SUN_DIR } from "./sceneGlobe";
 
@@ -77,6 +77,9 @@ export class SwarmSceneController {
   private viewW = 1;
   private viewH = 1;
   private scratch = new THREE.Vector3();
+  private followId: string | null = null;
+  private followFly = 0; // seconds left in the fly-in
+  private lastFollowPos = new THREE.Vector3();
 
   constructor(container: HTMLElement, onPick: (id: string | null) => void) {
     this.container = container;
@@ -96,7 +99,13 @@ export class SwarmSceneController {
     container.appendChild(this.labels.root);
 
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+    // Eyes-on-the-Earth feel: weighty drag with momentum, zoom toward the
+    // cursor, and room to dive close to the surface or a spacecraft.
     this.controls.enableDamping = true;
+    this.controls.dampingFactor = 0.06;
+    this.controls.rotateSpeed = 0.55;
+    this.controls.zoomSpeed = 0.9;
+    this.controls.zoomToCursor = true;
 
     this.slots = new SlotLayer(this.labels);
     this.scene.add(this.slots.group);
@@ -182,6 +191,7 @@ export class SwarmSceneController {
 
   applyPreset(preset: CameraPreset, focusSat: Satellite | null): void {
     const e = this.extent || 1000;
+    if (preset !== "focus") this.followId = null;
     if (preset === "reset") {
       if (this.orbitMode === "local") {
         this.setOrbitViewMode("global");
@@ -218,6 +228,51 @@ export class SwarmSceneController {
     const d = Math.min(Math.max(offset.length() * factor, this.controls.minDistance || 1), 1e7 * 0.5);
     this.camera.position.copy(this.controls.target).add(offset.setLength(d));
     this.controls.update();
+  }
+
+  /** Fly the camera to a satellite and keep it in frame as it orbits; null
+   * flies back out to the whole-Earth view. */
+  focusSatellite(id: string | null): void {
+    if (id === this.followId) return;
+    this.followId = id;
+    if (id === null) {
+      this.applyPreset(this.orbitMode === "global" ? "reset" : "formation", null);
+      return;
+    }
+    const rec = this.records.get(id);
+    if (rec === undefined) {
+      this.followId = null;
+      return;
+    }
+    this.fit.onWheel(); // the follow-cam owns framing now
+    this.followFly = this.reducedMotion ? 0.01 : 1.6;
+    this.lastFollowPos.copy(rec.group.position);
+  }
+
+  private updateFollow(dt: number): void {
+    if (this.followId === null) return;
+    const rec = this.records.get(this.followId);
+    if (rec === undefined) {
+      this.followId = null;
+      return;
+    }
+    const pos = rec.group.position;
+    // Carry the camera along with the satellite's motion.
+    const delta = this.scratch.copy(pos).sub(this.lastFollowPos);
+    this.camera.position.add(delta);
+    this.controls.target.add(delta);
+    this.lastFollowPos.copy(pos);
+    if (this.followFly > 0) {
+      this.followFly -= dt;
+      const k = 1 - Math.exp(-4 * dt);
+      this.controls.target.lerp(pos, k);
+      // Park the camera just outside and above the satellite, looking back
+      // down at it with the planet filling the background.
+      const close = (this.extent || 1000) * 0.22;
+      const out = this.orbitMode === "global" ? pos.clone().normalize() : new THREE.Vector3(1, 0.6, 1).normalize();
+      const want = out.multiplyScalar(close).add(new THREE.Vector3(0, close * 0.45, 0)).add(pos);
+      this.camera.position.lerp(want, k);
+    }
   }
 
   getToggles(): { labels: boolean; trails: boolean; lines: boolean; slots: boolean } {
@@ -309,6 +364,8 @@ export class SwarmSceneController {
     let maxR = 0;
     for (const sat of sats) maxR = Math.max(maxR, Math.hypot(sat.r[0], sat.r[1], sat.r[2]));
     this.extent = this.environment.trackExtent(maxR);
+    this.controls.minDistance = this.extent * 0.05;
+    this.controls.maxDistance = this.extent * 30;
   }
 
   private updateMarkers(elapsed: number): void {
@@ -433,12 +490,35 @@ export class SwarmSceneController {
       const fit = fitFormation(this.lastSats, nSeats);
       this.syncAllObjects(this.lastSats, fit);
     }
+    this.updateFollow(dt);
     this.controls.update();
+    // Never fly through the planet: keep the camera just above the air.
+    if (this.orbitMode === "global") {
+      const floor = (this.extent || 1000) * EARTH_RADIUS_FACTOR * 1.04;
+      const r = this.camera.position.length();
+      if (r < floor) this.camera.position.multiplyScalar(floor / Math.max(r, 1e-6));
+    }
     this.camera.updateMatrixWorld();
     this.fit.update(this.camera, this.controls, dt, this.lastSats, this.environment.frame());
     this.environment.update(dt, this.reducedMotion);
     this.updateMarkers(elapsed);
     this.updateLabels();
+    this.fitClipPlanes();
     this.renderer.render(this.scene, this.camera);
   };
+
+  /** Near/far follow the zoom so depth precision holds at every scale: a
+   * coasting dead satellite can grow the scene ~10x, and a fixed near = 1
+   * then let the atmosphere shell z-fight through the planet. */
+  private fitClipPlanes(): void {
+    const d = this.camera.position.distanceTo(this.controls.target);
+    const e = this.extent || 1000;
+    const near = Math.max(1, d * 0.01);
+    const far = this.camera.position.length() + e * 60;
+    if (Math.abs(near - this.camera.near) > near * 0.05 || Math.abs(far - this.camera.far) > far * 0.05) {
+      this.camera.near = near;
+      this.camera.far = far;
+      this.camera.updateProjectionMatrix();
+    }
+  }
 }
