@@ -411,3 +411,23 @@ def test_slow_dead_sat_drift_is_invisible_at_two_orbits_and_visible_later():
     print(f"\nx10 psi 30: {two.min_sep_m:.1f} m at 2 orbits, {long.min_sep_m:.1f} m at 4.19")
     assert two.min_sep_m == pytest.approx(2419.1, abs=1.0)
     assert long.min_sep_m == pytest.approx(614.8, abs=1.0) and long.min_sep_pair == (1, 2)
+
+
+def test_a_coverage_only_failure_makes_passed_false():
+    sc = scn(2.0, dt_s=10.0)
+    st = swarm_state_from_engine(engine_at(sc, 0))
+    s = slots(2.0)
+    items = (PlanItem(4, None, s[4], ("spare",)),)  # same seat, imager role dropped
+    c = certify(Plan(items, "drop", 0.0), st, sc, d_safe_m=TINY)
+    assert kinds(c) == ["coverage"] and not c.passed
+
+
+def test_settled_error_between_the_tolerance_and_kilometres_fails():
+    """A THRUSTER_OUT sat asked to hold a seat 300 m off its own coasts on its own orbit: it ends
+    hundreds of metres from the seat, far below the 5 km a loose tolerance would accept."""
+    sc = scn(2.0, dt_s=10.0, failures=[{"t": 0.0, "sat_id": 1, "mode": "THRUSTER_OUT"}])
+    st = swarm_state_from_engine(engine_at(sc, 2))
+    seat = seat_t0(st, 1) + np.array([0.0, 300.0, 0.0, 0.0, 0.0, 0.0])
+    plan = Plan((PlanItem(1, None, seat, tuple(st.roles[1])),), "x", st.t_s)
+    c = certify(plan, st, sc, d_safe_m=TINY, coverage_floor=0.0)
+    assert 100.0 < c.settled_error_m < 5000.0 and "settled" in kinds(c) and not c.passed

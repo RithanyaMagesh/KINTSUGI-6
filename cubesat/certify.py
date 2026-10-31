@@ -37,7 +37,6 @@ from cubesat.certify_checks import (
     check_roles,
 )
 from cubesat.certify_sim import (
-    MAX_STEPS,
     CertificateCancelled,
     SwarmState,
     burn_span,
@@ -197,8 +196,6 @@ def certify(
     tail = round(PLAN_TAIL_ORBITS * period / dt)
     ends = [burn_span(tr, state.sats[i], dt)[2] + tail for i, tr in flyable.items()]
     steps = max([max(1, round(horizon_orbits * period / dt)), *ends])
-    if steps > MAX_STEPS:
-        raise ValueError(f"the horizon needs {steps} steps (cap {MAX_STEPS})")
     res = simulate(scenario, state, seats_now, flyable, steps, cancel_event)
 
     if res.min_sep_m < d_safe_m:
