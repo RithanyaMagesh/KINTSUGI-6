@@ -13,6 +13,8 @@ import cubesat.allocate as allocate
 import cubesat.sim as sim_module
 from cubesat import ground
 from cubesat.benchmark import (
+    CUBESAT_TANK_DV_MPS,
+    _policies_summary,
     _scenario_for_policy,
     _write_log,
     enumerate_pairs,
@@ -184,3 +186,57 @@ def test_wait_for_ground_vacancy_at_least_delay(base, tmp_path):
     delay = ground.wait_to_next_pass(1200.0)
     assert m["critical_roles_held_end"] is True
     assert m["critical_vacancy_s"] >= delay
+
+
+# --- dv budget fields --------------------------------------------------------
+
+def _dv_log(tmp_path, dvs):
+    ticks = [
+        {"v": 1, "t": float(t), "state": "NOMINAL", "coverage": 0.3, "min_sep": 5000.0,
+         "sats": [{"id": i, "role": "imager", "status": "NOMINAL", "r": [0.0, 0.0, 0.0],
+                   "v": [0.0, 0.0, 0.0], "dv_used": dv * t / 2.0} for i, dv in enumerate(dvs)]}
+        for t in (0, 2)
+    ]
+    lines = [{"v": 1, "t": 0.0, "state": "INIT", "scenario": "x", "seed": 0, "n_sats": len(dvs)}]
+    lines += ticks + [{"v": 1, "t": 2.0, "state": "SUMMARY", "coverage_mean_last_orbit": 0.3}]
+    path = tmp_path / "dv.jsonl"
+    _write_log(lines, path)
+    return path
+
+
+def test_cubesat_tank_constant_value():
+    assert CUBESAT_TANK_DV_MPS == pytest.approx(40 * 9.80665 * math.log(4 / 3.8))
+    assert CUBESAT_TANK_DV_MPS == pytest.approx(20.12, abs=0.01)
+
+
+def test_dv_budget_fields_synthetic(tmp_path):
+    path = _dv_log(tmp_path, [0.0, 10.0, 50.0])  # worst 50 m/s
+    m = metrics_from_log(
+        path, first_failure_t=0.0, dead_ids=[], duration_s=2.0, dv_budget_mps=200.0
+    )
+    assert m["dv_pct_of_scenario_budget"] == pytest.approx(25.0)
+    assert m["dv_within_scenario_budget"] is True
+    assert m["dv_pct_of_cubesat_tank"] == pytest.approx(100.0 * 50.0 / CUBESAT_TANK_DV_MPS)
+    assert m["dv_within_cubesat_tank"] is False
+    ok = metrics_from_log(
+        _dv_log(tmp_path, [5.0]), first_failure_t=0.0, dead_ids=[], duration_s=2.0,
+        dv_budget_mps=4.0,
+    )
+    assert ok["dv_within_scenario_budget"] is False  # 5 > 4
+    assert ok["dv_within_cubesat_tank"] is True
+
+
+def test_dv_summary_rollups():
+    def row(policy, scen, tank):
+        return {
+            "policy": policy, "coverage_mean_last_orbit": 0.27, "total_dv_mps": 1.0,
+            "per_sat_dv_mps": [0.5], "min_sep_survivor_dead_m": 3000.0,
+            "gain_vs_do_nothing_pts": 0.0, "critical_roles_held_end": True,
+            "critical_seat_frac": 1.0, "critical_vacancy_s": 0.0, "imagers_end": 2,
+            "dv_within_scenario_budget": scen, "dv_within_cubesat_tank": tank,
+        }
+    rows = [row("hungarian", True, False), row("hungarian", False, False),
+            row("hungarian", True, True)]
+    s = _policies_summary(rows, ["hungarian"])["hungarian"]
+    assert s["pairs_within_scenario_budget"] == 2
+    assert s["pairs_within_cubesat_tank"] == 1

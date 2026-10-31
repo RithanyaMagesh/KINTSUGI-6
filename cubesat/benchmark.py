@@ -42,6 +42,9 @@ from cubesat.benchmark_policies import (
 from cubesat.hcw import mean_motion
 from cubesat.scenario import MAX_DURATION_S, MAX_TICKS, Failure, FailureMode, Scenario
 
+# illustrative: 4 kg, 0.2 kg propellant, Isp 40 s  (Tsiolkovsky: Isp * g0 * ln(m0 / m1))
+CUBESAT_TANK_DV_MPS = 40 * 9.80665 * math.log(4 / 3.8)
+
 POLICY_ORDER = ("do_nothing", "even_split", "greedy", "hungarian", "hungarian_keepout")
 # Pre-registered baselines (GATES.md 2026-10-31). Kept OUT of POLICY_ORDER so the
 # default P0 sweep (and its committed 60-row report) is unchanged; selectable via
@@ -138,9 +141,17 @@ def _write_log(lines: list[dict], path: Path) -> None:
 
 
 def metrics_from_log(
-    path: Path, *, first_failure_t: float, dead_ids: list[int], duration_s: float
+    path: Path,
+    *,
+    first_failure_t: float,
+    dead_ids: list[int],
+    duration_s: float,
+    dv_budget_mps: float | None = None,
 ) -> dict:
-    """Post-hoc metrics from the written log bytes (ENDGAME_PLAN 3.4)."""
+    """Post-hoc metrics from the written log bytes (ENDGAME_PLAN 3.4). The dv_*
+    budget fields compare the WORST per-sat delta-v with the scenario's
+    allocation.dv_budget_mps (None when not given) and with the illustrative
+    CubeSat tank CUBESAT_TANK_DV_MPS."""
     raw = path.read_bytes()
     lines = [json.loads(line) for line in raw.decode("utf-8").splitlines()]
     ticks = [line for line in lines if line["state"] not in ("INIT", "SUMMARY")]
@@ -170,7 +181,16 @@ def metrics_from_log(
     post = [line for line in ticks if line["t"] >= first_failure_t - 1e-9]
     dt = ticks[1]["t"] - ticks[0]["t"] if len(ticks) > 1 else 0.0
     vacant = sum(1 for line in post if not crit_held(line))
+    worst_dv = max(per_sat_dv)
     return {
+        "dv_pct_of_scenario_budget": (
+            100.0 * worst_dv / dv_budget_mps if dv_budget_mps is not None else None
+        ),
+        "dv_within_scenario_budget": (
+            worst_dv <= dv_budget_mps if dv_budget_mps is not None else None
+        ),
+        "dv_pct_of_cubesat_tank": 100.0 * worst_dv / CUBESAT_TANK_DV_MPS,
+        "dv_within_cubesat_tank": worst_dv <= CUBESAT_TANK_DV_MPS,
         "critical_roles_held_end": crit_held(final_tick),
         "critical_seat_frac": (len(post) - vacant) / len(post) if post else 1.0,
         "critical_vacancy_s": vacant * dt,
@@ -225,6 +245,7 @@ def run_benchmark(
                     first_failure_t=first_failure_t,
                     dead_ids=dead_ids,
                     duration_s=policy_scenario.duration_s,
+                    dv_budget_mps=pair_scenario.allocation.dv_budget_mps,
                 ),
             }
             if policy == "wait_for_ground":
@@ -284,6 +305,10 @@ def _policies_summary(rows: list[dict], policies: list[str]) -> dict[str, dict]:
             "worst_min_sep_survivor_dead_m": min(seps),
             "mean_gain_vs_do_nothing_pts": (sum(gains) / len(gains)) if gains else None,
             "pairs_critical_roles_held": sum(1 for row in sel if row["critical_roles_held_end"]),
+            "pairs_within_scenario_budget": sum(
+                1 for row in sel if row.get("dv_within_scenario_budget")
+            ),
+            "pairs_within_cubesat_tank": sum(1 for row in sel if row.get("dv_within_cubesat_tank")),
             "mean_critical_seat_frac": sum(row["critical_seat_frac"] for row in sel) / len(sel),
             "mean_critical_vacancy_s": sum(row["critical_vacancy_s"] for row in sel) / len(sel),
             "worst_critical_vacancy_s": max(row["critical_vacancy_s"] for row in sel),
