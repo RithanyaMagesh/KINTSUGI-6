@@ -266,3 +266,45 @@ def test_wire_self_report_failure_message():
         SessionEnrich(),
     )
     assert plain[1]["message"] == "SAT-2 DEAD failure detected"  # unchanged shape
+
+
+# --- Wire additions (2026-10-31): additive optional keys, never a changed one ---
+
+
+def _tick(t, sats=(), event=None, state="NOMINAL"):
+    line = {"v": 1, "t": t, "state": state, "coverage": 0.5, "min_sep": 1.0,
+            "sats": [{"id": i, "role": r, "status": s, "r": [0, 0, 0], "v": [0, 0, 0],
+                      "dv_used": 0.0} for i, r, s in sats]}
+    if event:
+        line["event"] = event
+    return line
+
+
+def _assignment(method, **extra):
+    payload = {"assignments": [{"role": "leader", "sat_id": 2, "slot_index": 2}],
+               "cost_total": 0.0, "method": method,
+               "formation": {"phase_offset_rad": 0.5, "radial_amp_m": 8000.0},
+               "transfer_lower_bound_s": 12.5, **extra}
+    return {"type": "ASSIGNMENT", "payload": payload}
+
+
+def test_role_reassignment_passes_method_formation_and_bound():
+    msgs = to_messages(_tick(1.0, event=_assignment("hungarian")), SessionEnrich())
+    r = msgs[1]
+    assert r["method"] == "hungarian"
+    assert r["kept_formation"] is False
+    assert r["formation"] == {"radial_amp_m": 8000.0, "phase_offset_rad": 0.5}
+    assert r["transfer_lower_bound_s"] == 12.5
+
+
+def test_role_reassignment_do_no_harm_hold_sets_kept_formation():
+    msgs = to_messages(_tick(1.0, event=_assignment("do_no_harm_hold")), SessionEnrich())
+    assert msgs[1]["method"] == "do_no_harm_hold"
+    assert msgs[1]["kept_formation"] is True
+
+
+def test_role_reassignment_without_method_adds_no_new_keys():
+    payload = {"assignments": [{"role": "leader", "sat_id": 2, "slot_index": 2}]}
+    msgs = to_messages(_tick(1.0, event={"type": "ASSIGNMENT", "payload": payload}),
+                       SessionEnrich())
+    assert set(msgs[1]) == {"type", "sim_time", "assignments"}

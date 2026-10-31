@@ -238,6 +238,11 @@ def _role_reassignment(frame: dict, payload: dict, enrich: SessionEnrich) -> dic
     }
     if "cost_total" in payload:
         msg["cost_total"] = payload["cost_total"]
+    for key in ("method", "formation", "transfer_lower_bound_s"):  # additive passthrough
+        if key in payload:
+            msg[key] = payload[key]
+    if "method" in payload:
+        msg["kept_formation"] = payload["method"] == "do_no_harm_hold"
     return msg
 
 
