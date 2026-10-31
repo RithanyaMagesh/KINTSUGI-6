@@ -145,11 +145,50 @@ def _strip(o):
     return [_strip(v) for v in o] if isinstance(o, list) else o
 
 
+# HiGHS / SLSQP output is not bit-reproducible across platforms (same class of problem as the
+# golden log hashes, see cubesat/canon.py): continuous values are compared with a tolerance,
+# every discrete value (counts, planned/None, strings, booleans) is compared exactly.
+_REL, _ABS = 1e-5, 1e-6
+
+
+def _diffs(new, old, path=""):
+    if isinstance(old, dict) and isinstance(new, dict):
+        out = []
+        for k in sorted(set(old) | set(new)):
+            if k not in old or k not in new:
+                out.append(f"{path}/{k}: key missing")
+            else:
+                out += _diffs(new[k], old[k], f"{path}/{k}")
+        return out
+    if isinstance(old, list) and isinstance(new, list):
+        if len(old) != len(new):
+            return [f"{path}: length {len(new)} != {len(old)}"]
+        return [d for i, (a, b) in enumerate(zip(new, old, strict=True)) for d in _diffs(a, b, f"{path}[{i}]")]
+    both_num = (
+        isinstance(old, (int, float))
+        and isinstance(new, (int, float))
+        and not isinstance(old, bool)
+        and not isinstance(new, bool)
+    )
+    if both_num and (isinstance(old, float) or isinstance(new, float)):
+        ok = abs(new - old) <= _ABS + _REL * abs(old)
+        return [] if ok else [f"{path}: {new!r} != {old!r}"]
+    return [] if new == old else [f"{path}: {new!r} != {old!r}"]
+
+
+def test_tolerant_compare_flags_discrete_changes_and_accepts_float_noise():
+    assert _diffs({"a": 1.0 + 1e-9, "n": 3, "ok": True}, {"a": 1.0, "n": 3, "ok": True}) == []
+    assert _diffs({"n": 4}, {"n": 3}) and _diffs({"ok": False}, {"ok": True})
+    assert _diffs({"a": 1.1}, {"a": 1.0}) and _diffs({"a": None}, {"a": 1.0})
+    assert _diffs({"a": [1.0, 2.0]}, {"a": [1.0]})
+
+
 @pytest.mark.slow
 def test_report_regenerates_identically(tmp_path):
     out = tmp_path / "t.json"
     assert main(["--report", str(out)]) == 0
-    assert _strip(json.loads(out.read_text())) == _strip(json.loads(ART.read_text()))
+    d = _diffs(_strip(json.loads(out.read_text())), _strip(json.loads(ART.read_text())))
+    assert not d, d[:10]
 
 
 @pytest.mark.slow
@@ -162,4 +201,5 @@ def test_fuzz_artifacts_regenerate_identically(tmp_path):
         assert main([flag, str(out)]) == 0
         new = _strip(json.loads(out.read_text()))
         old = _strip(json.loads(Path(f"data/eval/{name}.json").read_text()))
-        assert new == old
+        d = _diffs(new, old)
+        assert not d, (name, d[:10])
