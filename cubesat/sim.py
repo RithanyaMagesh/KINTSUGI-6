@@ -156,6 +156,9 @@ def run_scenario(
     with no partial output. It is never set by any CLI/canonical caller, so the
     check is a pure read that leaves every log byte-identical (AGENTS.md
     invariant 2); no wall clock enters the sim itself (section 9.2)."""
+    if scenario.engine == "v2":  # v2 seam (cubesat/sim_v2.py)
+        from cubesat.sim_v2 import run_scenario_v2
+        return run_scenario_v2(scenario, cancel_event)
     altitude_m = scenario.chief.altitude_km * 1000.0
     n = mean_motion(altitude_m)
     dt = scenario.dt_s

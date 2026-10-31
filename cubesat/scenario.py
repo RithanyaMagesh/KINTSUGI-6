@@ -38,6 +38,18 @@ class ChiefOrbit(BaseModel):
     altitude_km: float = Field(
         gt=160, lt=2000, description="Circular chief altitude above Earth, km"
     )
+    inclination_deg: float = Field(
+        default=97.4, ge=0, le=180,
+        description="Chief inclination, deg (engine v2 only; SSO-like, illustrative default)",
+    )
+    raan_deg: float = Field(
+        default=0.0, description="Chief right ascension of ascending node, deg (engine v2 only)"
+    )
+    epoch_utc: str = Field(
+        default="2026-03-20T12:00:00Z",
+        description="Fixed ISO-8601 UTC epoch of t=0 (engine v2 only; used for the sun "
+        "direction and Earth rotation phase; illustrative fixed date, never the wall clock)",
+    )
 
 
 class Formation(BaseModel):
@@ -209,6 +221,11 @@ class Scenario(BaseModel):
     allocation: Allocation = Field(default_factory=Allocation)
     oracle: Oracle = Field(default_factory=Oracle)
     safety: Safety = Field(default_factory=Safety)
+    engine: Literal["v1", "v2"] = Field(
+        default="v1",
+        description="'v1' = frozen linear-CW engine (every committed log); "
+        "'v2' = truth-dynamics engine (cubesat/sim_v2.py)",
+    )
 
     @property
     def n_sats(self) -> int:
