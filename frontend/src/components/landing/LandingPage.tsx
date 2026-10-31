@@ -9,12 +9,13 @@ import { useEffect, useRef, useState } from "react";
 import { createLandingScene, type TelemetryCard } from "./landingScene";
 import styles from "./LandingPage.module.css";
 
-// Floating hero cards — measured values only (README.md / GATES.md).
+// Floating hero cards — measured values only. Sources: data/eval/benchmark_results.json (critical roles),
+// data/eval/benchmark_manifest.json (run count), tests/test_fault.py (4 s detection).
 const CARDS: TelemetryCard[] = [
   { label: "SAT-1 · leader", value: "holding slot", tone: "green" },
   { label: "Failure detected", value: "in 4 s", tone: "ink" },
-  { label: "Coverage restored", value: "27.0% vs 22.1%", tone: "gold" },
-  { label: "Benchmarked", value: "75 recovery runs", tone: "ink" },
+  { label: "Leader + downlink kept", value: "15 / 15 pairs (6 / 15 without recovery)", tone: "gold" },
+  { label: "Benchmarked", value: "60 runs · 4 policies", tone: "ink" },
   { label: "Reruns", value: "byte-identical", tone: "ink" },
 ];
 
@@ -63,10 +64,20 @@ const WORKFLOW_MODES = [
   },
 ];
 
+// Every value below must match a committed artifact (repo invariant 1):
+//   4 s            tests/test_fault.py::test_failure_detection_latency (DEAD, K=3 missed heartbeats, dt 2 s)
+//   15 / 15, 6 / 15 data/eval/benchmark_results.json policies_summary.{hungarian,do_nothing}.pairs_critical_roles_held
+//   60              data/eval/benchmark_manifest.json (60 logs = 15 pairs × 4 policies: do_nothing, even_split, greedy, hungarian)
+// Command: uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark \
+//   --report data/eval/benchmark_results.json --policies do_nothing,even_split,greedy,hungarian
 const STATS = [
-  { value: "4 s", label: "Failure detection", source: "3 missed heartbeats · two_failure, seed 42" },
-  { value: "27.0%", label: "Coverage restored", source: "vs 22.1% with no recovery · same run" },
-  { value: "75", label: "Benchmarked recovery runs", source: "15 failure pairs × 5 policies" },
+  { value: "4 s", label: "Failure detection", source: "kill-type failure, 3 missed heartbeats" },
+  {
+    value: "15 / 15",
+    label: "Failure pairs with leader and downlink kept",
+    source: "vs 6 / 15 with no recovery · all 15 two-failure pairs",
+  },
+  { value: "60", label: "Benchmarked runs", source: "15 failure pairs × 4 policies, no-recovery included" },
   { value: "SHA-256", label: "Byte-identical reruns", source: "same machine, same scenario + seed" },
 ];
 
