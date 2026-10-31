@@ -323,7 +323,7 @@ export default function ScenarioBuilder() {
         </p>
       </div>
 
-      {/* Open = Advanced view, so the fault type in FailureInjectionPanel shows too. */}
+      {/* Open = Advanced view (builder extras only). */}
       <details
         className={styles.setupAccordion}
         open={viewMode === "advanced"}
