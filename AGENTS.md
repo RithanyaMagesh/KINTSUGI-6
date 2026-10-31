@@ -1,5 +1,5 @@
 # KINTSUGI-6 CubeSat swarm self-healing (hackathon #b2ef60e9)
-Deterministic CubeSat swarm simulator: failure detection, role reassignment and re-formation under Hill–Clohessy–Wiltshire dynamics, FastAPI + WebSocket backend, React + Three.js console. Work continues after the hackathon on branch `v2` (never merge to master without the user; pushing branch `v2` is allowed).
+Deterministic CubeSat swarm simulator: failure detection, role reassignment and re-formation under Hill–Clohessy–Wiltshire dynamics, FastAPI + WebSocket backend, React + Three.js console. Work continues after the hackathon on branch `backend` (never merge to master without the user; pushing branch `backend` is allowed; `frontend` belongs to another session and is never rebased or force-pushed).
 
 ## Where things are (read in this order before writing code)
 1. `PROJECT_MEMORY.md` — project map, decisions, current state (refreshed each phase).
