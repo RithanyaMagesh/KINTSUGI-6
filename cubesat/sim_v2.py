@@ -82,8 +82,7 @@ class EngineV2:
         self.cov: list[tuple[float, float]] = []
         self.roles = [[r] for r in scenario.roles]  # holders now = incumbents (Phase 5a)
         self.believed = [["NOMINAL", True, True] for _ in scenario.roles]
-        laser = scenario.comms is not None and scenario.comms.model == "laser"
-        self.comms = comms_v2.CommsState(scenario) if laser else None  # track C2
+        self.comms, self.functions = comms_v2.attach(scenario)  # track C: (None, None) = off
         for f in injections:
             self.inject(f)
 
@@ -157,8 +156,8 @@ class EngineV2:
             "coverage": cov,
             "min_sep": self._min_sep(lvlh[:, :3]),
             **geo_v2.tick_fields(c[:3], self.scenario.chief.epoch_utc, t),  # Earth view (v2 only)
-            **links,  # laser comms only: links, components
         }
+        comms_v2.annotate(line, links)  # laser comms only: links, components, functions
         if events:
             line["event"], line["events"] = events[0], events
         self.cov.append((t, cov))
@@ -202,7 +201,7 @@ class EngineV2:
             "believed": self.believed,
             "faults": self.faults.state(),
             "rng": self.rng.bit_generator.state,
-            **({"comms": self.comms.state()} if self.comms else {}),
+            **comms_v2.snapshot(self),  # {} without laser comms
         }
         doc = {"fingerprint": self._fingerprint(), "state": state}
         return json.dumps(doc, sort_keys=True).encode()
@@ -225,14 +224,13 @@ class EngineV2:
                 raise ValueError(f"roles/believed lists must hold {self.n_sats} entries")
             rng = make_rng(self.scenario)
             rng.bit_generator.state = state["rng"]
-            if comms := self.comms and comms_v2.CommsState(self.scenario):
-                comms.load(state["comms"], self.n_sats)
+            comms, functions = comms_v2.restore(self, state)  # parsed, not applied yet
             self.faults.load(state["faults"])  # atomic itself; raises ValueError first
         except (KeyError, TypeError, ValueError) as exc:
             raise ValueError(f"bad EngineV2 snapshot: {exc!r}") from exc
         self.k, self.X, self.refs, self.dv, self.hold, self.cov = k, X, refs, dv, hold, cov
         self.roles, self.believed = roles, believed
-        self.rng, self.comms = rng, comms
+        self.rng, self.comms, self.functions = rng, comms, functions
 
     # -- internals ---------------------------------------------------------------------------------
     def _reentries(self, t: float, lvlh: np.ndarray) -> list[dict]:
@@ -256,7 +254,8 @@ class EngineV2:
             {"status": b[0], "payload_ok": b[1], "radio_ok": b[2], "roles": rs}
             for b, rs in zip(self.believed, self.roles, strict=True)
         ]
-        priority = [r for r in self.scenario.role_priority if r in self.scenario.roles]
+        priority = [r for r in self.scenario.role_priority if r in self.scenario.roles
+                    and not (r == "leader" and self.functions)]  # decentral: no leader role
         new = assign_roles(view, priority, self.scenario.roles.count("imager"))
         payloads = handoff_events(self.roles, new, f.status, priority)
         self.roles = new

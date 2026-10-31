@@ -6,7 +6,8 @@ Each tick, after the failures of the tick have fired and before the heartbeat ru
      end's receive cone (sun vector from cubesat/geo_v2.py, rotated to LVLH);
   2. the topology is replanned only on a topology event: the set of talking sats changed, a
      LOCKED link was lost, or (star) the hub moved. Mesh keeps the LOCKED links (isl.plan_topology
-     keep=); star links every talking sat to the current leader holder;
+     keep=); star links every talking sat to the current leader holder (decentral, or the
+     leader vacant: the lowest talking sat);
   3. components = connected sets of talking sats over LOCKED links. A talking sat alone in its
      component is ISOLATED: nobody hears its heartbeat (cubesat/faults_v2.py detect()).
 Assumptions (label them wherever shown): the sim starts in steady state, so the first topology
@@ -25,6 +26,7 @@ from __future__ import annotations
 import numpy as np
 
 from cubesat import geo_v2, isl, truth
+from cubesat.decentral import FunctionState
 from cubesat.faults_v2 import STATUS_REENTERED
 from cubesat.sim import STATUS_DEAD
 
@@ -145,14 +147,58 @@ class CommsState:
         self.links, self.up, self.hub, self.comps = links, up, hub, comps
 
 
+def attach(scenario) -> tuple[CommsState | None, FunctionState | None]:
+    """EngineV2's track-C state: (comms, functions); (None, None) without laser comms."""
+    if scenario.comms is None or scenario.comms.model != "laser":
+        return None, None
+    rec = scenario.recovery
+    decentral = rec is not None and rec.authority == "decentral"
+    return CommsState(scenario), FunctionState(scenario) if decentral else None
+
+
 def fault_tick(eng, t: float, lvlh: np.ndarray) -> tuple[list[dict], dict]:
     """EngineV2's hook: eng.faults.tick() unchanged without laser comms (-> events, {}); with
-    them fire the failures, step the links, then run the heartbeat rule over the link graph."""
+    them fire the failures, step the links, run the heartbeat rule over the link graph, then
+    (decentral) the leader-function auction."""
     faults, vel_eci = eng.faults, eng.X[1:, 3:]
     if eng.comms is None:
         return faults.tick(t, vel_eci), {}
     events = faults.fire(t, vel_eci)
     fields, link_events, isolated = eng.comms.tick(
-        t, eng.dt, lvlh[:, :3], eng.X[0], faults.status, faults.sats, eng.roles
+        t, eng.dt, lvlh[:, :3], eng.X[0], faults.status, faults.sats,
+        eng.roles if eng.functions is None else [],  # decentral: no leader, no role-based hub
     )
-    return events + link_events + faults.detect(t, isolated), fields
+    events += link_events + faults.detect(t, isolated)
+    if eng.functions is not None:
+        locked = [e for e, link in sorted(eng.comms.links.items()) if link[0] == isl.LOCKED]
+        fn_events, fn_fields = eng.functions.tick(eng.k, locked, eng.comms.up, faults.sats)
+        events += fn_events
+        fields.update(fn_fields)
+    return events, fields
+
+
+def annotate(line: dict, fields: dict) -> None:
+    """Put the track-C fields on a tick line: per-sat `functions`, the rest top-level."""
+    per_sat = fields.pop("functions", None)
+    line.update(fields)
+    for sat, fns in zip(line["sats"], per_sat or (), strict=False):
+        sat["functions"] = fns
+
+
+def snapshot(eng) -> dict:
+    out = {} if eng.comms is None else {"comms": eng.comms.state()}
+    return out if eng.functions is None else {**out, "functions": eng.functions.state()}
+
+
+def restore(eng, state: dict) -> tuple[CommsState | None, FunctionState | None]:
+    """Parse the track-C part of a snapshot into fresh objects (ValueError if bad); the
+    engine assigns them only after every other part parsed."""
+    comms, functions = attach(eng.scenario)
+    try:
+        if comms is not None:
+            comms.load(state["comms"], eng.n_sats)
+        if functions is not None:
+            functions.load(state["functions"], eng.n_sats)
+    except KeyError as exc:
+        raise ValueError(f"snapshot lacks track-C state {exc}") from exc
+    return comms, functions
