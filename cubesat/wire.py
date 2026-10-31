@@ -17,6 +17,8 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field
 
+from cubesat import wire_comms
+
 
 def display_sat_id(i: int) -> str:
     """0-based log id -> 1-based display id (section 6.1)."""
@@ -248,6 +250,7 @@ def to_sim_state(frame: dict, enrich: SessionEnrich) -> dict:
     for key in ("chief", "station"):  # v2 Earth view: optional passthrough
         if key in frame:
             msg[key] = frame[key]
+    msg.update(wire_comms.tick_fields(frame))  # laser comms: links, components (C6)
     return msg
 
 
@@ -300,6 +303,9 @@ def _v2_event(frame: dict, key: object, sat: object) -> dict | None:
 
 
 def _failure_event(frame: dict, payload: dict, enrich: SessionEnrich) -> dict:
+    # laser comms (C6): healthy but unheard; not a failure, so detection_latency_s stays
+    if payload.get("cause") == "isolated":
+        return wire_comms.isolated_event(frame.get("t", 0.0), payload)
     if isinstance(payload.get("t_fail"), (int, float)) and isinstance(
         payload.get("t_detect"), (int, float)
     ):
@@ -487,7 +493,8 @@ def _plain_event(frame: dict, etype: str, payload: dict) -> dict:
         if lead is not None:
             msg += f" in {lead}"
         return _with_sat(to_event("info", t, msg + "; replanning early"), who)
-    return to_event("info", t, etype)  # unknown types: pass the type
+    link = wire_comms.link_event(t, etype, payload)  # LINK_LOCKED / LINK_LOST / PARTITION
+    return link if link is not None else to_event("info", t, etype)  # unknown: pass the type
 
 
 def to_messages(frame: dict, enrich: SessionEnrich) -> list[dict]:
