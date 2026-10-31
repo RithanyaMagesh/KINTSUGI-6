@@ -28,7 +28,7 @@ from cubesat.faults_v2 import STATUS_REENTERED, Faults
 from cubesat.hcw import mean_motion, stm
 from cubesat.pd import PDController
 from cubesat.rng_v2 import draw_tick, make_rng
-from cubesat.roles_v2 import assign_roles, handoff_events
+from cubesat.roles_v2 import assign_roles, believe, handoff_events, imaging_sats
 from cubesat.scenario import Failure, Scenario
 from cubesat.sim import (
     LOG_SCHEMA_VERSION,
@@ -81,6 +81,7 @@ class EngineV2:
         self.faults = Faults(scenario)
         self.cov: list[tuple[float, float]] = []
         self.roles = [[r] for r in scenario.roles]  # holders now = incumbents (Phase 5a)
+        self.believed = [["NOMINAL", True, True] for _ in scenario.roles]
         for f in injections:
             self.inject(f)
 
@@ -124,7 +125,7 @@ class EngineV2:
         status = self.faults.status
         gone = np.array([s == STATUS_REENTERED for s in status])
         lvlh[gone] = self.hold[gone]  # a re-entered sat shows its state at re-entry
-        imagers = [i for i, roles in enumerate(self.roles) if "imager" in roles]
+        imagers = imaging_sats(self.roles, status, self.faults.sats)  # physical, not believed
         cov = coverage_fraction(lvlh[imagers, 1:3], self.grid, self.r_f)
         line = {
             "v": LOG_SCHEMA_VERSION,
@@ -192,6 +193,7 @@ class EngineV2:
             "hold": self.hold.tolist(),
             "cov": self.cov,
             "roles": self.roles,
+            "believed": self.believed,
             "faults": self.faults.state(),
             "rng": self.rng.bit_generator.state,
         }
@@ -211,15 +213,16 @@ class EngineV2:
             dv, hold = np.array(state["dv"]), np.array(state["hold"])
             cov = [(t, c) for t, c in state["cov"]]
             roles = [[str(r) for r in rs] for rs in state["roles"]]
-            if len(roles) != self.n_sats:
-                raise ValueError(f"{len(roles)} role lists for {self.n_sats} sats")
+            believed = [[str(b[0]), bool(b[1]), bool(b[2])] for b in state["believed"]]
+            if len(roles) != self.n_sats or len(believed) != self.n_sats:
+                raise ValueError(f"roles/believed lists must hold {self.n_sats} entries")
             rng = make_rng(self.scenario)
             rng.bit_generator.state = state["rng"]
             self.faults.load(state["faults"])  # atomic itself; raises ValueError first
         except (KeyError, TypeError, ValueError) as exc:
             raise ValueError(f"bad EngineV2 snapshot: {exc!r}") from exc
         self.k, self.X, self.refs, self.dv, self.hold, self.cov = k, X, refs, dv, hold, cov
-        self.roles = roles
+        self.roles, self.believed = roles, believed
         self.rng = rng
 
     # -- internals ---------------------------------------------------------------------------------
@@ -235,17 +238,18 @@ class EngineV2:
         return events
 
     def _update_roles(self) -> list[dict]:
-        """Re-assign capability roles from the live statuses (cubesat/roles_v2.py; no motion is
-        touched) and return the ROLE_HANDOFF events of this tick. Only roles the scenario
+        """Re-assign capability roles from the BELIEVED statuses (cubesat/roles_v2.py; no motion
+        is touched) and return the ROLE_HANDOFF events of this tick. Only roles the scenario
         labels exist at all: a scenario without a downlink has that role vacant from the start."""
-        status, sats = self.faults.status, self.faults.sats
+        f = self.faults
+        self.believed = believe(self.believed, f.status, f.sats, f.declared)
         view = [
-            {"status": status[i], "payload_ok": s.payload_ok, "radio_ok": s.radio_ok, "roles": rs}
-            for i, (s, rs) in enumerate(zip(sats, self.roles, strict=True))
+            {"status": b[0], "payload_ok": b[1], "radio_ok": b[2], "roles": rs}
+            for b, rs in zip(self.believed, self.roles, strict=True)
         ]
         priority = [r for r in self.scenario.role_priority if r in self.scenario.roles]
         new = assign_roles(view, priority)
-        payloads = handoff_events(self.roles, new, status, priority)
+        payloads = handoff_events(self.roles, new, f.status, priority)
         self.roles = new
         return [{"type": "ROLE_HANDOFF", "payload": p} for p in payloads]
 

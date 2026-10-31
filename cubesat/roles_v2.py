@@ -95,6 +95,26 @@ def assign_roles(sats: list[dict], priority: Sequence[str] = DEFAULT_PRIORITY) -
     return held
 
 
+def believe(believed: list[list], statuses: list[str], sats: list, declared: list[bool]) -> list:
+    """The swarm's belief about each sat as [status, payload_ok, radio_ok]: a silent failure
+    (DEAD, dead radio, REENTERED) is believed only once the heartbeat rule has declared it; a
+    sat that still talks self-reports at once, so its true state is believed. `sats` are
+    SatState-like (payload_ok, radio_ok)."""
+    return [
+        [st, s.payload_ok, s.radio_ok]
+        if declared[i] or (st != "REENTERED" and s.radio_ok)
+        else believed[i]
+        for i, (st, s) in enumerate(zip(statuses, sats, strict=True))
+    ]
+
+
+def imaging_sats(roles: list[list[str]], statuses: list[str], sats: list) -> list[int]:
+    """Ids that hold the imager role AND can physically image now (roles are believed, imaging
+    is not: a dead payload takes no images even before the death is declared)."""
+    can = [capability(st, s.payload_ok, s.radio_ok, "imager") for st, s in zip(statuses, sats, strict=True)]
+    return [i for i, rs in enumerate(roles) if "imager" in rs and can[i]]
+
+
 def handoff_events(
     old_roles: list[list[str]], new_roles: list[list[str]], statuses: list[str],
     priority: Sequence[str] = DEFAULT_PRIORITY,
