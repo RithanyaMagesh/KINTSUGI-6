@@ -146,6 +146,30 @@ function cardTexture(card: TelemetryCard): THREE.CanvasTexture {
 
 // ---------------------------------------------------------------- scene
 
+/** A tiny equirectangular "space" environment for reflections. */
+function spaceEnvTexture(sunDir: THREE.Vector3): THREE.Texture {
+  const w = 128;
+  const h = 64;
+  const c = document.createElement("canvas");
+  c.width = w;
+  c.height = h;
+  const g = c.getContext("2d") as CanvasRenderingContext2D;
+  g.fillStyle = cssVar("--hero-bg");
+  g.fillRect(0, 0, w, h);
+  // sun spot at sunDir (three.js equirect: u from atan2(z, x), v from asin(y))
+  const u = (Math.atan2(sunDir.z, sunDir.x) / (2 * Math.PI) + 0.5) * w;
+  const v = (0.5 - Math.asin(sunDir.y) / Math.PI) * h;
+  const spot = g.createRadialGradient(u, v, 0, u, v, 6);
+  spot.addColorStop(0, cssVar("--hero-sun"));
+  spot.addColorStop(1, `#${new THREE.Color(cssVar("--hero-sun")).getHexString()}00`);
+  g.fillStyle = spot;
+  g.fillRect(u - 6, v - 6, 12, 12);
+  const tex = new THREE.CanvasTexture(c);
+  tex.mapping = THREE.EquirectangularReflectionMapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
 /** The visible sun: a hot core plus a wide corona, additive and above the
  * bloom threshold, so the composer's bloom gives it a soft glare. */
 function buildSun(): { group: THREE.Group; dispose(): void } {
@@ -168,7 +192,7 @@ function buildSun(): { group: THREE.Group; dispose(): void } {
   const glow = cssVar("--hero-sun-glow");
   const coreTex = make(256, [[0, sun, 1], [0.3, sun, 1], [0.55, sun, 0.3], [1, sun, 0]]);
   const coronaTex = make(512, [
-    [0, glow, 0.42], [0.12, glow, 0.2], [0.3, glow, 0.07], [0.55, glow, 0.02], [1, glow, 0],
+    [0, glow, 0.5], [0.06, glow, 0.22], [0.2, glow, 0.06], [0.5, glow, 0.012], [1, glow, 0],
   ]);
   const sprite = (map: THREE.Texture, scale: number, boost: number) => {
     const m = new THREE.SpriteMaterial({
@@ -184,9 +208,12 @@ function buildSun(): { group: THREE.Group; dispose(): void } {
     return sp;
   };
   const group = new THREE.Group();
-  const corona = sprite(coronaTex, 12, 1.0);
-  const core = sprite(coreTex, 2.4, 2.6);
-  group.add(corona, core);
+  const corona = sprite(coronaTex, 14, 1.0);
+  const core = sprite(coreTex, 1.5, 3.2);
+  // Faint anamorphic streak: the lens artifact real orbital footage has.
+  const streak = sprite(coronaTex, 1, 0.5);
+  streak.scale.set(26, 0.5, 1);
+  group.add(corona, streak, core);
   return {
     group,
     dispose() {
@@ -194,6 +221,7 @@ function buildSun(): { group: THREE.Group; dispose(): void } {
       coronaTex.dispose();
       (corona.material as THREE.Material).dispose();
       (core.material as THREE.Material).dispose();
+      (streak.material as THREE.Material).dispose();
     },
   };
 }
@@ -219,20 +247,33 @@ export function createLandingScene(
   const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 300);
   camera.position.set(0, 1.4, 14);
 
-  // Lights. One sun, upper right and behind the swarm, is the key light:
-  // every satellite gets a lit side, a dark side and a moving panel glint.
-  // A faint blue fill from the opposite side keeps shadow sides readable.
-  const SUN_POS = new THREE.Vector3(19, 10, -26);
-  scene.add(new THREE.AmbientLight(col("--hero-light-key"), 0.14));
-  const key = new THREE.DirectionalLight(col("--hero-sun"), 3.4);
+  // Lights, as in orbit: one hard sun in the upper-right corner, slightly to
+  // the side so the swarm is side-lit, and no sky. A faint cool fill from the
+  // opposite side keeps shadow sides dark but never fully black.
+  const SUN_POS = new THREE.Vector3(14, 5.2, -12);
+  const SUN_DIR = SUN_POS.clone().normalize();
+  scene.add(new THREE.AmbientLight(col("--hero-light-key"), 0.12));
+  const key = new THREE.DirectionalLight(col("--hero-sun"), 4.6);
   key.position.copy(SUN_POS);
   scene.add(key);
-  const rim = new THREE.DirectionalLight(col("--hero-light-rim"), 0.9);
-  rim.position.set(-9, -4, 10);
+  const rim = new THREE.DirectionalLight(col("--hero-light-rim"), 1.0);
+  rim.position.set(-10, -3, 8);
   scene.add(rim);
   const sun = buildSun();
   sun.group.position.copy(SUN_POS);
   scene.add(sun.group);
+
+  // Reflections for the metal and glass: black space and a white sun spot
+  // (a tiny equirect, prefiltered).
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  const envSrc = spaceEnvTexture(SUN_DIR);
+  const envRT = pmrem.fromEquirectangular(envSrc);
+  scene.environment = envRT.texture;
+  scene.environmentIntensity = 1.2;
+  envSrc.dispose();
+  pmrem.dispose();
+
+
   const goldLight = new THREE.PointLight(col("--hero-gold"), 0, 14, 1.6);
   scene.add(goldLight);
   const redLight = new THREE.PointLight(col("--hero-red"), 0, 6, 2);
@@ -595,6 +636,7 @@ export function createLandingScene(
       running = false;
       cancelAnimationFrame(raf);
       sun.dispose();
+      envRT.dispose();
       ro.disconnect();
       document.removeEventListener("visibilitychange", onVisibility);
       for (const sat of sats) {
