@@ -421,6 +421,9 @@ export function updateMarkerView(
   // Pick disc + focus ring wrap the model, so the click target and label
   // offset match what you see.
   rec.marker.scale.setScalar(modelScale * 1.25 * pulse);
+  // Close up (physical size beats the screen-size floor) the focus ring is a
+  // big grey donut around the spacecraft: show it only from afar.
+  rec.ring.visible = modelScale <= size.world * MODEL_SCALE * countScale * 1.5;
   if (!reducedMotion) {
     // Slow roll so the panels catch the sun; dead satellites tumble faster.
     rec.model.rotation.y = elapsed * (status === "failed" ? 0.9 : 0.25);

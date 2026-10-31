@@ -29,6 +29,12 @@ import { createEnvironment, EARTH_RADIUS_FACTOR, type Environment } from "./scen
 import { SCENE_TOKENS, tokenColor } from "./sceneColors";
 import { SUN_DIR } from "./sceneGlobe";
 
+/** Visual orbit phase per simulated second (2x real LEO mean motion, kept
+ * from the original scene), and the Earth's spin as a fraction of it: a
+ * 500 km orbit (~95 min) laps the planet ~15.2x per sidereal day. */
+const ORBIT_PHASE_PER_SIM_S = 0.0022;
+const EARTH_SPIN_RATIO = 15.2;
+
 /** Up to this many satellites every name is shown; above it, names appear
  * only for the satellites that matter (see labelWanted). */
 const LABEL_ALL_MAX = 10;
@@ -64,6 +70,12 @@ export class SwarmSceneController {
   private orbitMode: OrbitViewMode = "global";
   private orbitPhase = 0;
   private lastSimTime = 0;
+  // One clock for the orbit animation: the sim-time phase from the stream,
+  // extrapolated between frames at the measured rate and eased toward, so the
+  // swarm glides instead of snapping back on every frame.
+  private phaseTarget = 0;
+  private phaseRate = 0; // rad per wall-clock second, measured from the stream
+  private phaseStampMs = 0;
   private slots: SlotLayer;
   private labels = new LabelLayer();
   private fit = new AutoFitController();
@@ -145,12 +157,20 @@ export class SwarmSceneController {
     this.selectedId = selectedId;
     this.missionState = missionState;
     if (simTime !== undefined && simTime !== this.lastSimTime) {
-      const deltaSim = simTime - this.lastSimTime;
       this.lastSimTime = simTime;
-      // Advance orbital angle deterministically with simulation time
-      if (Math.abs(deltaSim) > 0) {
-        this.orbitPhase = (simTime * 0.0022) % (Math.PI * 2);
+      const now = performance.now();
+      const target = simTime * ORBIT_PHASE_PER_SIM_S;
+      const dtw = (now - this.phaseStampMs) / 1000;
+      const step = target - this.phaseTarget;
+      if (this.phaseStampMs > 0 && dtw > 0 && step > 0 && step < 0.5) {
+        this.phaseRate = 0.7 * this.phaseRate + 0.3 * (step / dtw);
+      } else if (this.phaseStampMs === 0 || Math.abs(step) >= 0.5) {
+        // first frame, replay seek or a new run: jump straight there
+        this.orbitPhase = target;
+        this.phaseRate = 0;
       }
+      this.phaseTarget = target;
+      this.phaseStampMs = now;
     }
 
     this.updateExtent(satellites);
@@ -160,7 +180,7 @@ export class SwarmSceneController {
       mode: this.orbitMode,
       extent: this.extent || 1000,
       amplitude: fit.ok && fit.amplitude > 0 ? fit.amplitude : (this.extent || 1000) * 0.55,
-      orbitPhase: this.orbitPhase,
+      orbitPhase: this.orbitPhase % (Math.PI * 2),
     });
 
     this.syncAllObjects(satellites, fit);
@@ -266,10 +286,22 @@ export class SwarmSceneController {
       return;
     }
     const pos = rec.group.position;
-    // Carry the camera along with the satellite's motion.
-    const delta = this.scratch.copy(pos).sub(this.lastFollowPos);
-    this.camera.position.add(delta);
-    this.controls.target.add(delta);
+    // Carry the camera with the satellite. In the Earth view also turn it
+    // with the orbit (rotation about Earth's centre from the last position
+    // to this one), so it stays a chase cam and the planet rolls underneath;
+    // a pure translation let the satellite drift round to the far side.
+    const camOff = this.camera.position.clone().sub(this.lastFollowPos);
+    const tgtOff = this.controls.target.clone().sub(this.lastFollowPos);
+    if (this.orbitMode === "global" && this.lastFollowPos.lengthSq() > 0 && pos.lengthSq() > 0) {
+      const q = new THREE.Quaternion().setFromUnitVectors(
+        this.lastFollowPos.clone().normalize(),
+        pos.clone().normalize(),
+      );
+      camOff.applyQuaternion(q);
+      tgtOff.applyQuaternion(q);
+    }
+    this.camera.position.copy(pos).add(camOff);
+    this.controls.target.copy(pos).add(tgtOff);
     this.lastFollowPos.copy(pos);
     if (this.followFly > 0) {
       this.followFly -= dt;
@@ -527,12 +559,22 @@ export class SwarmSceneController {
     this.raf = requestAnimationFrame(this.animate);
     const dt = this.clock.getDelta();
     const elapsed = this.clock.elapsedTime;
-    if (!this.reducedMotion && this.orbitMode === "global" && this.lastSats.length > 0) {
-      this.orbitPhase = (this.orbitPhase + dt * 0.12) % (Math.PI * 2);
-      setSceneCoordinateTransform({ orbitPhase: this.orbitPhase });
+    if (this.orbitMode === "global" && this.lastSats.length > 0) {
+      const sinceMs = performance.now() - this.phaseStampMs;
+      // Stream stalled (paused / ended): stop extrapolating after 1.5 s.
+      const lead = sinceMs > 1500 ? 0 : Math.min(sinceMs / 1000, 1.5);
+      const predicted = this.phaseTarget + this.phaseRate * lead;
+      this.orbitPhase = this.reducedMotion
+        ? this.phaseTarget
+        : this.orbitPhase + (predicted - this.orbitPhase) * Math.min(1, dt * 10);
+      setSceneCoordinateTransform({ orbitPhase: this.orbitPhase % (Math.PI * 2) });
+      // B) Earth turns on the same clock, at the real ratio (~1:15).
+      this.environment.setEarthSpin(this.orbitPhase / EARTH_SPIN_RATIO);
       const nSeats = Math.max(this.lastSats.length, 1);
       const fit = fitFormation(this.lastSats, nSeats);
       this.syncAllObjects(this.lastSats, fit);
+    } else if (this.lastSats.length === 0) {
+      this.environment.setEarthSpin(null);
     }
     this.updateFollow(dt);
     this.controls.update();

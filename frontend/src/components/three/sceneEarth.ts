@@ -178,6 +178,8 @@ export interface Environment {
   refreshTheme(): void;
   frame(): EnvFrame;
   update(dt: number, reducedMotion: boolean): void;
+  /** Drive the Earth's spin from the sim clock (radians); null = idle spin. */
+  setEarthSpin(angle: number | null): void;
   dispose(): void;
 }
 
@@ -271,6 +273,7 @@ export function createEnvironment(): Environment {
   place(1000);
 
   let earthSpin = 0;
+  let spinOverride: number | null = null;
   return {
     group,
     trackExtent(maxR: number): number {
@@ -298,9 +301,16 @@ export function createEnvironment(): Environment {
     frame(): EnvFrame {
       return envFrame;
     },
+    setEarthSpin(angle: number | null): void {
+      // Handing back to the idle spin keeps the current angle (no jump).
+      if (angle === null && spinOverride !== null) earthSpin += spinOverride;
+      spinOverride = angle;
+    },
     update(dt: number, reducedMotion: boolean): void {
-      if (!reducedMotion && currentMode === "global") {
-        earthSpin += dt * EARTH_SPIN_RATE;
+      if (spinOverride !== null) {
+        globe.surface.rotation.y = earthSpin + spinOverride;
+      } else if (!reducedMotion && currentMode === "global") {
+        earthSpin += dt * EARTH_SPIN_RATE; // idle: no run streaming
         globe.surface.rotation.y = earthSpin;
       }
       globe.update(dt, reducedMotion || currentMode !== "global");
