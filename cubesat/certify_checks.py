@@ -11,15 +11,16 @@ import numpy as np
 from cubesat.certify_sim import MAX_STEPS, burn_span, coverage_estimate
 from cubesat.coverage import footprint_radius, target_grid
 from cubesat.hcw import mean_motion
-from cubesat.roles_v2 import ROLE_SPECS, capability, imaging_sats
+from cubesat.roles_v2 import ROLE_SPECS, assign_roles, capability, imaging_sats
 
 REQUIRED_ROLES = tuple(r for r, spec in ROLE_SPECS.items() if spec["critical"])
 DEAD = ("DEAD", "REENTERED")
 
 
-def check_fuel_planned(movers, state, cmd_ok, fuel_reserve, dt, reasons):
+def check_fuel_planned(movers, state, cmd_ok, fuel_reserve, dt, tail, reasons):
     """Static fuel and cannot-move checks. Returns (worst planned margin, its sat, the movers
-    that may be flown); (0.0, None, {}) when nothing moves. Failing movers are not simulated."""
+    that may be flown); (0.0, None, {}) when nothing moves. Failing movers are not simulated.
+    A mover whose burns plus the `tail` steps after them exceed MAX_STEPS cannot be flown."""
     worst, worst_sat, flyable = math.inf, None, {}
     for i, tr in movers.items():
         sat, planned = state.sats[i], float(np.linalg.norm(np.asarray(tr.dv), axis=1).sum())
@@ -36,8 +37,10 @@ def check_fuel_planned(movers, state, cmd_ok, fuel_reserve, dt, reasons):
                     f"fuel: sat {i} needs {planned:.3f} m/s but only {sat.fuel_mps_left:.3f} m/s "
                     f"is left with a {100.0 * fuel_reserve:.0f}% reserve (margin {margin:.3f} m/s)"
                 )
-            elif last > MAX_STEPS:
-                reasons.append(f"fuel: sat {i}'s burns need {last} steps (cap {MAX_STEPS})")
+            elif last + tail > MAX_STEPS:
+                reasons.append(
+                    f"fuel: sat {i}'s burns need {last} steps + {tail} after (cap {MAX_STEPS})"
+                )
             else:
                 flyable[i] = tr
         if margin < worst:
@@ -79,15 +82,17 @@ def check_roles(final_roles, state, scenario, reasons):
         if len(holders) > 1:
             found.append(f"{role} held by sats {holders}")
     bad = [(i, r) for i, rs in enumerate(final_roles) for r in rs if not can(i, r)]
-    one = [r for r, spec in ROLE_SPECS.items() if not spec["stackable"]]
-    for i, rs in enumerate(final_roles):
-        stacked = [r for r in rs if r in one]
-        free = [
-            j for j, qs in enumerate(final_roles)
-            if j != i and not [r for r in qs if r in one] and any(can(j, r) for r in stacked)
-        ]
-        if len(stacked) > 1 and free:
-            found.append(f"sat {i} stacks {', '.join(stacked)} while sat {free[0]} is free")
+    # stacking and seat counts: the plan must be what the engine's own rule (roles_v2.assign_roles,
+    # truth statuses, the plan's roles as incumbents) would keep; "spare" is only a label
+    view = [
+        {"status": st, "payload_ok": s.payload_ok, "radio_ok": s.radio_ok, "roles": rs}
+        for st, s, rs in zip(state.status, state.sats, final_roles, strict=True)
+    ]
+    priority = [r for r in scenario.role_priority if r in scenario.roles]
+    kept = assign_roles(view, priority, scenario.roles.count("imager"))
+    for i, (want, got) in enumerate(zip(kept, final_roles, strict=True)):
+        if set(want) - {"spare"} != set(got) - {"spare"}:
+            found.append(f"the engine's role rule gives sat {i} {sorted(want)}, not {sorted(got)}")
     if vacant:
         reasons.append("roles: no capable sat holds " + ", ".join(vacant))
     if bad:
@@ -99,17 +104,20 @@ def check_roles(final_roles, state, scenario, reasons):
 
 def check_coverage(seats_now, final_roles, state, scenario, floor, unreached, reasons):
     """Coverage check via the allocator's convention (footprint radius, target grid, 72-sample
-    orbit average). `unreached` sats do not image. Returns (plan coverage, hold coverage)."""
+    orbit average). `unreached` sats do not image, on BOTH sides (like for like: an empty plan
+    never fails against itself). Returns (plan coverage, hold coverage)."""
     n = mean_motion(scenario.chief.altitude_km * 1000.0)
     sn = scenario.sensor
-    r_f = footprint_radius(scenario.chief.altitude_km * 1000.0, math.radians(sn.fov_half_angle_deg))
+    alt = scenario.chief.altitude_km * 1000.0
+    r_f = footprint_radius(alt, math.radians(sn.fov_half_angle_deg))
     grid = target_grid(sn.grid_step_km * 1000.0, sn.grid_extent_km * 1000.0)
 
     def cover(seats, roles, skip=()):
         img = [i for i in imaging_sats(roles, state.status, state.sats) if i not in skip]
         return coverage_estimate(list(seats), img, r_f=r_f, grid=grid, n=n)
 
-    coverage, hold_cov = cover(seats_now, final_roles, unreached), cover(state.refs, state.roles)
+    coverage = cover(seats_now, final_roles, unreached)
+    hold_cov = cover(state.refs, state.roles, unreached)
     need = hold_cov - 1e-9 if floor is None else float(floor)
     if coverage < need:
         what = "the coverage floor" if floor is not None else "holding position"

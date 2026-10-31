@@ -121,15 +121,16 @@ def test_fuel_fails_with_a_small_tank():
     state = swarm_state_from_engine(engine_at(sc, 0))
     tank = 40.0 * G0 * math.log(4.0 / 3.99)
     cert = certify(Plan((mover(0, burn([0.5, 0, 0], [0, 0.3, 0])),), "x", 0.0), state, sc,
-                   d_safe_m=1e-6, **FAST)
+                   d_safe_m=60.0, **FAST)
     assert reasons_of(cert, "fuel") and not cert.passed
     assert cert.worst_fuel_sat == 0
     assert cert.planned_fuel_margin_mps == pytest.approx(0.8 * tank - 0.8, abs=1e-9)  # reserve 20 %
     assert cert.worst_fuel_margin_mps <= cert.planned_fuel_margin_mps
     cert0 = certify(Plan((mover(0, burn([0.5, 0, 0], [0, 0.3, 0])),), "x", 0.0), state, sc,
-                    d_safe_m=1e-6, fuel_reserve=0.0, **FAST)
+                    d_safe_m=60.0, fuel_reserve=0.0, **FAST)
     assert cert0.planned_fuel_margin_mps == pytest.approx(tank - 0.8, abs=1e-9)
-    assert not [r for r in cert0.reasons if "needs" in r]  # (the flown tank is a separate check)
+    # exact: no static "needs" reason; with no reserve the flown check reports only the empty tank
+    assert reasons_of(cert0, "fuel") == ["fuel: sat 0 runs out of propellant during the horizon"]
 
 
 def test_fuel_margin_uses_the_current_mass_not_the_launch_mass():
@@ -137,7 +138,7 @@ def test_fuel_margin_uses_the_current_mass_not_the_launch_mass():
     state = swarm_state_from_engine(engine_at(sc, 0))
     s = state.sats[2]
     s.m_kg, s.m_prop_kg = 3.9, 0.1  # used 0.1 kg already: tank delta-v now 40 g0 ln(3.9/3.8)
-    cert = certify(Plan((mover(2, burn([1.0, 0, 0])),), "x", 0.0), state, sc, d_safe_m=1e-6, **FAST)
+    cert = certify(Plan((mover(2, burn([1.0, 0, 0])),), "x", 0.0), state, sc, d_safe_m=60.0, **FAST)
     assert cert.planned_fuel_margin_mps == pytest.approx(
         0.8 * 40.0 * G0 * math.log(3.9 / 3.8) - 1.0, abs=1e-9
     )
@@ -147,7 +148,7 @@ def test_fuel_worst_margin_is_over_all_movers():
     sc = scn(2.0)
     state = swarm_state_from_engine(engine_at(sc, 0))
     items = (mover(1, burn([1.0, 0, 0])), mover(3, burn([4.0, 0, 0])), mover(4, burn([2.0, 0, 0])))
-    cert = certify(Plan(items, "x", 0.0), state, sc, d_safe_m=1e-6, **FAST)
+    cert = certify(Plan(items, "x", 0.0), state, sc, d_safe_m=60.0, **FAST)
     assert cert.worst_fuel_sat == 3
     assert cert.planned_fuel_margin_mps == pytest.approx(0.8 * state.sats[3].fuel_mps_left - 4.0)
 
@@ -157,7 +158,7 @@ def test_k_zero_sat_cannot_move():
     state = swarm_state_from_engine(engine_at(sc, 1))
     assert state.sats[3].k == 0.0 and state.sats[3].fuel_mps_left > 10.0  # fuel left, no thrust
     tiny = burn([0.01, 0, 0])
-    cert = certify(Plan((mover(3, tiny),), "x", state.t_s), state, sc, d_safe_m=1e-6, **FAST)
+    cert = certify(Plan((mover(3, tiny),), "x", state.t_s), state, sc, d_safe_m=60.0, **FAST)
     assert any("sat 3 cannot move" in r and "k = 0" in r for r in reasons_of(cert, "fuel"))
     assert not cert.passed and cert.worst_fuel_sat == 3 and cert.worst_fuel_margin_mps <= 0.0
 
@@ -169,7 +170,7 @@ def test_dead_or_silent_sat_cannot_be_a_mover(mode):
     sc = scn(2.0, failures=[{"t": 0.0, "sat_id": 4, "mode": mode}])
     state = swarm_state_from_engine(engine_at(sc, 1))
     cert = certify(Plan((mover(4, burn([0.01, 0, 0])),), "x", state.t_s), state, sc,
-                   d_safe_m=1e-6, **FAST)
+                   d_safe_m=60.0, **FAST)
     assert any("sat 4 cannot move" in r for r in reasons_of(cert, "fuel"))
     assert cert.landing_error_m == 0.0  # its burn is not flown: it cannot be commanded
 
@@ -181,7 +182,7 @@ def test_zero_fuel_start():
     hold_cert = certify(hold(state), state, sc, d_safe_m=500.0, **FAST)  # holds, never raises
     assert reasons_of(hold_cert, "fuel") == [] and hold_cert.worst_fuel_margin_mps == 0.0
     cert = certify(Plan((mover(0, burn([0.001, 0, 0])),), "x", state.t_s), state, sc,
-                   d_safe_m=1e-6, **FAST)
+                   d_safe_m=60.0, **FAST)
     assert any("empty tank" in r for r in cert.reasons) and not cert.passed
 
 
@@ -232,26 +233,31 @@ def test_a_role_on_an_incapable_sat_fails_even_when_a_capable_sat_also_holds_it(
 
 # ---- 4. coverage ---------------------------------------------------------------------------------
 def test_coverage_fails_when_plan_is_worse_than_hold():
-    sc = scn(2.0)
+    """Imager sat 4 is sent 600 m along track of imager sat 3: the footprints overlap. (Stacking
+    all imagers on one seat no longer works as a probe: they never settle there, and a sat that
+    does not reach its seat is removed from both sides of the coverage comparison.)"""
+    sc = scn(2.0, dt_s=10.0)
     state = swarm_state_from_engine(engine_at(sc, 0))
     seats = slots(2.0)
-    stacked = tuple(PlanItem(i, None, seats[1], ("imager",)) for i in (1, 2, 3, 4))
-    cert = certify(Plan(stacked, "stack", 0.0), state, sc, d_safe_m=1e-6, **FAST)
+    near = seats[3] + np.array([0.0, 600.0, 0.0, 0.0, 0.0, 0.0])
+    stacked = (PlanItem(4, None, near, ("imager",)),)
+    cert = certify(Plan(stacked, "stack", 0.0), state, sc, d_safe_m=60.0)
     assert cert.coverage < cert.hold_coverage - 1e-3
-    assert reasons_of(cert, "coverage") and not cert.passed
-    low = certify(Plan(stacked, "stack", 0.0), state, sc, d_safe_m=1e-6, coverage_floor=0.0, **FAST)
+    # the 2.8 km PD dash also spends more than 80 % of sat 4's tank (flown-fuel check)
+    assert [r.split(":")[0] for r in cert.reasons] == ["fuel", "coverage"] and not cert.passed
+    low = certify(Plan(stacked, "stack", 0.0), state, sc, d_safe_m=60.0, coverage_floor=0.0)
     assert reasons_of(low, "coverage") == []  # an explicit floor replaces the hold comparison
     assert low.coverage == cert.coverage and low.hold_coverage == cert.hold_coverage
-    high = certify(hold(state), state, sc, d_safe_m=1e-6, coverage_floor=0.99, **FAST)
+    high = certify(hold(state), state, sc, d_safe_m=60.0, coverage_floor=0.99, **FAST)
     assert reasons_of(high, "coverage") and high.coverage == high.hold_coverage
 
 
 def test_coverage_counts_only_capable_imagers_and_hold_uses_current_roles():
     sc = scn(2.0)
     state = swarm_state_from_engine(engine_at(sc, 0))
-    base = certify(hold(state), state, sc, d_safe_m=1e-6, **FAST)
+    base = certify(hold(state), state, sc, d_safe_m=60.0, **FAST)
     state.sats[1].payload_ok = False  # still labelled imager, but its payload is dead
-    cert = certify(hold(state), state, sc, d_safe_m=1e-6, **FAST)
+    cert = certify(hold(state), state, sc, d_safe_m=60.0, **FAST)
     assert cert.coverage < base.coverage - 1e-3 and cert.coverage == cert.hold_coverage
     assert not cert.roles_ok  # and the roles check flags the incapable imager
 
@@ -282,11 +288,11 @@ def test_landing_fails_for_cw_planned_transfers_but_1km_impulsive(amp, f_max, me
     1 km near-impulsive. The 50 m default tolerance therefore fails everything but the last, so
     even a 2 km plan must be MPC-corrected (kit 2.2 'smaller formation' = 1 km or less)."""
     sc, state, plan = _transfer_plan(amp, f_max)
-    cert = certify(plan, state, sc, d_safe_m=1e-6, horizon_orbits=1.0)
+    cert = certify(plan, state, sc, d_safe_m=60.0, horizon_orbits=1.0)
     print(f"\nlanding error, {amp:g} km formation, F_max {f_max:g} N: {cert.landing_error_m:.1f} m")
     assert cert.landing_error_m == pytest.approx(measured, rel=0.02)
     assert (reasons_of(cert, "landing") == []) == (measured <= 50.0)
-    lax = certify(plan, state, sc, d_safe_m=1e-6, horizon_orbits=1.0,
+    lax = certify(plan, state, sc, d_safe_m=cert.landing_error_m + 2.0, horizon_orbits=1.0,
                   landing_tol_m=cert.landing_error_m + 1.0)
     assert reasons_of(lax, "landing") == []  # the limit is the tolerance and nothing else
     assert lax.landing_error_m == cert.landing_error_m
@@ -296,7 +302,7 @@ def test_landing_error_grows_with_formation_size_fast():
     errs = []
     for amp in (1.0, 4.0):
         sc, state, plan = _transfer_plan(amp, 4.0)
-        errs.append(certify(plan, state, sc, d_safe_m=1e-6, horizon_orbits=1.0).landing_error_m)
+        errs.append(certify(plan, state, sc, d_safe_m=60.0, horizon_orbits=1.0).landing_error_m)
     assert errs[1] > 3.0 * errs[0]
 
 
@@ -331,7 +337,8 @@ def test_all_checks_evaluated_after_first_failure():
     items.append(PlanItem(0, None, seats[0], ()))  # leader dropped
     cert = certify(Plan(tuple(items), "all", 0.0), state, sc, d_safe_m=1e5)
     kinds = {r.split(":")[0] for r in cert.reasons}
-    assert {"separation", "fuel", "roles", "coverage", "landing"} <= kinds
+    print("\nall-checks reasons:", cert.reasons)
+    assert kinds == {"separation", "fuel", "roles", "coverage", "landing", "settled"}
     assert not cert.passed and not cert.roles_ok
 
 
@@ -394,7 +401,7 @@ def test_dropping_an_imager_role_is_worse_than_holding_the_current_roles():
     sc = scn(2.0)
     state = swarm_state_from_engine(engine_at(sc, 0))
     items = (PlanItem(4, None, slots(2.0)[4], ("spare",)),)  # same seat, imager role dropped
-    cert = certify(Plan(items, "drop", 0.0), state, sc, d_safe_m=1e-6, **FAST)
+    cert = certify(Plan(items, "drop", 0.0), state, sc, d_safe_m=60.0, **FAST)
     assert cert.coverage < cert.hold_coverage - 1e-3 and reasons_of(cert, "coverage")
 
 
@@ -403,6 +410,6 @@ def test_a_silent_sat_keeps_its_old_seat_whatever_the_plan_says():
     state = swarm_state_from_engine(engine_at(sc, 20))
     items = (PlanItem(5, None, slots(2.0)[0], tuple(state.roles[5])),)  # "go to sat 0's slot"
     plan = Plan(items, "x", state.t_s)
-    cert = certify(plan, state, sc, d_safe_m=1e-6, horizon_orbits=0.5)
-    base = certify(hold(state), state, sc, d_safe_m=1e-6, horizon_orbits=0.5)
+    cert = certify(plan, state, sc, d_safe_m=60.0, horizon_orbits=0.5)
+    base = certify(hold(state), state, sc, d_safe_m=60.0, horizon_orbits=0.5)
     assert cert.min_sep_m == pytest.approx(base.min_sep_m, abs=1e-3)

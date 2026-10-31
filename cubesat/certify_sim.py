@@ -143,7 +143,10 @@ def burn_span(tr: Transfer, sat: SatState, dt: float):
     cap_dv = sat.k * sat.f_max_n / sat.m_kg * dt  # delta-v one step can deliver
     starts = np.floor(ts / dt + _EPS).astype(np.int64)
     mag = np.linalg.norm(dv, axis=1)
-    counts = np.ceil(mag / cap_dv - _EPS).astype(np.int64) if cap_dv > 0.0 else 0 * starts
+    if cap_dv > 0.0:  # clamp before the int cast (k = 1e-300 would overflow int64)
+        counts = np.ceil(np.minimum(mag / cap_dv - _EPS, MAX_STEPS + 1.0)).astype(np.int64)
+    else:
+        counts = 0 * starts
     return starts, counts, int(max(starts.max(), (starts + counts).max()))
 
 
@@ -169,6 +172,8 @@ class SimResult:
     min_sep_t_s: float
     landing_m: dict[int, float]  # mover id -> truth position error vs seat at its plan end
     final_err_m: np.ndarray  # (N,) truth position error vs seat at the last step, every sat
+    max_err_m: np.ndarray  # (N,) maximum of that error over the whole horizon
+    tail_err_m: np.ndarray  # (N,) maximum over the final orbit of the horizon
     n_steps: int  # steps simulated (>= the requested horizon)
     final_eci: np.ndarray  # (N + 1, 6), row 0 chief
     final_sats: list[SatState]
@@ -203,6 +208,8 @@ def simulate(
         raise ValueError(f"the horizon needs {n_steps} steps (cap {MAX_STEPS})")
     hold = np.array(state.hold, dtype=float)
     best, pair, t_best, landing = math.inf, (0, 0), 0.0, {}
+    max_err, tail_err = np.zeros(count), np.zeros(count)
+    tail_from = n_steps - round(2.0 * math.pi / n / dt)  # steps of the final orbit
     for j in range(n_steps + 1):
         if cancel_event is not None and cancel_event.is_set():
             raise CertificateCancelled(f"certificate cancelled before step {j}")
@@ -223,6 +230,10 @@ def simulate(
         if flat[m] < best**2:
             best, t_best = float(math.sqrt(flat[m])), j * dt
             pair = (keep[iu[0][m]], keep[iu[1][m]])
+        err = np.linalg.norm(lvlh[:, :3] - refs[:, :3], axis=1)
+        max_err = np.maximum(max_err, err)
+        if j >= tail_from:
+            tail_err = np.maximum(tail_err, err)
         for i, (_, last) in sched.items():
             if j == last:
                 landing[i] = float(np.linalg.norm(lvlh[i, :3] - refs[i, :3]))
@@ -253,5 +264,6 @@ def simulate(
         frozen = np.array([False] + [s == STATUS_REENTERED for s in status])
         X = np.where(frozen[:, None], X, new)
         refs = refs @ phi.T
-    err = np.linalg.norm(lvlh[:, :3] - refs[:, :3], axis=1)
-    return SimResult(best, pair, t_best, landing, err, n_steps, X, sats, status)
+    return SimResult(
+        best, pair, t_best, landing, err, max_err, tail_err, n_steps, X, sats, status
+    )

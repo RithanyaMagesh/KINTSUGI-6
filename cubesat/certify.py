@@ -174,6 +174,8 @@ def certify(
         raise ValueError(f"fuel_reserve must be in [0, 1), got {fuel_reserve!r}")
     if _finite(landing_tol_m, "landing_tol_m") < 0.0:
         raise ValueError(f"landing_tol_m must be >= 0, got {landing_tol_m!r}")
+    if landing_tol_m >= d_safe_m:  # a sat "on its seat" must not count as a collision risk
+        raise ValueError(f"landing_tol_m={landing_tol_m} must be < d_safe_m={d_safe_m}")
     if coverage_floor is not None:
         _finite(coverage_floor, "coverage_floor")
     n = mean_motion(scenario.chief.altitude_km * 1000.0)
@@ -181,17 +183,29 @@ def certify(
     _check_inputs(plan, state, scenario, period)
     items = {int(it.sat_id): it for it in plan.items}
     cmd_ok = [capability(s, True, True, "leader") for s in state.status]  # a reporting sat
+    live = [i for i in range(len(state.sats)) if state.status[i] not in DEAD]  # a re-entry counts
+    passive = {  # cannot thrust at the start: coasts, not judged by settled, keeps its seat
+        i for i in live
+        if (state.sats[i].k <= 0.0 or state.sats[i].depleted) and state.sats[i].stuck_vec is None
+    }
     seats_now = np.array(state.refs, dtype=float)
-    notes = []
+    notes, reasons = [], []
     for i, it in items.items():
-        if cmd_ok[i]:  # a sat that cannot be commanded keeps flying its old seat
-            seats_now[i] = propagate(it.seat, plan.t_start_s, n)
+        seat = propagate(it.seat, plan.t_start_s, n)
+        if i in passive:
+            moved = float(np.linalg.norm(seat[:3] - state.refs[i, :3]))
+            if moved > 1e-3 or float(np.linalg.norm(seat[3:] - state.refs[i, 3:])) > 1e-6:
+                reasons.append(
+                    f"seat: sat {i} cannot thrust (k = 0 or empty tank); the plan moves its "
+                    f"seat by {moved:.1f} m"
+                )
+        elif cmd_ok[i]:  # a sat that cannot be commanded keeps flying its old seat
+            seats_now[i] = seat
         elif it.transfer is None:
             notes.append(f"sat {i} ({state.status[i]}): plan item ignored, it cannot be commanded")
-    reasons: list[str] = []
     movers = {i: it.transfer for i, it in items.items() if it.transfer is not None}
     plan_margin, plan_sat, flyable = check_fuel_planned(
-        movers, state, cmd_ok, fuel_reserve, dt, reasons
+        movers, state, cmd_ok, fuel_reserve, dt, round(PLAN_TAIL_ORBITS * period / dt), reasons
     )
     tail = round(PLAN_TAIL_ORBITS * period / dt)
     ends = [burn_span(tr, state.sats[i], dt)[2] + tail for i, tr in flyable.items()]
@@ -212,8 +226,8 @@ def certify(
         list(items[i].roles) if i in items else list(r) for i, r in enumerate(state.roles)
     ]
     vacant, roles_ok = check_roles(final_roles, state, scenario, reasons)
-    live = [i for i in range(len(state.sats)) if state.status[i] not in DEAD]  # a re-entry counts
-    far = {i for i in live if res.final_err_m[i] > landing_tol_m}
+    active = [i for i in live if i not in passive]
+    far = {i for i in active if res.tail_err_m[i] > landing_tol_m}
     dry = {i for i in live if state.sats[i].m_prop_kg > 0.0 >= res.final_sats[i].m_prop_kg}
     coverage, hold_cov = check_coverage(
         seats_now, final_roles, state, scenario, coverage_floor, far | dry, reasons
@@ -225,12 +239,16 @@ def certify(
                 f"landing: sat {i} ends {err:.1f} m from its seat in the truth model "
                 f"(limit {landing_tol_m:.1f} m)"
             )
-    settled = max((float(res.final_err_m[i]) for i in live), default=0.0)
+    settled = max((float(res.tail_err_m[i]) for i in active), default=0.0)
     for i in sorted(far):
         reasons.append(
-            f"settled: sat {i} is {res.final_err_m[i]:.1f} m from its seat at the horizon end "
-            f"(limit {landing_tol_m:.1f} m)"
+            f"settled: sat {i} is up to {res.tail_err_m[i]:.1f} m from its seat over the final "
+            f"orbit (limit {landing_tol_m:.1f} m)"
         )
+    notes += [
+        f"sat {i} is passive (cannot thrust): drifts up to {res.max_err_m[i]:.1f} m from its seat"
+        for i in sorted(passive)
+    ]
     if horizon_orbits < MIN_HORIZON_ORBITS:
         reasons.append(
             f"horizon: {horizon_orbits:g} orbits requested, at least {MIN_HORIZON_ORBITS:g} "

@@ -18,7 +18,7 @@ from cubesat.hcw import propagate, stm
 from cubesat.spacecraft import G0, SatState
 from cubesat.transfer import Transfer, lp_transfer, propagate_plan
 
-TINY = 1e-6  # d_safe_m must be > 0
+TINY = 60.0  # a small d_safe_m: it must be > 0 and > landing_tol_m (50 m by default)
 FAST = {"horizon_orbits": 0.1}
 
 
@@ -52,19 +52,21 @@ def test_hold_item_with_a_far_seat_fails_settled(y):
 
 
 def test_thruster_out_sat_with_a_far_hold_seat_fails_and_earns_no_coverage():
+    """Fix round 2: a sat that cannot thrust is passive; a plan that moves its seat fails ('seat')
+    and the far seat earns nothing: coverage counts it on the seat it actually keeps."""
     sc = scn(2.0, dt_s=10.0, failures=[{"t": 0.0, "sat_id": 1, "mode": "THRUSTER_OUT"}])
     st = swarm_state_from_engine(engine_at(sc, 2))
     item = PlanItem(1, None, np.array([0, 14000.0, 0, 0, 0, 0.0]), tuple(st.roles[1]))
     c = certify(Plan((item,), "far", st.t_s), st, sc, d_safe_m=TINY)
-    assert not c.passed and {"settled", "coverage"} <= set(kinds(c))
-    assert c.coverage < c.hold_coverage - 1e-3  # an unreachable seat is not credited
+    assert not c.passed and kinds(c) == ["seat"]
+    assert c.coverage == c.hold_coverage  # not the 0.5075 the far seat would have earned
 
 
 def test_stuck_open_sat_fails_as_a_hold_and_with_a_tiny_mover_plan():
     sc = scn(2.0, dt_s=10.0, failures=[{"t": 0.0, "sat_id": 2, "mode": "THRUSTER_STUCK_OPEN"}])
     st = swarm_state_from_engine(engine_at(sc, 3))
     hold = certify(Plan((), "hold", st.t_s), st, sc, d_safe_m=TINY)
-    assert not hold.passed and {"settled", "fuel"} <= set(kinds(hold))
+    assert not hold.passed and kinds(hold) == ["fuel", "settled"]
     assert any("runs out" in r for r in hold.reasons)
     mover = PlanItem(2, burn([1e-6, 0, 0], times=[0.0]), seat_t0(st, 2), ("imager",))
     c = certify(Plan((mover,), "tiny", st.t_s), st, sc, d_safe_m=TINY)
@@ -78,7 +80,7 @@ def test_flown_tank_below_the_reserve_fails_even_when_the_planned_sum_fits():
     s = slots(8.0)
     tr = lp_transfer(s[0], propagate(s[1], PERIOD, N_MM), PERIOD, N_MM, 0.01, 1.0, 48)
     plan = Plan((PlanItem(0, tr, s[1], ("leader",)),), "x", 0.0)
-    c = certify(plan, st, sc, d_safe_m=TINY, landing_tol_m=1e6, coverage_floor=0.0)
+    c = certify(plan, st, sc, d_safe_m=2e6, landing_tol_m=1e6, coverage_floor=0.0)
     assert c.planned_fuel_margin_mps == pytest.approx(0.8 * tank() - tr.l2_dv_mps)
     assert c.planned_fuel_margin_mps > 1.0  # the old check said "+2 m/s" and passed
     assert c.worst_fuel_margin_mps < -2.0 and c.worst_fuel_sat == 0
@@ -89,7 +91,7 @@ def test_worst_fuel_margin_is_the_smaller_of_planned_and_flown():
     sc = scn(2.0, dt_s=10.0)
     st = swarm_state_from_engine(engine_at(sc, 0))
     plan = Plan((PlanItem(0, burn([0.3, 0, 0]), slots(2.0)[0], ("leader",)),), "x", 0.0)
-    c = certify(plan, st, sc, d_safe_m=TINY, landing_tol_m=1e6, coverage_floor=0.0)
+    c = certify(plan, st, sc, d_safe_m=2e6, landing_tol_m=1e6, coverage_floor=0.0)
     res = simulate(sc, st, np.array(st.refs), {0: plan.items[0].transfer}, round(2 * PERIOD / 10.0))
     flown = [
         f.fuel_mps_left - 0.2 * i.fuel_mps_left
@@ -104,9 +106,9 @@ def test_a_sat_that_runs_dry_fails_even_with_no_reserve():
     sc = scn(2.0, dt_s=10.0, spacecraft={"m_prop_kg": 0.01})  # 0.98 m/s tank
     st = swarm_state_from_engine(engine_at(sc, 0))
     plan = Plan((PlanItem(0, burn([0.5, 0, 0]), slots(2.0)[0], ("leader",)),), "x", 0.0)
-    c = certify(plan, st, sc, d_safe_m=TINY, fuel_reserve=0.0, landing_tol_m=1e6)
-    assert not [r for r in c.reasons if "needs" in r]  # 0.5 of 0.98 m/s fits statically
-    assert any("runs out" in r for r in c.reasons) and not c.passed
+    c = certify(plan, st, sc, d_safe_m=2e6, fuel_reserve=0.0, landing_tol_m=1e6)
+    fuel = [r for r in c.reasons if r.startswith("fuel")]  # 0.5 of 0.98 m/s fits statically
+    assert fuel == ["fuel: sat 0 runs out of propellant during the horizon"] and not c.passed
 
 
 # ---- P0-4: the horizon is never shorter than two orbits (and covers the plan) -------------
@@ -213,10 +215,11 @@ def test_two_holders_of_a_single_seat_role_fail():
 
 def test_stacking_non_stackable_roles_fails_while_a_free_capable_sat_exists():
     c = _roles_cert({0: ["leader", "downlink", "imager"], 5: []})
-    assert not c.roles_ok and any("stack" in r for r in c.reasons)
+    assert not c.roles_ok and any("engine's role rule gives sat 0" in r for r in c.reasons)
     ok = _roles_cert({0: ["leader"], 5: ["downlink"], 1: ["imager"], 2: ["imager"]})
     assert ok.roles_ok  # a stackable leader on an imager sat is fine
-    assert _roles_cert({0: ["leader", "imager"], 5: ["downlink"]}).roles_ok
+    assert _roles_cert({0: ["leader", "imager"], 5: ["downlink"], 4: ["spare"]}).roles_ok
+    assert not _roles_cert({0: ["leader", "imager"], 5: ["downlink"]}).roles_ok  # 5 > 4 seats
 
 
 def test_plan_item_for_a_dead_sat_is_reported_as_a_note_not_a_failure():
@@ -275,14 +278,15 @@ def _impulsive_plan(dt=10.0, f_max=4.0):
 
 def test_a_landing_only_failure_makes_passed_false():
     sc, st, plan = _impulsive_plan()
-    c = certify(plan, st, sc, d_safe_m=TINY, landing_tol_m=1.0)
+    # 3 orbits: the final orbit starts after the PD capture, so only the landing check fails
+    c = certify(plan, st, sc, d_safe_m=TINY, landing_tol_m=1.0, horizon_orbits=3.0)
     assert kinds(c) == ["landing"] and not c.passed and c.landing_error_m > 1.0
 
 
 def test_boundaries_are_inclusive():
     sc, st, plan = _impulsive_plan()
     c = certify(plan, st, sc, d_safe_m=TINY)
-    at = certify(plan, st, sc, d_safe_m=TINY, landing_tol_m=c.landing_error_m)
+    at = certify(plan, st, sc, d_safe_m=c.landing_error_m + 1.0, landing_tol_m=c.landing_error_m)
     assert not [r for r in at.reasons if r.startswith("landing")]
     h = certify(Plan((), "h", 0.0), st, sc, d_safe_m=TINY)
     at = certify(Plan((), "h", 0.0), st, sc, d_safe_m=h.min_sep_m)
@@ -342,7 +346,7 @@ def test_landing_error_is_the_worst_mover_not_the_best():
     for i, j in ((0, 1), (3, 4)):
         tr = lp_transfer(s[i], propagate(s[j], PERIOD, N_MM), PERIOD, N_MM, 1.0, 1.0, 48)
         items.append(PlanItem(i, tr, s[j], tuple(st.roles[i])))
-    c = certify(Plan(tuple(items), "x", 0.0), st, sc, d_safe_m=TINY, landing_tol_m=1e6)
+    c = certify(Plan(tuple(items), "x", 0.0), st, sc, d_safe_m=2e6, landing_tol_m=1e6)
     seats = np.array(st.refs)
     for it in items:
         seats[it.sat_id] = propagate(it.seat, 0.0, N_MM)
@@ -364,7 +368,7 @@ def test_collision_in_the_middle_of_a_transfer_is_found():
     r, v = truth.lvlh_to_eci(x3, st.chief[:3], st.chief[3:])
     st.sat_eci[3], st.refs[3] = np.concatenate([r, v]), x3
     plan = Plan((PlanItem(0, tr, seat, ("leader",)),), "x", 0.0)
-    c = certify(plan, st, sc, d_safe_m=1000.0, landing_tol_m=1e6, coverage_floor=0.0)
+    c = certify(plan, st, sc, d_safe_m=1000.0, landing_tol_m=900.0, coverage_floor=0.0)
     assert set(c.min_sep_pair) == {0, 3} and c.min_sep_m < 600.0
     assert abs(c.min_sep_t_s - T / 2.0) < 600.0  # mid-transfer, long before the plan end
     assert any(r.startswith("separation") for r in c.reasons)
@@ -417,17 +421,19 @@ def test_a_coverage_only_failure_makes_passed_false():
     sc = scn(2.0, dt_s=10.0)
     st = swarm_state_from_engine(engine_at(sc, 0))
     s = slots(2.0)
-    items = (PlanItem(4, None, s[4], ("spare",)),)  # same seat, imager role dropped
-    c = certify(Plan(items, "drop", 0.0), st, sc, d_safe_m=TINY)
-    assert kinds(c) == ["coverage"] and not c.passed
+    c = certify(Plan((), "hold", 0.0), st, sc, d_safe_m=TINY, coverage_floor=0.99)
+    assert kinds(c) == ["coverage"] and not c.passed and len(s) == 6
 
 
-def test_settled_error_between_the_tolerance_and_kilometres_fails():
-    """A THRUSTER_OUT sat asked to hold a seat 300 m off its own coasts on its own orbit: it ends
-    hundreds of metres from the seat, far below the 5 km a loose tolerance would accept."""
+def test_a_passive_sat_asked_to_hold_a_seat_300_m_off_fails_seat():
+    """A THRUSTER_OUT sat asked to hold a seat 300 m off its own: since fix round 2 it is passive,
+    so the plan fails on 'seat' (300.0 m); settled for active sats is pinned in
+    test_certify_degraded.py::test_active_settled_is_the_max_over_the_final_orbit_not_one_instant
+    (68 m, between the 50 m tolerance and 100 m)."""
     sc = scn(2.0, dt_s=10.0, failures=[{"t": 0.0, "sat_id": 1, "mode": "THRUSTER_OUT"}])
     st = swarm_state_from_engine(engine_at(sc, 2))
     seat = seat_t0(st, 1) + np.array([0.0, 300.0, 0.0, 0.0, 0.0, 0.0])
     plan = Plan((PlanItem(1, None, seat, tuple(st.roles[1])),), "x", st.t_s)
     c = certify(plan, st, sc, d_safe_m=TINY, coverage_floor=0.0)
-    assert 100.0 < c.settled_error_m < 5000.0 and "settled" in kinds(c) and not c.passed
+    assert kinds(c) == ["seat"] and not c.passed
+    assert any("moves its seat by 300.0 m" in r for r in c.reasons)

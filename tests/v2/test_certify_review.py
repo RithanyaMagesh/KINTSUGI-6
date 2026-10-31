@@ -105,14 +105,14 @@ def test_unknown_sat_id_raises(sat_id):
     sc, state = _base()
     plan = Plan((PlanItem(sat_id, None, slots(2.0)[0], ()),), "x", 0.0)
     with pytest.raises(ValueError, match="unknown sat id"):
-        certify(plan, state, sc, d_safe_m=1e-6, **FAST)
+        certify(plan, state, sc, d_safe_m=60.0, **FAST)
 
 
 def test_duplicate_item_raises():
     sc, state = _base()
     it = PlanItem(1, None, slots(2.0)[1], ())
     with pytest.raises(ValueError, match="two items"):
-        certify(Plan((it, it), "x", 0.0), state, sc, d_safe_m=1e-6, **FAST)
+        certify(Plan((it, it), "x", 0.0), state, sc, d_safe_m=60.0, **FAST)
 
 
 @pytest.mark.parametrize(
@@ -131,7 +131,7 @@ def test_malformed_transfer_raises(tr):
     sc, state = _base()
     plan = Plan((PlanItem(0, tr, slots(2.0)[0], ()),), "x", 0.0)
     with pytest.raises(ValueError, match="transfer"):
-        certify(plan, state, sc, d_safe_m=1e-6, **FAST)
+        certify(plan, state, sc, d_safe_m=60.0, **FAST)
 
 
 def test_malformed_seat_role_and_time_raise():
@@ -143,26 +143,26 @@ def test_malformed_seat_role_and_time_raise():
         (PlanItem(0, None, good, ("captain",)), "unknown role"),
     ]:
         with pytest.raises(ValueError, match=match):
-            certify(Plan((item,), "x", 0.0), state, sc, d_safe_m=1e-6, **FAST)
+            certify(Plan((item,), "x", 0.0), state, sc, d_safe_m=60.0, **FAST)
     with pytest.raises(ValueError, match="t_start_s"):
-        certify(Plan((), "x", 50.0), state, sc, d_safe_m=1e-6, **FAST)
+        certify(Plan((), "x", 50.0), state, sc, d_safe_m=60.0, **FAST)
     with pytest.raises(ValueError, match="t_start_s"):
-        certify(Plan((), "x", float("nan")), state, sc, d_safe_m=1e-6, **FAST)
+        certify(Plan((), "x", float("nan")), state, sc, d_safe_m=60.0, **FAST)
 
 
 def test_malformed_state_raises():
     sc, state = _base()
     state.sat_eci[2, 0] = np.nan
     with pytest.raises(ValueError, match="sat_eci"):
-        certify(hold(state), state, sc, d_safe_m=1e-6, **FAST)
+        certify(hold(state), state, sc, d_safe_m=60.0, **FAST)
     _, state = _base()
     state.status.pop()
     with pytest.raises(ValueError, match="6 entries"):
-        certify(hold(state), state, sc, d_safe_m=1e-6, **FAST)
+        certify(hold(state), state, sc, d_safe_m=60.0, **FAST)
     _, state = _base()
     state.sats[0].m_prop_kg = float("nan")
     with pytest.raises(ValueError, match="SatState"):
-        certify(hold(state), state, sc, d_safe_m=1e-6, **FAST)
+        certify(hold(state), state, sc, d_safe_m=60.0, **FAST)
 
 
 def test_swarm_state_is_a_copy_of_the_engine():
