@@ -133,6 +133,6 @@ Roadmap (HANDOFF §10): CBBA decentralized control · more realistic failures (b
 | Measurement plan, claims policy | `docs/ENDGAME_PLAN.md`, `docs/AI_LAYER_PLAN.md` |
 | Live import design/threat model | `docs/LIVE_IMPORT_DESIGN.md` |
 | Predictor provenance + kill switch | `files/INTEGRATION_PROMPT.md`, `files/ORACLE_SWEEP.md`, `models/predictor_manifest.json` |
-| Code graph (stale, 2026-09-29) | `graphify-out/GRAPH_REPORT.md`, `graph.json` |
+| Code graph (archived, stale 2026-09-29, do not rely) | `docs/archive/graphify-out/` |
 
 *Maintenance rule: when a gate lands, a decision changes, or a number is re-measured, update §4, §6 and the date at the top of this file in the same change.*
