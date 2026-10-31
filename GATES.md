@@ -267,3 +267,27 @@ Every number below is the printed output of the command beside it (macOS arm64, 
 | v2 vs CW, G1 state, J2/drag off, 3 orbits | 3.1026 m (recorded 3.101 m) | 3.411 m | `uv run python -m pytest tests/v2/test_sim_v2_truth.py -m slow -s -k "3p1_m and not 1orbit"` |
 | v2 vs CW, G1 state, J2 on, 1 orbit | 44.8058 m | finite | `uv run python -m pytest tests/v2/test_sim_v2_truth.py -s -k j2_on` |
 | Review fixes: inject/replay, draw order, schema bounds, re-entry, snapshot | 17 of 17 mutants killed | all killed | mutation method and table in `docs/PHYSICS_V2.md` "Mutation check" |
+
+## 2026-10-31 — v2 Physics Phase 5b: cross-track phase psi (branch `backend-psi`; not wired into the engine, v1 untouched)
+
+Definitions, defaults and the disagreements with the brief: `docs/PHYSICS_V2.md` "Cross-track phase psi". Pytest commands add `-p no:cacheprovider`.
+
+| Gate | Result | Command |
+|---|---|---|
+| lint | All checks passed | `uv run ruff check .` |
+| fast tests | 465 passed, 2 skipped, 5 deselected | `uv run python -m pytest -m "not slow"` |
+| slow tests | 5 passed | `uv run python -m pytest -m slow` |
+| v1 pins unchanged | no test outside `tests/v2` edited; grep for sha/hash empty | `git diff $(git merge-base backend HEAD)..HEAD -- tests/ ':!tests/v2' \| grep -E 'sha\|hash'` |
+| mutation check (copy in /tmp) | 6 of 6 killed | method in `docs/PHYSICS_V2.md` |
+
+Measured, A = B = 8 km, 6 slots, 4 imagers, fov_half 1.5 deg (command `uv run python -m cubesat.psi_table --report data/eval/psi_trade_table.json`):
+
+| psi | coverage, even seats / scenario order | worst sep under any along-track drift (m) | brief |
+|---|---|---|---|
+| 0 | 0.4003 / 0.3710 | 0.0 | 0.371 / 11.8 m |
+| 30 | 0.3890 / 0.3637 | 2928.2 | 0.364 / 2929 m |
+| 45 | 0.3772 / 0.3554 | 4329.6 | 0.355 / 4330 m |
+| 60 | 0.3625 / 0.3446 | 5656.9 | 0.345 / 5657 m |
+| 90 | 0.3390 / 0.3259 | 8000.0 | 0.326 / 8000 m |
+
+Brief reproduced for psi >= 30 (separation within 0.03 percent, coverage with imagers on seats 0-3). Not reproduced: psi = 0 separation (0.0 m exact, the brief's 11.8 m looks like a discrete s grid) and the even-seat coverage column (0.013 to 0.029 higher). Same table at 2 km / 0.375 deg (illustrative): psi = 30 gives 732.05 m, psi = 90 gives 2000.0 m. Not claimed: nothing here changes the engine; psi 30 as a v2 default is not yet exercised by any sim run.

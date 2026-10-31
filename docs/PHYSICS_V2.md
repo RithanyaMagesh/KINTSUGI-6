@@ -185,3 +185,27 @@ Measured (command: `uv run python -m cubesat.geo_v2`, scenario `two_failure.json
 Tests: GMST 2000-01-01T12:00Z = 280.46061837 deg and Meeus ex. 12.b; sun within 0.5 deg of +x at the 2000 equinox and declination 23.44 +- 0.1 deg at the June solstice (`uv run python -m pytest tests/v2/test_geo_v2.py`).
 
 Honest limits: spherical Earth (latitude up to 0.2 deg off a real ellipsoid), UT1 = UTC, no precession/nutation/polar motion, constant rotation rate, sun fixed per run on the wire, the ring is one period of the J2-perturbed orbit and is open by 32 km, the ground track inherits the same J2 drift, one ground station, drag is not in the ring (the chief has none in the engine either).
+
+## Cross-track phase psi (2026-10-31, Phase 5b; `cubesat/allocate_v2.py`, `cubesat/psi_table.py`)
+
+**Definition.** Slots on the passive 2:1 relative orbit, `x = A cos(th)`, `y = -2A sin(th)`, `z = B cos(th + psi)`, `B = A`, `th = phase0 + 2 pi j/k`. `allocate_v2.candidate_slots(amp_m, phase0_rad, psi_deg, n_slots, n)` takes `(x, y, vx, vy)` from `hcw.slot_initial_state` at `th` and `(z, vz)` from the same function at `th + psi`, so `z = B cos(nt + th + psi)`, `vz = -B n sin(nt + th + psi)`: still passive (closes each period, zero fuel to hold). psi = 0 returns `hcw.slot_initial_state(A, A, th, n)` bit for bit, which is `sim.build_slots` (tested with `np.array_equal`). Scenario field `formation.cross_track_phase_deg`, default 0.0 (v1), finite, within +-360 deg, "v2 only; 0 reproduces v1 slots". The engine does not read it yet (not wired); the v2 packs are to set 30 (kit 2.2).
+
+**Metric: worst separation under ANY along-track drift.** For slot pair (i, j): `min over t in [0, 2 orbits] and s in [-S, S] of |p_i(t) - (p_j(t) + s y_hat)|`, i.e. slot j (the dead one) is displaced by `s` along track. A y shift of the initial state shifts `y(t)` by exactly `s` at every `t` (CW y row has coefficient 1 on `y0` and nothing else depends on `y`), so the minimum over `s` is closed form, `s* = clip(dy, -S, S)`: no s grid and no s discretisation error; `S = 2 max|y|` sweeps the whole ring. Any drift `s(t)` can do no better than this min over (t, s), so it is a lower bound on the drift hazard. The result is the minimum over all pairs. Time grid: 2881 samples per orbit (about 2 s), halved to 1441 for the convergence delta (odd counts so no grid contains the symmetric minimiser time by luck).
+
+**Coverage.** `allocate._coverage_estimate` unchanged (72 samples per orbit, union of footprints `r_f = h tan(fov_half)`, `coverage.target_grid`), 6 slots, 4 imagers, phase0 = 0. Seat layout is `allocate.seat_roles_for`'s (imagers on even seats: 0, 2, 4, 5) as the primary column; the column `coverage_scenario_order` uses the scenario role order (imagers on seats 0-3, `sim.py`'s initial formation).
+
+**Measured (A = B = 8 km, h = 500 km, fov_half 1.5 deg, r_f = 13093 m, grid 30 km / 2 km).** Command: `uv run python -m cubesat.psi_table --report data/eval/psi_trade_table.json` (about 18 s), artifact `data/eval/psi_trade_table.json`.
+
+| psi | coverage (even seats) | coverage (scenario order) | worst sep (m) | halved-grid delta (m) | brief coverage / sep |
+|---|---|---|---|---|---|
+| 0 | 0.4003 | 0.3710 | 0.0 | 0.0 | 0.371 / 11.8 |
+| 15 | 0.3981 | 0.3697 | 1476.74 | 0.002 | - |
+| 30 | 0.3890 | 0.3637 | 2928.20 | 0.000 | 0.364 / 2929 |
+| 45 | 0.3772 | 0.3554 | 4329.57 | 0.000 | 0.355 / 4330 |
+| 60 | 0.3625 | 0.3446 | 5656.85 | 0.000 | 0.345 / 5657 |
+| 75 | 0.3482 | 0.3334 | 6887.35 | 0.000 | - |
+| 90 | 0.3390 | 0.3259 | 8000.00 | 0.000 | 0.326 / 8000 |
+
+**Disagreements with the brief (not tuned away).** (1) Separation reproduces within 0.03 percent for psi >= 30 (2928.2 vs 2929, 4329.6 vs 4330, 5656.9 vs 5657, 8000.0 vs 8000). (2) psi = 0: this metric gives 0.0 m, not 11.8 m. Slots j and k-j have equal `x` and `z` at t = 0 and differ only along track, so a dead satellite displaced by `dy` sits on top of its mirror neighbour; the unrestricted minimum is exactly 0, and the brief's 11.8 m is consistent with a discrete along-track offset grid (an s grid of step 24 m leaves up to 12 m; `s_step` in `pair_min_distance` reproduces this effect, tested). With `s = 0` only (no drift) the same formation is 11313.7 m apart at psi = 0, which is why the drift sweep matters. (3) Coverage: the brief's column is reproduced (max difference 0.0004, every row inside 0.003) only with imagers on seats 0-3; with `seat_roles_for`'s even layout coverage is 0.013 to 0.029 higher and all five rows are flagged (more than 0.003). Coverage is monotone non-increasing in psi in both layouts. The 2 km / fov_half 0.375 deg kit formation (illustrative, grid scaled by 1/4 so r_f/A is unchanged, r_f = 3272.5 m) gives the same coverage to the grid's resolution (psi = 30: 0.3890 / 0.3637) and the separation scales with A (psi = 30: 732.05 m, psi = 90: 2000.0 m).
+
+**Bound.** psi = 90: neighbours at `dphi = 60 deg` stay `2 sin(dphi/2) min(A, B)` apart in the (x, z) plane at all times (a rotating circle); measured 8000.0 m = bound at A = 8 km, 2000.0 m at 2 km (`tests/v2/test_psi_table.py::test_psi90_matches_analytic_bound`). Mutation check on a copy (`/tmp/mut`): sign of psi, psi on x instead of z, wrong z amplitude, separation restricted to s = 0, coverage with all seats imaging, separation taken at t = 0 only: 6 of 6 killed.

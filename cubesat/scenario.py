@@ -103,6 +103,14 @@ class Formation(BaseModel):
     phase_offset_deg: float = Field(
         default=0.0, description="Common phase offset of all slots, deg"
     )
+    cross_track_phase_deg: float = Field(
+        default=0.0,
+        ge=-360,
+        le=360,
+        allow_inf_nan=False,
+        description="Cross-track phase psi of the slots, deg: z = B cos(theta + psi). "
+        "v2 only; 0 reproduces v1 slots",
+    )
 
 
 class Gains(BaseModel):
