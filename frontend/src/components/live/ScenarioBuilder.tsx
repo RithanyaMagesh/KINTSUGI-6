@@ -169,6 +169,7 @@ export default function ScenarioBuilder() {
       useRecoveryStore.getState().resetForNewRun();
       useRoleHistoryStore.getState().resetForNewRun();
       const started = await startWithFallback(filename);
+      useUiStore.getState().setRunSpeed(started.speed ?? nums.speed);
       useSimStore.getState().setSessionMeta({
         scenario: started.scenario ?? filename,
         seed: started.seed ?? nums.seed,

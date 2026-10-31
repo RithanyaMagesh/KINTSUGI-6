@@ -61,6 +61,9 @@ interface UiStore {
   viewMode: ViewMode;
   orbitViewMode: OrbitViewMode;
   theme: ThemeMode;
+  /** Playback speed of the current run (x real time) as last set from this
+   * console; null = unknown (run started elsewhere). */
+  runSpeed: number | null;
 
   setShowLabels(v: boolean): void;
   setShowTrails(v: boolean): void;
@@ -76,6 +79,7 @@ interface UiStore {
   setOrbitViewMode(m: OrbitViewMode): void;
   setTheme(t: ThemeMode): void;
   toggleTheme(): void;
+  setRunSpeed(v: number | null): void;
 }
 
 export const useUiStore = create<UiStore>((set, get) => ({
@@ -92,6 +96,8 @@ export const useUiStore = create<UiStore>((set, get) => ({
   viewMode: "simplified",
   orbitViewMode: "global",
   theme: initialTheme(),
+  runSpeed: null,
+  setRunSpeed: (v) => set({ runSpeed: v }),
 
   setShowLabels: (v) => set({ showLabels: v }),
   setShowTrails: (v) => set({ showTrails: v }),
