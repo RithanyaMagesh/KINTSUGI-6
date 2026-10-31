@@ -1,0 +1,245 @@
+{
+  "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark_keepout --report data/eval/keepout_runs.json --manifest data/eval/keepout_runs_manifest.json --policies hungarian,hungarian_keepout",
+  "logs": {
+    "pair_0-1__hungarian.jsonl": {
+      "pair": [
+        0,
+        1
+      ],
+      "policy": "hungarian",
+      "sha256": "376745704646c6f29b90b7d0467bc7f1cbcadfe6f5bb1f4374db9bc9164ed460"
+    },
+    "pair_0-1__hungarian_keepout.jsonl": {
+      "pair": [
+        0,
+        1
+      ],
+      "policy": "hungarian_keepout",
+      "sha256": "2826f4d95d016137916edbde467cbbd9a93bacccf1339c89c6a02c4ac458a3e1"
+    },
+    "pair_0-2__hungarian.jsonl": {
+      "pair": [
+        0,
+        2
+      ],
+      "policy": "hungarian",
+      "sha256": "5cb4884095c17300908252872e25813f87e82739b7c4f657b41b5a265b53759c"
+    },
+    "pair_0-2__hungarian_keepout.jsonl": {
+      "pair": [
+        0,
+        2
+      ],
+      "policy": "hungarian_keepout",
+      "sha256": "fbc5b0be94e1a2312315d0e3cf3beb81528cf0f4a6691cdd3a095c29647edff7"
+    },
+    "pair_0-3__hungarian.jsonl": {
+      "pair": [
+        0,
+        3
+      ],
+      "policy": "hungarian",
+      "sha256": "c107cce566403278e55b64f588aa8cc4a2be7b65fb3edb446dd39ec2ea532430"
+    },
+    "pair_0-3__hungarian_keepout.jsonl": {
+      "pair": [
+        0,
+        3
+      ],
+      "policy": "hungarian_keepout",
+      "sha256": "6ece38cfa22b7be14fce2ff370ff2efc7049ad8073c34effe39ff40092a4015d"
+    },
+    "pair_0-4__hungarian.jsonl": {
+      "pair": [
+        0,
+        4
+      ],
+      "policy": "hungarian",
+      "sha256": "8bd568b5136b5f0bb0889b54c291433349d3e149cdcb6f2e486192ea07508c04"
+    },
+    "pair_0-4__hungarian_keepout.jsonl": {
+      "pair": [
+        0,
+        4
+      ],
+      "policy": "hungarian_keepout",
+      "sha256": "ead1f8e661887d94d92ebc4d844ad8da3bfc76bf2d64d2f196e58b444c385f2b"
+    },
+    "pair_0-5__hungarian.jsonl": {
+      "pair": [
+        0,
+        5
+      ],
+      "policy": "hungarian",
+      "sha256": "d419eab67c4a79b354eeca9750dfffb79bc145e7e037812beb4127973a1e95bb"
+    },
+    "pair_0-5__hungarian_keepout.jsonl": {
+      "pair": [
+        0,
+        5
+      ],
+      "policy": "hungarian_keepout",
+      "sha256": "027ce379aa9f2ca047099617bff2ff4ded69958d3d18957ac0166f00fcb5eb8c"
+    },
+    "pair_1-2__hungarian.jsonl": {
+      "pair": [
+        1,
+        2
+      ],
+      "policy": "hungarian",
+      "sha256": "86a9a3ab15f17327f56ac94dac173d3fcc9e4a25c052bc86d860d33e2dcc0244"
+    },
+    "pair_1-2__hungarian_keepout.jsonl": {
+      "pair": [
+        1,
+        2
+      ],
+      "policy": "hungarian_keepout",
+      "sha256": "31ea78fffff731cdc0263a43691c263497066f90e2f724c3beda0c153b6a4961"
+    },
+    "pair_1-3__hungarian.jsonl": {
+      "pair": [
+        1,
+        3
+      ],
+      "policy": "hungarian",
+      "sha256": "510784f5818cbab23ab8ad844af9d2133ac0182739df62ddca0b6b09675d131f"
+    },
+    "pair_1-3__hungarian_keepout.jsonl": {
+      "pair": [
+        1,
+        3
+      ],
+      "policy": "hungarian_keepout",
+      "sha256": "07ee26db3ed56403b7521bf603c1f462d8234e2f5b73dd0a96b9ce80ab186106"
+    },
+    "pair_1-4__hungarian.jsonl": {
+      "pair": [
+        1,
+        4
+      ],
+      "policy": "hungarian",
+      "sha256": "617ee7bad54d81de8a466109bdfaaf36fbd5cf60afefe3cff8f4584c4d26cbf9"
+    },
+    "pair_1-4__hungarian_keepout.jsonl": {
+      "pair": [
+        1,
+        4
+      ],
+      "policy": "hungarian_keepout",
+      "sha256": "a165d859304273abee30e1344a55a67d18d4544691f0dda309432ab82828db24"
+    },
+    "pair_1-5__hungarian.jsonl": {
+      "pair": [
+        1,
+        5
+      ],
+      "policy": "hungarian",
+      "sha256": "4db487ffa1b62256c5ab93fd458321ce985573466da967c6686f78ee820aeda5"
+    },
+    "pair_1-5__hungarian_keepout.jsonl": {
+      "pair": [
+        1,
+        5
+      ],
+      "policy": "hungarian_keepout",
+      "sha256": "b43215d227ff6704cbdb6e33fff72fa1153a5521a91a1d5ab9c37c41067856dd"
+    },
+    "pair_2-3__hungarian.jsonl": {
+      "pair": [
+        2,
+        3
+      ],
+      "policy": "hungarian",
+      "sha256": "8f72013db68948f23776465bfd663dc726d97e5e9f90a64f2b0cb0b96a019136"
+    },
+    "pair_2-3__hungarian_keepout.jsonl": {
+      "pair": [
+        2,
+        3
+      ],
+      "policy": "hungarian_keepout",
+      "sha256": "0c422fa1cd9fb3cf50d7f5c633e8d209c2b757e1c3978f2352a604fc6d876d39"
+    },
+    "pair_2-4__hungarian.jsonl": {
+      "pair": [
+        2,
+        4
+      ],
+      "policy": "hungarian",
+      "sha256": "889c08dfabc99b7544333f152e7ad3e268388f05d20350dea44b6d6b2c192216"
+    },
+    "pair_2-4__hungarian_keepout.jsonl": {
+      "pair": [
+        2,
+        4
+      ],
+      "policy": "hungarian_keepout",
+      "sha256": "5a8dba95d6288f8ef06d5bda9d5ffc0d1be1747cf1c0e1577629348247d9c0cb"
+    },
+    "pair_2-5__hungarian.jsonl": {
+      "pair": [
+        2,
+        5
+      ],
+      "policy": "hungarian",
+      "sha256": "558fe9ac4d8ef68ddf96d25eda663a9c3f50030d9e5d91b8143b747f582ede63"
+    },
+    "pair_2-5__hungarian_keepout.jsonl": {
+      "pair": [
+        2,
+        5
+      ],
+      "policy": "hungarian_keepout",
+      "sha256": "8f92eb3411b9e8e7c72744c3190891cef567c0172bfa91dffcf7db4e86bb9f03"
+    },
+    "pair_3-4__hungarian.jsonl": {
+      "pair": [
+        3,
+        4
+      ],
+      "policy": "hungarian",
+      "sha256": "151b6f175e9862817e49fd4c1c8d2098a8331035070475fdf3d453dbdce50ce3"
+    },
+    "pair_3-4__hungarian_keepout.jsonl": {
+      "pair": [
+        3,
+        4
+      ],
+      "policy": "hungarian_keepout",
+      "sha256": "d4cc875bdcdffd879c656a48b35e2ee6b382fcef133de9eb986748747da80a45"
+    },
+    "pair_3-5__hungarian.jsonl": {
+      "pair": [
+        3,
+        5
+      ],
+      "policy": "hungarian",
+      "sha256": "9c2512db252598f756bb9a176ff35bcd5f58e909e4cfe0aa0266d617bbf23b67"
+    },
+    "pair_3-5__hungarian_keepout.jsonl": {
+      "pair": [
+        3,
+        5
+      ],
+      "policy": "hungarian_keepout",
+      "sha256": "48dd061afa7c43133fa1acbeafeb69a804ca5362f6918b0a41c12c61cc18f0be"
+    },
+    "pair_4-5__hungarian.jsonl": {
+      "pair": [
+        4,
+        5
+      ],
+      "policy": "hungarian",
+      "sha256": "c983def02fae67b45e9e519ddf73d18e0042ed07f1a1075906056d7cb5b0f04b"
+    },
+    "pair_4-5__hungarian_keepout.jsonl": {
+      "pair": [
+        4,
+        5
+      ],
+      "policy": "hungarian_keepout",
+      "sha256": "fd13889113bd118f703399a1b7b29382592a5c8bedd3b5b41a71e2a629499933"
+    }
+  }
+}

@@ -1,0 +1,912 @@
+{
+  "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark_keepout --report data/eval/keepout_runs.json --manifest data/eval/keepout_runs_manifest.json --policies hungarian,hungarian_keepout",
+  "failure_times_s": [
+    1200.0,
+    1500.0
+  ],
+  "n_pairs": 15,
+  "policies": [
+    "hungarian",
+    "hungarian_keepout"
+  ],
+  "policies_summary": {
+    "hungarian": {
+      "mean_coverage_retained": 0.2697991664342247,
+      "mean_critical_seat_frac": 0.9996293956622447,
+      "mean_critical_vacancy_s": 5.866666666666666,
+      "mean_gain_vs_do_nothing_pts": null,
+      "mean_min_sep_survivor_dead_m": 4154.908391010354,
+      "mean_total_dv_mps": 444.29725554174547,
+      "pairs_critical_roles_held": 15,
+      "worst_coverage_retained": 0.26979718716450923,
+      "worst_critical_vacancy_s": 16.0,
+      "worst_min_sep_survivor_dead_m": 1852.5321340900618,
+      "worst_per_sat_dv_mps": 251.24099230983734
+    },
+    "hungarian_keepout": {
+      "mean_coverage_retained": 0.2697985066776528,
+      "mean_critical_seat_frac": 0.9996293956622447,
+      "mean_critical_vacancy_s": 5.866666666666666,
+      "mean_gain_vs_do_nothing_pts": null,
+      "mean_min_sep_survivor_dead_m": 3687.2438281364907,
+      "mean_total_dv_mps": 481.60608302493904,
+      "pairs_critical_roles_held": 15,
+      "worst_coverage_retained": 0.26979718716450923,
+      "worst_critical_vacancy_s": 16.0,
+      "worst_min_sep_survivor_dead_m": 1322.6031098669118,
+      "worst_per_sat_dv_mps": 251.24099230983734
+    }
+  },
+  "rows": [
+    {
+      "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark_keepout --report data/eval/keepout_runs.json --manifest data/eval/keepout_runs_manifest.json --policies hungarian,hungarian_keepout",
+      "coverage_mean_last_orbit": 0.26979718716450923,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 0.9994946304485155,
+      "critical_vacancy_s": 8.0,
+      "duration_s": 17028.0,
+      "gain_vs_do_nothing_pts": null,
+      "imagers_end": 2,
+      "log": "pair_0-1__hungarian.jsonl",
+      "log_sha256": "376745704646c6f29b90b7d0467bc7f1cbcadfe6f5bb1f4374db9bc9164ed460",
+      "min_sep_survivor_dead_m": 4913.311100820126,
+      "n_ticks": 8515,
+      "pair": [
+        0,
+        1
+      ],
+      "per_sat_dv_mps": [
+        1.324845007004202e-12,
+        1.0545218712862473e-12,
+        4.457685652940815e-11,
+        45.03666603943282,
+        104.33784961794923,
+        85.64234770465279
+      ],
+      "policy": "hungarian",
+      "prefailure_mean_coverage": 0.37957162677766215,
+      "total_dv_mps": 235.0168633620818
+    },
+    {
+      "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark_keepout --report data/eval/keepout_runs.json --manifest data/eval/keepout_runs_manifest.json --policies hungarian,hungarian_keepout",
+      "coverage_mean_last_orbit": 0.26979718716450923,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 0.9994946304485155,
+      "critical_vacancy_s": 8.0,
+      "duration_s": 17028.0,
+      "gain_vs_do_nothing_pts": null,
+      "imagers_end": 2,
+      "log": "pair_0-1__hungarian_keepout.jsonl",
+      "log_sha256": "2826f4d95d016137916edbde467cbbd9a93bacccf1339c89c6a02c4ac458a3e1",
+      "min_sep_survivor_dead_m": 1322.6031098669118,
+      "n_ticks": 8515,
+      "pair": [
+        0,
+        1
+      ],
+      "per_sat_dv_mps": [
+        1.324845007004202e-12,
+        16.738056190317835,
+        172.75180675712096,
+        87.04429548354152,
+        125.0887013953175,
+        91.75798726739465
+      ],
+      "policy": "hungarian_keepout",
+      "prefailure_mean_coverage": 0.37957162677766215,
+      "total_dv_mps": 493.3808470936938
+    },
+    {
+      "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark_keepout --report data/eval/keepout_runs.json --manifest data/eval/keepout_runs_manifest.json --policies hungarian,hungarian_keepout",
+      "coverage_mean_last_orbit": 0.26980708351308647,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 0.998989260897031,
+      "critical_vacancy_s": 16.0,
+      "duration_s": 17028.0,
+      "gain_vs_do_nothing_pts": null,
+      "imagers_end": 2,
+      "log": "pair_0-2__hungarian.jsonl",
+      "log_sha256": "5cb4884095c17300908252872e25813f87e82739b7c4f657b41b5a265b53759c",
+      "min_sep_survivor_dead_m": 5723.113748216915,
+      "n_ticks": 8515,
+      "pair": [
+        0,
+        2
+      ],
+      "per_sat_dv_mps": [
+        1.324845007004202e-12,
+        4.433797269899681e-11,
+        1.5700136380949072e-12,
+        38.513456822633486,
+        140.61483539705569,
+        104.33784961795152
+      ],
+      "policy": "hungarian",
+      "prefailure_mean_coverage": 0.37957162677766215,
+      "total_dv_mps": 283.4661418376879
+    },
+    {
+      "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark_keepout --report data/eval/keepout_runs.json --manifest data/eval/keepout_runs_manifest.json --policies hungarian,hungarian_keepout",
+      "coverage_mean_last_orbit": 0.26980708351308647,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 0.9994946304485155,
+      "critical_vacancy_s": 8.0,
+      "duration_s": 17028.0,
+      "gain_vs_do_nothing_pts": null,
+      "imagers_end": 2,
+      "log": "pair_0-2__hungarian_keepout.jsonl",
+      "log_sha256": "fbc5b0be94e1a2312315d0e3cf3beb81528cf0f4a6691cdd3a095c29647edff7",
+      "min_sep_survivor_dead_m": 5333.132514575604,
+      "n_ticks": 8515,
+      "pair": [
+        0,
+        2
+      ],
+      "per_sat_dv_mps": [
+        1.324845007004202e-12,
+        43.776421950387665,
+        1.5700136380949072e-12,
+        66.60682979343717,
+        81.89474962857012,
+        56.34359230299351
+      ],
+      "policy": "hungarian_keepout",
+      "prefailure_mean_coverage": 0.37957162677766215,
+      "total_dv_mps": 248.62159367539135
+    },
+    {
+      "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark_keepout --report data/eval/keepout_runs.json --manifest data/eval/keepout_runs_manifest.json --policies hungarian,hungarian_keepout",
+      "coverage_mean_last_orbit": 0.26979718716450923,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 0.9994946304485155,
+      "critical_vacancy_s": 8.0,
+      "duration_s": 17028.0,
+      "gain_vs_do_nothing_pts": null,
+      "imagers_end": 2,
+      "log": "pair_0-3__hungarian.jsonl",
+      "log_sha256": "c107cce566403278e55b64f588aa8cc4a2be7b65fb3edb446dd39ec2ea532430",
+      "min_sep_survivor_dead_m": 5799.512406708856,
+      "n_ticks": 8515,
+      "pair": [
+        0,
+        3
+      ],
+      "per_sat_dv_mps": [
+        1.324845007004202e-12,
+        53.071414687468575,
+        4.457685652940815e-11,
+        1.5512623549697742e-12,
+        104.33784961794923,
+        172.75180675712087
+      ],
+      "policy": "hungarian",
+      "prefailure_mean_coverage": 0.37957162677766215,
+      "total_dv_mps": 330.16107106258613
+    },
+    {
+      "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark_keepout --report data/eval/keepout_runs.json --manifest data/eval/keepout_runs_manifest.json --policies hungarian,hungarian_keepout",
+      "coverage_mean_last_orbit": 0.26979718716450923,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 0.998989260897031,
+      "critical_vacancy_s": 16.0,
+      "duration_s": 17028.0,
+      "gain_vs_do_nothing_pts": null,
+      "imagers_end": 2,
+      "log": "pair_0-3__hungarian_keepout.jsonl",
+      "log_sha256": "6ece38cfa22b7be14fce2ff370ff2efc7049ad8073c34effe39ff40092a4015d",
+      "min_sep_survivor_dead_m": 2888.5356843892955,
+      "n_ticks": 8515,
+      "pair": [
+        0,
+        3
+      ],
+      "per_sat_dv_mps": [
+        1.324845007004202e-12,
+        50.364547329882996,
+        4.457685652940815e-11,
+        13.262575913715203,
+        125.0887013953175,
+        91.75798726739465
+      ],
+      "policy": "hungarian_keepout",
+      "prefailure_mean_coverage": 0.37957162677766215,
+      "total_dv_mps": 280.4738119063563
+    },
+    {
+      "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark_keepout --report data/eval/keepout_runs.json --manifest data/eval/keepout_runs_manifest.json --policies hungarian,hungarian_keepout",
+      "coverage_mean_last_orbit": 0.26979718716450923,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 0.998989260897031,
+      "critical_vacancy_s": 16.0,
+      "duration_s": 17028.0,
+      "gain_vs_do_nothing_pts": null,
+      "imagers_end": 2,
+      "log": "pair_0-4__hungarian.jsonl",
+      "log_sha256": "8bd568b5136b5f0bb0889b54c291433349d3e149cdcb6f2e486192ea07508c04",
+      "min_sep_survivor_dead_m": 5856.406476807209,
+      "n_ticks": 8515,
+      "pair": [
+        0,
+        4
+      ],
+      "per_sat_dv_mps": [
+        1.324845007004202e-12,
+        53.071414687468575,
+        4.457685652940815e-11,
+        45.03666603943282,
+        1.066758970894579e-12,
+        4.464838728578468e-11
+      ],
+      "policy": "hungarian",
+      "prefailure_mean_coverage": 0.37957162677766215,
+      "total_dv_mps": 98.10808072699301
+    },
+    {
+      "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark_keepout --report data/eval/keepout_runs.json --manifest data/eval/keepout_runs_manifest.json --policies hungarian,hungarian_keepout",
+      "coverage_mean_last_orbit": 0.26979718716450923,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 0.9994946304485155,
+      "critical_vacancy_s": 8.0,
+      "duration_s": 17028.0,
+      "gain_vs_do_nothing_pts": null,
+      "imagers_end": 2,
+      "log": "pair_0-4__hungarian_keepout.jsonl",
+      "log_sha256": "ead1f8e661887d94d92ebc4d844ad8da3bfc76bf2d64d2f196e58b444c385f2b",
+      "min_sep_survivor_dead_m": 5376.931218402245,
+      "n_ticks": 8515,
+      "pair": [
+        0,
+        4
+      ],
+      "per_sat_dv_mps": [
+        1.324845007004202e-12,
+        50.364547329882996,
+        85.64234770465208,
+        87.04429548354152,
+        25.80817634871625,
+        91.75798726739465
+      ],
+      "policy": "hungarian_keepout",
+      "prefailure_mean_coverage": 0.37957162677766215,
+      "total_dv_mps": 340.6173541341888
+    },
+    {
+      "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark_keepout --report data/eval/keepout_runs.json --manifest data/eval/keepout_runs_manifest.json --policies hungarian,hungarian_keepout",
+      "coverage_mean_last_orbit": 0.26980708351308647,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 0.9994946304485155,
+      "critical_vacancy_s": 8.0,
+      "duration_s": 17028.0,
+      "gain_vs_do_nothing_pts": null,
+      "imagers_end": 2,
+      "log": "pair_0-5__hungarian.jsonl",
+      "log_sha256": "d419eab67c4a79b354eeca9750dfffb79bc145e7e037812beb4127973a1e95bb",
+      "min_sep_survivor_dead_m": 5500.233802980266,
+      "n_ticks": 8515,
+      "pair": [
+        0,
+        5
+      ],
+      "per_sat_dv_mps": [
+        1.324845007004202e-12,
+        4.433797269899681e-11,
+        42.220709990465046,
+        92.91744949179778,
+        140.61483539705569,
+        1.5523199003013134e-12
+      ],
+      "policy": "hungarian",
+      "prefailure_mean_coverage": 0.37957162677766215,
+      "total_dv_mps": 275.7529948793657
+    },
+    {
+      "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark_keepout --report data/eval/keepout_runs.json --manifest data/eval/keepout_runs_manifest.json --policies hungarian,hungarian_keepout",
+      "coverage_mean_last_orbit": 0.26979718716450923,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 0.998989260897031,
+      "critical_vacancy_s": 16.0,
+      "duration_s": 17028.0,
+      "gain_vs_do_nothing_pts": null,
+      "imagers_end": 2,
+      "log": "pair_0-5__hungarian_keepout.jsonl",
+      "log_sha256": "027ce379aa9f2ca047099617bff2ff4ded69958d3d18957ac0166f00fcb5eb8c",
+      "min_sep_survivor_dead_m": 5856.406565191367,
+      "n_ticks": 8515,
+      "pair": [
+        0,
+        5
+      ],
+      "per_sat_dv_mps": [
+        1.324845007004202e-12,
+        50.364547329882996,
+        4.457685652940815e-11,
+        216.9026109970726,
+        125.0887013953175,
+        26.688097584669023
+      ],
+      "policy": "hungarian_keepout",
+      "prefailure_mean_coverage": 0.37957162677766215,
+      "total_dv_mps": 419.04395730698803
+    },
+    {
+      "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark_keepout --report data/eval/keepout_runs.json --manifest data/eval/keepout_runs_manifest.json --policies hungarian,hungarian_keepout",
+      "coverage_mean_last_orbit": 0.26979718716450923,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
+      "duration_s": 17028.0,
+      "gain_vs_do_nothing_pts": null,
+      "imagers_end": 2,
+      "log": "pair_1-2__hungarian.jsonl",
+      "log_sha256": "86a9a3ab15f17327f56ac94dac173d3fcc9e4a25c052bc86d860d33e2dcc0244",
+      "min_sep_survivor_dead_m": 4587.361070081491,
+      "n_ticks": 8515,
+      "pair": [
+        1,
+        2
+      ],
+      "per_sat_dv_mps": [
+        193.67907947544643,
+        8.377937623522883e-13,
+        29.40000000000122,
+        123.45918458886413,
+        168.52268173534674,
+        109.65642694197007
+      ],
+      "policy": "hungarian",
+      "prefailure_mean_coverage": 0.37957162677766215,
+      "total_dv_mps": 624.7173727416294
+    },
+    {
+      "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark_keepout --report data/eval/keepout_runs.json --manifest data/eval/keepout_runs_manifest.json --policies hungarian,hungarian_keepout",
+      "coverage_mean_last_orbit": 0.26979718716450923,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
+      "duration_s": 17028.0,
+      "gain_vs_do_nothing_pts": null,
+      "imagers_end": 2,
+      "log": "pair_1-2__hungarian_keepout.jsonl",
+      "log_sha256": "31ea78fffff731cdc0263a43691c263497066f90e2f724c3beda0c153b6a4961",
+      "min_sep_survivor_dead_m": 4587.361070081491,
+      "n_ticks": 8515,
+      "pair": [
+        1,
+        2
+      ],
+      "per_sat_dv_mps": [
+        193.67907947544643,
+        8.377937623522883e-13,
+        29.40000000000122,
+        123.45918458886413,
+        168.52268173534674,
+        109.65642694197007
+      ],
+      "policy": "hungarian_keepout",
+      "prefailure_mean_coverage": 0.37957162677766215,
+      "total_dv_mps": 624.7173727416294
+    },
+    {
+      "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark_keepout --report data/eval/keepout_runs.json --manifest data/eval/keepout_runs_manifest.json --policies hungarian,hungarian_keepout",
+      "coverage_mean_last_orbit": 0.26979718716450923,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
+      "duration_s": 17028.0,
+      "gain_vs_do_nothing_pts": null,
+      "imagers_end": 2,
+      "log": "pair_1-3__hungarian.jsonl",
+      "log_sha256": "510784f5818cbab23ab8ad844af9d2133ac0182739df62ddca0b6b09675d131f",
+      "min_sep_survivor_dead_m": 3887.8630218025114,
+      "n_ticks": 8515,
+      "pair": [
+        1,
+        3
+      ],
+      "per_sat_dv_mps": [
+        193.67907947544643,
+        8.377937623522883e-13,
+        164.85191521979627,
+        25.049199358511384,
+        142.87832385394756,
+        109.65642694197007
+      ],
+      "policy": "hungarian",
+      "prefailure_mean_coverage": 0.37957162677766215,
+      "total_dv_mps": 636.1149448496725
+    },
+    {
+      "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark_keepout --report data/eval/keepout_runs.json --manifest data/eval/keepout_runs_manifest.json --policies hungarian,hungarian_keepout",
+      "coverage_mean_last_orbit": 0.26979718716450923,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
+      "duration_s": 17028.0,
+      "gain_vs_do_nothing_pts": null,
+      "imagers_end": 2,
+      "log": "pair_1-3__hungarian_keepout.jsonl",
+      "log_sha256": "07ee26db3ed56403b7521bf603c1f462d8234e2f5b73dd0a96b9ce80ab186106",
+      "min_sep_survivor_dead_m": 3887.8630218025114,
+      "n_ticks": 8515,
+      "pair": [
+        1,
+        3
+      ],
+      "per_sat_dv_mps": [
+        193.67907947544643,
+        8.377937623522883e-13,
+        164.85191521979627,
+        25.049199358511384,
+        142.87832385394756,
+        109.65642694197007
+      ],
+      "policy": "hungarian_keepout",
+      "prefailure_mean_coverage": 0.37957162677766215,
+      "total_dv_mps": 636.1149448496725
+    },
+    {
+      "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark_keepout --report data/eval/keepout_runs.json --manifest data/eval/keepout_runs_manifest.json --policies hungarian,hungarian_keepout",
+      "coverage_mean_last_orbit": 0.26979718716450923,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
+      "duration_s": 17028.0,
+      "gain_vs_do_nothing_pts": null,
+      "imagers_end": 2,
+      "log": "pair_1-4__hungarian.jsonl",
+      "log_sha256": "617ee7bad54d81de8a466109bdfaaf36fbd5cf60afefe3cff8f4584c4d26cbf9",
+      "min_sep_survivor_dead_m": 3096.9901362436885,
+      "n_ticks": 8515,
+      "pair": [
+        1,
+        4
+      ],
+      "per_sat_dv_mps": [
+        193.67907947544643,
+        8.377937623522883e-13,
+        164.85191521979627,
+        123.45918458886413,
+        29.400000000000784,
+        109.65642694197007
+      ],
+      "policy": "hungarian",
+      "prefailure_mean_coverage": 0.37957162677766215,
+      "total_dv_mps": 621.0466062260786
+    },
+    {
+      "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark_keepout --report data/eval/keepout_runs.json --manifest data/eval/keepout_runs_manifest.json --policies hungarian,hungarian_keepout",
+      "coverage_mean_last_orbit": 0.26979718716450923,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
+      "duration_s": 17028.0,
+      "gain_vs_do_nothing_pts": null,
+      "imagers_end": 2,
+      "log": "pair_1-4__hungarian_keepout.jsonl",
+      "log_sha256": "a165d859304273abee30e1344a55a67d18d4544691f0dda309432ab82828db24",
+      "min_sep_survivor_dead_m": 3096.9901362436885,
+      "n_ticks": 8515,
+      "pair": [
+        1,
+        4
+      ],
+      "per_sat_dv_mps": [
+        193.67907947544643,
+        8.377937623522883e-13,
+        164.85191521979627,
+        123.45918458886413,
+        29.400000000000784,
+        109.65642694197007
+      ],
+      "policy": "hungarian_keepout",
+      "prefailure_mean_coverage": 0.37957162677766215,
+      "total_dv_mps": 621.0466062260786
+    },
+    {
+      "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark_keepout --report data/eval/keepout_runs.json --manifest data/eval/keepout_runs_manifest.json --policies hungarian,hungarian_keepout",
+      "coverage_mean_last_orbit": 0.26979718716450923,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 0.9994946304485155,
+      "critical_vacancy_s": 8.0,
+      "duration_s": 17028.0,
+      "gain_vs_do_nothing_pts": null,
+      "imagers_end": 2,
+      "log": "pair_1-5__hungarian.jsonl",
+      "log_sha256": "4db487ffa1b62256c5ab93fd458321ce985573466da967c6686f78ee820aeda5",
+      "min_sep_survivor_dead_m": 2700.9890308463887,
+      "n_ticks": 8515,
+      "pair": [
+        1,
+        5
+      ],
+      "per_sat_dv_mps": [
+        193.67907947544643,
+        8.377937623522883e-13,
+        164.85191521979627,
+        123.45918458886413,
+        107.3443386082843,
+        29.400000000001217
+      ],
+      "policy": "hungarian",
+      "prefailure_mean_coverage": 0.37957162677766215,
+      "total_dv_mps": 618.7345178923932
+    },
+    {
+      "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark_keepout --report data/eval/keepout_runs.json --manifest data/eval/keepout_runs_manifest.json --policies hungarian,hungarian_keepout",
+      "coverage_mean_last_orbit": 0.26979718716450923,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 0.9994946304485155,
+      "critical_vacancy_s": 8.0,
+      "duration_s": 17028.0,
+      "gain_vs_do_nothing_pts": null,
+      "imagers_end": 2,
+      "log": "pair_1-5__hungarian_keepout.jsonl",
+      "log_sha256": "b43215d227ff6704cbdb6e33fff72fa1153a5521a91a1d5ab9c37c41067856dd",
+      "min_sep_survivor_dead_m": 2700.9890308463887,
+      "n_ticks": 8515,
+      "pair": [
+        1,
+        5
+      ],
+      "per_sat_dv_mps": [
+        193.67907947544643,
+        8.377937623522883e-13,
+        164.85191521979627,
+        123.45918458886413,
+        107.3443386082843,
+        29.400000000001217
+      ],
+      "policy": "hungarian_keepout",
+      "prefailure_mean_coverage": 0.37957162677766215,
+      "total_dv_mps": 618.7345178923932
+    },
+    {
+      "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark_keepout --report data/eval/keepout_runs.json --manifest data/eval/keepout_runs_manifest.json --policies hungarian,hungarian_keepout",
+      "coverage_mean_last_orbit": 0.26980048594736833,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
+      "duration_s": 17028.0,
+      "gain_vs_do_nothing_pts": null,
+      "imagers_end": 2,
+      "log": "pair_2-3__hungarian.jsonl",
+      "log_sha256": "8f72013db68948f23776465bfd663dc726d97e5e9f90a64f2b0cb0b96a019136",
+      "min_sep_survivor_dead_m": 5021.740504264554,
+      "n_ticks": 8515,
+      "pair": [
+        2,
+        3
+      ],
+      "per_sat_dv_mps": [
+        135.78448944815923,
+        76.14444995233968,
+        1.2861135883907983e-12,
+        25.049199358511384,
+        181.6637509508409,
+        81.68327826943747
+      ],
+      "policy": "hungarian",
+      "prefailure_mean_coverage": 0.37957162677766215,
+      "total_dv_mps": 500.32516797929
+    },
+    {
+      "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark_keepout --report data/eval/keepout_runs.json --manifest data/eval/keepout_runs_manifest.json --policies hungarian,hungarian_keepout",
+      "coverage_mean_last_orbit": 0.26980048594736833,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
+      "duration_s": 17028.0,
+      "gain_vs_do_nothing_pts": null,
+      "imagers_end": 2,
+      "log": "pair_2-3__hungarian_keepout.jsonl",
+      "log_sha256": "0c422fa1cd9fb3cf50d7f5c633e8d209c2b757e1c3978f2352a604fc6d876d39",
+      "min_sep_survivor_dead_m": 5021.740504264554,
+      "n_ticks": 8515,
+      "pair": [
+        2,
+        3
+      ],
+      "per_sat_dv_mps": [
+        135.78448944815923,
+        76.14444995233968,
+        1.2861135883907983e-12,
+        25.049199358511384,
+        181.6637509508409,
+        81.68327826943747
+      ],
+      "policy": "hungarian_keepout",
+      "prefailure_mean_coverage": 0.37957162677766215,
+      "total_dv_mps": 500.32516797929
+    },
+    {
+      "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark_keepout --report data/eval/keepout_runs.json --manifest data/eval/keepout_runs_manifest.json --policies hungarian,hungarian_keepout",
+      "coverage_mean_last_orbit": 0.26980048594736833,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
+      "duration_s": 17028.0,
+      "gain_vs_do_nothing_pts": null,
+      "imagers_end": 2,
+      "log": "pair_2-4__hungarian.jsonl",
+      "log_sha256": "889c08dfabc99b7544333f152e7ad3e268388f05d20350dea44b6d6b2c192216",
+      "min_sep_survivor_dead_m": 2944.7863443725328,
+      "n_ticks": 8515,
+      "pair": [
+        2,
+        4
+      ],
+      "per_sat_dv_mps": [
+        135.78448944815923,
+        76.14444995233968,
+        1.2861135883907983e-12,
+        85.88010829098945,
+        29.400000000000784,
+        81.68327826943747
+      ],
+      "policy": "hungarian",
+      "prefailure_mean_coverage": 0.37957162677766215,
+      "total_dv_mps": 408.8923259609279
+    },
+    {
+      "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark_keepout --report data/eval/keepout_runs.json --manifest data/eval/keepout_runs_manifest.json --policies hungarian,hungarian_keepout",
+      "coverage_mean_last_orbit": 0.26980048594736833,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
+      "duration_s": 17028.0,
+      "gain_vs_do_nothing_pts": null,
+      "imagers_end": 2,
+      "log": "pair_2-4__hungarian_keepout.jsonl",
+      "log_sha256": "5a8dba95d6288f8ef06d5bda9d5ffc0d1be1747cf1c0e1577629348247d9c0cb",
+      "min_sep_survivor_dead_m": 2944.7863443725328,
+      "n_ticks": 8515,
+      "pair": [
+        2,
+        4
+      ],
+      "per_sat_dv_mps": [
+        135.78448944815923,
+        76.14444995233968,
+        1.2861135883907983e-12,
+        85.88010829098945,
+        29.400000000000784,
+        81.68327826943747
+      ],
+      "policy": "hungarian_keepout",
+      "prefailure_mean_coverage": 0.37957162677766215,
+      "total_dv_mps": 408.8923259609279
+    },
+    {
+      "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark_keepout --report data/eval/keepout_runs.json --manifest data/eval/keepout_runs_manifest.json --policies hungarian,hungarian_keepout",
+      "coverage_mean_last_orbit": 0.26980048594736833,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 0.9994946304485155,
+      "critical_vacancy_s": 8.0,
+      "duration_s": 17028.0,
+      "gain_vs_do_nothing_pts": null,
+      "imagers_end": 2,
+      "log": "pair_2-5__hungarian.jsonl",
+      "log_sha256": "558fe9ac4d8ef68ddf96d25eda663a9c3f50030d9e5d91b8143b747f582ede63",
+      "min_sep_survivor_dead_m": 2780.9356399273047,
+      "n_ticks": 8515,
+      "pair": [
+        2,
+        5
+      ],
+      "per_sat_dv_mps": [
+        135.78448944815923,
+        76.14444995233968,
+        1.2861135883907983e-12,
+        85.88010829098945,
+        75.20467576139444,
+        29.400000000001217
+      ],
+      "policy": "hungarian",
+      "prefailure_mean_coverage": 0.37957162677766215,
+      "total_dv_mps": 402.41372345288534
+    },
+    {
+      "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark_keepout --report data/eval/keepout_runs.json --manifest data/eval/keepout_runs_manifest.json --policies hungarian,hungarian_keepout",
+      "coverage_mean_last_orbit": 0.26980048594736833,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 0.9994946304485155,
+      "critical_vacancy_s": 8.0,
+      "duration_s": 17028.0,
+      "gain_vs_do_nothing_pts": null,
+      "imagers_end": 2,
+      "log": "pair_2-5__hungarian_keepout.jsonl",
+      "log_sha256": "8f92eb3411b9e8e7c72744c3190891cef567c0172bfa91dffcf7db4e86bb9f03",
+      "min_sep_survivor_dead_m": 2780.9356399273047,
+      "n_ticks": 8515,
+      "pair": [
+        2,
+        5
+      ],
+      "per_sat_dv_mps": [
+        135.78448944815923,
+        76.14444995233968,
+        1.2861135883907983e-12,
+        85.88010829098945,
+        75.20467576139444,
+        29.400000000001217
+      ],
+      "policy": "hungarian_keepout",
+      "prefailure_mean_coverage": 0.37957162677766215,
+      "total_dv_mps": 402.41372345288534
+    },
+    {
+      "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark_keepout --report data/eval/keepout_runs.json --manifest data/eval/keepout_runs_manifest.json --policies hungarian,hungarian_keepout",
+      "coverage_mean_last_orbit": 0.26979718716450923,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
+      "duration_s": 17028.0,
+      "gain_vs_do_nothing_pts": null,
+      "imagers_end": 2,
+      "log": "pair_3-4__hungarian.jsonl",
+      "log_sha256": "151b6f175e9862817e49fd4c1c8d2098a8331035070475fdf3d453dbdce50ce3",
+      "min_sep_survivor_dead_m": 1852.5321340900618,
+      "n_ticks": 8515,
+      "pair": [
+        3,
+        4
+      ],
+      "per_sat_dv_mps": [
+        193.67907947544643,
+        69.57229519150658,
+        96.02701728565752,
+        1.3246298845524985e-12,
+        29.400000000000784,
+        109.65642694197007
+      ],
+      "policy": "hungarian",
+      "prefailure_mean_coverage": 0.37957162677766215,
+      "total_dv_mps": 498.3348188945827
+    },
+    {
+      "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark_keepout --report data/eval/keepout_runs.json --manifest data/eval/keepout_runs_manifest.json --policies hungarian,hungarian_keepout",
+      "coverage_mean_last_orbit": 0.26979718716450923,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
+      "duration_s": 17028.0,
+      "gain_vs_do_nothing_pts": null,
+      "imagers_end": 2,
+      "log": "pair_3-4__hungarian_keepout.jsonl",
+      "log_sha256": "d4cc875bdcdffd879c656a48b35e2ee6b382fcef133de9eb986748747da80a45",
+      "min_sep_survivor_dead_m": 1852.5321340900618,
+      "n_ticks": 8515,
+      "pair": [
+        3,
+        4
+      ],
+      "per_sat_dv_mps": [
+        193.67907947544643,
+        69.57229519150658,
+        96.02701728565752,
+        1.3246298845524985e-12,
+        29.400000000000784,
+        109.65642694197007
+      ],
+      "policy": "hungarian_keepout",
+      "prefailure_mean_coverage": 0.37957162677766215,
+      "total_dv_mps": 498.3348188945827
+    },
+    {
+      "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark_keepout --report data/eval/keepout_runs.json --manifest data/eval/keepout_runs_manifest.json --policies hungarian,hungarian_keepout",
+      "coverage_mean_last_orbit": 0.26979718716450923,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 0.9994946304485155,
+      "critical_vacancy_s": 8.0,
+      "duration_s": 17028.0,
+      "gain_vs_do_nothing_pts": null,
+      "imagers_end": 2,
+      "log": "pair_3-5__hungarian.jsonl",
+      "log_sha256": "9c2512db252598f756bb9a176ff35bcd5f58e909e4cfe0aa0266d617bbf23b67",
+      "min_sep_survivor_dead_m": 1852.5321340900618,
+      "n_ticks": 8515,
+      "pair": [
+        3,
+        5
+      ],
+      "per_sat_dv_mps": [
+        193.67907947544643,
+        69.57229519150658,
+        96.02701728565752,
+        1.3246298845524985e-12,
+        107.3443386082843,
+        29.400000000001217
+      ],
+      "policy": "hungarian",
+      "prefailure_mean_coverage": 0.37957162677766215,
+      "total_dv_mps": 496.0227305608974
+    },
+    {
+      "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark_keepout --report data/eval/keepout_runs.json --manifest data/eval/keepout_runs_manifest.json --policies hungarian,hungarian_keepout",
+      "coverage_mean_last_orbit": 0.26979718716450923,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 0.9994946304485155,
+      "critical_vacancy_s": 8.0,
+      "duration_s": 17028.0,
+      "gain_vs_do_nothing_pts": null,
+      "imagers_end": 2,
+      "log": "pair_3-5__hungarian_keepout.jsonl",
+      "log_sha256": "48dd061afa7c43133fa1acbeafeb69a804ca5362f6918b0a41c12c61cc18f0be",
+      "min_sep_survivor_dead_m": 1852.5321340900618,
+      "n_ticks": 8515,
+      "pair": [
+        3,
+        5
+      ],
+      "per_sat_dv_mps": [
+        193.67907947544643,
+        69.57229519150658,
+        96.02701728565752,
+        1.3246298845524985e-12,
+        107.3443386082843,
+        29.400000000001217
+      ],
+      "policy": "hungarian_keepout",
+      "prefailure_mean_coverage": 0.37957162677766215,
+      "total_dv_mps": 496.0227305608974
+    },
+    {
+      "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark_keepout --report data/eval/keepout_runs.json --manifest data/eval/keepout_runs_manifest.json --policies hungarian,hungarian_keepout",
+      "coverage_mean_last_orbit": 0.26979718716450923,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 0.9994946304485155,
+      "critical_vacancy_s": 8.0,
+      "duration_s": 17028.0,
+      "gain_vs_do_nothing_pts": null,
+      "imagers_end": 2,
+      "log": "pair_4-5__hungarian.jsonl",
+      "log_sha256": "c983def02fae67b45e9e519ddf73d18e0042ed07f1a1075906056d7cb5b0f04b",
+      "min_sep_survivor_dead_m": 5805.318313903343,
+      "n_ticks": 8515,
+      "pair": [
+        4,
+        5
+      ],
+      "per_sat_dv_mps": [
+        193.67907947544643,
+        69.57229519150658,
+        251.24099230983734,
+        91.45910572231807,
+        8.509468817782454e-13,
+        29.400000000001217
+      ],
+      "policy": "hungarian",
+      "prefailure_mean_coverage": 0.37957162677766215,
+      "total_dv_mps": 635.3514726991104
+    },
+    {
+      "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark_keepout --report data/eval/keepout_runs.json --manifest data/eval/keepout_runs_manifest.json --policies hungarian,hungarian_keepout",
+      "coverage_mean_last_orbit": 0.26979718716450923,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 0.9994946304485155,
+      "critical_vacancy_s": 8.0,
+      "duration_s": 17028.0,
+      "gain_vs_do_nothing_pts": null,
+      "imagers_end": 2,
+      "log": "pair_4-5__hungarian_keepout.jsonl",
+      "log_sha256": "fd13889113bd118f703399a1b7b29382592a5c8bedd3b5b41a71e2a629499933",
+      "min_sep_survivor_dead_m": 5805.318313903343,
+      "n_ticks": 8515,
+      "pair": [
+        4,
+        5
+      ],
+      "per_sat_dv_mps": [
+        193.67907947544643,
+        69.57229519150658,
+        251.24099230983734,
+        91.45910572231807,
+        8.509468817782454e-13,
+        29.400000000001217
+      ],
+      "policy": "hungarian_keepout",
+      "prefailure_mean_coverage": 0.37957162677766215,
+      "total_dv_mps": 635.3514726991104
+    }
+  ]
+}
