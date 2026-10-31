@@ -387,10 +387,6 @@ def run_scenario(
         if k == n_ticks - 1:
             break
 
-        # Between-step orchestration (MASTER_PROMPT 3.5): the replanner runs here,
-        # between sim steps, one control cycle per machine transition. The decision
-        # states FAILURE_DETECTED and REPLANNING therefore each last exactly one
-        # tick in the log; RECONFIGURING spans the physical transfers until every
         # Oracle value-of-warning hook (Phase 2): gated default-off; inert when disabled
         if (
             scenario.oracle.enabled
@@ -447,43 +443,24 @@ def run_scenario(
             assignable = [i for i in range(n_sats) if status[i] == STATUS_NOMINAL]
             obstacles = [states[i] for i in range(n_sats) if status[i] != STATUS_NOMINAL]
             current_slots = [formation[seat_of[i]] for i in assignable]
-            try:
-                plan, pairs, cost_total, method, max_transfer, _cost = replan(
-                    [states[i] for i in assignable],
-                    [roles[i] for i in assignable],
-                    [
-                        max(scenario.allocation.dv_budget_mps - controllers[i].dv_used, 1e-9)
-                        for i in assignable
-                    ],
-                    obstacles,
-                    scenario.roles,
-                    scenario.allocation,
-                    scenario.formation.radial_amp_km * 1000.0,
-                    r_f,
-                    grid,
-                    n,
-                    scenario.a_max_mps2,
-                    t,
-                    current_slots=current_slots,
-                )
-            except TypeError:
-                plan, pairs, cost_total, method, max_transfer, _cost = replan(
-                    [states[i] for i in assignable],
-                    [roles[i] for i in assignable],
-                    [
-                        max(scenario.allocation.dv_budget_mps - controllers[i].dv_used, 1e-9)
-                        for i in assignable
-                    ],
-                    obstacles,
-                    scenario.roles,
-                    scenario.allocation,
-                    scenario.formation.radial_amp_km * 1000.0,
-                    r_f,
-                    grid,
-                    n,
-                    scenario.a_max_mps2,
-                    t,
-                )
+            plan, pairs, cost_total, method, max_transfer, _cost = replan(
+                [states[i] for i in assignable],
+                [roles[i] for i in assignable],
+                [
+                    max(scenario.allocation.dv_budget_mps - controllers[i].dv_used, 1e-9)
+                    for i in assignable
+                ],
+                obstacles,
+                scenario.roles,
+                scenario.allocation,
+                scenario.formation.radial_amp_km * 1000.0,
+                r_f,
+                grid,
+                n,
+                scenario.a_max_mps2,
+                t,
+                current_slots=current_slots,
+            )
             if method == "do_no_harm_hold":
                 pairs = [(idx, idx) for idx in range(len(assignable))]
                 max_transfer = 0.0
