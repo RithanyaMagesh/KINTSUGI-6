@@ -230,8 +230,8 @@ Command of record: `uv run python -m cubesat.benchmark --base data/scenarios/two
 
 ### The web layer (gate G5, PASS 2026-09-30, untagged)
 
-FastAPI + WebSocket (~18 routes), async hub, wire normalizer, replay engine with binary-search
-seek; React + Three.js console (~13.5k lines TS/TSX), LIVE/REPLAY/Tutorial/FAQ/Docs pages,
+FastAPI + WebSocket (18 routes: `grep -cE "@app\.(get|post|put|delete|websocket)" cubesat/api.py`), async hub, wire normalizer, replay engine with binary-search
+seek; React + Three.js console (11,785 lines TS/TSX in this tree: `find frontend/src -name '*.ts' -o -name '*.tsx' | xargs cat | wc -l`; the frontend branch differs), LIVE/REPLAY/Tutorial/FAQ/Docs pages,
 ScenarioBuilder, 3D scene, telemetry charts, display-only risk panel. Replay load of the
 8517-line log: **0.337 s** (Windows 2026-09-30; 0.24 s macOS arm64 M3, 2026-10-31). Full run compute:
 **2.92–3.24 s** on Windows (target ~2 s, missed, recorded); 1.74 s on the M3 — machine-dependent.
