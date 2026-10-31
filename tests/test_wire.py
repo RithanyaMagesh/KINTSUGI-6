@@ -189,6 +189,10 @@ def test_wire_state_transition_event_maps_to_info_event():
         "sim_time": 1206.0,
         "level": "info",
         "message": "State FAILURE_DETECTED -> REPLANNING",
+        # additive structured fields (2026-10-31); the four keys above are unchanged
+        "from": "FAILURE_DETECTED",
+        "to": "REPLANNING",
+        "label": "Planning recovery",
     }
 
 
@@ -360,3 +364,27 @@ def test_run_summary_message_precedes_run_complete_event():
                        "sim_time": 17028.0, "scenario": "two_failure.json", "seed": 42}
     bare = to_messages({"v": 1, "t": 5.0, "state": "SUMMARY"}, SessionEnrich())
     assert bare[0]["coverage_mean_last_orbit"] is None  # truncated line never raises
+
+
+def _state_event(frm, to):
+    return to_messages(_tick(5.0, event={"type": "STATE", "payload": {"from": frm, "to": to}}),
+                       SessionEnrich())[1]
+
+
+def test_state_events_carry_structured_from_to_label():
+    for frm, to, label in [
+        ("FAILURE_DETECTED", "REPLANNING", "Planning recovery"),
+        ("REPLANNING", "RECONFIGURING", "Moving to new positions"),
+        ("RECONFIGURING", "RECOVERED", "Recovered"),
+    ]:
+        ev = _state_event(frm, to)
+        assert ev["message"] == f"State {frm} -> {to}"  # text unchanged
+        assert (ev["from"], ev["to"], ev["label"]) == (frm, to, label)
+
+
+def test_unknown_state_transition_keeps_text_only():
+    ev = _state_event("NOMINAL", "MYSTERY")
+    assert ev == {"type": "event", "sim_time": 5.0, "level": "info",
+                  "message": "State NOMINAL -> MYSTERY"}
+    assert _state_event(None, None)["message"] == "State None -> None"  # truncated payload
+    assert "label" not in _state_event(["x"], {"y": 1})  # unhashable junk never raises

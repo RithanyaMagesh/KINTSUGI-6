@@ -298,13 +298,23 @@ def _evasive_event(frame: dict, payload: dict) -> dict:
     )
 
 
+# Plain-wording labels for the transitions the UI narrates; others keep text only.
+_STATE_LABELS = {
+    ("FAILURE_DETECTED", "REPLANNING"): "Planning recovery",
+    ("REPLANNING", "RECONFIGURING"): "Moving to new positions",
+    ("RECONFIGURING", "RECOVERED"): "Recovered",
+}
+
+
 def _plain_event(frame: dict, etype: str, payload: dict) -> dict:
     if etype == "STATE":  # plain transitions: {from, to}
-        return to_event(
-            "info",
-            frame.get("t", 0.0),
-            f"State {payload.get('from')} -> {payload.get('to')}",
-        )
+        frm, to = payload.get("from"), payload.get("to")
+        ev = to_event("info", frame.get("t", 0.0), f"State {frm} -> {to}")
+        ok = isinstance(frm, str) and isinstance(to, str)  # junk payloads: text only
+        label = _STATE_LABELS.get((frm, to)) if ok else None
+        if label is not None:  # additive structured fields
+            ev.update({"from": frm, "to": to, "label": label})
+        return ev
     return to_event("info", frame.get("t", 0.0), etype)  # unknown types: pass the type
 
 
