@@ -1,0 +1,229 @@
+{
+  "command": "uv run python -m cubesat.psi_table --report data/eval/psi_trade_table.json",
+  "brief": "docs/superpowers/specs/2026-10-31-physics-v2-brief.md section 4 Phase 5 item 3",
+  "n_slots": 6,
+  "n_imagers": 4,
+  "altitude_m": 500000.0,
+  "coverage_samples_per_orbit": 72,
+  "seat_roles": [
+    "imager",
+    "leader",
+    "imager",
+    "downlink",
+    "imager",
+    "imager"
+  ],
+  "seat_roles_scenario_order": [
+    "imager",
+    "imager",
+    "imager",
+    "imager",
+    "leader",
+    "downlink"
+  ],
+  "separation_grid": {
+    "orbits": 2,
+    "samples_per_orbit": 2881,
+    "half_grid_samples_per_orbit": 1441,
+    "s": "closed-form minimum over s in [-S, S], S = 2 max|y|"
+  },
+  "metric": "worst separation = min over slot pairs, t in [0, 2 orbits] and along-track offset s of one slot of the 3-D distance; see cubesat/psi_table.py",
+  "cases": [
+    {
+      "label": "A=B=8 km, fov_half 1.5 deg",
+      "amp_m": 8000.0,
+      "fov_half_deg": 1.5,
+      "r_f_m": 13092.961,
+      "grid_step_m": 2000.0,
+      "grid_extent_m": 30000.0,
+      "rows": [
+        {
+          "psi_deg": 0,
+          "coverage": 0.400277,
+          "coverage_scenario_order": 0.370997,
+          "worst_separation_m": 0.0,
+          "worst_separation_half_grid_m": 0.0,
+          "convergence_delta_m": 0.0,
+          "worst_separation_s0_only_m": 11313.708,
+          "brief_diff": {
+            "brief_coverage": 0.371,
+            "brief_separation_m": 11.8,
+            "coverage_diff": 0.029277,
+            "coverage_diff_scenario_order": -3e-06,
+            "separation_diff_m": -11.8,
+            "separation_rel_diff": 1.0,
+            "flag": true,
+            "flag_scenario_order": true
+          }
+        },
+        {
+          "psi_deg": 15,
+          "coverage": 0.398081,
+          "coverage_scenario_order": 0.369725,
+          "worst_separation_m": 1476.736,
+          "worst_separation_half_grid_m": 1476.738,
+          "convergence_delta_m": 0.002,
+          "worst_separation_s0_only_m": 11039.177
+        },
+        {
+          "psi_deg": 30,
+          "coverage": 0.389033,
+          "coverage_scenario_order": 0.363741,
+          "worst_separation_m": 2928.203,
+          "worst_separation_half_grid_m": 2928.204,
+          "convergence_delta_m": 0.0,
+          "worst_separation_s0_only_m": 10360.307,
+          "brief_diff": {
+            "brief_coverage": 0.364,
+            "brief_separation_m": 2929.0,
+            "coverage_diff": 0.025033,
+            "coverage_diff_scenario_order": -0.000259,
+            "separation_diff_m": -0.797,
+            "separation_rel_diff": 0.000272,
+            "flag": true,
+            "flag_scenario_order": false
+          }
+        },
+        {
+          "psi_deg": 45,
+          "coverage": 0.377153,
+          "coverage_scenario_order": 0.355446,
+          "worst_separation_m": 4329.569,
+          "worst_separation_half_grid_m": 4329.569,
+          "convergence_delta_m": 0.0,
+          "worst_separation_s0_only_m": 9529.277,
+          "brief_diff": {
+            "brief_coverage": 0.355,
+            "brief_separation_m": 4330.0,
+            "coverage_diff": 0.022153,
+            "coverage_diff_scenario_order": 0.000446,
+            "separation_diff_m": -0.431,
+            "separation_rel_diff": 0.0001,
+            "flag": true,
+            "flag_scenario_order": false
+          }
+        },
+        {
+          "psi_deg": 60,
+          "coverage": 0.36247,
+          "coverage_scenario_order": 0.344635,
+          "worst_separation_m": 5656.854,
+          "worst_separation_half_grid_m": 5656.854,
+          "convergence_delta_m": 0.0,
+          "worst_separation_s0_only_m": 8753.42,
+          "brief_diff": {
+            "brief_coverage": 0.345,
+            "brief_separation_m": 5657.0,
+            "coverage_diff": 0.01747,
+            "coverage_diff_scenario_order": -0.000365,
+            "separation_diff_m": -0.146,
+            "separation_rel_diff": 2.6e-05,
+            "flag": true,
+            "flag_scenario_order": false
+          }
+        },
+        {
+          "psi_deg": 75,
+          "coverage": 0.348248,
+          "coverage_scenario_order": 0.333362,
+          "worst_separation_m": 6887.349,
+          "worst_separation_half_grid_m": 6887.349,
+          "convergence_delta_m": 0.0,
+          "worst_separation_s0_only_m": 8201.026
+        },
+        {
+          "psi_deg": 90,
+          "coverage": 0.33897,
+          "coverage_scenario_order": 0.325905,
+          "worst_separation_m": 8000.0,
+          "worst_separation_half_grid_m": 8000.0,
+          "convergence_delta_m": 0.0,
+          "worst_separation_s0_only_m": 8000.0,
+          "brief_diff": {
+            "brief_coverage": 0.326,
+            "brief_separation_m": 8000.0,
+            "coverage_diff": 0.01297,
+            "coverage_diff_scenario_order": -9.5e-05,
+            "separation_diff_m": 0.0,
+            "separation_rel_diff": 0.0,
+            "flag": true,
+            "flag_scenario_order": false
+          }
+        }
+      ]
+    },
+    {
+      "label": "A=B=2 km, fov_half 0.375 deg (kit v2 formation, illustrative; grid scaled by 1/4)",
+      "amp_m": 2000.0,
+      "fov_half_deg": 0.375,
+      "r_f_m": 3272.539,
+      "grid_step_m": 500.0,
+      "grid_extent_m": 7500.0,
+      "rows": [
+        {
+          "psi_deg": 0,
+          "coverage": 0.400162,
+          "coverage_scenario_order": 0.370939,
+          "worst_separation_m": 0.0,
+          "worst_separation_half_grid_m": 0.0,
+          "convergence_delta_m": 0.0,
+          "worst_separation_s0_only_m": 2828.427
+        },
+        {
+          "psi_deg": 15,
+          "coverage": 0.398081,
+          "coverage_scenario_order": 0.369725,
+          "worst_separation_m": 369.184,
+          "worst_separation_half_grid_m": 369.185,
+          "convergence_delta_m": 0.001,
+          "worst_separation_s0_only_m": 2759.794
+        },
+        {
+          "psi_deg": 30,
+          "coverage": 0.389033,
+          "coverage_scenario_order": 0.363741,
+          "worst_separation_m": 732.051,
+          "worst_separation_half_grid_m": 732.051,
+          "convergence_delta_m": 0.0,
+          "worst_separation_s0_only_m": 2590.077
+        },
+        {
+          "psi_deg": 45,
+          "coverage": 0.377038,
+          "coverage_scenario_order": 0.35533,
+          "worst_separation_m": 1082.392,
+          "worst_separation_half_grid_m": 1082.392,
+          "convergence_delta_m": 0.0,
+          "worst_separation_s0_only_m": 2382.319
+        },
+        {
+          "psi_deg": 60,
+          "coverage": 0.36247,
+          "coverage_scenario_order": 0.344635,
+          "worst_separation_m": 1414.214,
+          "worst_separation_half_grid_m": 1414.214,
+          "convergence_delta_m": 0.0,
+          "worst_separation_s0_only_m": 2188.355
+        },
+        {
+          "psi_deg": 75,
+          "coverage": 0.348219,
+          "coverage_scenario_order": 0.333304,
+          "worst_separation_m": 1721.837,
+          "worst_separation_half_grid_m": 1721.837,
+          "convergence_delta_m": 0.0,
+          "worst_separation_s0_only_m": 2050.256
+        },
+        {
+          "psi_deg": 90,
+          "coverage": 0.33897,
+          "coverage_scenario_order": 0.325847,
+          "worst_separation_m": 2000.0,
+          "worst_separation_half_grid_m": 2000.0,
+          "convergence_delta_m": 0.0,
+          "worst_separation_s0_only_m": 2000.0
+        }
+      ]
+    }
+  ]
+}

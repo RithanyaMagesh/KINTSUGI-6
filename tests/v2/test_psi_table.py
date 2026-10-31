@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import math
 
 import numpy as np
@@ -10,6 +11,8 @@ import pytest
 from cubesat.allocate_v2 import candidate_slots
 from cubesat.hcw import mean_motion
 from cubesat.psi_table import (
+    COMMAND,
+    _row,
     imager_seat_roles,
     mean_coverage,
     pair_min_distance,
@@ -117,3 +120,28 @@ def test_even_layout_is_not_the_briefs_layout(cov8):
 @pytest.mark.parametrize("psi", [30, 45, 60, 90])
 def test_separation_matches_brief_for_psi_ge_30(psi):
     assert _sep(psi, samples_per_orbit=2881) == pytest.approx(BRIEF[psi][1], rel=0.01)
+
+
+def _committed():
+    with open("data/eval/psi_trade_table.json") as f:
+        return json.load(f)
+
+
+def test_committed_table_flags_vs_brief():
+    rep = _committed()
+    assert rep["command"] == COMMAND
+    rows = [r for c in rep["cases"] for r in c["rows"] if "brief_diff" in r]
+    assert [r["psi_deg"] for r in rows] == [0, 30, 45, 60, 90]
+    # even-seat layout: coverage differs from the brief by > 0.003 on every row
+    assert all(r["brief_diff"]["flag"] for r in rows)
+    # scenario role order (brief's layout): only psi = 0 differs (separation 0 vs 11.8 m)
+    assert [r["psi_deg"] for r in rows if r["brief_diff"]["flag_scenario_order"]] == [0]
+    assert max(r["convergence_delta_m"] for c in rep["cases"] for r in c["rows"]) < 0.5
+
+
+def test_committed_row_reproduces():
+    case = _committed()["cases"][1]  # the 2 km case
+    row = next(r for r in case["rows"] if r["psi_deg"] == 30)
+    got = _row(30, case["amp_m"], case["fov_half_deg"], case["grid_step_m"],
+               case["grid_extent_m"], N)
+    assert got == row
