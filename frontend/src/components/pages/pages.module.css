@@ -58,7 +58,7 @@
 }
 
 .stepNum {
-  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   font-size: var(--text-body);
   color: var(--ink-muted);
   padding-top: 1px;
@@ -140,7 +140,7 @@
 /* Inline literals: commands, file names, backend state values. State enums
    render uppercase because they are data values, not styled copy (§13.2). */
 .lit {
-  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   font-size: 0.9em;
   color: var(--ink);
   background: var(--panel-raised);
@@ -179,7 +179,6 @@
 }
 
 .swatchLabel {
-  font-family: var(--font-mono);
   font-size: var(--text-event);
   color: var(--ink);
 }

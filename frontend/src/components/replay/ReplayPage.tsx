@@ -7,13 +7,12 @@
 import { useEffect, useState } from "react";
 import { backend } from "../../api/backend";
 import { useReplayStore } from "../../stores/replayStore";
-import { useRecoveryStore } from "../../stores/recoveryStore";
-import { useRoleHistoryStore } from "../../stores/roleHistoryStore";
 import { useSimStore } from "../../stores/simStore";
+import { useUiStore } from "../../stores/uiStore";
 import SwarmScene from "../three/SwarmScene.tsx";
 import NarrationStrip from "../narration/NarrationStrip";
 import Timeline from "../events/Timeline";
-import ReplayControls from "../controls/ReplayControls";
+import ReplayControls, { resetRunStores, runTitle } from "../controls/ReplayControls";
 import RightPanel from "../layout/RightPanel";
 import SatelliteList from "../satellites/SatelliteList";
 import chrome from "../../styles/chrome.module.css";
@@ -21,22 +20,8 @@ import styles from "./ReplayPage.module.css";
 
 const LOAD_SPEED = 10;
 
-const RUN_LABELS: Record<string, string> = {
-  firefly_swarm: "Hypothetical 6-sat swarm on FIREFLY-1's real orbit (NORAD 62701)",
-  two_failure: "Primary 6-sat two-failure recovery demo (SAT-2 & SAT-3 DEAD)",
-  cascading_n8: "8-sat cascading failures (2 DEAD + 1 THRUSTER_OUT downlink)",
-  leader_failure_6sat: "6-sat leader death at t=2400 s + imager death at t=3000 s",
-  single_failure_n4: "4-sat minimal swarm with leader failure and re-election",
-  nominal: "6-sat nominal baseline (1 orbit, zero failures)",
-};
-
-function scenarioBaseOf(filename: string): string {
-  return filename.replace(/\.jsonl$/, "").replace(/_run\d+$/, "");
-}
-
 export default function ReplayPage() {
   const [files, setFiles] = useState<string[] | null>(null);
-  const [scenarioFiles, setScenarioFiles] = useState<string[]>([]);
   const [busyFile, setBusyFile] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const activeFile = useReplayStore((s) => s.activeFile);
@@ -52,39 +37,21 @@ export default function ReplayPage() {
       .catch((err: unknown) => {
         if (!cancelled) {
           setFiles([]);
-          setError(err instanceof Error ? err.message : "Could not list replay logs");
+          setError(`Could not list recorded runs: ${err instanceof Error ? err.message : "unknown error"}`);
         }
-      });
-    backend
-      .scenarios()
-      .then((d) => {
-        if (!cancelled) setScenarioFiles(d.scenarios);
-      })
-      .catch(() => {
-        if (!cancelled) setScenarioFiles([]);
       });
     return () => {
       cancelled = true;
     };
   }, []);
 
-  function labelFor(filename: string): string | null {
-    const base = scenarioBaseOf(filename);
-    const label = RUN_LABELS[base];
-    if (label === undefined) return null;
-    return scenarioFiles.length === 0 || scenarioFiles.includes(`${base}.json`)
-      ? label
-      : null;
-  }
-
   async function loadRun(filename: string): Promise<void> {
     setBusyFile(filename);
     setError(null);
     try {
-      useSimStore.getState().reset();
-      useRecoveryStore.getState().resetForNewRun();
-      useRoleHistoryStore.getState().resetForNewRun();
+      resetRunStores();
       useReplayStore.getState().setPlaybackSpeed(LOAD_SPEED);
+      useUiStore.getState().setRunSpeed(LOAD_SPEED);
       await backend.replayLoad(filename, LOAD_SPEED);
       useReplayStore.getState().setActiveFile(filename);
       useReplayStore.getState().setIsPlaying(true);
@@ -105,25 +72,17 @@ export default function ReplayPage() {
           className={`${chrome.panel} ${styles.gallery}`}
           aria-label="Replay runs"
         >
-          <h2 className={chrome.panelTitle}>Scenario replays</h2>
+          <h2 className={chrome.panelTitle}>Recorded runs</h2>
           <p className={chrome.hint}>
-            Pre-recorded mission logs. Select a scenario below to play and scrub through its
-            recovery timeline.
+            Pick a run to replay it and scrub through the recovery.
           </p>
           {files === null ? (
             <p className={chrome.hint}>Loading runs…</p>
           ) : files.length === 0 ? (
-            <p className={chrome.hint}>
-              No replay logs found. Generate one:{" "}
-              <span className={styles.command}>
-                uv run python -m cubesat.run --scenario data/scenarios/two_failure.json --seed
-                42 --out data/logs/two_failure.jsonl
-              </span>
-            </p>
+            <p className={chrome.hint}>No recorded runs yet.</p>
           ) : (
             <ul className={styles.runList}>
               {files.map((f) => {
-                const label = labelFor(f);
                 const active = activeFile === f;
                 return (
                   <li key={f}>
@@ -134,10 +93,9 @@ export default function ReplayPage() {
                       disabled={busyFile !== null}
                       aria-current={active ? "true" : undefined}
                     >
-                      <span className={styles.runName}>{f.replace(/\.jsonl$/, "")}</span>
-                      {label !== null && <span className={styles.runLabel}>{label}</span>}
+                      <span className={styles.runName}>{runTitle(f)}</span>
                       {active && scenario !== null && (
-                        <span className={styles.runScenario}>Active recording</span>
+                        <span className={styles.runScenario}>Now playing</span>
                       )}
                     </button>
                   </li>
@@ -148,11 +106,11 @@ export default function ReplayPage() {
           <div className={styles.hintSlot} aria-live="polite">
             {error !== null && <p className={chrome.errorText}>{error}</p>}
             {busyFile !== null && error === null && (
-              <p className={chrome.hint}>Loading {busyFile}…</p>
+              <p className={chrome.hint}>Loading {runTitle(busyFile)}…</p>
             )}
           </div>
           <div className={styles.fleetSection}>
-            <h2 className={chrome.panelTitle}>Swarm fleet (click to inspect)</h2>
+            <h2 className={chrome.panelTitle}>Satellites (click one to inspect)</h2>
             <SatelliteList />
           </div>
         </aside>

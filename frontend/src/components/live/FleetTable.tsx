@@ -4,7 +4,7 @@
 import { useSimStore } from "../../stores/simStore";
 import { useUiStore } from "../../stores/uiStore";
 import { satelliteStatusColor } from "../../utils/colors";
-import { faultLabel, km, roleLabel, statusLabel } from "./hudFormat";
+import { faultLabel, km, roleLabel, slotLabel, statusLabel } from "./hudFormat";
 import styles from "./ImmersiveLive.module.css";
 
 export default function FleetTable() {
@@ -30,7 +30,7 @@ export default function FleetTable() {
             <th scope="col" className={styles.num}>Along</th>
             <th scope="col" className={styles.num}>Cross</th>
             <th scope="col" className={styles.num}>Speed m/s</th>
-            <th scope="col" className={styles.num}>Δv m/s</th>
+            <th scope="col" className={styles.num}>Fuel m/s</th>
             <th scope="col">Slot</th>
             {hasRisk && <th scope="col" className={styles.num}>Risk</th>}
           </tr>
@@ -52,7 +52,8 @@ export default function FleetTable() {
                 <td>
                   <span className={styles.statusPip} style={{ background: satelliteStatusColor(s.status) }} aria-hidden="true" />
                   {statusLabel(s.status)}
-                  {s.failureType !== undefined && <span className={styles.fault}>{faultLabel(s.failureType)}</span>}
+                  {/* the status already says Lost / Battery fading; name only other faults */}
+                  {s.failureType === "THRUSTER_OUT" && <span className={styles.fault}>{faultLabel(s.failureType)}</span>}
                 </td>
                 <td className={styles.num}>{km(range)}</td>
                 <td className={styles.num}>{km(s.r[0])}</td>
@@ -60,7 +61,7 @@ export default function FleetTable() {
                 <td className={styles.num}>{km(s.r[2])}</td>
                 <td className={styles.num}>{speed.toFixed(2)}</td>
                 <td className={styles.num}>{s.dv_used.toFixed(2)}</td>
-                <td>{s.targetSlot?.replace("slot_", "") ?? "–"}</td>
+                <td>{slotLabel(s.targetSlot)}</td>
                 {hasRisk && <td className={styles.num}>{s.risk === undefined ? "–" : s.risk.toFixed(2)}</td>}
               </tr>
             );

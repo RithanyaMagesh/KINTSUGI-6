@@ -8,14 +8,12 @@ import { create } from "zustand";
 import { useSimStore } from "./simStore";
 import { useEffect } from "react";
 import { fitFormation } from "../utils/geometry";
-import { missionHealthScore } from "../utils/health";
 
 export interface ChartSample {
   t: number; // sim time [s] — from the data, never the clock
   coverage: number | null;
   minSep: number | null;
   deviation: number | null; // derived from measured positions (geometry.ts)
-  health: number | null; // derived, §8.7, measured inputs only
   dv: Record<string, number>; // satellite id -> dv_used [m/s] (streamed)
 }
 
@@ -81,13 +79,6 @@ export function useFrameHistory(): void {
       const fit = fitFormation(s.satellites, nSeats);
       const minSep = s.metrics.minSep ?? null;
       const minSepRef = useHistoryStore.getState().minSepRef;
-      const health = missionHealthScore({
-        coverage: s.metrics.coverage ?? null,
-        deviation: fit.ok ? fit.deviationMean : null,
-        amplitude: fit.amplitude,
-        minSep,
-        minSepRef,
-      });
 
       const dv: Record<string, number> = {};
       for (const sat of s.satellites) dv[sat.id] = sat.dv_used; // index iteration
@@ -97,7 +88,6 @@ export function useFrameHistory(): void {
         coverage: s.metrics.coverage ?? null,
         minSep,
         deviation: fit.ok ? fit.deviationMean : null,
-        health,
         dv,
       });
       if (minSepRef === null && minSep !== null) {
@@ -120,8 +110,11 @@ export function useFrameHistory(): void {
     });
 
     const unsubResetWatch = useSimStore.subscribe((s, prev) => {
-      // A fresh session (new live run / replay load) clears the charts.
-      if (s.events.length === 0 && prev.events.length > 0) {
+      // A fresh session (new run, replay load, restart or backward seek) clears
+      // the charts; failure-free runs have no events, so time going backwards counts too.
+      const timeWentBack = s.simTime !== null && prev.simTime !== null && s.simTime < prev.simTime;
+      const satsCleared = s.satellites.length === 0 && prev.satellites.length > 0;
+      if ((s.events.length === 0 && prev.events.length > 0) || timeWentBack || satsCleared) {
         useHistoryStore.getState().reset();
         lastState = null;
         lastT = null;

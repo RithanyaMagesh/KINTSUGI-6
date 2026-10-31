@@ -1,6 +1,6 @@
 /* Panel primitives shared across layout components — derived ONLY from
-   tokens.css (§13.1). Solid surfaces, 1px borders, radius ≤ 8px, no shadows,
-   no gradients, no glassmorphism. */
+   tokens.css. 1px borders, radius ≤ 8px, no shadows, no gradients; controls
+   use the glass tokens so they sit cleanly inside the live HUD drawers. */
 
 .panel {
   background: var(--panel);
@@ -12,9 +12,9 @@
 }
 
 .panelTitle {
-  font-size: var(--text-panel-title);
+  font-size: 13px;
   font-weight: 600;
-  color: var(--ink);
+  color: var(--ink-muted);
   margin-bottom: var(--space-3);
 }
 
@@ -29,12 +29,12 @@
   min-height: 1.4em;
 }
 
-/* Ordinary product buttons — no pill styling (§13.3). */
+/* Buttons and fields blend with the glass HUD panels they sit in. */
 .btn {
-  background: var(--panel-raised);
+  background: var(--glass);
   color: var(--ink);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-control);
+  border: 1px solid var(--glass-line);
+  border-radius: 8px;
   padding: var(--space-1) var(--space-3);
   font-size: var(--text-body);
   font-weight: 500;
@@ -44,12 +44,12 @@
 }
 
 .btn:hover:not(:disabled) {
-  background: var(--border);
+  background: var(--glass-line);
 }
 
 .btn:disabled {
   color: var(--ink-faint);
-  border-color: var(--border);
+  border-color: var(--glass-line);
   cursor: not-allowed;
 }
 
@@ -59,21 +59,32 @@
   gap: var(--space-2);
 }
 
-/* Native-styled form controls (§13.3: ordinary product patterns). */
+/* Native-styled form controls. */
 .select,
 .input {
-  background: var(--bg);
+  background: var(--glass);
   color: var(--ink);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-control);
+  border: 1px solid var(--glass-line);
+  border-radius: 8px;
   padding: var(--space-1) var(--space-2);
   font-size: var(--text-body);
+}
+
+.select:hover:not(:disabled),
+.input:hover:not(:disabled) {
+  background: var(--glass-line);
 }
 
 .select:disabled,
 .input:disabled {
   color: var(--ink-faint);
-  border-color: var(--border);
+  border-color: var(--glass-line);
+}
+
+/* Dropdown lists render natively; keep them opaque and readable. */
+.select option {
+  background: var(--bg);
+  color: var(--ink);
 }
 
 .fieldLabel {

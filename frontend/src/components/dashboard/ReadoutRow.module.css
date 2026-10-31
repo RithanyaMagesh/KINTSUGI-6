@@ -38,17 +38,15 @@
 }
 
 .value {
-  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   font-size: var(--text-metric);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   color: var(--ink);
 }
 
-/* Context line under the value (threshold reference, §8.7 band) — mono at
-   the event-log size, secondary voice. */
+/* Context line under the value — plain words at the event-log size, secondary voice. */
 .context {
-  font-family: var(--font-mono);
   font-size: var(--text-event);
   color: var(--ink-muted);
   font-variant-numeric: tabular-nums;

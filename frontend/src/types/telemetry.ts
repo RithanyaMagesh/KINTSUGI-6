@@ -8,7 +8,6 @@ export interface Metrics {
   minSep: number; // [m]
   detectionLatencyS?: number; // t_detect − t_fail
   replanningLatencyMs?: number;
-  missionHealthScore?: number; // derived, only from measured inputs
 }
 
 /** One deserialized simulation frame — serves live WS, replay, and logs alike. */

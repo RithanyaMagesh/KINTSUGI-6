@@ -23,12 +23,16 @@ export default function SceneControls({ controller }: { controller: SwarmSceneCo
 
   function preset(p: "reset" | "focus"): void {
     if (controller === null) return;
+    const ui = useUiStore.getState();
+    if (p === "reset") {
+      ui.selectSatellite(null); // also ends any follow
+      controller.applyPreset(view === "global" ? "reset" : "formation", null);
+      return;
+    }
+    // Follow = select: the scene's follow-cam does the rest.
     const sats = useSimStore.getState().satellites;
-    const focus =
-      sats.find((s) => s.status === "failed") ??
-      sats.find((s) => s.id === useUiStore.getState().selectedSatelliteId) ??
-      null;
-    controller.applyPreset(p === "reset" ? (view === "global" ? "reset" : "formation") : "focus", focus);
+    const pick = sats.find((s) => s.id === ui.selectedSatelliteId) ?? sats.find((s) => s.status === "failed");
+    if (pick !== undefined) ui.selectSatellite(pick.id);
   }
 
   function toggle(k: Layer): void {

@@ -1,4 +1,4 @@
-/* Event log — 14px mono rows (§13.2), severity via tokens only (§13.1).
+/* Event log — 14px rows, severity via tokens only.
    Collapsed state keeps the header + one latest-event line: stable height. */
 
 .log {
@@ -16,9 +16,9 @@
 }
 
 .title {
-  font-size: var(--text-panel-title);
+  font-size: 13px;
   font-weight: 600;
-  color: var(--ink);
+  color: var(--ink-muted);
 }
 
 .count {
@@ -30,8 +30,7 @@
 
 .list {
   list-style: none;
-  font-family: var(--font-mono);
-  font-size: var(--text-event); /* 14px mono rows (§13.2) */
+  font-size: var(--text-event);
   overflow-y: auto;
   min-height: 0;
 }
@@ -40,7 +39,7 @@
   display: flex;
   gap: var(--space-3);
   padding: 2px 0;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--glass-line);
 }
 
 .time {
@@ -63,7 +62,6 @@
   display: flex;
   gap: var(--space-3);
   min-height: 1.4em;
-  font-family: var(--font-mono);
   font-size: var(--text-event);
   white-space: nowrap;
 }

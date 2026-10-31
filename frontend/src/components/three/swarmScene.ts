@@ -164,10 +164,11 @@ export class SwarmSceneController {
       const step = target - this.phaseTarget;
       if (this.phaseStampMs > 0 && dtw > 0 && step > 0 && step < 0.5) {
         this.phaseRate = 0.7 * this.phaseRate + 0.3 * (step / dtw);
-      } else if (this.phaseStampMs === 0 || Math.abs(step) >= 0.5) {
+      } else if (this.phaseStampMs === 0 || step <= 0 || step >= 0.5) {
         // first frame, replay seek or a new run: jump straight there
         this.orbitPhase = target;
         this.phaseRate = 0;
+        for (const rec of this.records.values()) clearSatelliteTrail(rec); // no chord across Earth
       }
       this.phaseTarget = target;
       this.phaseStampMs = now;
@@ -196,7 +197,14 @@ export class SwarmSceneController {
     }
     const nSeats = Math.max(this.lastSats.length, 1);
     const fit = fitFormation(this.lastSats, nSeats);
+    this.orbitPhase = this.phaseTarget; // phase only advances in Earth view: no catch-up spin
     this.syncAllObjects(this.lastSats, fit);
+    if (this.followId !== null) {
+      this.followFly = this.reducedMotion ? 0.01 : 1.6; // fly back to the followed satellite
+      const rec = this.records.get(this.followId);
+      if (rec !== undefined) this.lastFollowPos.copy(rec.group.position);
+      return;
+    }
     // Smoothly animate camera distance and target via AutoFitController
     this.fit.onPreset(mode === "global" ? "reset" : "formation");
   }
@@ -213,6 +221,9 @@ export class SwarmSceneController {
   }
 
   setToggles(t: typeof this.toggles): void {
+    if (t.trails && !this.toggles.trails) {
+      for (const rec of this.records.values()) clearSatelliteTrail(rec);
+    }
     this.toggles = { ...t };
     this.slots.visible = t.slots;
     this.lines.setVisibility(t.lines);
@@ -262,7 +273,7 @@ export class SwarmSceneController {
   /** Fly the camera to a satellite and keep it in frame as it orbits; null
    * flies back out to the whole-Earth view. */
   focusSatellite(id: string | null): void {
-    if (id === this.followId) return;
+    if (id !== null && id === this.followId) return;
     this.followId = id;
     if (id === null) {
       this.applyPreset(this.orbitMode === "global" ? "reset" : "formation", null);
@@ -283,6 +294,7 @@ export class SwarmSceneController {
     const rec = this.records.get(this.followId);
     if (rec === undefined) {
       this.followId = null;
+      this.onPick(null); // satellite gone (new run): drop the selection, fly back out
       return;
     }
     const pos = rec.group.position;
@@ -485,6 +497,7 @@ export class SwarmSceneController {
       this.animate();
     } else if (!visible) {
       this.running = false;
+      cancelAnimationFrame(this.raf); // else the pending frame revives a 2nd loop on return
     }
   };
 
@@ -562,8 +575,10 @@ export class SwarmSceneController {
     if (this.orbitMode === "global" && this.lastSats.length > 0) {
       const sinceMs = performance.now() - this.phaseStampMs;
       // Stream stalled (paused / ended): stop extrapolating after 1.5 s.
-      const lead = sinceMs > 1500 ? 0 : Math.min(sinceMs / 1000, 1.5);
-      const predicted = this.phaseTarget + this.phaseRate * lead;
+      // Stalled (paused / ended / recomputing): hold where we are, never ease back.
+      const stalled = sinceMs > 1500;
+      const lead = Math.min(sinceMs / 1000, 1.5);
+      const predicted = stalled ? this.orbitPhase : this.phaseTarget + this.phaseRate * lead;
       this.orbitPhase = this.reducedMotion
         ? this.phaseTarget
         : this.orbitPhase + (predicted - this.orbitPhase) * Math.min(1, dt * 10);

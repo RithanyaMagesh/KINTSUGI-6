@@ -1,4 +1,4 @@
-/* FailureInjectionPanel — clean live fault trigger. Strict token compliance (§13.1). */
+/* FailureInjectionPanel — live fault trigger. Tokens only. */
 
 .group {
   display: flex;
@@ -32,7 +32,7 @@
 }
 
 .injectBtn:hover:not(:disabled) {
-  background: var(--panel-raised);
+  background: var(--glass-line);
   border-color: var(--status-failed);
 }
 

@@ -1,6 +1,7 @@
 // Full-screen live HUD — top edge. Left: wordmark home link, mission state,
 // sim clock. Right: run transport, view switch and the buttons that open the
 // hidden layers (Setup, Telemetry), fullscreen and hide-HUD.
+import { useReplayStore } from "../../stores/replayStore";
 import { useEffect, useState } from "react";
 import { useSimStore } from "../../stores/simStore";
 import { useSceneStore, type SceneViewMode } from "../../stores/sceneStore";
@@ -32,6 +33,7 @@ export default function HudTopBar(p: Props) {
   const connection = useSimStore((s) => s.connection);
   const view = useSceneStore((s) => s.viewMode);
   const [paused, setPaused] = useState(false);
+  const [busy, setBusy] = useState(false); // one request at a time: no out-of-order speed/pause
   const speed = useUiStore((s) => s.runSpeed);
   const setSpeed = useUiStore((s) => s.setRunSpeed);
   const [err, setErr] = useState<string | null>(null);
@@ -73,23 +75,31 @@ export default function HudTopBar(p: Props) {
 
   async function togglePause(): Promise<void> {
     setErr(null);
+    setBusy(true);
     try {
       if (replay) await (paused ? backend.replayResume() : backend.replayPause());
       else await (paused ? backend.simulationResume() : backend.simulationPause());
+      if (replay) useReplayStore.getState().setIsPlaying(paused);
       setPaused(!paused);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Could not reach the simulator");
+    } finally {
+      setBusy(false);
     }
   }
 
   async function pickSpeed(v: number): Promise<void> {
     setErr(null);
+    setBusy(true);
     try {
       if (replay) await backend.replaySpeed(v);
       else await simulationSpeed(v);
+      if (replay) useReplayStore.getState().setPlaybackSpeed(v);
       setSpeed(v);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Could not change speed");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -118,7 +128,7 @@ export default function HudTopBar(p: Props) {
       <div className={styles.topRight}>
         {(live || replay) && (
           <div className={styles.group} role="group" aria-label="Run speed">
-            <button type="button" className={styles.hudBtn} onClick={() => void togglePause()}>
+            <button type="button" className={styles.hudBtn} disabled={busy} onClick={() => void togglePause()}>
               {paused ? "Resume" : "Pause"}
             </button>
             {SPEEDS.map((v) => (
@@ -127,6 +137,7 @@ export default function HudTopBar(p: Props) {
                 type="button"
                 className={styles.seg}
                 aria-pressed={speed === v}
+                disabled={busy}
                 onClick={() => void pickSpeed(v)}
                 title={`Run at ${v}× real time`}
               >

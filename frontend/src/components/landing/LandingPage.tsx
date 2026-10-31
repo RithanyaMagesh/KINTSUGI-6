@@ -12,25 +12,25 @@ import styles from "./LandingPage.module.css";
 // Floating hero cards — measured values only. Sources: data/eval/benchmark_results.json (critical roles),
 // data/eval/benchmark_manifest.json (run count), tests/test_fault.py (4 s detection).
 const CARDS: TelemetryCard[] = [
-  { label: "SAT-1 · leader", value: "holding slot", tone: "green" },
+  { label: "SAT-1, leader", value: "Holding slot", tone: "green" },
   { label: "Failure detected", value: "in 4 s", tone: "ink" },
-  { label: "Leader + downlink kept", value: "15 / 15 pairs (6 / 15 without recovery)", tone: "gold" },
-  { label: "Benchmarked", value: "60 runs · 4 policies", tone: "ink" },
-  { label: "Reruns", value: "byte-identical", tone: "ink" },
+  { label: "Leader and downlink kept", value: "15 of 15 pairs (6 without recovery)", tone: "gold" },
+  { label: "Benchmarked", value: "60 runs, 4 policies", tone: "ink" },
+  { label: "Reruns", value: "Byte-identical", tone: "ink" },
 ];
 
 const BEATS = [
   {
-    step: "01 · Failure detected",
+    step: "Failure detected",
     title: "One satellite breaks.",
     body:
-      "SAT-3 goes silent. Three missed heartbeats later — 4 seconds — the swarm knows. The dead satellite keeps coasting, so it stays in every collision check.",
+      "SAT-3 goes silent. Three missed check-ins later, 4 seconds in, the swarm knows. The dead satellite keeps coasting, so it stays in every collision check.",
   },
   {
-    step: "02 · Reconfiguring → recovered",
-    title: "The swarm repairs itself — with gold.",
+    step: "Moving to new slots",
+    title: "The swarm repairs itself, with gold.",
     body:
-      "A Hungarian solver re-assigns the survivors to new slots and re-elects lost roles; thrust-limited control flies them there. No ground command. Kintsugi repairs broken pottery with gold — this swarm does the same.",
+      "The swarm works out the cheapest new slot for every survivor and hands the lost roles to someone else; each satellite then flies itself there. No ground command. Kintsugi repairs broken pottery with gold, and this swarm does the same.",
   },
 ];
 
@@ -38,28 +38,28 @@ const BEATS = [
 const WORKFLOW_MODES = [
   {
     title: "Live simulation sandbox",
-    tag: "Interactive physics engine",
+    tag: "Interactive",
     description:
-      "Configure your own constellation, launch the live Clohessy-Wiltshire orbital physics engine, and inject satellite failures at any moment to test autonomous recovery.",
+      "Build your own swarm, run it in a live orbital physics simulation, and break any satellite at any moment to test the self-repair.",
     bullets: [
       "Choose satellite count, orbit altitude, and formation radius",
-      "Switch between Global Earth orbit and close-up Formation array views",
-      "Click any satellite in 3D to inject a live fault and watch Hungarian slot reassignment",
+      "Switch between a view of Earth and a close-up of the formation",
+      "Click any satellite to fail it and watch the survivors move into new slots",
     ],
     ctaLabel: "Open live sandbox",
     href: "#/live",
   },
   {
-    title: "Scenario replays",
-    tag: "Pre-recorded missions",
+    title: "Replays",
+    tag: "Recorded runs",
     description:
-      "Stream and scrub through canonical multi-failure scenarios — dual imager loss, leader re-election, cascading faults — with full telemetry playback.",
+      "Play back and scrub through recorded failure runs: two imagers lost, a lost leader replaced, failures one after another. Every number comes along.",
     bullets: [
-      "Instant playback of committed scenario runs",
-      "Scrub to any timestamp or state transition on the recovery timeline",
-      "Inspect ground coverage, minimum separation, and per-satellite propellant use",
+      "Instant playback of saved runs",
+      "Jump to any moment or step of the recovery",
+      "Inspect ground coverage, closest approach and fuel spent per satellite",
     ],
-    ctaLabel: "Browse scenario replays",
+    ctaLabel: "Browse replays",
     href: "#/replay",
   },
 ];
@@ -71,14 +71,14 @@ const WORKFLOW_MODES = [
 // Command: uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark \
 //   --report data/eval/benchmark_results.json --policies do_nothing,even_split,greedy,hungarian
 const STATS = [
-  { value: "4 s", label: "Failure detection", source: "kill-type failure, 3 missed heartbeats" },
+  { value: "4 s", label: "Failure detection", source: "Kill-type failure, 3 missed heartbeats" },
   {
     value: "15 / 15",
     label: "Failure pairs with leader and downlink kept",
-    source: "vs 6 / 15 with no recovery · all 15 two-failure pairs",
+    source: "Versus 6 of 15 with no recovery, all 15 two-failure pairs",
   },
-  { value: "60", label: "Benchmarked runs", source: "15 failure pairs × 4 policies, no-recovery included" },
-  { value: "SHA-256", label: "Byte-identical reruns", source: "same machine, same scenario + seed" },
+  { value: "60", label: "Benchmarked runs", source: "15 failure pairs, 4 policies, no-recovery included" },
+  { value: "SHA-256", label: "Byte-identical reruns", source: "Same machine, same scenario and seed" },
 ];
 
 const SECTION_COUNT = BEATS.length + 2;
@@ -165,10 +165,10 @@ export function LandingPage() {
           <p className={styles.kicker}>Autonomous CubeSat swarm recovery</p>
           <h1 className={styles.srOnly}>KINTSUGI-6</h1>
           <div className={styles.wordmarkSpace} aria-hidden="true" />
-          <p className={styles.tagline}>The swarm that heals itself — and repairs with gold.</p>
+          <p className={styles.tagline}>The swarm that heals itself, and repairs with gold.</p>
           <div className={styles.ctaRow}>
             <a className={styles.ctaPrimary} href="#/live">
-              Launch live demo <span aria-hidden="true">→</span>
+              Launch live demo
             </a>
             <a className={styles.ctaGhost} href="#/replay">
               Watch a replay
@@ -176,7 +176,7 @@ export function LandingPage() {
           </div>
           <button type="button" className={styles.scrollHint} onClick={() => goTo(1)}>
             <span className={styles.scrollLine} aria-hidden="true" />
-            Scroll — watch a satellite break and the swarm repair
+            Scroll to watch a satellite break and the swarm repair itself
           </button>
         </section>
 
@@ -192,8 +192,8 @@ export function LandingPage() {
 
         <section ref={setSection(SECTION_COUNT - 1)} className={`${styles.section} ${styles.proof}`}>
           <div className={styles.proofPanel}>
-            <p className={styles.step}>03 · Recovered</p>
-            <h2 className={styles.beatTitle}>Every number has a command behind it.</h2>
+            <p className={styles.step}>Recovered</p>
+            <h2 className={styles.beatTitle}>Every number comes from a recorded run.</h2>
             <dl className={styles.stats}>
               {STATS.map((s) => (
                 <div key={s.label} className={styles.stat}>
@@ -218,7 +218,7 @@ export function LandingPage() {
                     ))}
                   </ul>
                   <a className={styles.modeLink} href={m.href}>
-                    {m.ctaLabel} <span aria-hidden="true">→</span>
+                    {m.ctaLabel}
                   </a>
                 </div>
               ))}
@@ -228,7 +228,7 @@ export function LandingPage() {
               <a href="#/tutorial">Interactive tutorial</a>
               <a href="#/faq">FAQ</a>
               <a href="#/docs">Technical documentation</a>
-              <span className={styles.footerNote}>Linearized CW dynamics, simulation only — limits in the docs.</span>
+              <span className={styles.footerNote}>Simplified orbit model, simulation only. Limits are in the docs.</span>
             </footer>
           </div>
         </section>

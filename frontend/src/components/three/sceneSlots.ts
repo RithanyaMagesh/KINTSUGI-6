@@ -16,6 +16,7 @@ import { SCENE_TOKENS, statusToken, tokenColor } from "./sceneColors";
 import { lvlhToScene, markerWorldRadius } from "./sceneSatellites";
 import type { LabelLayer } from "./sceneLabels";
 import styles from "./SwarmScene.module.css";
+import { roleLabel } from "../live/hudFormat";
 
 const SLOT_TARGET_PX = 6;
 const ELLIPSE_SEGMENTS = 128;
@@ -141,7 +142,7 @@ export class SlotLayer {
       mat.color = tokenColor(
         active ? statusToken("reconfiguring") : selectedTarget ? SCENE_TOKENS.focus : SCENE_TOKENS.inkMuted,
       );
-      slot.text = `slot_${j}${sat !== undefined ? ` · ${sat.role}` : " · VACATED"}`;
+      slot.text = sat !== undefined ? `Slot ${j + 1}, ${roleLabel(sat.role).toLowerCase()}` : `Slot ${j + 1} (empty)`;
       slot.show = active || selectedTarget || sat === undefined;
 
       // Dashed transfer vector while the assigned survivor maneuvers to the slot.

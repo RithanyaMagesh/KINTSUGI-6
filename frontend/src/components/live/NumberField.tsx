@@ -17,8 +17,7 @@ interface Props {
   step?: string;
   min?: string;
   max?: string;
-  /** Native tooltip; copy grounded in cubesat/scenario.py field descriptions
-   * or docs/MASTER_PROMPT.md — no invented explanations. */
+  /** Native tooltip in plain words. */
   tip?: string;
   disabled?: boolean;
 }

@@ -53,10 +53,8 @@ interface UiStore {
   showFormationLines: boolean;
   showTargetSlots: boolean;
   showDebugPanel: boolean;
-  presentationMode: boolean;
   selectedSatelliteId: string | null;
   cameraMode: CameraMode;
-  replayModeRequested: boolean;
   route: Route;
   viewMode: ViewMode;
   orbitViewMode: OrbitViewMode;
@@ -70,10 +68,8 @@ interface UiStore {
   setShowFormationLines(v: boolean): void;
   setShowTargetSlots(v: boolean): void;
   toggleDebugPanel(): void;
-  setPresentationMode(v: boolean): void;
   selectSatellite(id: string | null): void;
   setCameraMode(m: CameraMode): void;
-  setReplayModeRequested(v: boolean): void;
   setRoute(r: Route): void;
   setViewMode(m: ViewMode): void;
   setOrbitViewMode(m: OrbitViewMode): void;
@@ -88,10 +84,8 @@ export const useUiStore = create<UiStore>((set, get) => ({
   showFormationLines: true,
   showTargetSlots: true,
   showDebugPanel: false,
-  presentationMode: false,
   selectedSatelliteId: null,
   cameraMode: "free",
-  replayModeRequested: false,
   route: initialRoute(),
   viewMode: "simplified",
   orbitViewMode: "global",
@@ -104,10 +98,8 @@ export const useUiStore = create<UiStore>((set, get) => ({
   setShowFormationLines: (v) => set({ showFormationLines: v }),
   setShowTargetSlots: (v) => set({ showTargetSlots: v }),
   toggleDebugPanel: () => set((s) => ({ showDebugPanel: !s.showDebugPanel })),
-  setPresentationMode: (v) => set({ presentationMode: v }),
   selectSatellite: (id) => set({ selectedSatelliteId: id }),
   setCameraMode: (m) => set({ cameraMode: m }),
-  setReplayModeRequested: (v) => set({ replayModeRequested: v }),
   setRoute: (r) => set({ route: r }),
   setViewMode: (m) => set({ viewMode: m }),
   setOrbitViewMode: (m) => set({ orbitViewMode: m }),

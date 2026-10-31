@@ -6,8 +6,7 @@ import type { ReactElement } from "react";
 import { useSimStore } from "../../stores/simStore";
 import { useUiStore, type Route } from "../../stores/uiStore";
 import { missionStateColor } from "../../utils/colors";
-import { formatSimTime } from "../../utils/format";
-import { isMissionState } from "../../types/satellite";
+import { clock, stateLabel } from "../live/hudFormat";
 import chrome from "../../styles/chrome.module.css";
 import styles from "./TopStatusBar.module.css";
 
@@ -90,13 +89,6 @@ export default function TopStatusBar() {
   const setViewMode = useUiStore((s) => s.setViewMode);
   const theme = useUiStore((s) => s.theme);
   const toggleTheme = useUiStore((s) => s.toggleTheme);
-  const presentation = useUiStore((s) => s.presentationMode);
-  const setPresentationMode = useUiStore((s) => s.setPresentationMode);
-
-  const stateLabel =
-    missionState !== null && isMissionState(missionState)
-      ? missionState
-      : "Standby";
 
   const failedCount = satellites.reduce((n, s) => (s.status === "failed" ? n + 1 : n), 0);
   const activeCount = satellites.length - failedCount;
@@ -106,17 +98,16 @@ export default function TopStatusBar() {
       <div className={styles.brandCluster}>
         <a href="#/" className={styles.name}>
           <span className={styles.brandMark} aria-hidden="true" />
-          CubeSat swarm console
+          KINTSUGI-6
         </a>
         {scenario !== null && scenario !== "" && (
           <span className={styles.metaTag} title="Active scenario">
-            {scenario}
+            {scenario.replace(/_/g, " ")}
           </span>
         )}
       </div>
 
-      {!presentation && (
-        <nav className={styles.nav} aria-label="Primary">
+      <nav className={styles.nav} aria-label="Primary">
           {NAV.map((n) => (
             <a
               key={n.route}
@@ -139,8 +130,7 @@ export default function TopStatusBar() {
               {n.icon}
             </a>
           ))}
-        </nav>
-      )}
+      </nav>
 
       <div className={styles.status}>
         <span
@@ -149,15 +139,15 @@ export default function TopStatusBar() {
           style={{ color: missionStateColor(missionState) }}
         >
           <span className={styles.dot} style={{ background: missionStateColor(missionState) }} />
-          <span className={styles.stateWord}>{stateLabel}</span>
+          <span className={styles.stateWord}>{stateLabel(missionState)}</span>
         </span>
         {satellites.length > 0 && (
           <span className={styles.fleetCount} title="Active / total satellites">
             {activeCount}/{satellites.length} active
           </span>
         )}
-        <span className={styles.mono} aria-label="Simulation time">
-          {formatSimTime(simTime)}
+        <span className={styles.clock} aria-label="Simulation time">
+          {clock(simTime)}
         </span>
         {mode !== "stopped" && (
           <span className={styles.modeChip} data-mode={mode}>
@@ -175,7 +165,7 @@ export default function TopStatusBar() {
 
       {/* Console density toggle (Simplified vs Advanced) + Theme toggle (Dark vs Light) */}
       <div className={styles.toolbarControls}>
-        {(route === "live" || route === "replay") && !presentation && (
+        {(route === "live" || route === "replay") && (
           <div className={styles.segmented} role="group" aria-label="Console view density">
             <button
               type="button"
@@ -205,16 +195,6 @@ export default function TopStatusBar() {
         >
           {theme === "dark" ? "Light mode" : "Dark mode"}
         </button>
-
-        {presentation && (
-          <button
-            type="button"
-            className={chrome.btn}
-            onClick={() => setPresentationMode(false)}
-          >
-            Exit presentation
-          </button>
-        )}
       </div>
     </header>
   );

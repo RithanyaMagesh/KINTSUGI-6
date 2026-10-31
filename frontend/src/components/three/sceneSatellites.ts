@@ -30,8 +30,8 @@ function cubeSatKit(): { geoms: Geoms; live: SatMaterials; dark: SatMaterials } 
     const panel = panelTexture();
     const dark = makeMaterials(panel);
     for (const m of Object.values(dark)) {
-      m.color.multiplyScalar(0.28);
-      m.emissive.copy(tokenColor(statusToken("failed"))).multiplyScalar(0.45);
+      m.color.multiplyScalar(0.35);
+      m.emissive.copy(tokenColor(statusToken("failed"))).multiplyScalar(0.1); // charred, red-tinted; not a flat pink block
     }
     kit = { geoms: makeGeoms(), live: makeMaterials(panel), dark };
   }

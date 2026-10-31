@@ -14,7 +14,9 @@ export default function PhaseRail() {
   return (
     <ol className={styles.rail} aria-label="Recovery sequence">
       {PHASES.map((p, i) => {
-        const reached = starts[p.state] !== undefined || i === currentIdx;
+        // Only steps up to the current one: after a second failure the
+        // earlier "Recovered" must not stay lit.
+        const reached = currentIdx >= 0 && i <= currentIdx;
         const current = i === currentIdx;
         const repaired = p.state === "RECOVERED" && current;
         return (
@@ -28,7 +30,7 @@ export default function PhaseRail() {
           >
             <span className={styles.railTick} aria-hidden="true" />
             <span className={styles.railLabel}>{p.label}</span>
-            {starts[p.state] !== undefined && i > 0 && (
+            {reached && starts[p.state] !== undefined && i > 0 && (
               <span className={styles.railTime}>{clock(starts[p.state])}</span>
             )}
           </li>

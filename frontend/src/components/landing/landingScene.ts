@@ -121,22 +121,22 @@ function cardTexture(card: TelemetryCard): THREE.CanvasTexture {
   const r = 18;
   g.beginPath();
   g.roundRect(4, 4, w - 8, h - 8, r);
-  g.fillStyle = cssVar("--panel");
+  g.fillStyle = cssVar("--hero-bg"); // hero token, not --panel: the stage stays black in light mode
   g.fill();
   g.lineWidth = 3;
   g.strokeStyle = card.tone === "gold" ? cssVar("--hero-gold") : cssVar("--hero-line-strong");
   g.stroke();
   g.textBaseline = "alphabetic";
-  g.fillStyle = cssVar("--hero-ink-faint");
-  g.font = `500 30px "IBM Plex Mono", monospace`;
-  g.fillText(card.label.toUpperCase(), 32, 64);
+  g.fillStyle = cssVar("--hero-ink-muted");
+  g.font = `500 32px "IBM Plex Sans", "Segoe UI", sans-serif`;
+  g.fillText(card.label, 32, 64);
   g.fillStyle =
     card.tone === "gold"
       ? cssVar("--hero-gold-bright")
       : card.tone === "green"
         ? cssVar("--status-nominal")
         : cssVar("--hero-ink");
-  g.font = `500 48px "IBM Plex Mono", monospace`;
+  g.font = `600 48px "IBM Plex Sans", "Segoe UI", sans-serif`;
   g.fillText(card.value, 32, 132);
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;

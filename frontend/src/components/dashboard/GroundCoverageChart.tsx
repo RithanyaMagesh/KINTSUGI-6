@@ -20,8 +20,8 @@ export default function GroundCoverageChart() {
       title="Ground coverage over time"
       data={data}
       xKey="t"
-      xLabel="t [s]"
-      yLabel="coverage"
+      xLabel="Time (s)"
+      yLabel="Coverage"
       yDomain={[0, 1]}
       yTickFormat={(v) => `${(v * 100).toFixed(0)}%`}
       endLabelX={last?.t ?? null}

@@ -19,9 +19,12 @@
 import { useEffect, useState } from "react";
 import { backend, replayLogDuration } from "../../api/backend";
 import { useSimStore } from "../../stores/simStore";
+import { useRecoveryStore } from "../../stores/recoveryStore";
+import { useRoleHistoryStore } from "../../stores/roleHistoryStore";
+import { useHistoryStore } from "../../stores/historyStore";
 import { useReplayStore } from "../../stores/replayStore";
 import { useUiStore } from "../../stores/uiStore";
-import { formatSimTime } from "../../utils/format";
+import { clock } from "../live/hudFormat";
 import chrome from "../../styles/chrome.module.css";
 import styles from "./ReplayControls.module.css";
 
@@ -29,6 +32,41 @@ import styles from "./ReplayControls.module.css";
 // visibly moves — a 5676 s log takes 95 minutes at 1×.
 const SPEEDS = [0.5, 1, 2, 5, 10];
 const DEFAULT_SPEED = 10;
+
+const RUN_LABELS: Record<string, string> = {
+  firefly_swarm: "Six satellites on FIREFLY-1's real orbit",
+  two_failure: "Two satellites lost",
+  cascading_n8: "Eight satellites, three failures in a row",
+  leader_failure_6sat: "Leader lost, then an imager",
+  single_failure_n4: "Four satellites, leader lost and replaced",
+  nominal: "Nominal orbit, no failures",
+};
+
+/** Plain-English title for a recorded run; never the raw log filename. */
+export function runTitle(filename: string): string {
+  const name = filename.replace(/\.jsonl$/, "");
+  const run = /_run(\d+)$/.exec(name);
+  const base = name.replace(/_run\d+$/, "");
+  const title = RUN_LABELS[base] ?? base.charAt(0).toUpperCase() + base.slice(1).replace(/_/g, " ");
+  return run !== null ? `${title}, run ${run[1]}` : title;
+}
+
+/** Clear every per-run store so the next frames start a clean story. */
+export function resetRunStores(): void {
+  useSimStore.getState().reset();
+  useRecoveryStore.getState().resetForNewRun();
+  useRoleHistoryStore.getState().resetForNewRun();
+  useHistoryStore.getState().reset();
+}
+
+/** Backward seek / restart: wipe the "future" the stores already saw, but keep
+ * the session's identity and replay mode. */
+export function rewindStores(): void {
+  const { scenario, seed, policy, minSepM } = useSimStore.getState();
+  resetRunStores();
+  useSimStore.getState().setSessionMeta({ scenario, seed, policy, minSepM });
+  useSimStore.getState().setMode("replay");
+}
 
 interface Props {
   /** Narrow-band variant: same controls, fewer rows, tighter padding. */
@@ -53,6 +91,7 @@ export default function ReplayControls({ compact = false }: Props) {
   const [duration, setDuration] = useState<number | null>(null);
   const [sliderT, setSliderT] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [filesError, setFilesError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   // The store defaults to the backend's 100× (cubesat/wire.py StartRequest);
@@ -71,25 +110,16 @@ export default function ReplayControls({ compact = false }: Props) {
       .then((data) => {
         if (!cancelled) setFiles(data.files);
       })
-      .catch(() => {
-        if (!cancelled) setFiles([]);
+      .catch((err: unknown) => {
+        if (!cancelled) {
+          setFiles([]);
+          setFilesError(err instanceof Error ? err.message : "unknown error");
+        }
       });
     return () => {
       cancelled = true;
     };
   }, []);
-
-  // The mission brief's "Open replay mode" sets uiStore.replayModeRequested
-  // and loads the latest log itself; preselect that same latest log here so
-  // the dropdown reflects the running replay. Reactive (not mount-only) so
-  // the flag is consumed whenever this bar is mounted, in either flag/files
-  // arrival order. One-shot: consumed once it acts.
-  const replayModeRequested = useUiStore((s) => s.replayModeRequested);
-  useEffect(() => {
-    if (!replayModeRequested || files.length === 0) return;
-    setSelected(files[files.length - 1]);
-    useUiStore.getState().setReplayModeRequested(false);
-  }, [replayModeRequested, files]);
 
   // The dropdown mirrors the session, never a stale local pick: a run loaded
   // through the page's gallery (or any other path) updates the selection, so
@@ -137,8 +167,10 @@ export default function ReplayControls({ compact = false }: Props) {
     setBusy(true);
     setError(null);
     try {
+      // Reset BEFORE loading: the backend pushes the first frames right away.
+      resetRunStores();
+      useUiStore.getState().setRunSpeed(speed);
       await backend.replayLoad(selected, speed);
-      resetStore();
       setActiveFile(selected);
       setIsPlaying(true);
       setMode("replay");
@@ -150,11 +182,18 @@ export default function ReplayControls({ compact = false }: Props) {
     }
   }
 
+  function seek(t: number, after?: () => void): void {
+    const now = useSimStore.getState().simTime;
+    // Going back: forget later events, or dead satellites read as recovered.
+    if (now !== null && t < now) rewindStores();
+    void run(() => backend.replaySeek(t), after);
+  }
+
   function commitSliderSeek(): void {
     if (sliderT === null) return;
     const t = sliderT;
     setSliderT(null);
-    void run(() => backend.replaySeek(t));
+    seek(t);
   }
 
   function stopReplay(): void {
@@ -185,14 +224,14 @@ export default function ReplayControls({ compact = false }: Props) {
         value={seekTo}
         disabled={!replay || busy}
         onChange={(e) => setSeekTo(e.target.value)}
-        aria-label="Seek to sim time in seconds"
+        aria-label="Jump to time in seconds"
       />
       <button
         className={chrome.btn}
         disabled={!replay || busy || seekTo === ""}
-        onClick={() => run(() => backend.replaySeek(Number(seekTo)))}
+        onClick={() => seek(Number(seekTo))}
       >
-        Seek
+        Jump
       </button>
     </>
   );
@@ -229,7 +268,7 @@ export default function ReplayControls({ compact = false }: Props) {
         <button
           className={chrome.btn}
           disabled={!replay || busy}
-          onClick={() => run(() => backend.replaySeek(0), () => setIsPlaying(true))}
+          onClick={() => seek(0, () => setIsPlaying(true))}
         >
           Restart
         </button>
@@ -244,6 +283,7 @@ export default function ReplayControls({ compact = false }: Props) {
           onChange={(e) => {
             const next = Number(e.target.value);
             setPlaybackSpeed(next);
+            useUiStore.getState().setRunSpeed(next);
             run(() => backend.replaySpeed(next));
           }}
         >
@@ -255,15 +295,15 @@ export default function ReplayControls({ compact = false }: Props) {
         </select>
         {replay && (
           <span className={styles.timeMono}>
-            {formatSimTime(simTime)}
-            {duration !== null ? ` of t + ${duration.toFixed(1)} s` : ""}
+            {clock(simTime)}
+            {duration !== null ? ` of ${clock(duration)}` : ""}
           </span>
         )}
       </div>
       {replay && duration !== null && (
         <div className={styles.seekRow}>
           <label className={chrome.fieldLabel} htmlFor="replay-seek">
-            Scrub — {formatSimTime(simTime)} of t + {duration.toFixed(1)} s
+            Position {clock(simTime)} of {clock(duration)}
           </label>
           <input
             id="replay-seek"
@@ -277,7 +317,7 @@ export default function ReplayControls({ compact = false }: Props) {
             onChange={(e) => setSliderT(Number(e.target.value))}
             onPointerUp={commitSliderSeek}
             onKeyUp={commitSliderSeek}
-            aria-valuetext={formatSimTime(sliderT ?? simTime)}
+            aria-valuetext={clock(sliderT ?? simTime)}
           />
         </div>
       )}
@@ -286,7 +326,7 @@ export default function ReplayControls({ compact = false }: Props) {
         // selector only — the dropdown stands down for a quiet readout.
         <div className={styles.loadRow}>
           <span className={styles.playingState}>{isPlaying ? "Playing" : "Paused"}</span>
-          <span className={styles.fileMono}>{activeFile}</span>
+          <span className={styles.fileMono}>{runTitle(activeFile)}</span>
           <button type="button" className={chrome.btn} onClick={focusGallery}>
             Change recording
           </button>
@@ -304,12 +344,12 @@ export default function ReplayControls({ compact = false }: Props) {
             value={selected}
             disabled={files.length === 0 || busy}
             onChange={(e) => setSelected(e.target.value)}
-            aria-label="Replay log file"
+            aria-label="Recorded run"
           >
-            {files.length === 0 && <option value="">No replay logs found</option>}
+            {files.length === 0 && <option value="">No recorded runs found</option>}
             {files.map((f) => (
               <option key={f} value={f}>
-                {f}
+                {runTitle(f)}
               </option>
             ))}
           </select>
@@ -332,15 +372,18 @@ export default function ReplayControls({ compact = false }: Props) {
         </div>
       )}
       {replay && duration === null && (
-        <p className={chrome.hint}>Log duration unreadable — use the exact seek input.</p>
+        <p className={chrome.hint}>Run length unknown, so use the time box to jump.</p>
       )}
       {!compact && replay && activeFile === null && (
         <p className={chrome.hint}>
-          Replay session in progress — the session greeting does not report the file name.
+          A replay is already playing; pick a run to start a new one.
         </p>
       )}
       {!replay && activeFile === null && (
-        <p className={chrome.hint}>No replay file loaded. Pick a run from the gallery, or select a log below.</p>
+        <p className={chrome.hint}>Nothing loaded yet. Pick a run to replay.</p>
+      )}
+      {filesError !== null && (
+        <p className={chrome.errorText}>Could not list recorded runs: {filesError}</p>
       )}
       {error !== null && <p className={chrome.errorText}>{error}</p>}
     </section>

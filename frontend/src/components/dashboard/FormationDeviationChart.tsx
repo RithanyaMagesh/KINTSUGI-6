@@ -14,15 +14,15 @@ export default function FormationDeviationChart() {
 
   return (
     <TelemetryChart
-      title="Formation deviation over time"
+      title="Distance to slot"
       data={data}
       xKey="t"
-      xLabel="t [s]"
-      yLabel="deviation [m]"
+      xLabel="Time (s)"
+      yLabel="Distance (m)"
       yTickFormat={(v) => v.toFixed(0)}
       endLabelX={last?.t ?? null}
       endLabelY={() => last?.deviation ?? null}
-      series={[{ key: "deviation", label: "deviation", color: "var(--status-caution)" }]}
+      series={[{ key: "deviation", label: "Distance", color: "var(--status-caution)" }]}
     >
       <EventMarkers markers={markers} />
     </TelemetryChart>

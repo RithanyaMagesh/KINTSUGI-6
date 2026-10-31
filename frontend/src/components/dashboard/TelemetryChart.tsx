@@ -1,6 +1,6 @@
-// Telemetry chart frame — §13.4 chart law: solid 2px lines, no per-point
-// dots, no gradient fills, hairline gridlines in --border, axis ticks in
-// Plex Mono at the §13.2 tick size, direct end-of-line labels (no legend
+// Telemetry chart frame: solid 2px lines, no per-point dots, no gradient
+// fills, hairline gridlines, sans axis ticks with tabular numbers, direct
+// end-of-line labels (no legend
 // chip row). Shared by every chart in the dashboard so the styling is
 // decided once. Animation is off everywhere (§13.5: near-zero UI motion;
 // data streams at 2 Hz).
@@ -20,8 +20,9 @@ import styles from "./TelemetryChart.module.css";
 
 export const TICK_STYLE = {
   fill: "var(--ink-muted)",
-  fontSize: 12, // §13.2 axis ticks: 12-13px
-  fontFamily: "var(--font-mono)",
+  fontSize: 12,
+  fontFamily: "var(--font-sans)",
+  fontVariantNumeric: "tabular-nums",
 } as const;
 
 export interface SeriesSpec {
@@ -75,7 +76,7 @@ export default function TelemetryChart({
         <div style={{ height }}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 8, right: 88, bottom: 4, left: 0 }}>
-            <CartesianGrid stroke="var(--border)" />
+            <CartesianGrid stroke="var(--glass-line)" />
             <XAxis
               dataKey={xKey}
               tick={TICK_STYLE}
@@ -105,10 +106,10 @@ export default function TelemetryChart({
             />
             <Tooltip
               contentStyle={{
-                background: "var(--panel-raised)",
-                border: "1px solid var(--border-strong)",
-                borderRadius: 6,
-                fontFamily: "var(--font-mono)",
+                background: "var(--glass-strong)",
+                border: "1px solid var(--glass-line-strong)",
+                borderRadius: 8,
+                fontFamily: "var(--font-sans)",
                 fontSize: 12,
                 color: "var(--ink)",
               }}
@@ -145,7 +146,7 @@ export default function TelemetryChart({
                     position: "right",
                     fill: s.color,
                     fontSize: 12,
-                    fontFamily: "var(--font-mono)",
+                    fontFamily: "var(--font-sans)",
                   }}
                 />
               );

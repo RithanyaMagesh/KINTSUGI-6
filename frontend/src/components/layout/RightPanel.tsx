@@ -1,9 +1,9 @@
 // RightPanel — View-Aware Telemetry & Inspector.
 // Adapts automatically to Simplified vs. Advanced view mode:
-// - Simplified mode (default): 3 core readout rows (Ground coverage, Minimum
-//   separation, Satellites active / failed), the Ground coverage chart, and a
+// - Simplified mode (default): 3 core readout rows (Ground coverage, Closest
+//   approach, Satellites flying), the Ground coverage chart, and a
 //   compact Selected satellite card.
-// - Advanced mode: All 6 readout rows + 4 strictly tabbed inspector panels
+// - Advanced mode: All 5 readout rows + 4 strictly tabbed inspector panels
 //   (Charts | Satellite detail | Role reassignment | Events & AI risk) so
 //   panels never stack on top of each other.
 // Every value traces strictly to the stream; absent values render "unmeasured"
@@ -13,13 +13,11 @@ import { useSimStore } from "../../stores/simStore";
 import { useHistoryStore } from "../../stores/historyStore";
 import { useRecoveryStore, selectLatestFailure } from "../../stores/recoveryStore";
 import { useUiStore } from "../../stores/uiStore";
-import { healthBand } from "../../utils/health";
 import ReadoutRow from "../dashboard/ReadoutRow";
 import GroundCoverageChart from "../dashboard/GroundCoverageChart";
 import FormationDeviationChart from "../dashboard/FormationDeviationChart";
 import InterSatDistanceChart from "../dashboard/InterSatDistanceChart";
 import DvChart from "../dashboard/DvChart";
-import MissionHealthScore from "../dashboard/MissionHealthScore";
 import RoleTable from "../dashboard/RoleTable";
 import RecoveryLog from "../recovery/RecoveryLog";
 import EventLog from "../events/EventLog";
@@ -41,8 +39,7 @@ const CHART_TABS = [
   { id: "coverage", label: "Coverage" },
   { id: "separation", label: "Separation" },
   { id: "deviation", label: "Deviation" },
-  { id: "dv", label: "Delta-v" },
-  { id: "health", label: "Health" },
+  { id: "dv", label: "Fuel spent" },
 ] as const;
 
 type ChartTabId = (typeof CHART_TABS)[number]["id"];
@@ -61,11 +58,8 @@ export default function RightPanel() {
   const failed = satellites.reduce((n, s) => (s.status === "failed" ? n + 1 : n), 0);
   const active = satellites.length - failed;
 
-  const health = useHistoryStore((s) =>
-    s.samples.length > 0 ? s.samples[s.samples.length - 1].health : null,
-  );
   const minSepRef = useHistoryStore((s) => s.minSepRef);
-  const band = health === null ? null : healthBand(health);
+  const keepOutM = useSimStore((s) => s.minSepM); // scenario keep-out [m]; null = unknown
 
   const preCov = latestFailure?.coverage.pre ?? null;
   const covNow = metrics.coverage ?? null;
@@ -73,13 +67,15 @@ export default function RightPanel() {
   if (preCov !== null && covNow !== null) {
     const diffPts = (covNow - preCov) * 100;
     const sign = diffPts >= 0 ? "+" : "";
-    covContext = `${sign}${diffPts.toFixed(1)} pts vs ${(preCov * 100).toFixed(1)}% pre-fault`;
+    covContext = `${sign}${diffPts.toFixed(1)} pts vs ${(preCov * 100).toFixed(1)}% before the failure`;
   }
 
   const sepContext =
-    minSepRef !== null
-      ? `2000 m keep-out · ref ${minSepRef.toFixed(0)} m`
-      : "2000 m keep-out floor";
+    keepOutM !== null
+      ? `Safety limit ${keepOutM.toFixed(0)} m${minSepRef !== null ? `, started at ${minSepRef.toFixed(0)} m` : ""}`
+      : minSepRef !== null
+        ? `Started at ${minSepRef.toFixed(0)} m`
+        : undefined;
 
   const latencyVal = metrics.detectionLatencyS ?? latestFailure?.detectionLatencyS ?? null;
 
@@ -98,42 +94,36 @@ export default function RightPanel() {
           label="Ground coverage"
           value={metrics.coverage === undefined ? null : metrics.coverage}
           format={(v) => `${(v * 100).toFixed(1)} %`}
-          tip="Share of ground targets observed by healthy imagers. Drops when an imager fails; recovers as survivors re-phase around the formation (spec 7.5)."
+          tip="Share of ground targets the working imagers can see. Drops when an imager fails and climbs back as the survivors spread out again."
           context={covContext}
         />
         <ReadoutRow
-          label="Minimum separation"
+          label="Closest approach"
           value={metrics.minSep}
           format={(v) => `${v.toFixed(0)} m`}
-          tip="Closest pair distance across the swarm (including coasting dead satellites). Must remain above the 2000 m keep-out safety floor (spec 7.5)."
+          tip={`Distance between the two closest satellites, lost ones included.${keepOutM !== null ? ` It must stay above the ${keepOutM.toFixed(0)} m safety limit.` : ""}`}
           context={sepContext}
         />
         <ReadoutRow
-          label="Satellites active / failed"
+          label="Satellites flying"
           value={hasSats ? active : null}
-          format={() => `${active} / ${failed}`}
-          tip="Count of healthy/reconfiguring satellites vs failed satellites."
+          format={() => `${active} of ${satellites.length}${failed > 0 ? `, ${failed} lost` : ""}`}
+          tip="Satellites still working, out of the whole swarm."
         />
 
         {viewMode === "advanced" && (
           <>
             <ReadoutRow
-              label="Mission health score"
-              value={health}
-              format={(v) => `${v.toFixed(0)} / 100${band ? ` (${band})` : ""}`}
-              tip="Composite 0-100 score combining ground coverage, formation slot tracking, and separation margin."
-            />
-            <ReadoutRow
               label="Detection latency"
               value={latencyVal}
               format={(v) => `${v.toFixed(1)} s`}
-              tip="t_detect − t_fail: time from fault injection until 3 missed heartbeats trigger autonomous Hungarian replanning (spec 7.5)."
+              tip="Time from the failure until the swarm notices it: three missed check-ins in a row."
             />
             <ReadoutRow
-              label="Delta-v used (sum)"
+              label="Fuel spent"
               value={hasSats ? dvTotal : null}
               format={(v) => `${v.toFixed(2)} m/s`}
-              tip="Total propellant (Δv) burned by saturated PD thrusters across all satellites during slot reconfiguration (spec 7.5)."
+              tip="Total speed change (delta-v) all satellites have burned, mostly while moving to new slots."
             />
           </>
         )}
@@ -194,7 +184,6 @@ export default function RightPanel() {
                 {chartTab === "separation" && <InterSatDistanceChart />}
                 {chartTab === "deviation" && <FormationDeviationChart />}
                 {chartTab === "dv" && <DvChart />}
-                {chartTab === "health" && <MissionHealthScore />}
               </div>
             )}
 

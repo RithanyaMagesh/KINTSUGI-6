@@ -13,6 +13,7 @@
 //
 // Bare section: the host supplies panel chrome (no card inside a card,
 // §13.3). Embeddable on the replay page AND the live page's Recovery tab.
+import { slotLabel } from "../live/hudFormat";
 import type { ReactNode } from "react";
 import { useSimStore } from "../../stores/simStore";
 import { useRecoveryStore } from "../../stores/recoveryStore";
@@ -22,39 +23,34 @@ import type {
   RecoveryPhase,
 } from "../../stores/recoveryStore";
 import { useHistoryStore, type ChartSample } from "../../stores/historyStore";
-import { formatPercent, formatSimTime } from "../../utils/format";
+import { formatSimTime } from "../../utils/format";
+import { faultLabel, stateLabel } from "../live/hudFormat";
+import { POLICIES } from "../live/scenarioDraft";
 import styles from "./RecoveryLog.module.css";
 
-/** Format the active recovery policy from simStore.policy when measured on the
- * session, falling back to "Hungarian (default)" for replay logs where the wire
- * omits the default policy field (cubesat/wire.py _policy_field). */
-const POLICY_DISPLAY: Record<string, string> = {
-  hungarian: "hungarian (two-step assignment)",
-  even_split: "even_split (even redistribution)",
-  hungarian_keepout: "hungarian_keepout (dead-sat keep-out)",
-};
+/** Display name of a recovery method id; null when unknown (replay logs may
+ * omit the policy field, so it is never assumed). */
+function policyName(policy: string | null): string | null {
+  return POLICIES.find((p) => p.id === policy)?.label ?? null;
+}
 
-function formatPolicyLabel(policy: string | null): string {
-  if (policy === null || policy.trim() === "") return "Hungarian (default)";
-  return POLICY_DISPLAY[policy] ?? policy;
+/** "slot_2" -> "Slot 3" (people count from 1); anything else passes through. */
+export { slotLabel } from "../live/hudFormat"; // one helper, kept for existing importers
+
+/** Coverage fraction as "26%". */
+function pct(v: number): string {
+  return `${(v * 100).toFixed(0)}%`;
 }
 
 /** m/s — below any measured burn (dead satellites coast, invariant 5). */
 const DV_EPSILON = 1e-9;
 
-/** The allocator's semantics in one plain-language line — the answer to the
- * beta report "satellite 5 failed — why did satellite 6 go?". The re-solve is
- * ONE Hungarian assignment over ALL survivors (docs/MASTER_PROMPT.md §2:
- * rectangular linear_sum_assignment, rows = survivors, cols = slots;
- * cubesat/allocate.py solve_assignment), so every survivor is reassigned at
- * once and a failure can move several satellites. Algorithm semantics from
- * the docs, NOT telemetry. Exported so NarrationStrip mounts the same words
- * while a multi-mover reassignment is the live story. */
+/** Why one failure can move several satellites: every recovery method
+ * reassigns all survivors at once. Exported so NarrationStrip shows the same
+ * words. */
 export const WHY_LINE =
-  "Why these moves: the allocator minimizes total burn across every survivor " +
-  "and slot at once — each survivor takes the slot that makes the whole " +
-  "formation cheapest to restore, so a failure can move several satellites, " +
-  "not just the closest one.";
+  "Why several moved: the replan picks a new slot for every survivor at once, " +
+  "so one failure can move more than the nearest satellite.";
 
 interface Step {
   time: number | null; // sim time stamp [s]; null = no measured instant
@@ -181,7 +177,7 @@ function stepsFor(
   isLatest: boolean,
   samples: ChartSample[],
   missionState: string | null,
-  policyLabel: string,
+  policyLabel: string | null,
 ): Step[] {
   const f = ep.failure;
   const steps: Step[] = [];
@@ -195,13 +191,8 @@ function stepsFor(
     time: detectedAt,
     body: (
       <>
-        <span className={styles.mono}>{f.satId}</span>{" "}
-        {f.mode !== null && (
-          <>
-            <span className={styles.mono}>{f.mode}</span>{" "}
-          </>
-        )}
-        failure detected
+        {f.satId} failure detected
+        {f.mode !== null && <> ({faultLabel(f.mode)})</>}
       </>
     ),
   });
@@ -214,8 +205,8 @@ function stepsFor(
       time: null,
       body: (
         <>
-          Declared <span className={styles.mono}>{f.mode ?? "failed"}</span> after{" "}
-          <span className={styles.mono}>{f.detectionLatencyS.toFixed(1)} s</span>
+          Confirmed lost after{" "}
+          <span className={styles.num}>{f.detectionLatencyS.toFixed(1)} s</span>
         </>
       ),
     });
@@ -237,15 +228,15 @@ function stepsFor(
     if (movers.length > 0) {
       movers.forEach((m, i) => {
         parts.push(
-          <span key={`mover-${m.satelliteId}`} className={styles.mono}>
-            {m.satelliteId} {m.prevSlot} {"->"} {m.targetSlot}
+          <span key={`mover-${m.satelliteId}`}>
+            {m.satelliteId} from {slotLabel(m.prevSlot ?? "")} to {slotLabel(m.targetSlot ?? "")}
           </span>,
         );
         if (f.vacatedSlot !== null && m.targetSlot === f.vacatedSlot) {
           parts.push(
             <span key={`takeover-${m.satelliteId}`}>
               {" "}
-              (takes over from <span className={styles.mono}>{f.satId}</span>)
+              (takes over from {f.satId})
             </span>,
           );
         }
@@ -254,14 +245,7 @@ function stepsFor(
     } else {
       parts.push(
         <span key="nomovers">
-          {a.rows.length} survivor slots assigned; no slot change provable from the wire yet
-        </span>,
-      );
-    }
-    if (a.costTotal !== null) {
-      parts.push(
-        <span key="cost">
-          ; assignment cost <span className={styles.mono}>{a.costTotal.toFixed(2)}</span>
+          {a.rows.length} survivors given slots; no slot change seen yet
         </span>,
       );
     }
@@ -269,7 +253,7 @@ function stepsFor(
       time: a.time,
       body: (
         <>
-          Replan via {policyLabel}: {parts}
+          Replan{policyLabel !== null && ` (${policyLabel.replace(/ \((default|comparison)\)$/, "")})`}: {parts}
         </>
       ),
     });
@@ -277,26 +261,7 @@ function stepsFor(
     // WHY line under the moves (beta report: "satellite 5 failed — why did
     // satellite 6 go?"). The replan step lists WHO moved; this says WHY more
     // than one can. Context, not an action: muted, no measured instant.
-    // cost_total suffix only when the wire carried it — never estimated
-    // (invariant 1; measured on data/logs/two_failure.jsonl).
-    steps.push({
-      time: null,
-      muted: true,
-      body: (
-        <>
-          {WHY_LINE}
-          {a.costTotal !== null && (
-            <>
-              {" "}(total weighted assignment cost{" "}
-              <span className={styles.mono}>{a.costTotal.toFixed(2)}</span>
-              {/* cost_total is a dimensionless weighted sum over normalized
-                  distance, fuel and role mismatch (cubesat/allocate.py) — no
-                  physical unit, so none is claimed. */}
-            </>
-          )}
-        </>
-      ),
-    });
+    steps.push({ time: null, muted: true, body: WHY_LINE });
   }
 
   // (d) Propellant burned across this episode's reconfiguration window
@@ -309,8 +274,8 @@ function stepsFor(
         time: ep.reconfig.t0,
         body: (
           <>
-            Propellant burned across reconfiguration (
-            <span className={styles.mono}>
+            Fuel spent while moving (
+            <span className={styles.num}>
               {ep.reconfig.t0.toFixed(1)} s to {ep.reconfig.t1.toFixed(1)} s
             </span>
             ):
@@ -337,13 +302,12 @@ function stepsFor(
       time: ep.recoveredAt,
       body: (
         <>
-          Formation error back within band; <span className={styles.mono}>RECOVERED</span>.
+          The survivors are back in their slots. Recovered.
           {atRecovery !== null && f.coverage.pre !== null && (
             <>
               {" "}
-              Coverage <span className={styles.mono}>{formatPercent(atRecovery)}</span> vs{" "}
-              <span className={styles.mono}>{formatPercent(f.coverage.pre)}</span> before the
-              failure.
+              Coverage <span className={styles.num}>{pct(atRecovery)}</span>, was{" "}
+              <span className={styles.num}>{pct(f.coverage.pre)}</span> before the failure.
             </>
           )}
         </>
@@ -356,8 +320,7 @@ function stepsFor(
       body:
         missionState !== null ? (
           <>
-            Recovery in progress — mission state{" "}
-            <span className={styles.mono}>{missionState}</span>
+            Recovery in progress: {stateLabel(missionState).toLowerCase()}
           </>
         ) : (
           <>Recovery in progress</>
@@ -369,8 +332,8 @@ function stepsFor(
       muted: true,
       body: (
         <>
-          Superseded by the <span className={styles.mono}>{ep.next.satId}</span> failure at{" "}
-          <span className={styles.mono}>{formatSimTime(ep.next.tFail)}</span>
+          Interrupted by the {ep.next.satId} failure at{" "}
+          <span className={styles.num}>{formatSimTime(ep.next.tFail)}</span>
         </>
       ),
     });
@@ -387,14 +350,16 @@ export default function RecoveryLog() {
   const policy = useSimStore((s) => s.policy);
   const samples = useHistoryStore((s) => s.samples);
 
-  const policyLabel = formatPolicyLabel(policy);
+  const policyLabel = policyName(policy);
   const episodes = dedupeEpisodes(failures, assignments, phases, simTime);
 
   return (
     <section className={styles.log} aria-label="Recovery log">
       <div className={styles.header}>
         <h3 className={styles.title}>Recovery log</h3>
-        <span className={styles.policy}>Recovery policy: {policyLabel}</span>
+        {policyLabel !== null && (
+          <span className={styles.policy}>Recovery method: {policyLabel}</span>
+        )}
       </div>
       {episodes.length === 0 ? (
         <p className={styles.empty}>
@@ -417,12 +382,8 @@ export default function RecoveryLog() {
                 className={`${styles.episode} ${outcomeClass}`}
               >
                 <h4 className={styles.episodeTitle}>
-                  Episode {i + 1}: <span className={styles.mono}>{ep.failure.satId}</span>
-                  {ep.failure.mode !== null && (
-                    <>
-                      {" "}(<span className={styles.mono}>{ep.failure.mode}</span>)
-                    </>
-                  )}
+                  Failure {i + 1}: {ep.failure.satId}
+                  {ep.failure.mode !== null && <> ({faultLabel(ep.failure.mode)})</>}
                 </h4>
                 <ol className={styles.steps}>
                   {stepsFor(ep, isLatest, samples, missionState, policyLabel).map((s, j) => (

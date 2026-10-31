@@ -1,12 +1,9 @@
 // Scenario builder — the #/live unscripted sandbox control seat.
 // Starts with zero pre-scheduled failures (failures: []) so the swarm flies
 // nominal until the operator injects faults live in real time.
-// Adapts to Simplified vs Advanced view mode:
-// - Simplified: Satellite count (2-50), Orbit altitude (km), Formation radius (km),
-//   Recovery policy, and Start / Pause / Resume / Reset controls.
-// - Advanced: Adds per-satellite role customization, phase offset, PD controller
-//   gains, sensor FOV/grid settings, AI risk overlay toggle, and optional
-//   scheduled failures.
+// Core fields always show (count, altitude, radius, recovery method, start /
+// stop). "More options" switches the app to Advanced view, which reveals roles,
+// physics, AI risk, scheduled failures and the fault type in FailureInjectionPanel.
 import { useRef, useState } from "react";
 import { uploadScenario, type ScenarioUploadResult } from "../../api/scenarios";
 import { useSimStore } from "../../stores/simStore";
@@ -70,11 +67,10 @@ export default function ScenarioBuilder() {
   const [predictorNote, setPredictorNote] = useState<string | null>(null);
   const [predictor, setPredictor] = useState(false);
   const [controlling, setControlling] = useState(false);
-  const [advancedOpen, setAdvancedOpen] = useState(false);
   const nextFailureKey = useRef(1);
 
-  const wirePolicy = useSimStore((s) => s.policy);
   const mode = useSimStore((s) => s.mode);
+  const liveCount = useSimStore((s) => s.satellites.length);
 
   const building = phase === "building";
   const live = mode === "live";
@@ -119,7 +115,7 @@ export default function ScenarioBuilder() {
       const res = await postStart({ ...baseReq, policy });
       if (predictor) {
         setPredictorNote(
-          "AI-risk option not accepted by this backend — started without predictor overlay.",
+          "This server does not support AI risk, so the run started without it.",
         );
       }
       return res;
@@ -129,16 +125,16 @@ export default function ScenarioBuilder() {
     try {
       const res = await postStart({ ...baseReq, predictor });
       setPolicyNote(
-        `Policy "${policy}" not accepted by this backend — started with default allocator.`,
+        `This server does not support "${POLICIES.find((p) => p.id === policy)?.label ?? policy}", so the run uses its default recovery method.`,
       );
       return res;
     } catch (errPredOnly) {
       if ((errPredOnly as StartError).status !== 422) throw errPredOnly;
     }
     const res = await postStart(baseReq);
-    setPolicyNote("Policy option not accepted by this backend — started with default allocator.");
+    setPolicyNote("This server does not support choosing a recovery method, so the run uses its default.");
     if (predictor) {
-      setPredictorNote("AI-risk option not accepted by this backend — started without overlay.");
+      setPredictorNote("This server does not support AI risk, so the run started without it.");
     }
     return res;
   }
@@ -148,6 +144,7 @@ export default function ScenarioBuilder() {
     setPolicyNote(null);
     setPredictorNote(null);
     setPhase("building");
+    let starting = false;
     try {
       const customTypedName = sanitizeName(runName);
       const auto = customTypedName === "";
@@ -168,18 +165,22 @@ export default function ScenarioBuilder() {
 
       useRecoveryStore.getState().resetForNewRun();
       useRoleHistoryStore.getState().resetForNewRun();
+      starting = true;
       const started = await startWithFallback(filename);
       useUiStore.getState().setRunSpeed(started.speed ?? nums.speed);
       useSimStore.getState().setSessionMeta({
         scenario: started.scenario ?? filename,
         seed: started.seed ?? nums.seed,
         policy: started.policy ?? policy,
+        minSepM: started.minSepM,
       });
       useSimStore.getState().setMode("live");
       useReplayStore.getState().setActiveFile(null);
       setPhase("running");
-      setAdvancedOpen(false);
     } catch (err) {
+      // A failed start (not a 422 validation error) has already torn the old run
+      // down server-side, so the UI must stop showing it as live.
+      if (starting && (err as StartError).status !== 422) useSimStore.getState().reset();
       setPhase("error");
       setError(err instanceof Error ? err.message : "Run failed");
     }
@@ -209,15 +210,15 @@ export default function ScenarioBuilder() {
 
   const statusText =
     phase === "building"
-      ? "Initializing physics engine…"
+      ? "Starting…"
       : live
-        ? `Live swarm active (${nSats} satellites, ${wirePolicy ?? policy}). Inject faults below.`
-        : `Ready: ${nSats} satellites at ${nums.altitudeKm} km altitude (${nums.radialAmpKm} km formation radius).`;
+        ? `Running with ${liveCount} satellites. Fail one below.`
+        : `Ready: ${nSats} satellites at ${nums.altitudeKm} km altitude, ${nums.radialAmpKm} km formation radius.`;
 
   return (
     <section className={styles.panel} aria-label="Live sandbox setup">
       <div className={styles.panelHead}>
-        <h2 className={chrome.panelTitle}>Live swarm sandbox</h2>
+        <h2 className={chrome.panelTitle}>New run</h2>
       </div>
 
       {policyNote !== null && (
@@ -235,7 +236,7 @@ export default function ScenarioBuilder() {
       <div className={styles.group}>
         <div className={styles.field}>
           <label className={chrome.fieldLabel} htmlFor="builder-nsats">
-            Satellite count (N)
+            Satellites
           </label>
           <select
             id="builder-nsats"
@@ -246,7 +247,7 @@ export default function ScenarioBuilder() {
           >
             {SAT_COUNT_OPTIONS.map((n) => (
               <option key={n} value={n}>
-                {n} satellites ({n - 2} imagers, 1 leader, 1 downlink)
+                {`${n} satellites (1 leader, ${n - 2} imager${n - 2 === 1 ? "" : "s"}, 1 downlink)`}
               </option>
             ))}
           </select>
@@ -265,7 +266,7 @@ export default function ScenarioBuilder() {
           />
           <NumberField
             id="builder-amp-quick"
-            label="Array radius (km)"
+            label="Formation radius (km)"
             value={nums.radialAmpKm}
             min="0.5"
             step="0.5"
@@ -276,7 +277,7 @@ export default function ScenarioBuilder() {
 
         <div className={styles.field}>
           <label className={chrome.fieldLabel} htmlFor="builder-policy">
-            Recovery algorithm
+            Recovery method
           </label>
           <select
             id="builder-policy"
@@ -299,39 +300,17 @@ export default function ScenarioBuilder() {
           onClick={() => void run()}
           disabled={building}
         >
-          {building
-            ? "Starting simulation…"
-            : live
-              ? "Apply & restart live simulation"
-              : "Start live simulation"}
+          {building ? "Starting…" : live ? "Restart with these settings" : "Start run"}
         </button>
 
-        <div className={chrome.btnRow}>
-          <button
-            type="button"
-            className={chrome.btn}
-            disabled={!live || controlling}
-            onClick={() => void control(backend.simulationPause)}
-          >
-            Pause
-          </button>
-          <button
-            type="button"
-            className={chrome.btn}
-            disabled={!live || controlling}
-            onClick={() => void control(backend.simulationResume)}
-          >
-            Resume
-          </button>
-          <button
-            type="button"
-            className={chrome.btn}
-            disabled={mode === "stopped" || controlling}
-            onClick={resetRun}
-          >
-            Reset
-          </button>
-        </div>
+        <button
+          type="button"
+          className={chrome.btn}
+          disabled={mode === "stopped" || controlling}
+          onClick={resetRun}
+        >
+          Stop run
+        </button>
 
         <p className={styles.runStatus} aria-live="polite">
           {error !== null ? (
@@ -344,17 +323,16 @@ export default function ScenarioBuilder() {
         </p>
       </div>
 
-      {/* Advanced Engineering Parameters — shown only in Advanced View */}
-      {viewMode === "advanced" && (
-        <details
-          className={styles.setupAccordion}
-          open={advancedOpen}
-          onToggle={(e) => setAdvancedOpen(e.currentTarget.open)}
-        >
-          <summary className={styles.setupSummary}>
-            <span>Advanced roles, physics &amp; scheduled faults</span>
-            <span className={styles.setupBadge}>{advancedOpen ? "Hide" : "Expand"}</span>
-          </summary>
+      {/* Open = Advanced view, so the fault type in FailureInjectionPanel shows too. */}
+      <details
+        className={styles.setupAccordion}
+        open={viewMode === "advanced"}
+        onToggle={(e) => {
+          useUiStore.getState().setViewMode(e.currentTarget.open ? "advanced" : "simplified");
+        }}
+      >
+        <summary className={styles.setupSummary}>More options</summary>
+        {viewMode === "advanced" && (
           <div className={styles.setupBody}>
             <div className={styles.field}>
               <label className={styles.toggle} htmlFor="builder-predictor">
@@ -365,7 +343,7 @@ export default function ScenarioBuilder() {
                   disabled={building}
                   onChange={(e) => setPredictor(e.target.checked)}
                 />
-                AI risk overlay (display-only LightGBM precursor score)
+                AI risk (shown only, not used for decisions)
               </label>
             </div>
 
@@ -374,7 +352,6 @@ export default function ScenarioBuilder() {
               roles={roles}
               building={building}
               nums={nums}
-              onSats={changeSats}
               onRole={(seat, role) => {
                 setRoles((prev) => prev.map((r, j) => (j === seat ? role : r)));
               }}
@@ -382,10 +359,10 @@ export default function ScenarioBuilder() {
             />
 
             <fieldset className={styles.group} disabled={building}>
-              <legend className={chrome.panelTitle}>Optional scheduled failures</legend>
+              <legend className={chrome.panelTitle}>Scheduled failures</legend>
               {failures.length === 0 ? (
                 <p className={chrome.hint}>
-                  None scheduled — swarm flies nominal until you inject a fault live below.
+                  None scheduled. The swarm flies normally until you fail a satellite below.
                 </p>
               ) : (
                 <table className={styles.failTable}>
@@ -393,7 +370,7 @@ export default function ScenarioBuilder() {
                     <tr>
                       <th scope="col">Satellite</th>
                       <th scope="col">Time (s)</th>
-                      <th scope="col">Mode</th>
+                      <th scope="col">Fault</th>
                       <th scope="col">
                         <span className={styles.visuallyHidden}>Remove</span>
                       </th>
@@ -429,7 +406,7 @@ export default function ScenarioBuilder() {
 
             <div className={styles.field}>
               <label className={chrome.fieldLabel} htmlFor="builder-name">
-                Custom scenario name (optional)
+                Run name (optional)
               </label>
               <input
                 id="builder-name"
@@ -443,8 +420,8 @@ export default function ScenarioBuilder() {
               />
             </div>
           </div>
-        </details>
-      )}
+        )}
+      </details>
     </section>
   );
 }
