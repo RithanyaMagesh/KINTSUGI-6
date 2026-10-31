@@ -117,6 +117,36 @@ def sat_row_ok(sat: object) -> bool:
     )
 
 
+def _frame_events(frame: dict) -> list:
+    """The events a log line carries. v2 lines add an `events` list beside `event` (the first
+    entry); it only differs from [event] when several events share a tick. v1 lines have none."""
+    events = frame.get("events")
+    if isinstance(events, list) and len(events) > 1:
+        return events
+    event = frame.get("event")
+    return [] if event is None else [event]
+
+
+def _event_ok(event: object) -> bool:
+    if not isinstance(event, dict):
+        return False
+    payload = event.get("payload")
+    if payload is not None and not isinstance(payload, dict):
+        return False
+    if event.get("type") == "ASSIGNMENT":
+        assignments = (payload or {}).get("assignments") or []
+        if not isinstance(assignments, list):
+            return False
+        for a in assignments:
+            if (
+                not isinstance(a, dict)
+                or not isinstance(a.get("sat_id"), int)
+                or "slot_index" not in a
+            ):
+                return False
+    return True
+
+
 def tick_frame_ok(frame: dict) -> bool:
     """True when to_messages can render this tick line end to end (section 7.1
     "corrupt replay file -> skip + warn, never crash"): every sats entry carries
@@ -128,25 +158,7 @@ def tick_frame_ok(frame: dict) -> bool:
     sats = frame.get("sats")
     if not isinstance(sats, list) or not all(sat_row_ok(s) for s in sats):
         return False
-    event = frame.get("event")
-    if event is not None:
-        if not isinstance(event, dict):
-            return False
-        payload = event.get("payload")
-        if payload is not None and not isinstance(payload, dict):
-            return False
-        if event.get("type") == "ASSIGNMENT":
-            assignments = (payload or {}).get("assignments") or []
-            if not isinstance(assignments, list):
-                return False
-            for a in assignments:
-                if (
-                    not isinstance(a, dict)
-                    or not isinstance(a.get("sat_id"), int)
-                    or "slot_index" not in a
-                ):
-                    return False
-    return True
+    return all(_event_ok(e) for e in _frame_events(frame))
 
 
 def to_event(level: str, sim_time: float, message: str) -> dict:
@@ -454,30 +466,30 @@ def to_messages(frame: dict, enrich: SessionEnrich) -> list[dict]:
             to_event("info", frame.get("t", 0.0), "Run complete"),
         ]
 
-    event = frame.get("event")
-    reassignment: dict | None = None
-    event_msg: dict | None = None
-    if event:
+    reassignments: list[dict] = []
+    event_msgs: list[dict] = []
+    for event in _frame_events(frame):
+        if not event:  # `"event": null` / {} = no event (as before)
+            continue
         etype = event.get("type", "")
         payload = event.get("payload") or {}
         if etype == "FAILURE_DETECTED":
-            event_msg = _failure_event(frame, payload, enrich)
+            msg = _failure_event(frame, payload, enrich)
         elif etype == "EVASIVE_MANEUVER":
-            event_msg = _evasive_event(frame, payload)
+            msg = _evasive_event(frame, payload)
         elif etype == "ASSIGNMENT":
-            reassignment = _role_reassignment(frame, payload, enrich)
+            reassignments.append(_role_reassignment(frame, payload, enrich))
+            continue
         else:
-            event_msg = _plain_event(frame, etype, payload)
+            msg = _plain_event(frame, etype, payload)
+        if msg not in event_msgs:  # v2 logs FUEL_DEPLETED twice for one sat: same sentence
+            event_msgs.append(msg)
 
     old_roles, handoffs = _track_roles(frame, enrich)
     msgs = [to_sim_state(frame, enrich)]
     for row, sat in zip(msgs[0]["sats"], frame.get("sats", []), strict=True):
         if sat["id"] in old_roles:
             row["old_role"] = old_roles[sat["id"]]
-    if reassignment is not None and handoffs:
-        reassignment["role_handoffs"] = handoffs
-    if event_msg is not None:
-        msgs.append(event_msg)
-    if reassignment is not None:
-        msgs.append(reassignment)
-    return msgs
+    if reassignments and handoffs:
+        reassignments[0]["role_handoffs"] = handoffs
+    return msgs + event_msgs + reassignments

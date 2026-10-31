@@ -109,3 +109,54 @@ def test_v1_failure_event_wording_unchanged():
     assert (ev["level"], ev["message"]) == ("critical", "SAT-1 DEAD failure detected")
     (ev,) = _events(_line([_sat()], event=_detected(0, "THRUSTER_OUT", self_report=True)))
     assert ev["message"] == "SAT-1 THRUSTER_OUT failure detected (self-reported)"
+
+
+# --- item 4: several events on one v2 line ----------------------------------------------------
+def _six_sat_line():
+    evs = [_detected(i, "PAYLOAD_FAIL", self_report=True) for i in range(6)]
+    return _line([_sat(i, "PAYLOAD_FAILED") for i in range(6)], event=evs[0], events=evs)
+
+
+def test_simultaneous_v2_events_each_become_an_event_message_in_order():
+    msgs = to_messages(_six_sat_line(), SessionEnrich())
+    assert [m["type"] for m in msgs] == ["sim_state"] + ["event"] * 6
+    assert [m["sat_id"] for m in msgs[1:]] == [f"SAT-{i + 1}" for i in range(6)]
+
+
+def test_single_entry_events_list_equals_event_only_line():
+    ev = _detected(0, "DEAD")
+    plain = to_messages(_line([_sat()], event=ev), SessionEnrich())
+    listed = to_messages(_line([_sat()], event=ev, events=[ev]), SessionEnrich())
+    assert listed == plain
+
+
+def test_v1_line_without_events_list_is_unchanged():
+    ev = {"type": "STATE", "payload": {"from": "NOMINAL", "to": "FAILURE_DETECTED"}}
+    msgs = to_messages(_line([_sat()], event=ev), SessionEnrich())
+    assert [m["type"] for m in msgs] == ["sim_state", "event"]
+
+
+def test_fuel_depletion_pair_for_one_sat_is_one_message():
+    """The engine logs FAILURE_DETECTED(FUEL_DEPLETED) and FUEL_DEPLETED together: same sentence."""
+    evs = [_detected(1, "FUEL_DEPLETED", self_report=True),
+           {"type": "FUEL_DEPLETED", "payload": {"sat_id": 1, "t": 10.0}}]
+    msgs = to_messages(_line([_sat(1)], event=evs[0], events=evs), SessionEnrich())
+    sentence = "SAT-2 ran out of propellant and can no longer maneuver"
+    assert [m["message"] for m in msgs[1:]] == [sentence]
+
+
+def test_assignment_in_a_multi_event_line_still_emits_role_reassignment():
+    evs = [_detected(0, "RADIO_FAIL"),
+           {"type": "ASSIGNMENT", "payload": {"assignments": [
+               {"sat_id": 0, "role": "leader", "slot_index": 0}]}}]
+    msgs = to_messages(_line([_sat()], event=evs[0], events=evs), SessionEnrich())
+    assert [m["type"] for m in msgs] == ["sim_state", "event", "role_reassignment"]
+
+
+def test_replay_validation_checks_every_entry_of_events():
+    from cubesat.wire import tick_frame_ok
+
+    assert tick_frame_ok(_six_sat_line())
+    bad = _six_sat_line()
+    bad["events"][3] = "oops"
+    assert not tick_frame_ok(bad)
