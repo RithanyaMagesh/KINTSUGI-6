@@ -6,7 +6,8 @@ Each tick, after the failures of the tick have fired and before the heartbeat ru
      end's receive cone (sun vector from cubesat/geo_v2.py, rotated to LVLH);
   2. the topology is replanned only on a topology event: the set of talking sats changed, a
      LOCKED link was lost, or (star) the hub moved. Mesh keeps the LOCKED links (isl.plan_topology
-     keep=); star links every talking sat to the current leader holder;
+     keep=); star links every talking sat to the current leader holder (decentral, or the
+     leader vacant: the lowest talking sat);
   3. components = connected sets of talking sats over LOCKED links. A talking sat alone in its
      component is ISOLATED: nobody hears its heartbeat (cubesat/faults_v2.py detect()).
 Assumptions (label them wherever shown): the sim starts in steady state, so the first topology
@@ -164,7 +165,8 @@ def fault_tick(eng, t: float, lvlh: np.ndarray) -> tuple[list[dict], dict]:
         return faults.tick(t, vel_eci), {}
     events = faults.fire(t, vel_eci)
     fields, link_events, isolated = eng.comms.tick(
-        t, eng.dt, lvlh[:, :3], eng.X[0], faults.status, faults.sats, eng.roles
+        t, eng.dt, lvlh[:, :3], eng.X[0], faults.status, faults.sats,
+        eng.roles if eng.functions is None else [],  # decentral: no leader, no role-based hub
     )
     events += link_events + faults.detect(t, isolated)
     if eng.functions is not None:

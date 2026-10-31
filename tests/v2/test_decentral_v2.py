@@ -134,3 +134,42 @@ def test_restore_without_function_state_raises_and_changes_nothing():
     with pytest.raises(ValueError):
         a.restore(json.dumps(doc).encode())
     assert a.snapshot() == before
+
+
+# --- review fixes ---
+def test_star_decentral_with_the_leader_label_off_sat_0_is_quiet_and_holders_are_sorted():
+    roles = ["imager", "imager", "leader", "imager", "imager", "downlink"]
+    lines = _ticks(run_scenario_v2(_scn(topology="star", roles=roles, duration_s=60.0)))
+    assert all(not x.get("events") for x in lines)
+    assert {link[0] for link in lines[0]["links"]} == {0}  # hub = lowest talking sat from t=0
+    star = _ticks(run_scenario_v2(_scn([{"t": 100.0, "sat_id": 0, "mode": "DEAD"}], "star")))
+    for _, p in _events(star, "FUNCTION_HANDOFF"):
+        assert p["from"] == sorted(p["from"]) and p["to"] == sorted(p["to"])
+
+
+@pytest.mark.parametrize("patch", [{"holders": {}}, {"rounds": -5}, {"dirty": "no"},
+                                   {"holders": {f: [1.7] for f in LEADER_FUNCTIONS}}])
+def test_restore_rejects_malformed_function_state(patch):
+    a = EngineV2(_scn())
+    for _ in range(3):
+        a.step()
+    doc = json.loads(a.snapshot())
+    doc["state"]["functions"].update(patch)
+    before = a.snapshot()
+    with pytest.raises(ValueError):
+        a.restore(json.dumps(doc).encode())
+    assert a.snapshot() == before
+
+
+def test_measured_vacancy_and_split_brain_seconds_for_a_sat0_kill():
+    """GATES.md C4 numbers (a count of 2 s ticks, one consensus hop per tick: assumption).
+    Mesh: 40 s with failure_detection vacant (20 rounds on the broken ring), no split-brain.
+    Star: no vacancy (each singleton elects itself), 46 s with all six functions split-brain
+    until the star re-forms around sat 1 and the auction lands."""
+    out = {}
+    for topo in ("mesh", "star"):
+        lines = _ticks(run_scenario_v2(_scn([{"t": 100.0, "sat_id": 0, "mode": "DEAD"}], topo)))
+        vac = sum(bool(x["functions_vacant"]) for x in lines) * 2.0
+        brain = sum(bool(x["split_brain"]) for x in lines) * 2.0
+        out[topo] = (vac, brain, len(_events(lines, "FUNCTION_HANDOFF")))
+    assert out == {"mesh": (40.0, 0.0, 8), "star": (0.0, 46.0, 12)}

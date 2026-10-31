@@ -127,7 +127,9 @@ class FunctionState:
     assumption). Bids (default_bids): degree over LOCKED links, fuel fraction of the tank at
     the auction start (0 for a sat that cannot thrust), ground wait 0 for every sat
     (assumption: sats km apart under a ~1000 km pass footprint share one wait, which leaves
-    the argmax unchanged)."""
+    the argmax unchanged). The inputs are TRUE state (talking sats, thrust), not believed
+    state: a sat learns its neighbour's thruster loss with no detection delay (assumption).
+    Holder lists are sorted, so FUNCTION_HANDOFF `from` / `to` compare as sets."""
 
     def __init__(self, scenario) -> None:
         self.m_prop0 = scenario.spacecraft.m_prop_kg
@@ -158,7 +160,7 @@ class FunctionState:
                 self.dirty = False
             if self.pending is None or k < self.pending["k_done"]:
                 break
-            new = self.pending["holders"]
+            new = {f: sorted(h) for f, h in self.pending["holders"].items()}
             for f in LEADER_FUNCTIONS if self.holders else ():
                 if self.holders[f] != new[f]:
                     payload = {"function": f, "from": self.holders[f], "to": new[f]}
@@ -178,23 +180,43 @@ class FunctionState:
 
     def load(self, state: dict, n: int) -> None:
         """Replace every field; raises ValueError and leaves self unchanged on a bad state."""
-        try:
-            def holders(h):
-                if sorted(h) != sorted(LEADER_FUNCTIONS) or any(
-                        not 0 <= int(i) < n for v in h.values() for i in v):
-                    raise ValueError("holders must map every leader function to sat ids")
-                return {f: [int(i) for i in h[f]] for f in LEADER_FUNCTIONS}
 
-            hold = holders(state["holders"]) if state["holders"] else {}
-            p = state["pending"]
-            pending = None if p is None else {"k_done": int(p["k_done"]),
+        def ids(v, what):
+            if not isinstance(v, list) or any(type(i) is not int or not 0 <= i < n for i in v):
+                raise ValueError(f"{what} must be a list of sat ids")
+            return list(v)
+
+        def flags(v, what):
+            if not isinstance(v, list) or len(v) != n or any(type(b) is not bool for b in v):
+                raise ValueError(f"{what} must hold {n} booleans")
+            return list(v)
+
+        def holders(h):
+            if not isinstance(h, dict) or sorted(h) != sorted(LEADER_FUNCTIONS):
+                raise ValueError("holders must map every leader function to sat ids")
+            return {f: ids(h[f], f) for f in LEADER_FUNCTIONS}
+
+        def count(v, what):
+            if type(v) is not int or v < 0:
+                raise ValueError(f"{what} must be an int >= 0")
+            return v
+
+        try:
+            key, p = state["key"], state["pending"]
+            started = key is not None
+            hold = holders(state["holders"]) if started or state["holders"] else {}
+            pending = None if p is None else {"k_done": count(p["k_done"], "k_done"),
                                               "holders": holders(p["holders"]),
-                                              "rounds": int(p["rounds"])}
-            rounds, key, dirty = int(state["rounds"]), state["key"], bool(state["dirty"])
-            if key is not None:
+                                              "rounds": count(p["rounds"], "rounds")}
+            rounds, dirty = count(state["rounds"], "rounds"), state["dirty"]
+            if type(dirty) is not bool:
+                raise ValueError("dirty must be a boolean")
+            if started:
                 links, up, thrust = key
-                key = [[[int(i), int(j)] for i, j in links], [bool(u) for u in up],
-                       [bool(c) for c in thrust]]
+                for e in links:
+                    if len(ids(e, "link")) != 2 or not e[0] < e[1]:
+                        raise ValueError("links must be [i, j] with i < j")
+                key = [[list(e) for e in links], flags(up, "up"), flags(thrust, "thrust")]
         except (KeyError, TypeError, ValueError, AttributeError) as exc:
             raise ValueError(f"bad function state in snapshot: {exc!r}") from exc
         self.holders, self.pending, self.rounds, self.key = hold, pending, rounds, key
