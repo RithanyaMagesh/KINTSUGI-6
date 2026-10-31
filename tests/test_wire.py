@@ -440,3 +440,26 @@ def test_failure_and_evasive_events_carry_sat_id():
     assert "sat_id" not in _ev("FAILURE_DETECTED", {})  # truncated payload: no key, no raise
     assert "sat_id" not in _ev("EVASIVE_MANEUVER", {})
     assert "sat_id" not in _ev("MYSTERY", {"sat_id": 1})  # unknown types untouched
+
+
+def _contains(new, old, path="$"):
+    """Assert `new` carries every key/value of `old` (extra keys in `new` are fine)."""
+    if isinstance(old, dict):
+        assert isinstance(new, dict), path
+        for k, v in old.items():
+            assert k in new, f"{path}.{k} missing from new output"
+            _contains(new[k], v, f"{path}.{k}")
+    elif isinstance(old, list):
+        assert isinstance(new, list) and len(new) == len(old), path
+        for i, (n, o) in enumerate(zip(new, old, strict=True)):
+            _contains(n, o, f"{path}[{i}]")
+    else:
+        assert new == old, f"{path}: {new!r} != {old!r}"
+
+
+def test_new_wire_output_is_a_superset_of_the_legacy_golden():
+    """Additive-only proof: wire_golden_legacy_subset.json is the pre-2026-10-31
+    golden, frozen. Every key/value it holds must still appear unchanged."""
+    legacy = json.loads((FIXTURES / "wire_golden_legacy_subset.json").read_text("utf-8"))
+    new = to_messages(legacy["line"], SessionEnrich(scenario="two_failure.json", seed=42))
+    _contains(new, legacy["expected_messages"])
