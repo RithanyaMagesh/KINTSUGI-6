@@ -150,7 +150,12 @@ function cardTexture(card: TelemetryCard): THREE.CanvasTexture {
 /** The visible sun: a warm glow, a white-hot core and a fan of soft radial
  * rays (seeded, so identical on every load) that turn very slowly. Additive
  * and above the bloom threshold, so the composer adds a gentle glare. */
-function buildSun(): { group: THREE.Group; update(t: number): void; dispose(): void } {
+function buildSun(): {
+  group: THREE.Group;
+  update(t: number): void;
+  setFade(f: number): void;
+  dispose(): void;
+} {
   const hex = (name: string, alpha: number) =>
     `#${new THREE.Color(cssVar(name)).getHexString()}${Math.round(alpha * 255).toString(16).padStart(2, "0")}`;
   const radial = (size: number, stops: Array<[number, string, number]>) => {
@@ -227,6 +232,10 @@ function buildSun(): { group: THREE.Group; update(t: number): void; dispose(): v
   group.add(glow, rays, raysB, core);
   return {
     group,
+    setFade(f: number) {
+      for (const sp of [glow, rays, raysB, core]) (sp.material as THREE.SpriteMaterial).opacity = f;
+      group.visible = f > 0.003;
+    },
     update(t: number) {
       (rays.material as THREE.SpriteMaterial).rotation = t * 0.015;
       (raysB.material as THREE.SpriteMaterial).rotation = -t * 0.01 + 0.3;
@@ -624,6 +633,11 @@ export function createLandingScene(
     );
     camera.lookAt(center.x * 0.45, center.y * 0.5, 0);
     if (!reduceMotion) sun.update(t);
+    // The sun belongs to the hero: it fades out as you scroll to the next
+    // section (and back in on the way up), its light with it.
+    const sunFade = 1 - smooth(0.02, 0.16, p);
+    sun.setFade(sunFade);
+    sunLight.intensity = 95 * sunFade;
     composer.render();
   }
   raf = requestAnimationFrame(frame);
