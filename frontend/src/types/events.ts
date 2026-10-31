@@ -7,6 +7,22 @@ export interface SimEvent {
   simTime: number;
   level: EventLevel;
   message: string;
+  satId?: string; // "SAT-n" the event is about, when the backend knows it
+  from?: string; // STATE events: raw mission states
+  to?: string;
+  label?: string; // STATE events: plain sentence, e.g. "Planning recovery"
+}
+
+export interface RoleHandoff {
+  role: string;
+  from_sat: string;
+  to_sat: string;
+}
+
+export interface RunSummary {
+  coverageMeanLastOrbit: number | null;
+  simTime: number | null;
+  scenario: string | null;
 }
 
 export interface RoleReassignment {
@@ -72,4 +88,8 @@ export interface RoleReassignmentMessage {
     target_slot: string | null;
   }>;
   cost_total?: number;
+  method?: string; // hungarian | greedy | do_no_harm_hold | even_split ...
+  kept_formation?: boolean; // true = held the current slots, nobody moved
+  transfer_lower_bound_s?: number;
+  role_handoffs?: RoleHandoff[];
 }

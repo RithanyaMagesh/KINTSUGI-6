@@ -214,6 +214,7 @@ export const useRoleHistoryStore = create<RoleHistoryState>((set) => ({
           return { ...state, history };
         }
         case "hello":
+        case "summary":
           return state;
       }
     });
