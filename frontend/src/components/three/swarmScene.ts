@@ -16,6 +16,7 @@ import {
   lvlhToScene,
   pushTrail,
   setSceneCoordinateTransform,
+  setSwarmCount,
   syncSatellite,
   updateMarkerView,
   type SatRecord,
@@ -27,6 +28,10 @@ import { FormationLines } from "./sceneLines";
 import { createEnvironment, EARTH_RADIUS_FACTOR, type Environment } from "./sceneEarth";
 import { SCENE_TOKENS, tokenColor } from "./sceneColors";
 import { SUN_DIR } from "./sceneGlobe";
+
+/** Up to this many satellites every name is shown; above it, names appear
+ * only for the satellites that matter (see labelWanted). */
+const LABEL_ALL_MAX = 10;
 
 export type CameraPreset = "reset" | "top" | "formation" | "focus";
 
@@ -78,6 +83,8 @@ export class SwarmSceneController {
   private viewH = 1;
   private scratch = new THREE.Vector3();
   private followId: string | null = null;
+  private hoverId: string | null = null;
+  private lastHoverAt = 0;
   private followFly = 0; // seconds left in the fly-in
   private lastFollowPos = new THREE.Vector3();
 
@@ -123,6 +130,7 @@ export class SwarmSceneController {
 
     this.renderer.domElement.addEventListener("pointerdown", this.handlePointerDown);
     this.renderer.domElement.addEventListener("pointerup", this.handlePointerUp);
+    this.renderer.domElement.addEventListener("pointermove", this.handlePointerMove);
     this.renderer.domElement.addEventListener("wheel", this.handleWheel, { passive: true });
     this.fit.attach(this.controls);
     document.addEventListener("visibilitychange", this.handleVisibility);
@@ -133,6 +141,7 @@ export class SwarmSceneController {
 
   update({ satellites, selectedId, missionState, simTime }: SceneUpdate): void {
     this.lastSats = satellites.slice();
+    setSwarmCount(satellites.length);
     this.selectedId = selectedId;
     this.missionState = missionState;
     if (simTime !== undefined && simTime !== this.lastSimTime) {
@@ -299,6 +308,10 @@ export class SwarmSceneController {
         this.records.delete(id);
       }
     }
+    const trailOpacity = satellites.length > LABEL_ALL_MAX ? 0.28 : 0.65;
+    for (const rec of this.records.values()) {
+      (rec.trail.material as THREE.LineBasicMaterial).opacity = trailOpacity;
+    }
     if (this.toggles.trails) {
       const now = performance.now();
       for (const sat of satellites) {
@@ -339,6 +352,7 @@ export class SwarmSceneController {
     this.controls.dispose();
     this.renderer.domElement.removeEventListener("pointerdown", this.handlePointerDown);
     this.renderer.domElement.removeEventListener("pointerup", this.handlePointerUp);
+    this.renderer.domElement.removeEventListener("pointermove", this.handlePointerMove);
     this.renderer.domElement.removeEventListener("wheel", this.handleWheel);
     document.removeEventListener("visibilitychange", this.handleVisibility);
     for (const rec of this.records.values()) disposeSatelliteRecord(rec, this.scene);
@@ -397,10 +411,10 @@ export class SwarmSceneController {
         dotR: rec.screenR + 2,
         priority: labelPriority(rec.status, rec.role, this.selectedId, rec.id),
         tie: rec.id,
-        show: this.toggles.labels,
+        show: this.toggles.labels && this.labelWanted(rec),
       });
     }
-    if (this.toggles.slots) {
+    if (this.toggles.slots && this.records.size <= LABEL_ALL_MAX) {
       for (const slot of this.slots.labelItems()) {
         if (!slot.show) continue;
         const p = project(slot.pos);
@@ -473,6 +487,36 @@ export class SwarmSceneController {
     }
     this.onPick(null);
   };
+
+  /** Hover reveals a satellite's name in big swarms (throttled raycast). */
+  private handlePointerMove = (ev: PointerEvent): void => {
+    if (ev.timeStamp - this.lastHoverAt < 60) return;
+    this.lastHoverAt = ev.timeStamp;
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    const ndc = new THREE.Vector2(
+      ((ev.clientX - rect.left) / rect.width) * 2 - 1,
+      -((ev.clientY - rect.top) / rect.height) * 2 + 1,
+    );
+    this.raycaster.setFromCamera(ndc, this.camera);
+    const targets: THREE.Mesh[] = [];
+    for (const rec of this.records.values()) targets.push(rec.disc);
+    const hit = this.raycaster.intersectObjects(targets, false)[0];
+    let id: string | null = null;
+    if (hit !== undefined) {
+      for (const rec of this.records.values()) if (rec.disc === hit.object) id = rec.id;
+    }
+    this.hoverId = id;
+    this.renderer.domElement.style.cursor = id !== null ? "pointer" : "";
+  };
+
+  /** Which names to draw: everything in a small swarm; in a big one only the
+   * satellites that matter right now (roles, trouble, selection, hover). */
+  private labelWanted(rec: SatRecord): boolean {
+    if (this.records.size <= LABEL_ALL_MAX) return true;
+    if (rec.id === this.selectedId || rec.id === this.hoverId) return true;
+    if (rec.role === "leader" || rec.role === "downlink") return true;
+    return rec.status !== "healthy";
+  }
 
   private handleWheel = (): void => {
     this.fit.onWheel();
