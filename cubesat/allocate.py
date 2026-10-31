@@ -44,6 +44,15 @@ _MAX_COST_CELLS = 4096  # deterministic size cap standing in for a timeout guard
 _SWEEP_SAMPLES = 72  # orbit samples for feasibility + coverage estimates
 
 
+class InfeasibleFormation(RuntimeError):
+    """No sweep candidate is feasible. separation_blocked: every candidate failed
+    the separation check (the grid geometry binds, not the delta-v budget)."""
+
+    def __init__(self, separation_blocked: bool) -> None:
+        super().__init__("no feasible survivor formation in the sweep grid")
+        self.separation_blocked = separation_blocked
+
+
 @dataclass
 class FormationPlan:
     """The selected survivor formation: seat states at t = 0 (sim convention) and
@@ -151,6 +160,7 @@ def select_formation(
     """Step 1: best feasible (amplitude, phase offset) formation for the k seats."""
     k = len(seat_roles)
     best: FormationPlan | None = None
+    separation_blocked = True
     for amp_mult in amp_mults:  # scenario order; ties keep the first (strictly >)
         amp = amp_mult * base_amp_m
         for phi0_deg in phase_offsets_deg:
@@ -163,6 +173,7 @@ def select_formation(
                 slots, obstacle_states, min_sep_m=min_sep_m, n=n, t_replan=t_replan
             ):
                 continue
+            separation_blocked = False
             if not _reachability_ok(
                 survivor_states,
                 slots,
@@ -176,7 +187,7 @@ def select_formation(
             if best is None or cov > best.coverage:
                 best = FormationPlan(amp, phi0, slots, list(seat_roles), cov)
     if best is None:
-        raise RuntimeError("no feasible survivor formation in the sweep grid")
+        raise InfeasibleFormation(separation_blocked)
     return best
 
 
@@ -249,26 +260,52 @@ def replan(
     """Full two-step allocation at t_replan; returns (plan, pairs, cost_total,
     method, max_transfer_m, cost_matrix). pairs index the GIVEN survivor order."""
     seats = seat_roles_for(survivor_roles, original_roles)
-    plan = select_formation(
-        survivor_states,
-        seats,
-        obstacle_states,
-        base_amp_m=base_amp_m,
-        amp_mults=list(allocation.amp_sweep),
-        phase_offsets_deg=list(allocation.phase_sweep_deg),
-        min_sep_m=allocation.min_sep_km * 1000.0,
-        dv_budget_mps=allocation.dv_budget_mps,
-        a_max=a_max,
-        r_f=r_f,
-        grid=grid,
-        n=n,
-        t_replan=t_replan,
-    )
+    min_sep_m = allocation.min_sep_km * 1000.0
+    try:
+        plan = select_formation(
+            survivor_states,
+            seats,
+            obstacle_states,
+            base_amp_m=base_amp_m,
+            amp_mults=list(allocation.amp_sweep),
+            phase_offsets_deg=list(allocation.phase_sweep_deg),
+            min_sep_m=min_sep_m,
+            dv_budget_mps=allocation.dv_budget_mps,
+            a_max=a_max,
+            r_f=r_f,
+            grid=grid,
+            n=n,
+            t_replan=t_replan,
+        )
+    except InfeasibleFormation as exc:
+        # F3 (perf audit 2026-11-01): with k = n - 1 evenly spaced seats on the
+        # dead sat's own ellipse, some seat is always within pi/k of its phase,
+        # so at 24 sats no grid candidate clears 2 km (best 1416 m) although
+        # the survivors' CURRENT seats do (2953 m). When the grid geometry is
+        # what binds, the current layout is the one extra candidate, checked by
+        # the same separation test plus the
+        # budget on its identity pairing; a budget-bound failure (pareto) stays an error.
+        if not (
+            exc.separation_blocked
+            and current_slots is not None
+            and _min_separation_ok(
+                current_slots, obstacle_states, min_sep_m=min_sep_m, n=n, t_replan=t_replan
+            )
+            and all(  # the hold pairs survivor i with ITS seat i: check that pairing
+                2.0 * math.sqrt(
+                    float(np.linalg.norm(np.asarray(s)[:3] - propagate(c, t_replan, n)[:3]))
+                    * a_max
+                ) <= allocation.dv_budget_mps
+                for s, c in zip(survivor_states, current_slots, strict=True)
+            )
+        ):
+            raise
+        plan = None
     if current_slots is not None:
         cov_curr = _coverage_estimate(
             current_slots, seats, r_f=r_f, grid=grid, n=n, t_replan=t_replan
         )
-        if plan.coverage < cov_curr:
+        if plan is None or plan.coverage < cov_curr:
             k = len(survivor_roles)
             hold = FormationPlan(
                 base_amp_m, 0.0, current_slots, seats, cov_curr, "do_no_harm_hold"
