@@ -12,6 +12,7 @@ checked by test_doc_table_matches once that file exists):
 """
 
 import json
+import re
 from pathlib import Path
 
 import numpy as np
@@ -72,3 +73,11 @@ def test_reserved_rows_consumed_as_noops():
     sim_v2.consume_reserved(c, 4)
     assert c.bit_generator.state == a.bit_generator.state
 
+
+
+def test_doc_table_matches():
+    """docs/PHYSICS_V2.md draw-order table rows (in order) equal DRAW_ORDER."""
+    text = (ROOT / "docs" / "PHYSICS_V2.md").read_text(encoding="utf-8")
+    names = re.findall(r"^\| (\d) \| `(\w+)` \|", text, flags=re.M)
+    assert [int(n) for n, _ in names] == list(range(1, 8))
+    assert tuple(name for _, name in names) == sim_v2.DRAW_ORDER

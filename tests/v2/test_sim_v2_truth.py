@@ -105,7 +105,9 @@ def test_cached_phi_slot_reference_matches_direct_stm():
     for _ in range(eng.n_ticks - 1):
         eng.step()
     direct = np.array([hcw.propagate(sl, eng.k * eng.dt, eng.n) for sl in slots])
-    assert np.max(np.abs(eng.refs[:, :3] - direct[:, :3])) < 1e-6
+    err = np.max(np.abs(eng.refs[:, :3] - direct[:, :3]))
+    print(f"cached-Phi(dt) slot reference vs direct Phi(t) after 1 orbit: {err:.3e} m")
+    assert err < 1e-6
 
 
 def _fail_scn(duration=600.0) -> Scenario:
