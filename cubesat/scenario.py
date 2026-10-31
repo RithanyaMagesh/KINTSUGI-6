@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field, model_validator
 # byte-identical (AGENTS.md invariant 2).
 MAX_GRID_POINTS = 10_000
 MAX_SWEEP_ENTRIES = 64
-MAX_SATS = 32
+MAX_SATS = 50  # live view supports 50; allocate._min_separation_ok is vectorized for it
 MAX_FAILURES = 64
 MAX_DURATION_S = 86_400.0
 MAX_TICKS = 100_000

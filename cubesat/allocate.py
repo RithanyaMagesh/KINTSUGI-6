@@ -86,14 +86,24 @@ def _min_separation_ok(
     t=0 states (propagated to absolute times); obstacle states are coasting
     states AT t_replan (propagated by the elapsed sample time)."""
     period = 2.0 * math.pi / n
+    # Pairwise distances are vectorized (50-sat swarms: ~1,300 pairs x 72
+    # samples per candidate). Decisions stay bit-identical to the scalar loop:
+    # pairs clearly below the floor fail at once; pairs within a relative 1e-9
+    # band of the floor are re-checked with the exact scalar norm.
+    band = min_sep_m * 1e-9
     for m in range(_SWEEP_SAMPLES):
         tau = m * period / _SWEEP_SAMPLES
         pts = [propagate(s, t_replan + tau, n)[:3] for s in seat_slots]
         pts += [propagate(o, tau, n)[:3] for o in obstacle_states]
-        for a in range(len(pts)):
-            for b in range(a + 1, len(pts)):
-                if float(np.linalg.norm(pts[a] - pts[b])) < min_sep_m:
-                    return False
+        p = np.asarray(pts, dtype=float)
+        ia, ib = np.triu_indices(len(pts), k=1)
+        d = np.sqrt(((p[ia] - p[ib]) ** 2).sum(axis=1))
+        if bool((d < min_sep_m - band).any()):
+            return False
+        for k in np.nonzero(np.abs(d - min_sep_m) <= band)[0]:
+            a, b = int(ia[k]), int(ib[k])
+            if float(np.linalg.norm(pts[a] - pts[b])) < min_sep_m:
+                return False
     return True
 
 
