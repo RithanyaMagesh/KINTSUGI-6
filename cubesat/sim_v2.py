@@ -122,8 +122,7 @@ class EngineV2:
         c = self.X[0]
         lvlh = truth.eci_to_lvlh(self.X[1:, :3], self.X[1:, 3:], c[:3], c[3:])
         events = self._reentries(t, lvlh)  # before faults: detection reads the new status
-        ev, links = comms_v2.fault_tick(self.comms, self.faults, t, self.dt, lvlh, c, self.roles,
-                                        self.X[1:, 3:])  # = faults.tick() without laser comms
+        ev, links = comms_v2.fault_tick(self, t, lvlh)  # = faults.tick() without laser comms
         events += ev
         events += self._update_roles()
         draw_tick(self.rng, self.n_sats)  # Phases 3-4 use these rows; ignored for now
@@ -227,7 +226,7 @@ class EngineV2:
             rng = make_rng(self.scenario)
             rng.bit_generator.state = state["rng"]
             if comms := self.comms and comms_v2.CommsState(self.scenario):
-                comms.load(state["comms"])
+                comms.load(state["comms"], self.n_sats)
             self.faults.load(state["faults"])  # atomic itself; raises ValueError first
         except (KeyError, TypeError, ValueError) as exc:
             raise ValueError(f"bad EngineV2 snapshot: {exc!r}") from exc

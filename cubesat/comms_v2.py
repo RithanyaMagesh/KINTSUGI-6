@@ -11,7 +11,11 @@ Each tick, after the failures of the tick have fired and before the heartbeat ru
      component is ISOLATED: nobody hears its heartbeat (cubesat/faults_v2.py detect()).
 Assumptions (label them wherever shown): the sim starts in steady state, so the first topology
 starts LOCKED; a dark terminal is visible to the planner (no beacon), so replans route around a
-silent sat at once; the star hub carries n-1 terminals; heartbeats cross a component in one tick.
+silent sat at once; the star hub carries n-1 terminals and is the leader holder of the previous
+tick (roles update after detection); heartbeats cross a component in one tick; self-reports
+(THRUSTER_OUT, PAYLOAD_FAIL, FUEL_DEPLETED) reach ground over the unmodelled RF ground link, so
+an isolated sat still self-reports AND is later declared isolated by the swarm. The last
+survivor is always isolated (no sat is left to hear it): reported, not special-cased.
 Link state on line t is the state after this tick's step: a link usable from line t locks on
 line t + (ceil(acquire_s / dt) - 1) dt.
 """
@@ -41,7 +45,7 @@ class CommsState:
         self.links: dict[tuple[int, int], list] = {}  # (i, j) i < j -> [state, timer_s]
         self.up: list[bool] | None = None  # talking sats at the last tick (None = not started)
         self.hub: int | None = None
-        self.n_comp = 0
+        self.comps: list[list[int]] = []  # components at the last tick
 
     def tick(self, t, dt, pos, chief, status, sats, roles) -> tuple[dict, list[dict], list[bool]]:
         """-> (log fields {links, components}, events, isolated per sat)."""
@@ -53,7 +57,10 @@ class CommsState:
         first = self.up is None
         lost = any([self._step(e, link, pos, up, sun, dt, events) for e, link in
                     sorted(self.links.items())])
-        hub = next((i for i, r in enumerate(roles) if "leader" in r), None) if self.star else None
+        hub = None
+        if self.star:  # the leader holder; with the leader vacant, the lowest talking sat
+            hub = next((i for i, r in enumerate(roles) if "leader" in r), None)
+            hub = next((i for i in range(n) if up[i]), None) if hub is None else hub
         if first or lost or up != self.up or hub != self.hub:
             if not self.star:
                 keep = {e for e, link in self.links.items() if link[0] == isl.LOCKED}
@@ -65,14 +72,21 @@ class CommsState:
             old = self.links
             init = [isl.LOCKED if first else isl.DOWN, 0.0]  # steady-state start: assumption
             self.links = {e: old.get(e, list(init)) for e in sorted(plan)}
+            for e in sorted(old.keys() - plan):  # a LOCKED link planned away is a lost link
+                if old[e][0] == isl.LOCKED:
+                    payload = {"link": list(e), "reason": "replan"}
+                    events.append({"type": "LINK_LOST", "payload": payload})
             for e in sorted(plan - old.keys()):  # new links start acquiring this tick
                 self._step(e, self.links[e], pos, up, sun, dt, events)
         self.up, self.hub = up, hub
         locked = {e for e, link in self.links.items() if link[0] == isl.LOCKED}
         comps = isl.components(n, locked, up)
-        if not first and len(comps) > self.n_comp:
+        where = {i: k for k, c in enumerate(comps) for i in c}
+        split = len(comps) > 1 if first else any(
+            len({where[i] for i in c if i in where}) > 1 for c in self.comps)
+        if split:  # sats that could hear each other last tick no longer can
             events.append({"type": "PARTITION", "payload": {"components": comps}})
-        self.n_comp = len(comps)
+        self.comps = comps
         rows = []
         for (i, j), (state, _) in self.links.items():
             r = float(np.linalg.norm(pos[i] - pos[j]))
@@ -110,27 +124,35 @@ class CommsState:
 
     def state(self) -> dict:
         links = [[i, j, s, tm] for (i, j), (s, tm) in sorted(self.links.items())]
-        return {"links": links, "up": self.up, "hub": self.hub, "n_comp": self.n_comp}
+        return {"links": links, "up": self.up, "hub": self.hub, "comps": self.comps}
 
-    def load(self, state: dict) -> None:
+    def load(self, state: dict, n: int) -> None:
         """Replace every field; raises ValueError and leaves self unchanged on a bad state."""
         try:
             links = {(int(i), int(j)): [str(s), float(tm)] for i, j, s, tm in state["links"]}
             up = None if state["up"] is None else [bool(u) for u in state["up"]]
             hub = None if state["hub"] is None else int(state["hub"])
-            n_comp = int(state["n_comp"])
+            comps = [[int(i) for i in c] for c in state["comps"]]
+            states = (isl.DOWN, isl.ACQUIRING, isl.LOCKED)
+            if any(not 0 <= i < j < n or v[0] not in states for (i, j), v in links.items()):
+                raise ValueError("links must be [i, j, state, timer] with 0 <= i < j < n_sats")
+            if (up is not None and len(up) != n) or (hub is not None and not 0 <= hub < n):
+                raise ValueError(f"up must hold {n} entries and hub must be a sat id")
+            if any(not 0 <= i < n for c in comps for i in c):
+                raise ValueError("components must hold sat ids")
         except (KeyError, TypeError, ValueError) as exc:
             raise ValueError(f"bad comms state in snapshot: {exc!r}") from exc
-        self.links, self.up, self.hub, self.n_comp = links, up, hub, n_comp
+        self.links, self.up, self.hub, self.comps = links, up, hub, comps
 
 
-def fault_tick(comms, faults, t, dt, lvlh, chief, roles, vel_eci) -> tuple[list[dict], dict]:
-    """EngineV2's hook: faults.tick() unchanged without laser comms (-> events, {}); with them
-    fire failures, step the links, then run the heartbeat rule over the link graph."""
-    if comms is None:
+def fault_tick(eng, t: float, lvlh: np.ndarray) -> tuple[list[dict], dict]:
+    """EngineV2's hook: eng.faults.tick() unchanged without laser comms (-> events, {}); with
+    them fire the failures, step the links, then run the heartbeat rule over the link graph."""
+    faults, vel_eci = eng.faults, eng.X[1:, 3:]
+    if eng.comms is None:
         return faults.tick(t, vel_eci), {}
     events = faults.fire(t, vel_eci)
-    fields, link_events, isolated = comms.tick(
-        t, dt, lvlh[:, :3], chief, faults.status, faults.sats, roles
+    fields, link_events, isolated = eng.comms.tick(
+        t, eng.dt, lvlh[:, :3], eng.X[0], faults.status, faults.sats, eng.roles
     )
     return events + link_events + faults.detect(t, isolated), fields

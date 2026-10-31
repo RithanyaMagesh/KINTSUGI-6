@@ -174,3 +174,50 @@ def test_a_reheard_sat_is_undeclared_so_its_real_death_is_detected_later():
     lines = _ticks(run_scenario_v2(_scn(fails, comms={"model": "laser", "topology": "star"})))
     det3 = [(t, p["mode"]) for t, p in _events(lines, "FAILURE_DETECTED") if p["sat_id"] == 3]
     assert det3 == [(100.0 + K_DT, ""), (200.0 + K_DT, "DEAD")]
+
+
+# --- review fixes ---
+def test_star_without_a_leader_holder_uses_the_lowest_talking_sat_as_hub():
+    roles = ["imager"] * 5 + ["downlink"]
+    lines = _ticks(run_scenario_v2(_scn(comms={"model": "laser", "topology": "star"},
+                                        roles=roles, duration_s=40.0)))
+    assert lines[0]["components"] == [[0, 1, 2, 3, 4, 5]]
+    assert {link[0] for link in lines[0]["links"]} == {0}
+    assert not _events(lines, "FAILURE_DETECTED")
+
+
+@pytest.mark.parametrize("bad", [[0, 99, "LOCKED", 0.0], [1, 0, "LOCKED", 0.0],
+                                 [0, 1, "BOGUS", 0.0]])
+def test_restore_rejects_a_malformed_link(bad):
+    a = EngineV2(_scn())
+    a.step()
+    doc = json.loads(a.snapshot())
+    doc["state"]["comms"]["links"][0] = bad
+    before = a.snapshot()
+    with pytest.raises(ValueError):
+        a.restore(json.dumps(doc).encode())
+    assert a.snapshot() == before
+
+
+def test_absurd_terminal_sizes_are_rejected_at_validation():
+    with pytest.raises(ValidationError):
+        _scn(comms={"model": "laser", "terminal": {"d_tx_m": 1e160}})
+
+
+def test_isolated_detection_reports_when_isolation_began():
+    lines = _ticks(run_scenario_v2(_scn([{"t": 100.0, "sat_id": 0, "mode": "DEAD"}],
+                                        comms={"model": "laser", "topology": "star"})))
+    leaf = [p for _, p in _events(lines, "FAILURE_DETECTED") if p["sat_id"] == 1][0]
+    assert leaf["t_fail"] == 100.0 and leaf["cause"] == "isolated"
+
+
+def test_partition_at_the_first_tick_is_reported():
+    two = {"roles": ["leader", "downlink"],
+           "formation": {**NOMINAL["formation"], "n_slots": 2}, "duration_s": 6.0}
+    s = _scn(**two)
+    sun = sun_lvlh(EngineV2(s).X[0], s.chief.epoch_utc, 0.0)
+    start = np.zeros((2, 6))
+    start[0, :3] = [1000.0, 0.0, 0.0]
+    start[1, :3] = start[0, :3] + 5000.0 * sun
+    lines = _ticks(list(EngineV2(s, initial_lvlh=start).run()))
+    assert _events(lines, "PARTITION")[0] == (0.0, {"components": [[0], [1]]})

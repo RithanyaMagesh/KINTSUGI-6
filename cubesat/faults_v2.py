@@ -182,6 +182,7 @@ class Faults:
                 payload["t_detect"] = t
                 if cut and self.sats[i].radio_ok and status != STATUS_REENTERED:
                     payload["cause"] = "isolated"  # healthy, but no locked link reaches it
+                    payload["t_fail"] = t - (self.missed[i] - 1) * self.scenario.dt_s
                 events.append({"type": "FAILURE_DETECTED", "payload": payload})
         return events
 

@@ -21,7 +21,7 @@ from cubesat.sim_v2 import EngineV2
 ROOT = Path(__file__).resolve().parents[1]
 # Track C2 added the optional `comms` field (a schema change by definition): re-pinned from the
 # C2 tree. FINGERPRINTS below are unchanged (EngineV2 drops `comms: null` from the fingerprint).
-SCHEMA_SHA256 = "9cfba4c9214b558f7c1f2206217e902ca2904060efa9cc443f84df095901bcbb"
+SCHEMA_SHA256 = "347330b70fc9630a153e9a05b88798f7296fe6e96de91a06617b894abfac70ea"
 FINGERPRINTS = {
     ("nominal", "v1"): "8b2ba0d0fa9c560ae8bb7c620bec20c61d42400063508c99219376d57b38475b",
     ("nominal", "v2"): "a5463052cc90ba0dc699bc587689b5501a1fcc5f638161a668d6e7cfacbfd9dc",

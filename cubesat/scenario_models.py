@@ -271,13 +271,13 @@ class LaserTerminal(BaseModel):
     apertures, eta, photons/bit, pointing error, acquisition time, sun cone and terminal count
     are ASSUMPTIONS of this simulator, not hardware figures."""
 
-    wavelength_m: float = Field(default=1.55e-6, gt=0, allow_inf_nan=False)
-    p_tx_w: float = Field(default=0.2, gt=0, allow_inf_nan=False)
-    d_tx_m: float = Field(default=0.02, gt=0, allow_inf_nan=False, description="assumption")
-    d_rx_m: float = Field(default=0.02, gt=0, allow_inf_nan=False, description="assumption")
+    wavelength_m: float = Field(default=1.55e-6, gt=0, le=1e-3)
+    p_tx_w: float = Field(default=0.2, gt=0, le=1e3)
+    d_tx_m: float = Field(default=0.02, gt=0, le=10, description="assumption")
+    d_rx_m: float = Field(default=0.02, gt=0, le=10, description="assumption")
     eta: float = Field(default=0.3, gt=0, le=1, description="optics x detector, assumption")
     photons_per_bit: float = Field(default=300.0, gt=0, le=1e9, description="assumption")
-    max_rate_bps: float = Field(default=20e6, gt=0, allow_inf_nan=False, description="modem cap")
+    max_rate_bps: float = Field(default=20e6, gt=0, le=1e12, description="modem cap")
     pointing_error_rad: float = Field(default=5e-6, ge=0, le=1, description="assumption")
     acquire_s: float = Field(default=30.0, ge=0, le=MAX_DURATION_S, description="assumption")
     sun_exclusion_rad: float = Field(default=0.05235987755982989, ge=0, le=1.5707963267948966,
