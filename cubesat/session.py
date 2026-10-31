@@ -20,7 +20,7 @@ import cubesat.sim as sim_module
 from cubesat import geo_v2
 from cubesat.benchmark_policies import even_split_replan, hungarian_keepout_replan
 from cubesat.replay import ReplayLog, index_at, load_jsonl
-from cubesat.scenario import Failure, FailureMode, Scenario, load_scenario
+from cubesat.scenario import V2_ONLY_MODES, Failure, FailureMode, Scenario, load_scenario
 from cubesat.sim import RunCancelled, run_scenario
 from cubesat.wire import POLICY_VALUES, SessionEnrich, to_event, to_messages, to_sim_state
 
@@ -128,11 +128,17 @@ class LiveSource:
         cancel_event passes through to run_scenario (compute-timeout
         cooperative cancellation, same contract as start_live)."""
         idx = _parse_sat_id(sat_display_id)
+        t_fail = t_now
+        if base.engine == "v2" and mode not in ("DEAD", "EPS_DEGRADE"):
+            # v2: the sat reports these itself on the failing tick (the line at t_now already
+            # streamed), so schedule the failure on the NEXT tick, exactly where the engine's own
+            # live inject() resolves it; its event then lands in the first frame after t_now
+            t_fail = t_now + base.dt_s
         failures = sorted(
             list(base.failures)
             + [
                 Failure(
-                    t=t_now, sat_id=idx, mode=FailureMode(mode), degrade_s=degrade_s
+                    t=t_fail, sat_id=idx, mode=FailureMode(mode), degrade_s=degrade_s
                 )
             ],
             key=lambda f: (f.t, f.sat_id),
@@ -492,9 +498,18 @@ class Session:
             idx = _parse_sat_id(sat_display_id)
             if idx >= source.scenario.n_sats:
                 raise SessionError(409, f"unknown satellite {sat_display_id!r}")
-            if any(f.sat_id == idx for f in source.scenario.failures):
-                raise SessionError(409, f"{sat_display_id} already failed")
             t_now = self._last_frame_t if self._last_frame_t is not None else 0.0
+            engine = source.scenario.engine
+            if mode in V2_ONLY_MODES and engine != "v2":
+                raise SessionError(
+                    422,
+                    f'failure mode {mode} requires engine "v2"; '
+                    f'the running scenario uses engine "{engine}"',
+                )
+            if engine == "v2":
+                self._check_v2_sat_alive(source, idx, sat_display_id, t_now)
+            elif any(f.sat_id == idx for f in source.scenario.failures):
+                raise SessionError(409, f"{sat_display_id} already failed")
             self._cancel_driver()  # hold playback at t_now until the recompute lands
             self.hub.publish(
                 to_event(
@@ -535,6 +550,23 @@ class Session:
                 await self._spawn_driver()
 
     # ---- internals ---------------------------------------------------------
+
+    def _check_v2_sat_alive(
+        self, source: LiveSource, idx: int, sat_display_id: str, t_now: float
+    ) -> None:
+        """v2 allows a further failure on a sat that only lost a resource (camera, radio, thrust);
+        a dead sat (scheduled or already streamed) and a re-entered sat cannot fail any further."""
+        for f in source.scenario.failures:
+            if f.sat_id == idx and f.mode in (FailureMode.DEAD, FailureMode.EPS_DEGRADE):
+                what = "already dead" if f.t <= t_now else "already scheduled to die"
+                raise SessionError(409, f"{sat_display_id} is {what}")
+        if self._cursor >= 1:  # the last streamed frame carries the live status (re-entry)
+            sats = source.frames[self._cursor - 1].get("sats", [])
+            status = sats[idx].get("status") if idx < len(sats) else None
+            if status == "DEAD":
+                raise SessionError(409, f"{sat_display_id} is already dead")
+            if status == "REENTERED":
+                raise SessionError(409, f"{sat_display_id} has already re-entered")
 
     def _require_running(self) -> None:
         if self.mode == "stopped":

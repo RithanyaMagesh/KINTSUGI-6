@@ -87,3 +87,41 @@ Backend item 1 of the Earth-view spec, engine v2 runs only (live). Everything is
 **Rotating the Earth.** Earth-fixed to ECI rotation about +z by GMST(t) = GMST(epoch) + 7.2921159e-5 rad/s * sim_time. The frontend needs GMST at the epoch: `gmst0 = (280.46061837 + 360.98564736629 * d + 0.000387933 * (d/36525)^2) deg` with `d` = days from 2000-01-01T12:00:00Z to `epoch_utc` (IAU-1982, UT1 = UTC). Rotate the globe mesh (texture with longitude 0 on +x at GMST = 0) by `gmst0 + 7.2921159e-5 * sim_time` about the z axis. A point at (lat, lon) sits at ECI angle lon + GMST. For lighting, `sun_vector_eci` is fixed at the epoch (the sun moves 1 deg/day: at most 0.07 deg over a one-orbit-day run, so keep it constant for a run). Use the sat positions in ECI: chief `r_eci`; satellites = chief + LVLH offset rotated by the LVLH basis (x radial, y along-track, z cross-track), or simply draw the formation as one cluster at `chief.r_eci` as the spec says. The `ground_track` is Earth-fixed (lat/lon at the sample times), draw it on the surface without rotating it with sim time.
 
 Simplifications: spherical Earth, UT1 = UTC, constant rotation rate, sun direction from the low-precision almanac formula (about 0.01 deg), no precession/nutation, replays of v2 logs carry the per-tick keys but no hello extras (the hello needs the scenario).
+
+
+## Wire additions: v2 statuses, fuel keys, events (2026-10-31)
+
+All additive and v2-only: a v1 run never carries a v2 status, key or event, and its wire bytes are unchanged (checked on `nominal` and `two_failure` logs). Source: `cubesat/wire.py`, `cubesat/session.py`; pinned in `tests/test_wire_v2.py` and `tests/v2/test_inject_v2_modes.py`.
+
+**Frontend owner: render these statuses.** Every v2 status now maps to one the UI already knows, so no satellite arrives as an unmapped uppercase string. Draw `degraded` amber (the satellite is still flying). `failure_type` keeps the raw status for the label.
+
+| raw log status | wire `status` | meaning |
+|---|---|---|
+| `NOMINAL` | `healthy` | unchanged |
+| `DEGRADED` | `degraded` | unchanged (EPS fade, partial or stuck-open thruster) |
+| `DEAD`, `THRUSTER_OUT` | `failed` | unchanged |
+| `REENTERED` | `failed` | burnt up; the sat shows its state at re-entry |
+| `FUEL_DEPLETED` | `degraded` | flies and images, cannot maneuver |
+| `PAYLOAD_FAILED` | `degraded` | flies, cannot image |
+| `RADIO_SILENT` | `degraded` | flies, silent |
+
+Any other future status still passes through unchanged.
+
+**`sats[]` keys (on `sim_state`, only when the log carries them, so absent for v1):** `fuel_kg` (propellant left, kg), `fuel_mps_left` (delta-v left, m/s), `k` (thrust health, 1.0 full, 0.5 half, 0 none), `payload_ok` (camera works), `radio_ok` (heartbeat works), `stuck` (thruster stuck open).
+
+**v2 events** (all carry the optional `sat_id`, `"SAT-n"`; a missing or odd payload falls back to "A satellite"):
+
+| source | level | message |
+|---|---|---|
+| `FAILURE_DETECTED`, mode `PAYLOAD_FAIL` | warning | `SAT-n camera failed; it keeps flying but can no longer image` |
+| `FAILURE_DETECTED`, mode `RADIO_FAIL` | warning | `SAT-n lost its radio; it keeps flying but is silent` |
+| `FAILURE_DETECTED`, mode `THRUSTER_STUCK_OPEN` | critical | `SAT-n thruster stuck open; it is burning fuel it cannot control` |
+| `FAILURE_DETECTED`, mode `PARTIAL_THRUST` | warning | `SAT-n lost half its thrust` |
+| `FAILURE_DETECTED` mode `FUEL_DEPLETED`, and the `FUEL_DEPLETED` event | warning | `SAT-n ran out of propellant and can no longer maneuver` |
+| `FAILURE_DETECTED` mode `REENTRY`, and the `REENTRY` event | critical | `SAT-n re-entered the atmosphere` |
+
+The v1 modes (`DEAD`, `THRUSTER_OUT`, `EPS_DEGRADE`) keep their wording and `critical` level. The engine logs the fuel-out report twice (`FAILURE_DETECTED` and `FUEL_DEPLETED`) with the same sentence; the wire sends it once.
+
+**Several events on one tick (v2 only).** A v2 log line carries `events` (a list) beside `event` (its first entry). When `events` has more than one entry the wire emits one `event` message per entry, in order, then any `role_reassignment`; with one entry, or only `event`, nothing changes. v1 lines never carry `events`, so the rule never applies to them. Every `event` message needs to be shown, not just the first per `sim_time`.
+
+**`POST /failure/inject` modes.** `mode` also accepts `PAYLOAD_FAIL`, `PARTIAL_THRUST`, `THRUSTER_STUCK_OPEN`, `RADIO_FAIL`, only while the running scenario uses engine `v2`; otherwise 422 `failure mode X requires engine "v2"; the running scenario uses engine "v1"`. On v2 a satellite that lost only a resource (camera, radio, thrust) can take another injection; 409 `SAT-n is already dead` / `already scheduled to die` / `has already re-entered` for a dead or re-entered one. The v1 rule (one failure per satellite) is unchanged. A v2 injection takes effect on the next tick, so its event appears in the first message after the one already streamed.
