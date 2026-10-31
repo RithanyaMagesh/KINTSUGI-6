@@ -234,7 +234,6 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Live CubeSat Swarm Ingestion Pipeline")
     for f, d, t, c in [
         ("--cluster", None, str, None), ("--name", None, str, None), ("--catnr", None, str, None),
-        ("--provider", "celestrak", str, ["celestrak", "spacetrack", "n2yo"]),
         ("--cache-dir", "data/celestrak", str, None), ("--ttl", 86400, int, None),
         ("--fit-mode", "fit-ellipse", str, ["fit-ellipse", "safe-envelope"]),
         ("--n-sats", None, int, None), ("--n-failures", 2, int, None), ("--seed", 42, int, None),
@@ -271,7 +270,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         q_label = args.cluster or args.name or args.catnr or "GRACE-FO"
         meta.update({
-            "provider": args.provider, "query": q_label,
+            "provider": "celestrak", "query": q_label,
             "url": url, "fetch_time_utc": ft, "cache_hit": hit,
         })
         Scenario.model_validate(scen)
