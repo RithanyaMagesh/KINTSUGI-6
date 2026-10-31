@@ -503,7 +503,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--mode", choices=("benchmark", "keepout-report", "pareto", "cw-curve", "monte-carlo",
-                 "ground-passes", "baselines", "formations"),
+                 "ground-passes", "baselines", "formations", "perf"),
         default="benchmark",
         help="benchmark: run the P0 sweep; keepout-report: P2 post-hoc log analysis; "
         "pareto: P1 w2 x dv_budget sweep; cw-curve: P3 CW-vs-Kepler error curves; "
@@ -511,7 +511,8 @@ def main(argv: list[str] | None = None) -> int:
         "ground-passes: single-station pass statistics (cubesat/ground.py); "
         "baselines: 15 pairs x do_nothing,role_swap_only,wait_for_ground,hungarian; "
         "formations: formation-shape report (cubesat/formations_bench.py; --base = "
-        "data/scenarios/formation_cartwheel_6sat.json)",
+        "data/scenarios/formation_cartwheel_6sat.json); "
+        "perf: live-run timing audit (cubesat/perf_bench.py; --base is a scenarios DIRECTORY)",
     )
     parser.add_argument("--base", required=True, type=Path, help="base scenario JSON")
     parser.add_argument(
@@ -570,6 +571,7 @@ def main(argv: list[str] | None = None) -> int:
         "--svg", type=Path, default=None,
         help="pareto/cw-curve mode: SVG curve path (default: alongside --report)",
     )
+    parser.add_argument("--repeats", type=int, default=3, help="perf mode: repeats per timing")
     args = parser.parse_args(argv)
     # Path-confinement guard (mirrors files/predictor_pipeline.py, I/O edge
     # only): every CLI-provided output path must resolve inside the repository
@@ -591,6 +593,12 @@ def main(argv: list[str] | None = None) -> int:
 
         args.argv = argv if argv is not None else sys.argv[1:]
         return run_formations(args)
+
+    if args.mode == "perf":
+        from cubesat.perf_bench import run_cli
+
+        return run_cli(args, "uv run python -m cubesat.benchmark "
+                       + " ".join(argv if argv is not None else sys.argv[1:]))
     if args.mode == "ground-passes":
         return _run_ground_passes(args)
     if args.mode == "keepout-report":

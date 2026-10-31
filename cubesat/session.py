@@ -18,6 +18,7 @@ from typing import Literal
 
 import cubesat.sim as sim_module
 from cubesat import geo_v2
+from cubesat.allocate import InfeasibleFormation
 from cubesat.benchmark_policies import even_split_replan, hungarian_keepout_replan
 from cubesat.replay import ReplayLog, index_at, load_jsonl
 from cubesat.scenario import V2_ONLY_MODES, Failure, FailureMode, Scenario, load_scenario
@@ -377,6 +378,12 @@ class Session:
             except RunCancelled:
                 self._restore_seam()
                 raise SessionError(409, "superseded by a newer start, load or reset") from None
+            except InfeasibleFormation as exc:  # F3: a scenario fact, not a server fault
+                self._restore_seam()
+                if epoch == self._epoch:  # a superseding start/reset owns the session
+                    self._teardown()
+                    self._announce_stopped()
+                raise SessionError(409, f"{exc} (scenario cannot recover)") from None
             except BaseException:
                 # Never leak the process-global replan seam on a failed start
                 # (the abandoned thread's output is discarded either way).
@@ -534,6 +541,8 @@ class Session:
                 raise SessionError(504, "failure recomputation timed out") from None
             except RunCancelled:
                 raise SessionError(409, "superseded by a newer start, load or reset") from None
+            except InfeasibleFormation as exc:  # F3: the old run plays on (finally)
+                raise SessionError(409, f"{exc} (injection not applied)") from None
             except BaseException:
                 cancel.set()
                 raise
