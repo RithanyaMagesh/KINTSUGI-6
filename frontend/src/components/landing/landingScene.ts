@@ -146,6 +146,58 @@ function cardTexture(card: TelemetryCard): THREE.CanvasTexture {
 
 // ---------------------------------------------------------------- scene
 
+/** The visible sun: a hot core plus a wide corona, additive and above the
+ * bloom threshold, so the composer's bloom gives it a soft glare. */
+function buildSun(): { group: THREE.Group; dispose(): void } {
+  const make = (size: number, stops: Array<[number, string, number]>) => {
+    const c = document.createElement("canvas");
+    c.width = c.height = size;
+    const g = c.getContext("2d") as CanvasRenderingContext2D;
+    const grad = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    for (const [at, color, alpha] of stops) {
+      const a = Math.round(alpha * 255).toString(16).padStart(2, "0");
+      grad.addColorStop(at, `#${new THREE.Color(color).getHexString()}${a}`);
+    }
+    g.fillStyle = grad;
+    g.fillRect(0, 0, size, size);
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  };
+  const sun = cssVar("--hero-sun");
+  const glow = cssVar("--hero-sun-glow");
+  const coreTex = make(256, [[0, sun, 1], [0.3, sun, 1], [0.55, sun, 0.3], [1, sun, 0]]);
+  const coronaTex = make(512, [
+    [0, glow, 0.42], [0.12, glow, 0.2], [0.3, glow, 0.07], [0.55, glow, 0.02], [1, glow, 0],
+  ]);
+  const sprite = (map: THREE.Texture, scale: number, boost: number) => {
+    const m = new THREE.SpriteMaterial({
+      map,
+      color: new THREE.Color(1, 1, 1).multiplyScalar(boost),
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      fog: false,
+      toneMapped: false,
+    });
+    const sp = new THREE.Sprite(m);
+    sp.scale.setScalar(scale);
+    return sp;
+  };
+  const group = new THREE.Group();
+  const corona = sprite(coronaTex, 12, 1.0);
+  const core = sprite(coreTex, 2.4, 2.6);
+  group.add(corona, core);
+  return {
+    group,
+    dispose() {
+      coreTex.dispose();
+      coronaTex.dispose();
+      (corona.material as THREE.Material).dispose();
+      (core.material as THREE.Material).dispose();
+    },
+  };
+}
+
 export function createLandingScene(
   canvas: HTMLCanvasElement,
   host: HTMLElement,
@@ -167,14 +219,20 @@ export function createLandingScene(
   const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 300);
   camera.position.set(0, 1.4, 14);
 
-  // Lights.
-  scene.add(new THREE.AmbientLight(col("--hero-light-key"), 0.3));
-  const key = new THREE.DirectionalLight(col("--hero-light-key"), 1.5);
-  key.position.set(-6, 7, 9);
+  // Lights. One sun, upper right and behind the swarm, is the key light:
+  // every satellite gets a lit side, a dark side and a moving panel glint.
+  // A faint blue fill from the opposite side keeps shadow sides readable.
+  const SUN_POS = new THREE.Vector3(19, 10, -26);
+  scene.add(new THREE.AmbientLight(col("--hero-light-key"), 0.14));
+  const key = new THREE.DirectionalLight(col("--hero-sun"), 3.4);
+  key.position.copy(SUN_POS);
   scene.add(key);
-  const rim = new THREE.DirectionalLight(col("--hero-light-rim"), 1.6);
-  rim.position.set(7, -3, -8);
+  const rim = new THREE.DirectionalLight(col("--hero-light-rim"), 0.9);
+  rim.position.set(-9, -4, 10);
   scene.add(rim);
+  const sun = buildSun();
+  sun.group.position.copy(SUN_POS);
+  scene.add(sun.group);
   const goldLight = new THREE.PointLight(col("--hero-gold"), 0, 14, 1.6);
   scene.add(goldLight);
   const redLight = new THREE.PointLight(col("--hero-red"), 0, 6, 2);
@@ -536,6 +594,7 @@ export function createLandingScene(
     dispose() {
       running = false;
       cancelAnimationFrame(raf);
+      sun.dispose();
       ro.disconnect();
       document.removeEventListener("visibilitychange", onVisibility);
       for (const sat of sats) {

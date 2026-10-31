@@ -81,7 +81,9 @@ export function makeMaterials(panelMap: THREE.Texture): SatMaterials {
   return {
     frame: new THREE.MeshStandardMaterial({ color: col("--cubesat-frame"), metalness: 0.85, roughness: 0.32 }),
     cap: new THREE.MeshStandardMaterial({ color: col("--cubesat-cap"), metalness: 0.6, roughness: 0.5 }),
-    panel: new THREE.MeshStandardMaterial({ map: panelMap, metalness: 0.2, roughness: 0.55, side: THREE.DoubleSide }),
+    // Glassy cells: low roughness gives a sun glint that sweeps across the
+    // panels as the satellite turns.
+    panel: new THREE.MeshStandardMaterial({ map: panelMap, metalness: 0.35, roughness: 0.24, side: THREE.DoubleSide }),
     gold: new THREE.MeshStandardMaterial({ color: col("--cubesat-gold"), metalness: 0.9, roughness: 0.3 }),
   };
 }
