@@ -53,3 +53,6 @@ graphify-out/cache/
 
 # keep-out A/B per-run JSONL logs (GATES.md P2) -- only the data/eval/keepout_*.json reports are committed
 data/eval/benchmark_keepout/
+
+# AI Studio scratch artifacts (removed from the repo 2026-10-31)
+.aistudio/
