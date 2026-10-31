@@ -268,7 +268,7 @@ export class SwarmSceneController {
       this.controls.target.lerp(pos, k);
       // Park the camera just outside and above the satellite, looking back
       // down at it with the planet filling the background.
-      const close = (this.extent || 1000) * 0.22;
+      const close = (this.extent || 1000) * 0.45;
       const out = this.orbitMode === "global" ? pos.clone().normalize() : new THREE.Vector3(1, 0.6, 1).normalize();
       const want = out.multiplyScalar(close).add(new THREE.Vector3(0, close * 0.45, 0)).add(pos);
       this.camera.position.lerp(want, k);

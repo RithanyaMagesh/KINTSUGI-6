@@ -40,11 +40,11 @@ function cubeSatKit(): { geoms: Geoms; live: SatMaterials; dark: SatMaterials } 
 
 /** Model size relative to the marker's world radius (the status ring sits at
  * 1.55-1.82 marker units; the 3U body is 3 units tall). */
-const MODEL_SCALE = 0.72;
+const MODEL_SCALE = 1.6; // exaggerated on purpose, like NASA Eyes: true scale would be invisible
 /** Physical model size as a fraction of the scene extent: when the camera
  * flies in close, the CubeSat grows past its screen-size floor and fills the
  * view (the 3U body is 3 units tall). */
-const MODEL_PHYS = 0.012;
+const MODEL_PHYS = 0.03;
 
 export const TRAIL_MAX = 220;
 export const TRAIL_INTERVAL_MS = 150;
@@ -355,7 +355,7 @@ export function syncSatellite(
   // selected one gets a thin focus ring; status lives in the model tint and
   // the label colour.
   ringMat.color = tokenColor(SCENE_TOKENS.focus);
-  ringMat.opacity = selected ? 0.85 : 0;
+  ringMat.opacity = selected ? 0.45 : 0;
   rec.leaderRing.visible = false;
   rec.cross.visible = false;
   rec.trail.visible = opts.showTrails;
@@ -406,13 +406,16 @@ export function updateMarkerView(
     extent,
   );
   const pulse = status === "failed" && !reducedMotion ? 1 + 0.22 * Math.sin(elapsed * 5) : 1;
-  rec.marker.scale.setScalar(size.world * pulse);
-  rec.model.scale.setScalar(Math.max(size.world * MODEL_SCALE, extent * MODEL_PHYS));
+  const modelScale = Math.max(size.world * MODEL_SCALE, extent * MODEL_PHYS);
+  rec.model.scale.setScalar(modelScale);
+  // Pick disc + focus ring wrap the model, so the click target and label
+  // offset match what you see.
+  rec.marker.scale.setScalar(modelScale * 1.25 * pulse);
   if (!reducedMotion) {
     // Slow roll so the panels catch the sun; dead satellites tumble faster.
     rec.model.rotation.y = elapsed * (status === "failed" ? 0.9 : 0.25);
   }
-  rec.screenR = size.screenPx;
+  rec.screenR = size.screenPx * (modelScale / Math.max(size.world, 1e-9)) * 0.9;
 }
 
 export function pushTrail(
