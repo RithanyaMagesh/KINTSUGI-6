@@ -1,10 +1,11 @@
 """Engine v2: stepper-native truth-dynamics loop (ECI two-body + J2 + drag, RK4).
 
 Log schema = cubesat/sim.py (v1) plus optional keys: `chief` + `station` on every tick (Earth
-view, cubesat/geo_v2.py), `events` (every event of the tick) and INIT `engine`. Consumers that
-read only `frame["event"]` (wire.py, dv_bound.py) see just the FIRST of several simultaneous
-events; `events` carries all of them. Phase 1 scope: truth propagation, v1 PDController seat
-holding on the LVLH state (until Phase 5), failures coast in the truth model
+view, cubesat/geo_v2.py), `events` (every event of the tick), INIT `engine` and per sat
+`roles` / `role` / `original_role` (cubesat/roles_v2.py, Phase 5a, plus ROLE_HANDOFF events).
+Consumers that read only `frame["event"]` (wire.py, dv_bound.py) see just the FIRST of several
+simultaneous events; `events` carries all of them. Phase 1 scope: truth propagation, v1
+PDController seat holding on the LVLH state (until Phase 5), failures coast in the truth model
 (cubesat/faults_v2.py), a re-entry guard, NO recovery.
 
 Contract: EngineV2(scenario, injections) replayed from t=0 gives the identical log; the
@@ -27,6 +28,7 @@ from cubesat.faults_v2 import STATUS_REENTERED, Faults
 from cubesat.hcw import mean_motion, stm
 from cubesat.pd import PDController
 from cubesat.rng_v2 import draw_tick, make_rng
+from cubesat.roles_v2 import assign_roles, believe, handoff_events, imaging_sats, primary_role
 from cubesat.scenario import Failure, Scenario
 from cubesat.sim import (
     LOG_SCHEMA_VERSION,
@@ -78,6 +80,8 @@ class EngineV2:
         self.hold = np.zeros((self.n_sats, 6))  # LVLH state of re-entered sats, frozen at re-entry
         self.faults = Faults(scenario)
         self.cov: list[tuple[float, float]] = []
+        self.roles = [[r] for r in scenario.roles]  # holders now = incumbents (Phase 5a)
+        self.believed = [["NOMINAL", True, True] for _ in scenario.roles]
         for f in injections:
             self.inject(f)
 
@@ -116,17 +120,12 @@ class EngineV2:
         c = self.X[0]
         lvlh = truth.eci_to_lvlh(self.X[1:, :3], self.X[1:, 3:], c[:3], c[3:])
         events = self._reentries(t, lvlh) + self.faults.tick(t, self.X[1:, 3:])
+        events += self._update_roles()
         draw_tick(self.rng, self.n_sats)  # Phases 3-4 use these rows; ignored for now
         status = self.faults.status
         gone = np.array([s == STATUS_REENTERED for s in status])
         lvlh[gone] = self.hold[gone]  # a re-entered sat shows its state at re-entry
-        imagers = [
-            i
-            for i, role in enumerate(self.scenario.roles)
-            if role == "imager"
-            and status[i] not in (STATUS_DEAD, STATUS_REENTERED)
-            and self.faults.sats[i].payload_ok  # a failed payload does not image
-        ]
+        imagers = imaging_sats(self.roles, status, self.faults.sats)  # physical, not believed
         cov = coverage_fraction(lvlh[imagers, 1:3], self.grid, self.r_f)
         line = {
             "v": LOG_SCHEMA_VERSION,
@@ -135,7 +134,9 @@ class EngineV2:
             "sats": [
                 {
                     "id": i,
-                    "role": self.scenario.roles[i],
+                    "role": primary_role(self.roles[i]),  # display label (fixed order)
+                    "roles": list(self.roles[i]),
+                    "original_role": self.scenario.roles[i],
                     "status": status[i],
                     "r": lvlh[i, :3].tolist(),
                     "v": lvlh[i, 3:].tolist(),
@@ -191,6 +192,8 @@ class EngineV2:
             "dv": self.dv.tolist(),
             "hold": self.hold.tolist(),
             "cov": self.cov,
+            "roles": self.roles,
+            "believed": self.believed,
             "faults": self.faults.state(),
             "rng": self.rng.bit_generator.state,
         }
@@ -209,12 +212,17 @@ class EngineV2:
             k, X, refs = int(state["k"]), np.array(state["X"]), np.array(state["refs"])
             dv, hold = np.array(state["dv"]), np.array(state["hold"])
             cov = [(t, c) for t, c in state["cov"]]
+            roles = [[str(r) for r in rs] for rs in state["roles"]]
+            believed = [[str(b[0]), bool(b[1]), bool(b[2])] for b in state["believed"]]
+            if len(roles) != self.n_sats or len(believed) != self.n_sats:
+                raise ValueError(f"roles/believed lists must hold {self.n_sats} entries")
             rng = make_rng(self.scenario)
             rng.bit_generator.state = state["rng"]
             self.faults.load(state["faults"])  # atomic itself; raises ValueError first
         except (KeyError, TypeError, ValueError) as exc:
             raise ValueError(f"bad EngineV2 snapshot: {exc!r}") from exc
         self.k, self.X, self.refs, self.dv, self.hold, self.cov = k, X, refs, dv, hold, cov
+        self.roles, self.believed = roles, believed
         self.rng = rng
 
     # -- internals ---------------------------------------------------------------------------------
@@ -228,6 +236,22 @@ class EngineV2:
                 self.hold[i] = lvlh[i]
                 events.append(self.faults.mark_reentered(i, t, float(alt[i])))
         return events
+
+    def _update_roles(self) -> list[dict]:
+        """Re-assign capability roles from the BELIEVED statuses (cubesat/roles_v2.py; no motion
+        is touched) and return the ROLE_HANDOFF events of this tick. Only roles the scenario
+        labels exist at all: a scenario without a downlink has that role vacant from the start."""
+        f = self.faults
+        self.believed = believe(self.believed, f.status, f.sats, f.declared)
+        view = [
+            {"status": b[0], "payload_ok": b[1], "radio_ok": b[2], "roles": rs}
+            for b, rs in zip(self.believed, self.roles, strict=True)
+        ]
+        priority = [r for r in self.scenario.role_priority if r in self.scenario.roles]
+        new = assign_roles(view, priority, self.scenario.roles.count("imager"))
+        payloads = handoff_events(self.roles, new, f.status, priority)
+        self.roles = new
+        return [{"type": "ROLE_HANDOFF", "payload": p} for p in payloads]
 
     def _min_sep(self, rho: np.ndarray) -> float:
         """Minimum pairwise LVLH distance among sats not re-entered (all sats if fewer than 2)."""

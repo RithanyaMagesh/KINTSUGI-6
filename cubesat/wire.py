@@ -34,6 +34,7 @@ class SessionEnrich:
     detection_latency_s: float | None = None
     replanning_latency_ms: float | None = None  # stays None in G5 (section 6.1 cut)
     prev_roles: dict[int, str] = field(default_factory=dict)  # log sat id -> role, last frame
+    prev_held: dict[int, list] = field(default_factory=dict)  # log sat id -> roles held, last frame
     role_holder: dict[str, int] = field(default_factory=dict)  # role -> last sole live holder
     last_t: float = -1.0  # previous frame time; a backwards step (seek) restarts role tracking
 
@@ -108,7 +109,9 @@ _STATUS_TO_WIRE = {
 _SAT_REQUIRED_KEYS = ("role", "r", "v", "dv_used")
 
 # Engine-v2 per-sat resource keys: optional passthrough, only when the log carries them.
-_SAT_V2_KEYS = ("fuel_kg", "fuel_mps_left", "k", "payload_ok", "radio_ok", "stuck")
+_SAT_V2_KEYS = (
+    "fuel_kg", "fuel_mps_left", "k", "payload_ok", "radio_ok", "stuck", "roles", "original_role",
+)
 
 
 def sat_row_ok(sat: object) -> bool:
@@ -341,17 +344,24 @@ def _role_reassignment(frame: dict, payload: dict, enrich: SessionEnrich) -> dic
     return msg
 
 
+def _held(sat: dict) -> list[str]:
+    roles = sat.get("roles")
+    return roles if isinstance(roles, list) else [sat["role"]]
+
+
 def _track_roles(frame: dict, enrich: SessionEnrich) -> tuple[dict[int, str], list[dict]]:
     """Per-frame role diff, then advance enrich: ({sat id: old role} for sats whose
     role changed since the previous frame, role_handoffs). A handoff is only
     well-defined for a role with ONE live holder (leader/downlink); the from_sat
     is that last sole live holder, which survives the holder's death because the
-    log keeps a dead sat's role label. No previous frame -> nothing to diff."""
+    log keeps a dead sat's role label. No previous frame -> nothing to diff. A v2 sat lists
+    every role it holds (`roles`; a leader stacks on an imager): a gained role is the unit that
+    hands off. v1 sats hold their one label, which reduces to the old rule."""
     sats = frame.get("sats", [])
     t = frame.get("t", 0.0)
     if isinstance(t, (int, float)):
         if t < enrich.last_t:
-            enrich.prev_roles, enrich.role_holder = {}, {}
+            enrich.prev_roles, enrich.role_holder, enrich.prev_held = {}, {}, {}
         enrich.last_t = t
     old = {
         s["id"]: enrich.prev_roles[s["id"]]
@@ -360,18 +370,23 @@ def _track_roles(frame: dict, enrich: SessionEnrich) -> tuple[dict[int, str], li
     }
     handoffs = [
         {
-            "role": s["role"],
-            "from_sat": display_sat_id(enrich.role_holder[s["role"]]),
+            "role": role,
+            "from_sat": display_sat_id(enrich.role_holder[role]),
             "to_sat": display_sat_id(s["id"]),
         }
         for s in sats
-        if s["id"] in old and enrich.role_holder.get(s["role"], s["id"]) != s["id"]
+        if s["id"] in enrich.prev_held
+        for role in _held(s)
+        if role not in enrich.prev_held[s["id"]]
+        and enrich.role_holder.get(role, s["id"]) != s["id"]
     ]
     enrich.prev_roles = {s["id"]: s["role"] for s in sats}
+    enrich.prev_held = {s["id"]: _held(s) for s in sats}
     live: dict[str, list[int]] = {}
     for s in sats:
         if s["status"] in ("NOMINAL", "DEGRADED"):
-            live.setdefault(s["role"], []).append(s["id"])
+            for role in _held(s):
+                live.setdefault(role, []).append(s["id"])
     enrich.role_holder.update({r: ids[0] for r, ids in live.items() if len(ids) == 1})
     return old, handoffs
 
@@ -407,6 +422,33 @@ _STATE_LABELS = {
 }
 
 
+_HANDOFF_WHY = {
+    "DEAD": "failed", "REENTERED": "re-entered the atmosphere", "RADIO_SILENT": "lost its radio",
+    "THRUSTER_OUT": "lost its thruster", "FUEL_DEPLETED": "ran out of propellant",
+    "PAYLOAD_FAILED": "lost its camera",
+}
+
+
+def _handoff_event(t: object, payload: dict) -> dict:
+    """ROLE_HANDOFF sentence (info). to_sat None: the role is vacant; from_sat None: it had no
+    holder; unknown reasons and junk fields fall back to the plain 'handed to' wording."""
+    role = payload.get("role") if isinstance(payload.get("role"), str) else "critical"
+    a, b = _sat_label(payload.get("from_sat")), _sat_label(payload.get("to_sat"))
+    reason = payload.get("reason")
+    why = _HANDOFF_WHY.get(reason) if isinstance(reason, str) else None
+    if "to_sat" in payload and payload["to_sat"] is None:  # nobody capable is left
+        msg = f"{a} {why}; the" if a and why else "The"
+        msg += f" {role} role is now vacant"
+        msg += " (no capable satellite is left)" if a and why else ""
+    elif a is None and b is not None and reason == "VACANT":
+        msg = f"{b} took over the vacant {role} role"
+    else:
+        msg = f"{a or 'A satellite'} {role} role handed to {b or 'another satellite'}"
+        if a and why:
+            msg += f" because {a} {why}"
+    return _with_sat(to_event("info", t, msg), a if a is not None else b)
+
+
 def _plain_event(frame: dict, etype: str, payload: dict) -> dict:
     if etype == "STATE":  # plain transitions: {from, to}
         frm, to = payload.get("from"), payload.get("to")
@@ -436,6 +478,8 @@ def _plain_event(frame: dict, etype: str, payload: dict) -> dict:
         role = payload.get("role") or "critical"
         msg = f"{a or 'A satellite'} {role} role handed to {b or 'another satellite'}{why}"
         return _with_sat(to_event("info", t, msg), a)
+    if etype == "ROLE_HANDOFF":  # {role, from_sat, to_sat, reason}, engine v2 critical roles
+        return _handoff_event(t, payload)
     if etype == "ORACLE_ALERT":  # {sat_id, lead_s, t_fail, t_warn}
         who = _sat_label(payload.get("sat_id"))
         lead = _mmss(payload.get("lead_s"))

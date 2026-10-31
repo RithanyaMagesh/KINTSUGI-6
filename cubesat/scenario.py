@@ -22,6 +22,7 @@ MAX_SWEEP_ENTRIES = 64
 MAX_SATS = 32
 MAX_FAILURES = 64
 MAX_DURATION_S = 86_400.0
+ROLE_PRIORITY = ("downlink", "imager", "leader")  # = roles_v2.DEFAULT_PRIORITY (test-pinned)
 MAX_TICKS = 100_000
 
 
@@ -308,6 +309,12 @@ class Scenario(BaseModel):
     safety: Safety = Field(default_factory=Safety)
     truth: Truth = Field(default_factory=Truth)
     spacecraft: Spacecraft = Field(default_factory=Spacecraft)
+    role_priority: list[str] = Field(
+        default_factory=lambda: list(ROLE_PRIORITY),
+        description="Engine v2 only: order in which capability roles are filled each tick "
+        "(cubesat/roles_v2.py). Must be a permutation of downlink, imager, leader (spare is "
+        "only an output label). v1 never reads it.",
+    )
     engine: Literal["v1", "v2"] = Field(
         default="v1",
         description="'v1' = frozen linear-CW engine (every committed log); "
@@ -337,6 +344,15 @@ class Scenario(BaseModel):
                         f'failure mode {f.mode.value} (sat {f.sat_id}) requires engine "v2"; '
                         f'this scenario uses engine "{self.engine}"'
                     )
+        return self
+
+    @model_validator(mode="after")
+    def _role_priority_is_a_permutation(self) -> Scenario:
+        if sorted(self.role_priority) != sorted(ROLE_PRIORITY):
+            raise ValueError(
+                f"role_priority={self.role_priority} must be a permutation of "
+                f"{', '.join(sorted(ROLE_PRIORITY))}"
+            )
         return self
 
     @model_validator(mode="after")
