@@ -201,6 +201,7 @@ class Session:
         # replay and reset bump it BEFORE queueing for the lock, so anything queued
         # or computing for an older run sees the change and gives up with 409.
         self._epoch = 0
+        self._cancel: threading.Event | None = None  # cancel flag of the in-flight compute
         self._lock: asyncio.Lock | None = None
         self._lock_loop: asyncio.AbstractEventLoop | None = None
         # Display-only predictor risk map (see _install_predictor): t_s -> sat_id -> [0,1].
@@ -259,6 +260,23 @@ class Session:
             self._lock, self._lock_loop = asyncio.Lock(), loop
         return self._lock
 
+    def _supersede(self) -> int:
+        """New run identity: older queued/in-flight work gives up, and the thread
+        computing for it is told to stop at its next tick (B-5)."""
+        self._epoch += 1
+        self._cancel_compute()
+        return self._epoch
+
+    def _cancel_compute(self) -> None:
+        if self._cancel is not None:
+            self._cancel.set()
+            self._cancel = None
+
+    def shutdown(self) -> None:
+        """Server stop: drop the run and cancel any in-flight compute thread."""
+        self._supersede()
+        self._teardown()
+
     def _check_epoch(self, epoch: int) -> None:
         if epoch != self._epoch:
             raise SessionError(409, "superseded by a newer start, load or reset")
@@ -280,7 +298,7 @@ class Session:
             raise SessionError(
                 422, f"unknown policy {policy!r}; expected one of: {', '.join(POLICY_VALUES)}"
             )
-        epoch = self._epoch = self._epoch + 1
+        epoch = self._supersede()
         async with self._mutex():
             self._check_epoch(epoch)
             self._teardown()
@@ -309,7 +327,7 @@ class Session:
             # process (audit, medium). The event is set on timeout and the thread
             # exits at its next tick (sim.run_scenario contract, zero effect on any
             # canonical run).
-            cancel = threading.Event()
+            cancel = self._cancel = threading.Event()
             try:
                 lines = await asyncio.wait_for(
                     asyncio.to_thread(run_scenario, scenario, cancel), self.run_timeout_s
@@ -324,8 +342,10 @@ class Session:
             except BaseException:
                 # Never leak the process-global replan seam on a failed start
                 # (the abandoned thread's output is discarded either way).
-                cancel.set()
+                cancel.set()  # client abort / any failure: stop the thread
                 self._restore_seam()
+                if epoch == self._epoch:
+                    self._teardown()  # no zombie "live" session without a source
                 raise
             self._check_epoch(epoch)  # a newer start/reset arrived during the compute
             self._source = LiveSource(scenario, lines)
@@ -340,7 +360,7 @@ class Session:
         self, filename: str, speed: float = 100.0, predictor: bool = False
     ) -> int:
         """Returns the skipped (unparseable) line count (section 7.1)."""
-        epoch = self._epoch = self._epoch + 1
+        epoch = self._supersede()
         async with self._mutex():
             self._check_epoch(epoch)
             self._teardown()
@@ -387,7 +407,7 @@ class Session:
                 await self._spawn_driver()
 
     async def reset(self) -> None:
-        epoch = self._epoch = self._epoch + 1
+        epoch = self._supersede()
         async with self._mutex():
             if epoch == self._epoch:  # a start queued after this reset keeps the floor
                 self._teardown()
@@ -450,7 +470,7 @@ class Session:
                     f"{sat_display_id} {mode} failure injected; recomputing trajectory...",
                 )
             )
-            cancel = threading.Event()  # same orphan-thread guard as start_live
+            cancel = self._cancel = threading.Event()  # same guard as start_live
             applied = False
             try:
                 new_source = await asyncio.wait_for(
@@ -597,6 +617,7 @@ class Session:
         self._install_seam()
 
     def _teardown(self) -> None:
+        self._cancel_compute()
         self._cancel_driver()
         self._restore_seam()
         self.mode = "stopped"

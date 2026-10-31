@@ -72,6 +72,8 @@ async def lifespan(_app: FastAPI):
     get_state()  # one Session + Hub per process (section 5.4)
     yield
     global _state
+    if _state is not None:
+        _state.session.shutdown()  # cancel in-flight compute threads (B-5/B-23)
     _state = None
 
 
