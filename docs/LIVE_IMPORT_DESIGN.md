@@ -1,5 +1,7 @@
 # Live Orbital Data Ingestion & Formation Fitting Specification
 
+> v2 note: `cubesat/live_import_e2e.py` and the `live_e2e_swarm*.json` fixtures were deleted (audit B-26); references below to them are historical.
+
 **Document Type:** Architecture Blueprint, Mathematical Formulation, and Security Specification  
 **Target Modules:** `cubesat/live_import.py`, `cubesat/_live_network.py`, `cubesat/live_import_e2e.py`, `tests/test_live_import.py`  
 **Status:** Approved Architectural Specification (Post-Audit Hardened Revision)  

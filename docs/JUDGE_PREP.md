@@ -220,7 +220,7 @@ Tests pinning the architecture: `test_live_equals_replay_frames`,
 - 13 committed scenario files = 12 scenarios + 1 meta (`git ls-files data/scenarios/`,
   verified this session): nominal, two_failure, single_failure_n4, cascading_n8 (8 sats),
   leader_failure_6sat, firefly_swarm (real CelesTrak orbit import), proximity_stress,
-  eps_leader/eps_downlink/eps_imager (EPS fade), thruster_leader, live_e2e + its meta.
+  eps_leader/eps_downlink/eps_imager (EPS fade), thruster_leader.
 - Evasive collision avoidance demo: 35 EVASIVE_MANEUVER events, first at t = 0 at 848.53 m
   range, 0.5 m/s per episode — `uv run python -m cubesat.run --scenario data/scenarios/proximity_stress.json --seed 7 --out data/logs/proximity_smoke.jsonl`.
 - Security round (2026-10-29): vite 5→7.3.7, `npm audit` 0 vulnerabilities; CLI output-path

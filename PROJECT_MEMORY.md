@@ -47,13 +47,13 @@ scenario JSON → scenario.py (pydantic) → sim.run_scenario (pure; list[dict])
 
 **Analysis layer (pure, zero core diff):** `benchmark.py` (modes: 15-pair × 5-policy, pareto, keepout-report, cw-curve, monte-carlo) · `benchmark_policies.py` · `pareto.py` · `keepout.py` (must not import sim) · `cw_curve.py` · `dv_bound.py` (two-impulse CW Δv bounds) · `monte_carlo.py` (jitters scenario params from one PCG64 stream OUTSIDE the core — the sim consumes no RNG so seed sweeps alone are vacuous).
 
-**Import layer:** `cluster_import.py` (CelesTrak OMM → *hypothetical* swarm on a real chief orbit; stdlib, no SGP4, eccentricity gate; FIREFLY demo) · `live_import.py` + `_live_network.py` (newer: GRACE-FO etc. ingestion, 2:1 formation fitting via Hungarian, SSRF-hardened client: host whitelist celestrak/space-track/n2yo, 5 MB cap, 30 s cumulative deadline, credential redaction, atomic TTL cache, protected-dir/file output confinement, `.meta.json` provenance sidecar) · `live_import_e2e.py` (ingest → run twice → assert byte-identical → check lifecycle).
+**Import layer:** `cluster_import.py` (CelesTrak OMM → *hypothetical* swarm on a real chief orbit; stdlib, no SGP4, eccentricity gate; FIREFLY demo) · `live_import.py` + `_live_network.py` (newer: GRACE-FO etc. ingestion, 2:1 formation fitting via Hungarian, SSRF-hardened client: host whitelist celestrak only, 5 MB cap, 30 s cumulative deadline, credential redaction, atomic TTL cache, protected-dir/file output confinement, `.meta.json` provenance sidecar).
 
 **Predictor (display-only):** repo-root package `predictor/runtime.py` (NOT under cubesat/); frozen `models/predictor.txt` (sha `37900918…`, tau 0.02568, K_ALARM=3, STRIDE=10, L3600, 132 features); sealed pipeline `files/predictor_pipeline.py` (src sha `deefeae1…`, self-enforcing via `out2/test_manifest.json`); CI hash-checks, **never retrains**. Opt-in `predictor:true` → `sats[].risk` on the wire. Nothing in sim/allocation consumes risk (pinned: `tests/test_predictor_wire.py`).
 
 **Frontend** (`frontend/`, React 18 + TS + Vite 7 + Zustand + Recharts + plain Three.js [no R3F] + CSS Modules, vendored IBM Plex): hash router `#/` landing (now a 3D "KINTSUGI-6" page: `components/landing/landingScene.ts`), `#/live` (control seat: ScenarioBuilder → upload → start), `#/replay` (playback only), `#/tutorial`, `#/faq`, `#/docs`. Data flow: `useWebSocket` → one `api/deserializer.ts` → stores (`simStore`, `recoveryStore`, `roleHistoryStore`, `historyStore`, `replayStore`, `sceneStore`, `uiStore`). 3D in `components/three/*` (Earth at ring center, constant-screen-size markers, label declutter). **Design law** FRONTEND_SPEC §13: raw hex ONLY in `styles/tokens.css` (grep gate), color = state only, no metric-card grids, `unmeasured` for missing numbers, avoid-ai-design scanner clean.
 
-**Data:** `data/scenarios/` (nominal, two_failure, single_failure_n4, cascading_n8, leader_failure_6sat, thruster_leader_6sat, eps_{leader,imager,downlink}_6sat, proximity_stress, firefly_swarm, live_e2e_swarm(+.meta); **untracked** live_{2,6,6_2,6_3,12}sat) · `data/logs/` (canonical two_failure/nominal JSONL) · `data/eval/` (benchmark, pareto, keepout, cw_error, dv_lower_bounds, oracle_sweep v2/v3, monte_carlo + manifests) · `data/celestrak/` snapshots.
+**Data:** `data/scenarios/` (nominal, two_failure, single_failure_n4, cascading_n8, leader_failure_6sat, thruster_leader_6sat, eps_{leader,imager,downlink}_6sat, proximity_stress, firefly_swarm, live_{2,6,8,12,16,24}sat) · `data/logs/` (canonical two_failure/nominal JSONL) · `data/eval/` (benchmark, pareto, keepout, cw_error, dv_lower_bounds, oracle_sweep v2/v3, monte_carlo + manifests) · `data/celestrak/` snapshots.
 
 **Tests:** `tests/` (~30 files; 123 collected as of 2026-10-26, more since: test_live_import, test_failure_modes, test_collision_avoidance, test_oracle_sweep_v2/v3). Golden wire fixtures in `tests/fixtures/`.
 
@@ -100,7 +100,6 @@ uv run python -m pytest -q -m "not slow" -x      # fast
 uv run python -m cubesat.run --scenario data/scenarios/two_failure.json --seed 42 --out data/logs/two_failure.jsonl
 uv run uvicorn cubesat.api:app --port 8000       # UI + API + WS in one process
 uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json
-uv run python -m cubesat.live_import_e2e         # live import determinism check (uses cache/offline fallback)
 cd frontend && npm run build                     # tsc + vite gate
 grep -rnE '#[0-9a-fA-F]{3,8}' frontend/src | grep -v tokens.css   # must print nothing
 ```

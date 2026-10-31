@@ -52,6 +52,7 @@ def even_split_replan(
     n: float,
     a_max: float,
     t_replan: float,
+    current_slots: list | None = None,  # sim seam kwarg; unused by this policy
 ) -> tuple[FormationPlan, list[tuple[int, int]], float, str, float, np.ndarray]:
     """Policy 2 -- even redistribution, ADAPTED from the RL-retasking literature's
     even-split rule (which splits TASK LOAD among survivors). The adaptation
@@ -141,6 +142,7 @@ def hungarian_keepout_replan(
     n: float,
     a_max: float,
     t_replan: float,
+    current_slots: list | None = None,  # sim seam kwarg; unused by this policy
 ) -> tuple[FormationPlan, list[tuple[int, int]], float, str, float, np.ndarray]:
     """Policy 5 -- the shipped Hungarian path with ONE extra additive cost term:
     C = build_cost_matrix(...) + W4 * keep-out penalty per seat (dead satellites
