@@ -10,10 +10,11 @@ import copy
 
 import numpy as np
 import pytest
-from certify_fixtures import PERIOD, engine_at, scn
+from certify_fixtures import engine_at, scn
 
 from cubesat.certify import Plan, certify, swarm_state_from_engine
 from cubesat.certify_sim import simulate
+from cubesat.hcw import mean_motion
 
 CASES = {
     "healthy": (scn(2.0), 0),
@@ -33,7 +34,20 @@ CASES = {
         ),
         20,
     ),
+    "dead_sat_reenters": (  # chief at 165 km, x10 density: dead sat 1 falls below 100 km
+        scn(
+            2.0,
+            chief={"altitude_km": 165.0},
+            failures=[{"t": 0.0, "sat_id": 1, "mode": "DEAD"}],
+            truth={"density_factor": 10},
+        ),
+        2,
+    ),
 }
+
+
+def _two_orbits(sc) -> int:
+    return round(4.0 * np.pi / mean_motion(sc.chief.altitude_km * 1000.0) / sc.dt_s)
 
 
 def _run_engine(eng, steps):
@@ -49,7 +63,7 @@ def test_hold_plan_matches_the_engine_run(name):
     state = swarm_state_from_engine(eng)
     cert = certify(Plan((), "hold", state.t_s), state, sc, d_safe_m=500.0)
     steps = round(cert.horizon_s / sc.dt_s)
-    assert steps == round(2.0 * PERIOD / sc.dt_s)
+    assert steps == _two_orbits(sc)
     engine_sep, _ = _run_engine(eng, steps)
     print(f"\n{name}: certificate min sep {cert.min_sep_m:.4f} m vs engine {engine_sep:.4f} m")
     assert abs(cert.min_sep_m - engine_sep) < 1.0
@@ -57,11 +71,12 @@ def test_hold_plan_matches_the_engine_run(name):
 
 
 @pytest.mark.slow
-def test_certificate_executes_a_plan_like_the_engine():
-    sc, ticks = CASES["mixed_storm"]
+@pytest.mark.parametrize("name", ["mixed_storm", "dead_sat_reenters"])
+def test_certificate_executes_a_plan_like_the_engine(name):
+    sc, ticks = CASES[name]
     eng = engine_at(sc, ticks)
     state = swarm_state_from_engine(eng)
-    steps = round(2.0 * PERIOD / sc.dt_s)
+    steps = _two_orbits(sc)
     res = simulate(sc, state, state.refs, {}, steps)
     _run_engine(eng, steps - 1)  # engine.X is the state after `steps` more ticks
     assert eng.k == ticks + steps
