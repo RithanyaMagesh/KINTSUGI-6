@@ -109,6 +109,7 @@ def test_wire_event_and_role_reassignment():
         "sim_time": 1204.0,
         "level": "critical",
         "message": "SAT-2 DEAD failure detected",
+        "sat_id": "SAT-2",  # additive (2026-10-31); the four keys above are unchanged
     }
     # latency = t_detect - t_fail, both timestamps present in the payload
     assert enrich.detection_latency_s == 4.0
@@ -388,3 +389,54 @@ def test_unknown_state_transition_keeps_text_only():
                   "message": "State NOMINAL -> MYSTERY"}
     assert _state_event(None, None)["message"] == "State None -> None"  # truncated payload
     assert "label" not in _state_event(["x"], {"y": 1})  # unhashable junk never raises
+
+
+def _ev(etype, payload, t=600.0):
+    msgs = to_messages(_tick(t, event={"type": etype, "payload": payload}), SessionEnrich())
+    return msgs[1]
+
+
+def test_degrade_start_plain_warning_with_countdown():
+    ev = _ev("DEGRADE_START", {"sat_id": 0, "t_fail": 2400.0, "degrade_s": 1800.0})
+    assert ev["level"] == "warning"
+    assert ev["message"] == "SAT-1 battery fading; failure expected at T+30:00"
+    assert ev["sat_id"] == "SAT-1"
+    assert _ev("DEGRADE_START", {"sat_id": 2})["message"] == "SAT-3 battery fading"
+    assert _ev("DEGRADE_START", {})["message"] == "A satellite battery fading"
+    assert "sat_id" not in _ev("DEGRADE_START", {})
+    junk = _ev("DEGRADE_START", {"sat_id": 1, "t_fail": float("nan")})
+    assert junk["message"] == "SAT-2 battery fading"
+
+
+def test_oracle_swap_plain_sentence_and_holder_sat_id():
+    ev = _ev("ORACLE_SWAP", {"role": "leader", "from_sat": 0, "to_sat": 1, "t": 5.0})
+    assert ev["level"] == "info"
+    assert ev["message"] == "SAT-1 leader role handed to SAT-2 before SAT-1 fails"
+    assert ev["sat_id"] == "SAT-1"
+    deg = _ev("ORACLE_SWAP", {"role": "leader", "from_sat": 0, "to_sat": 1,
+                              "mode": "degrade_trigger"})
+    assert deg["message"] == "SAT-1 leader role handed to SAT-2 because its battery is fading"
+    bare = _ev("ORACLE_SWAP", {})
+    assert bare["message"] == "A satellite critical role handed to another satellite"
+    assert "sat_id" not in bare
+
+
+def test_oracle_alert_plain_sentence_with_lead_time():
+    ev = _ev("ORACLE_ALERT", {"sat_id": 3, "lead_s": 600.0, "t_fail": 2400.0, "t_warn": 1800.0})
+    assert ev["level"] == "info"
+    assert ev["message"] == "Early warning: SAT-4 expected to fail in 10:00; replanning early"
+    assert ev["sat_id"] == "SAT-4"
+    assert _ev("ORACLE_ALERT", {"sat_id": 3})["message"] == (
+        "Early warning: SAT-4 expected to fail; replanning early")
+    assert _ev("ORACLE_ALERT", {})["message"] == (
+        "Early warning: a satellite expected to fail; replanning early")
+
+
+def test_failure_and_evasive_events_carry_sat_id():
+    f = _ev("FAILURE_DETECTED", {"sat_id": 1, "mode": "DEAD", "t_fail": 1.0, "t_detect": 2.0})
+    assert f["sat_id"] == "SAT-2" and f["message"] == "SAT-2 DEAD failure detected"
+    e = _ev("EVASIVE_MANEUVER", {"sat_id": 4, "other_id": 5, "range_m": 959.37})
+    assert e["sat_id"] == "SAT-5" and e["message"] == "SAT-5 evasive maneuver (SAT-6, range 959 m)"
+    assert "sat_id" not in _ev("FAILURE_DETECTED", {})  # truncated payload: no key, no raise
+    assert "sat_id" not in _ev("EVASIVE_MANEUVER", {})
+    assert "sat_id" not in _ev("MYSTERY", {"sat_id": 1})  # unknown types untouched

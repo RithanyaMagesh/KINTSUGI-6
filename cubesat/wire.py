@@ -11,6 +11,7 @@ are frontend-derived -- the backend only reports what the log carries.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 from typing import Literal
 
@@ -206,6 +207,28 @@ def to_sim_state(frame: dict, enrich: SessionEnrich) -> dict:
     }
 
 
+def _sat_label(sat: object) -> str | None:
+    """Raw log sat id -> display id; an already-display str passes; junk -> None."""
+    if isinstance(sat, int) and not isinstance(sat, bool):
+        return display_sat_id(sat)
+    return sat if isinstance(sat, str) else None
+
+
+def _with_sat(ev: dict, sat: object) -> dict:
+    """Optional additive sat_id ('SAT-n') on events about one satellite."""
+    label = _sat_label(sat)
+    if label is not None:
+        ev["sat_id"] = label
+    return ev
+
+
+def _mmss(seconds: object) -> str | None:
+    if not isinstance(seconds, (int, float)) or not math.isfinite(seconds):
+        return None
+    m, s = divmod(int(round(max(seconds, 0.0))), 60)
+    return f"{m:02d}:{s:02d}"
+
+
 def _failure_event(frame: dict, payload: dict, enrich: SessionEnrich) -> dict:
     if isinstance(payload.get("t_fail"), (int, float)) and isinstance(
         payload.get("t_detect"), (int, float)
@@ -217,7 +240,7 @@ def _failure_event(frame: dict, payload: dict, enrich: SessionEnrich) -> dict:
     message = f"{who} {mode} failure detected" if mode else f"{who} failure detected"
     if payload.get("self_report"):  # Addendum v1.2: additive key, old payloads unchanged
         message += " (self-reported)"
-    return to_event("critical", frame.get("t", 0.0), message)
+    return _with_sat(to_event("critical", frame.get("t", 0.0), message), who)
 
 
 def _role_reassignment(frame: dict, payload: dict, enrich: SessionEnrich) -> dict:
@@ -291,10 +314,13 @@ def _evasive_event(frame: dict, payload: dict) -> dict:
         other = display_sat_id(other)
     rng = payload.get("range_m")
     rng_txt = f"{rng:.0f}" if isinstance(rng, (int, float)) else str(rng)
-    return to_event(
-        "info",
-        frame.get("t", 0.0),
-        f"{who} evasive maneuver ({other}, range {rng_txt} m)",
+    return _with_sat(
+        to_event(
+            "info",
+            frame.get("t", 0.0),
+            f"{who} evasive maneuver ({other}, range {rng_txt} m)",
+        ),
+        who,
     )
 
 
@@ -315,7 +341,32 @@ def _plain_event(frame: dict, etype: str, payload: dict) -> dict:
         if label is not None:  # additive structured fields
             ev.update({"from": frm, "to": to, "label": label})
         return ev
-    return to_event("info", frame.get("t", 0.0), etype)  # unknown types: pass the type
+    t = frame.get("t", 0.0)
+    if etype == "DEGRADE_START":  # {sat_id, t_fail, degrade_s}
+        who = _sat_label(payload.get("sat_id"))
+        msg = f"{who or 'A satellite'} battery fading"
+        left = _mmss(payload["t_fail"] - t) if isinstance(payload.get("t_fail"), (int, float)) \
+            and isinstance(t, (int, float)) else None
+        if left is not None:
+            msg += f"; failure expected at T+{left}"
+        return _with_sat(to_event("warning", t, msg), who)
+    if etype == "ORACLE_SWAP":  # {role, from_sat, to_sat, t, mode?}
+        a, b = _sat_label(payload.get("from_sat")), _sat_label(payload.get("to_sat"))
+        if payload.get("mode") == "degrade_trigger":
+            why = " because its battery is fading"
+        else:
+            why = f" before {a} fails" if a else ""
+        role = payload.get("role") or "critical"
+        msg = f"{a or 'A satellite'} {role} role handed to {b or 'another satellite'}{why}"
+        return _with_sat(to_event("info", t, msg), a)
+    if etype == "ORACLE_ALERT":  # {sat_id, lead_s, t_fail, t_warn}
+        who = _sat_label(payload.get("sat_id"))
+        lead = _mmss(payload.get("lead_s"))
+        msg = f"Early warning: {who or 'a satellite'} expected to fail"
+        if lead is not None:
+            msg += f" in {lead}"
+        return _with_sat(to_event("info", t, msg + "; replanning early"), who)
+    return to_event("info", t, etype)  # unknown types: pass the type
 
 
 def to_messages(frame: dict, enrich: SessionEnrich) -> list[dict]:
