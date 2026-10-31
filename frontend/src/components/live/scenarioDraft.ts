@@ -234,6 +234,17 @@ export function defaultRoles(n: number): Role[] {
   ];
 }
 
+/** Big-swarm sizing (measured with two DEAD failures, seed 42, see the
+ * frontend commit): the 2:1 ellipse must grow with N or 24+ satellites sit
+ * inside the 2 km keep-out, and the recovery planner needs nearby ring sizes
+ * to clear the coasting dead satellites. Tested radial amplitudes, km. */
+const BIG_SWARM_AMP_KM: Record<number, number> = { 24: 9, 32: 11.5, 50: 18.5 };
+const BIG_SWARM_MIN = 12;
+
+function bigSwarmAmpKm(n: number): number {
+  return BIG_SWARM_AMP_KM[n] ?? Math.round(0.37 * n * 2) / 2;
+}
+
 /** Draft -> the scenario object. */
 export function buildScenario(
   n: BuilderNumbers,
@@ -243,12 +254,20 @@ export function buildScenario(
   return {
     name: n.name,
     seed: clampNumber("seed", n.seed),
-    duration_s: clampNumber("durationS", n.durationS),
+    // 40+ satellites: the live server precomputes the run under a 60 s limit
+    // (cubesat/session.py); 7000 s (> 1 orbit) computes in ~30 s at N = 50.
+    duration_s:
+      roles.length >= 40
+        ? Math.min(clampNumber("durationS", n.durationS), 7000)
+        : clampNumber("durationS", n.durationS),
     dt_s: clampNumber("dtS", n.dtS),
     chief: { altitude_km: clampNumber("altitudeKm", n.altitudeKm) },
     formation: {
       n_slots: roles.length,
-      radial_amp_km: clampNumber("radialAmpKm", n.radialAmpKm),
+      radial_amp_km:
+        roles.length >= BIG_SWARM_MIN
+          ? Math.max(clampNumber("radialAmpKm", n.radialAmpKm), bigSwarmAmpKm(roles.length))
+          : clampNumber("radialAmpKm", n.radialAmpKm),
       phase_offset_deg: clampNumber("phaseOffsetDeg", n.phaseOffsetDeg),
     },
     a_max_mps2: clampNumber("aMax", n.aMax),
@@ -259,6 +278,15 @@ export function buildScenario(
       grid_extent_km: clampNumber("gridExtentKm", n.gridExtentKm),
     },
     roles: [...roles],
+    ...(roles.length >= BIG_SWARM_MIN
+      ? {
+          allocation: {
+            amp_sweep: [1.0, 1.12, 0.9, 1.25, 0.8, 1.4],
+            phase_sweep_deg: [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330],
+          },
+          safety: { evade_radius_m: 2000.0 },
+        }
+      : {}),
     failures: failures
       .filter((f) => Number.isInteger(f.satId) && f.satId >= 0 && f.satId < roles.length)
       .map((f) => {

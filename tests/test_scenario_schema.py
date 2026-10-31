@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from cubesat.scenario import Scenario, load_scenario
+from cubesat.scenario import MAX_SATS, Scenario, load_scenario
 
 ROOT = Path(__file__).resolve().parents[1]
 NOMINAL = ROOT / "data" / "scenarios" / "nominal.json"
@@ -92,8 +92,8 @@ def test_rejects_oversized_sweeps():
 def test_rejects_too_many_satellites():
     """roles/n_slots drive O(n^2) per-tick loops (min_sep, evasion scan)."""
     payload = load_scenario(NOMINAL).model_dump()
-    payload["roles"] = ["imager"] * 33
-    payload["formation"]["n_slots"] = 33
+    payload["roles"] = ["imager"] * (MAX_SATS + 1)
+    payload["formation"]["n_slots"] = MAX_SATS + 1
     with pytest.raises(ValidationError):
         Scenario.model_validate(payload)
 
