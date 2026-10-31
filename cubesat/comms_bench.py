@@ -46,8 +46,19 @@ def _scenario(base: dict, cell: dict, kills: tuple[int, ...]) -> Scenario:
         raise ValueError(f"scenario has no field {unknown} (needs C4)")
     fails = [{"t": t, "sat_id": s, "mode": "DEAD"} for s, t in zip(kills, FAIL_TIMES, strict=False)]
     name = f"comms_{cell['name']}_{'-'.join(map(str, kills))}"
-    return Scenario.model_validate({**base, "engine": "v2", "name": name, "failures": fails,
-                                    **cell["update"]})
+    scn = Scenario.model_validate({**base, "engine": "v2", "name": name, "failures": fails,
+                                   **cell["update"]})
+    _check_applied(cell["update"], scn.model_dump(), "")
+    return scn
+
+
+def _check_applied(update: dict, dump: dict, path: str) -> None:
+    """Every (nested) key of a cell's update must exist in the validated scenario."""
+    for k, v in update.items():
+        if not isinstance(dump, dict) or k not in dump:
+            raise ValueError(f"scenario has no field {path + k!r}")
+        if isinstance(v, dict):
+            _check_applied(v, dump[k], f"{path}{k}.")
 
 
 def _held(sat: dict) -> list:
@@ -86,6 +97,7 @@ def run_metrics(lines, *, killed, first_failure_t, period_s, dt) -> dict:
     laser = any("components" in x for x in ticks)
     decentral = any("functions_vacant" in x for x in ticks)
     lat, false_iso, iso_s, part_s, locked, rows, handoffs = [], 0, 0.0, 0.0, 0, 0, 0
+    killed_iso, detected = 0, set()
     for x in ticks:
         for e in x.get("events") or ([x["event"]] if x.get("event") else []):
             p = e.get("payload") or {}
@@ -94,7 +106,9 @@ def run_metrics(lines, *, killed, first_failure_t, period_s, dt) -> dict:
                 continue
             if p.get("cause") == "isolated":
                 false_iso += p.get("sat_id") not in killed
-            elif p.get("sat_id") in killed:
+                killed_iso += p.get("sat_id") in killed
+            elif p.get("sat_id") in killed and p.get("sat_id") not in detected:
+                detected.add(p["sat_id"])
                 lat.append(p["t_detect"] - p["t_fail"])
         if laser:
             comps = x.get("components", [])
@@ -108,6 +122,10 @@ def run_metrics(lines, *, killed, first_failure_t, period_s, dt) -> dict:
     return {
         "detection_latency_s": sum(lat) / len(lat) if lat else None,
         "false_isolations": false_iso,
+        # not pre-registered (review finding): isolations of a sat before it is killed, and how
+        # many killed sats were ever declared dead (one still declared isolated never is)
+        "killed_sat_isolations": killed_iso,
+        "killed_detected": len(detected),
         "isolated_sat_s": iso_s if laser else None,
         "partition_s": part_s if laser else None,
         "partition_s_per_orbit": part_s / orbits if laser else None,
@@ -210,7 +228,8 @@ def run(args, command: str) -> int:
         "inputs_sha256": {str(args.base): _sha(args.base),
                           **{f"cubesat/{f}": _sha(src / f) for f in
                              ("comms_bench.py", "comms_v2.py", "isl.py", "faults_v2.py",
-                              "sim_v2.py")}},
+                              "sim_v2.py", "decentral.py", "scenario.py", "scenario_models.py",
+                              "scenario_comms.py")}},
         "period_s": period, "dt_s": dt, "failure_times_s": list(FAIL_TIMES),
         "cells": [c["name"] for c in CELLS], "na_cells": NA_CELLS,
         "verdicts": verdicts(rows), "rows": rows,

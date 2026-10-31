@@ -1,5 +1,7 @@
 """C5 comms benchmark: per-run metrics from synthetic log lines, cells, hypothesis verdicts."""
 
+import json
+
 import pytest
 
 from cubesat.comms_bench import CELLS, NA_CELLS, kill_sets, run_metrics, verdicts
@@ -135,3 +137,24 @@ def test_decentral_rounds_handoffs_and_round_time_sensitivity():
     # the 6 s window closed by an auction of 2 rounds: 6 - 2 * 2 + 2 * tau, floored at 0
     assert m["function_vacancy_s_by_round_time"] == pytest.approx({"0.1": 2.2, "0.5": 3.0,
                                                                     "2.0": 6.0})
+
+
+def test_killed_sat_isolations_and_undetected_deaths_are_reported():
+    sats = [_sat(0, roles=LEAD), _sat(1, roles=DOWN), _sat(2)]
+    lines = [_tick(0.0, sats, [[0, 1, 2]]),
+             _tick(2.0, sats, [[0, 1], [2]], events=[_det(2, 0.0, 2.0, "isolated")]),
+             _tick(4.0, sats, [[0, 1]], events=[_det(0, 2.0, 4.0)])]
+    m = run_metrics(lines, killed=[0, 2], first_failure_t=2.0, period_s=6.0, dt=2.0)
+    assert m["false_isolations"] == 0  # pre-registered: never-killed sats only
+    assert m["killed_sat_isolations"] == 1
+    assert m["killed_detected"] == 1  # sat 2 died while declared isolated: never detected
+
+
+def test_nested_cell_typos_are_refused_not_ignored():
+    from cubesat.comms_bench import _scenario
+
+    base = json.loads(open("data/scenarios/two_failure.json").read())
+    typo = {"name": "t", "update": {"comms": {"model": "laser", "topolgy": "star"}}}
+    with pytest.raises(ValueError, match="no field .*topolgy"):
+        _scenario(base, typo, (0,))
+    _scenario(base, CELLS[4], (0,))  # every real cell passes the guard
