@@ -163,7 +163,8 @@ def _diffs(new, old, path=""):
     if isinstance(old, list) and isinstance(new, list):
         if len(old) != len(new):
             return [f"{path}: length {len(new)} != {len(old)}"]
-        return [d for i, (a, b) in enumerate(zip(new, old, strict=True)) for d in _diffs(a, b, f"{path}[{i}]")]
+        pairs = enumerate(zip(new, old, strict=True))
+        return [d for i, (a, b) in pairs for d in _diffs(a, b, f"{path}[{i}]")]
     both_num = (
         isinstance(old, (int, float))
         and isinstance(new, (int, float))
