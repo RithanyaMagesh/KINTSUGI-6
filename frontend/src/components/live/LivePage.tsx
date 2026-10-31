@@ -4,7 +4,7 @@
 // readouts show. Setup (S) and Telemetry (T) slide in on demand; H hides the
 // whole interface for a clean stage; F goes fullscreen.
 import { useCallback, useEffect, useRef, useState } from "react";
-import SwarmScene from "../three/SwarmScene";
+import SwarmScene from "../three/SwarmScene.tsx"; // explicit: macOS is case-insensitive and would resolve swarmScene.ts
 import type { SwarmSceneController } from "../three/swarmScene";
 import { useSimStore } from "../../stores/simStore";
 import { useSceneStore } from "../../stores/sceneStore";
