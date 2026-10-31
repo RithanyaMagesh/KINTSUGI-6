@@ -255,11 +255,16 @@ def _entries(sdir: Path, variants) -> tuple[list[dict], dict, list[str]]:
     return entries, inputs, skipped
 
 
+def loadavg() -> list[float] | None:
+    """1/5/15-min load; None where the OS has none (Windows)."""
+    return list(os.getloadavg()) if hasattr(os, "getloadavg") else None
+
+
 def run_perf(sdir: Path, report: Path, *, repeats: int = 3, variants=("two_failure", "live_24sat"),
              profile=("two_failure", "two_failure@v2", "live_24sat"), ws_scenario="two_failure",
              ws_speeds=(1, 60, 1000, 1e6), ws_window_s=10.0, command: str = "") -> dict:
     sdir = Path(sdir)
-    load0, busy_proc = os.getloadavg(), _pytest_running()
+    load0, busy_proc = loadavg(), _pytest_running()
     entries, inputs, skipped = _entries(sdir, variants)
     rows = []
     with tempfile.TemporaryDirectory(prefix="perf_scn_") as tmp:
@@ -273,11 +278,11 @@ def run_perf(sdir: Path, report: Path, *, repeats: int = 3, variants=("two_failu
         ws = (websocket_section(sdir, ws_scenario, ws_speeds, ws_window_s, repeats)
               if (sdir / f"{ws_scenario}.json").is_file()
               else {"feasible": False, "reason": f"scenario {ws_scenario}.json not in {sdir}"})
-    load1 = load0[0]
+    load1 = load0[0] if load0 else 0.0
     out = {
         "schema": "perf_baseline/1", "command": command, "date_utc": datetime.now(UTC).isoformat(),
         "repeats": repeats, "machine": _machine(),
-        "load": {"start": list(load0), "end": list(os.getloadavg())},
+        "load": {"start": load0, "end": loadavg()},
         "pytest_running_at_start": busy_proc, "machine_busy": bool(load1 > 2.0 or busy_proc),
         "inputs": {k: inputs[k] for k in sorted(inputs)}, "skipped_scenarios": skipped,
         "scenarios": rows, "websocket": ws, "notes": NOTES,

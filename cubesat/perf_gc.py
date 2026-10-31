@@ -12,13 +12,12 @@ from __future__ import annotations
 import argparse
 import gc
 import json
-import os
 import sys
 from pathlib import Path
 
 import numpy as np
 
-from cubesat.perf_bench import TickTimer, _pc, sha256_file
+from cubesat.perf_bench import TickTimer, _pc, loadavg, sha256_file
 from cubesat.perf_ws import stats
 from cubesat.scenario import load_scenario
 from cubesat.sim import run_scenario
@@ -28,7 +27,7 @@ def run_gc_probe(
     sdir: Path, name: str, report: Path, *, repeats: int = 3, command: str = ""
 ) -> dict:
     path = Path(sdir) / f"{name}.json"
-    scn, load0 = load_scenario(path), os.getloadavg()
+    scn, load0 = load_scenario(path), loadavg()
     rows: dict[str, list[tuple]] = {"gc_on": [], "gc_off": []}
     for _ in range(repeats):  # interleaved so drift hits both modes alike
         for mode in rows:
@@ -47,7 +46,7 @@ def run_gc_probe(
         "schema": "perf_gc_probe/1", "command": command, "scenario": name, "repeats": repeats,
         "inputs": {path.name: sha256_file(path)},
         "n_ticks": int(round(scn.duration_s / scn.dt_s)) + 1,
-        "load": {"start": list(load0), "end": list(os.getloadavg())},
+        "load": {"start": load0, "end": loadavg()},
         "modes": {m: {"total_s": stats([r[0] for r in v]), "tick_ms_max": stats([r[1] for r in v]),
                       "tick_ms_p99": stats([r[2] for r in v]),
                       "n_ticks_over_5ms": stats([r[3] for r in v])} for m, v in rows.items()},
