@@ -522,3 +522,31 @@ N/A, not run: ideal × decentral (C4 refuses decentral authority without laser c
 - **Sensitivity (reported, no threshold).** If C4 logs rounds per handoff, the decentral vacancy is re-stated with round time τ ∈ {0.1, 0.5, 2.0} s as `vacancy − rounds × dt + rounds × τ` (a model, labelled as such, not a simulation); otherwise "unmeasured". No ranking claim follows from it.
 
 Command (to be run once, after this section is committed): `uv run python -m cubesat.benchmark --mode comms --base data/scenarios/two_failure.json --report data/eval/comms_report.json`.
+
+## 2026-11-01 — C5 results, part 1: laser vs ideal comms, central authority (branch `evidence`)
+
+Pre-registered in commit **c26de11** (section above; thresholds unchanged). Command: `uv run python -m cubesat.benchmark --mode comms --base data/scenarios/two_failure.json --report data/eval/comms_report.json` → `data/eval/comms_report.json` (command, input sha256s of the base scenario and of comms_bench / comms_v2 / isl / faults_v2 / sim_v2, every row, verdicts). 3 cells × 16 kill sets = 48 runs of 17028 s (chief period 5677.0 s, 3.0 orbits). Reproduced the laser-star-central leader-kill row exactly in a second run (all metrics equal). The decentral cells are reported as `unmeasured: scenario has no field ['recovery'] (needs C4)`: the harness refuses unknown cell fields, because pydantic would silently ignore `recovery` and run them as central.
+
+| hypothesis | threshold | measured | verdict |
+|---|---|---|---|
+| C5-H1 detection latency, mesh vs ideal | 16/16 within 2 s | 16/16 (4.0 s in every cell and kill set) | **PASS** |
+| C5-H2 no spurious isolation, mesh | ≥ 15/16 with 0 | **10/16** | **FAIL** |
+| C5-H3 star hub loss isolates leaves | 6/6 leader kills ≥ 1 | 6/6 (4-11 per run) | **PASS** |
+| C5-H4 mesh partition | mean ≤ 400 s/orbit | 94.76 s/orbit (max 321.4) | **PASS** |
+| C5-H5 mesh critical vacancy ≤ ideal + 2 s | 16/16 | 16/16 | **PASS** |
+| C5-H6 mesh LOCKED fraction | mean ≥ 0.95 | 0.9849 | **PASS** |
+| C5-H7, H8, H9 (decentral) | — | — | **unmeasured** (C4 not on `backend`) |
+
+Per cell, mean / worst over the 16 kill sets:
+| cell | detection s | false isolations | isolated sat-s | partition s/orbit | LOCKED fraction | critical vacancy s | coverage, last orbit |
+|---|---|---|---|---|---|---|---|
+| ideal-central | 4 / 4 | 0 / 0 | n/a | n/a | n/a | 3.0 / 8 | 0.3352 / 0.3712 |
+| laser-mesh-central | 4 / 4 | 0.44 / 2 | 5.75 / 26 | 94.76 / 321.4 | 0.9849 (best 0.9971) | 3.0 / 8 | 0.3352 / 0.3712 |
+| laser-star-central | 4 / 4 | 5.56 / 11 | 672.1 / 1132 | 217.7 / 332.0 | 0.9875 (best 1.0) | 3.0 / 8 | 0.3352 / 0.3712 |
+
+Honest notes:
+1. **H2 failed, and the cause is a compound event, not tuning.** All 6 mesh kill sets with false isolations ((0,1), (0,3), (0,5), (1,3), (2,3), (3,4); 1-2 each, 12-26 isolated sat-s) follow the same pattern. The second death lands while the sun cone has already cut the ring, or a death leaves a neighbour with no planned partner. The neighbour is then alone until the replacement link acquires (30 s, assumption), so the swarm declares it after K = 3 ticks. Example (0,3): sun splits [1,5]/[2,3,4] at 1352 s; sat 3 dies at 1500 s, leaving 2 and 4 as singletons, both declared `isolated` at 1504 s, and 2-4 locks about 30 s later.
+2. **In this engine, comms change detection and isolation only, not recovery.** Critical vacancy, coverage and the killed sats' detection latency are identical per kill set in all three cells (checked row by row). EngineV2 re-elects roles from the believed state, and central role recovery does not route over the links. So H5's PASS is real, but it is structural: it says the link layer does not delay the central solve, and it says nothing in favour of laser comms. The star's up to 11 false isolations per run do not move critical vacancy either. That is measured; why the role layer is not affected was not traced (unmeasured).
+3. The star is far worse on connectivity than the mesh: 217.7 vs 94.76 s/orbit partitioned, 672.1 vs 5.75 isolated sat-s, and false isolations on 12/16 kill sets. It is also worse without any leader kill, because a sun-blinded spoke isolates its leaf. That is the topology argument for decentralising. Whether decentral *recovery* is better is H7-H9, still unmeasured.
+4. Mesh partition varies a lot by kill set (0-321.4 s/orbit). The sun cut of the ring parallels persists when the dead sats break the cycle into a chain ((0,3), (1,2), (4,5) and leader-only ≈ 271-321 s/orbit); it heals when the replan picks other pairs ((1,4), (1,5), (2,4), (2,5) = 0).
+5. Laser parameters are the C2 defaults, and all of them are assumptions. Detection latency 4.0 s = (K − 1) dt everywhere.
