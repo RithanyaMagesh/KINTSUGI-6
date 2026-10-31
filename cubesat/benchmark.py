@@ -503,7 +503,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--mode", choices=("benchmark", "keepout-report", "pareto", "cw-curve", "monte-carlo",
-                 "ground-passes", "baselines", "formations", "perf"),
+                 "ground-passes", "baselines", "formations", "perf", "comms"),
         default="benchmark",
         help="benchmark: run the P0 sweep; keepout-report: P2 post-hoc log analysis; "
         "pareto: P1 w2 x dv_budget sweep; cw-curve: P3 CW-vs-Kepler error curves; "
@@ -512,6 +512,7 @@ def main(argv: list[str] | None = None) -> int:
         "baselines: 15 pairs x do_nothing,role_swap_only,wait_for_ground,hungarian; "
         "formations: formation-shape report (cubesat/formations_bench.py; --base = "
         "data/scenarios/formation_cartwheel_6sat.json); "
+        "comms: C5 pre-registered comms matrix (cubesat/comms_bench.py); "
         "perf: live-run timing audit (cubesat/perf_bench.py; --base is a scenarios DIRECTORY)",
     )
     parser.add_argument("--base", required=True, type=Path, help="base scenario JSON")
@@ -599,6 +600,11 @@ def main(argv: list[str] | None = None) -> int:
 
         return run_cli(args, "uv run python -m cubesat.benchmark "
                        + " ".join(argv if argv is not None else sys.argv[1:]))
+    if args.mode == "comms":
+        from cubesat.comms_bench import run as run_comms
+
+        return run_comms(args, "uv run python -m cubesat.benchmark "
+                         + " ".join(argv if argv is not None else sys.argv[1:]))
     if args.mode == "ground-passes":
         return _run_ground_passes(args)
     if args.mode == "keepout-report":
