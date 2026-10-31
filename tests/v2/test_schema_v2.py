@@ -11,7 +11,11 @@ from cubesat.scenario import Scenario, load_scenario
 from cubesat.sim import run_scenario
 
 ROOT = Path(__file__).resolve().parents[2]
-SCENARIOS = sorted((ROOT / "data" / "scenarios").glob("*.json"))
+# v1 files only: the C3 formation_*_6sat.json scenarios are engine v2 by design.
+SCENARIOS = sorted(
+    p for p in (ROOT / "data" / "scenarios").glob("*.json")
+    if json.loads(p.read_text()).get("engine", "v1") == "v1"
+)
 # Same pin as tests/test_cli.py (nominal.json, duration 600 s, seed 42); copied, not imported.
 GOLDEN_NOMINAL_SHORT = "64b88c46843f99cdeaff654c4eccef1bf9e94e500d5171b236c17ce9d8def3a8"
 

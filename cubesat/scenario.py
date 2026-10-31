@@ -130,6 +130,16 @@ class Scenario(BaseModel):
         return self
 
     @model_validator(mode="after")
+    def _v1_only_cartwheel(self) -> Scenario:
+        # the v1 allocator's formation sweep rebuilds cartwheel slots; refuse instead of mixing
+        if self.engine != "v2" and self.formation.shape != "cartwheel":
+            raise ValueError(
+                f'formation.shape "{self.formation.shape}" requires engine "v2"; '
+                f'this scenario uses engine "{self.engine}"'
+            )
+        return self
+
+    @model_validator(mode="after")
     def _role_priority_is_a_permutation(self) -> Scenario:
         if sorted(self.role_priority) != sorted(ROLE_PRIORITY):
             raise ValueError(

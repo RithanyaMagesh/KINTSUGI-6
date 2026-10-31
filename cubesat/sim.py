@@ -64,7 +64,8 @@ import numpy as np
 
 from cubesat.allocate import replan
 from cubesat.coverage import coverage_fraction, footprint_radius, target_grid
-from cubesat.hcw import mean_motion, propagate, slot_initial_state
+from cubesat.formations import formation_slots
+from cubesat.hcw import mean_motion, propagate
 from cubesat.pd import PDController, bang_bang_time_lower_bound
 from cubesat.scenario import FailureMode, Scenario
 
@@ -132,18 +133,14 @@ def _swap_critical_seat(
 
 
 def build_slots(scenario: Scenario, n: float) -> list[np.ndarray]:
-    """Slot initial states, sat i on slot i: phase = phase_offset_deg + 360*j/n_slots.
-    The schema has no cross-track amplitude, so it equals radial_amp_km (planar
-    relative orbit, z in phase with x); that spreads the ground (y, z) centers
-    around a ring instead of pairing them on top of each other."""
-    amp = scenario.formation.radial_amp_km * 1000.0
-    offset = math.radians(scenario.formation.phase_offset_deg)
-    return [
-        slot_initial_state(
-            amp, amp, offset + 2.0 * math.pi * j / scenario.formation.n_slots, n
-        )
-        for j in range(scenario.formation.n_slots)
-    ]
+    """Slot initial states, sat i on slot i: phase = phase_offset_deg + 360*j/n_slots, on the
+    `formation.shape` relative orbit (cubesat/formations.py). The default cartwheel has the
+    cross-track amplitude equal to radial_amp_km (z in phase with x; the v1 slots, byte for
+    byte), which spreads the ground (y, z) centers around a ring."""
+    f = scenario.formation
+    return formation_slots(
+        f.shape, f.n_slots, f.radial_amp_km * 1000.0, n, math.radians(f.phase_offset_deg)
+    )
 
 
 def run_scenario(

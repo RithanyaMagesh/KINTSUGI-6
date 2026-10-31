@@ -7,7 +7,7 @@ dependencies = [
     "fastapi>=0.115",
     "lightgbm>=4.7.0",
     "numpy>=2.1",
-    "pydantic>=2.9",
+    "pydantic>=2.12",  # Field(exclude_if=...) keeps the default formation.shape out of dumps
     "scipy>=1.14",
     "uvicorn[standard]>=0.30",
 ]

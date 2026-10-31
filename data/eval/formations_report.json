@@ -1,0 +1,453 @@
+{
+  "command": "uv run python -m cubesat.benchmark --mode formations --base data/scenarios/formation_cartwheel_6sat.json --report data/eval/formations_report.json",
+  "inputs_sha256": {
+    "data/scenarios/formation_cartwheel_6sat.json": "eaf22f951c9b4e3fedcd31de820b60710fe38d4333c979c39c50bf99c8fea736",
+    "data/scenarios/formation_gco_6sat.json": "54af6ebdaf6fd167fc270ffccb88edd5079c413778da71f189c915dbe5291505",
+    "data/scenarios/formation_helix_6sat.json": "10d9691921063cda876bc57a2b73e54a17af15df8804890180df41ba3b0f6105",
+    "data/scenarios/formation_pco_6sat.json": "0e9b1e4ed380b1ef9065f72a33cf157dbe2a06569966189a676b804fd950cebb",
+    "data/scenarios/formation_string_6sat.json": "fa4c7bd9396ea46b91fbf7e69a1007970f715d401071ae25912ab4a70351f985"
+  },
+  "notes": [
+    "illustrative scenarios (8 km amplitude; string: 8 km along-track spacing)",
+    "CW = linear Hill-Clohessy-Wiltshire; truth = EngineV2 (J2 + drag, PD hold)",
+    "switch delta-v is the L1 (per-axis) LP objective, an upper bound on vector fuel; CW planning model, not flown in truth",
+    "recovery is not shape-aware (allocate_v2.candidate_slots = cartwheel + psi family)"
+  ],
+  "shapes": {
+    "cartwheel": {
+      "cw_coverage": 0.3711955725046414,
+      "cw_min_sep_m": 11313.70849898476,
+      "cw_worst_sep_any_along_track_drift_m": 0.0,
+      "hold_dv_per_orbit_j2_drag_off_per_sat_mps": [
+        0.30150060214984276,
+        0.3011471211915772,
+        0.3012430950171454,
+        0.3014996263246139,
+        0.30114507966617177,
+        0.30124567303486444
+      ],
+      "hold_dv_per_orbit_max_sat_mps": 0.5611536629707318,
+      "hold_dv_per_orbit_per_sat_mps": [
+        0.5531157083904998,
+        0.554432954250101,
+        0.5611536629707318,
+        0.5567161477259382,
+        0.5567726619899899,
+        0.5581256795763737
+      ],
+      "hold_dv_per_orbit_total_mps": 3.340316814903635,
+      "scenario": "data/scenarios/formation_cartwheel_6sat.json",
+      "switch_from_cartwheel": {
+        "N": 48,
+        "T_s": 5676.978028525859,
+        "a_max_mps2": 0.01,
+        "d_safe_m": 2000.0,
+        "feasible": true,
+        "max_sat_dv_l1_mps": 0.0,
+        "min_pair_sep_during_switch_m": 11313.70849898476,
+        "per_sat": [
+          {
+            "dv_l1_mps": 0.0,
+            "dv_l2_mps": 0.0,
+            "free_dv_l1_mps": 0.0,
+            "keepout_ok": true,
+            "sat": 0,
+            "slot": 0
+          },
+          {
+            "dv_l1_mps": 0.0,
+            "dv_l2_mps": 0.0,
+            "free_dv_l1_mps": 0.0,
+            "keepout_ok": true,
+            "sat": 1,
+            "slot": 1
+          },
+          {
+            "dv_l1_mps": 0.0,
+            "dv_l2_mps": 0.0,
+            "free_dv_l1_mps": 0.0,
+            "keepout_ok": true,
+            "sat": 2,
+            "slot": 2
+          },
+          {
+            "dv_l1_mps": 0.0,
+            "dv_l2_mps": 0.0,
+            "free_dv_l1_mps": 0.0,
+            "keepout_ok": true,
+            "sat": 3,
+            "slot": 3
+          },
+          {
+            "dv_l1_mps": 0.0,
+            "dv_l2_mps": 0.0,
+            "free_dv_l1_mps": 0.0,
+            "keepout_ok": true,
+            "sat": 4,
+            "slot": 4
+          },
+          {
+            "dv_l1_mps": 0.0,
+            "dv_l2_mps": 0.0,
+            "free_dv_l1_mps": 0.0,
+            "keepout_ok": true,
+            "sat": 5,
+            "slot": 5
+          }
+        ],
+        "total_dv_l1_mps": 0.0
+      },
+      "truth_coverage": 0.3712003061270493,
+      "truth_min_sep_m": 11312.96178648406,
+      "truth_orbits": 2
+    },
+    "gco": {
+      "cw_coverage": 0.4277069412861487,
+      "cw_min_sep_m": 15999.999999999989,
+      "cw_worst_sep_any_along_track_drift_m": 0.0,
+      "hold_dv_per_orbit_j2_drag_off_per_sat_mps": [
+        0.3755585215249774,
+        0.3749787844357888,
+        0.3750188161529805,
+        0.3755608966062803,
+        0.3749783160769149,
+        0.3750204343037134
+      ],
+      "hold_dv_per_orbit_max_sat_mps": 0.6324012907252838,
+      "hold_dv_per_orbit_per_sat_mps": [
+        0.6108732848404604,
+        0.6308916359379813,
+        0.6324012907252838,
+        0.6039030383611651,
+        0.5910922357782021,
+        0.6020956892899939
+      ],
+      "hold_dv_per_orbit_total_mps": 3.6712571749330865,
+      "scenario": "data/scenarios/formation_gco_6sat.json",
+      "switch_from_cartwheel": {
+        "N": 48,
+        "T_s": 5676.978028525859,
+        "a_max_mps2": 0.01,
+        "d_safe_m": 2000.0,
+        "feasible": true,
+        "max_sat_dv_l1_mps": 6.597504748636452,
+        "min_pair_sep_during_switch_m": 11313.70849898476,
+        "per_sat": [
+          {
+            "dv_l1_mps": 6.596528257165716,
+            "dv_l2_mps": 6.596528257165716,
+            "free_dv_l1_mps": 6.596528257165716,
+            "keepout_ok": true,
+            "sat": 0,
+            "slot": 0
+          },
+          {
+            "dv_l1_mps": 6.597504748636452,
+            "dv_l2_mps": 6.597504748636452,
+            "free_dv_l1_mps": 6.597504748636452,
+            "keepout_ok": true,
+            "sat": 1,
+            "slot": 1
+          },
+          {
+            "dv_l1_mps": 6.597504748636451,
+            "dv_l2_mps": 6.597504748636451,
+            "free_dv_l1_mps": 6.597504748636451,
+            "keepout_ok": true,
+            "sat": 2,
+            "slot": 2
+          },
+          {
+            "dv_l1_mps": 6.596528257165716,
+            "dv_l2_mps": 6.596528257165716,
+            "free_dv_l1_mps": 6.596528257165716,
+            "keepout_ok": true,
+            "sat": 3,
+            "slot": 3
+          },
+          {
+            "dv_l1_mps": 6.597504748636451,
+            "dv_l2_mps": 6.597504748636451,
+            "free_dv_l1_mps": 6.597504748636451,
+            "keepout_ok": true,
+            "sat": 4,
+            "slot": 4
+          },
+          {
+            "dv_l1_mps": 6.597504748636452,
+            "dv_l2_mps": 6.597504748636453,
+            "free_dv_l1_mps": 6.597504748636452,
+            "keepout_ok": true,
+            "sat": 5,
+            "slot": 5
+          }
+        ],
+        "total_dv_l1_mps": 39.583075508877236
+      },
+      "truth_coverage": 0.42771083895745265,
+      "truth_min_sep_m": 15998.458435124981,
+      "truth_orbits": 2
+    },
+    "helix": {
+      "cw_coverage": 0.32591830884004275,
+      "cw_min_sep_m": 8000.0,
+      "cw_worst_sep_any_along_track_drift_m": 7999.999999999982,
+      "hold_dv_per_orbit_j2_drag_off_per_sat_mps": [
+        0.32723137643869554,
+        0.32716856727728766,
+        0.32728648818767975,
+        0.32722545261448444,
+        0.32716511356727185,
+        0.32729119410790636
+      ],
+      "hold_dv_per_orbit_max_sat_mps": 0.5807907799010578,
+      "hold_dv_per_orbit_per_sat_mps": [
+        0.5807907799010578,
+        0.5680897474318934,
+        0.5563288691514711,
+        0.5441560649548579,
+        0.5582110774411958,
+        0.5708283874040342
+      ],
+      "hold_dv_per_orbit_total_mps": 3.37840492628451,
+      "scenario": "data/scenarios/formation_helix_6sat.json",
+      "switch_from_cartwheel": {
+        "N": 48,
+        "T_s": 5676.978028525859,
+        "a_max_mps2": 0.01,
+        "d_safe_m": 2000.0,
+        "feasible": true,
+        "max_sat_dv_l1_mps": 10.552287520826612,
+        "min_pair_sep_during_switch_m": 7417.620685010428,
+        "per_sat": [
+          {
+            "dv_l1_mps": 10.550731676315902,
+            "dv_l2_mps": 10.150736585563235,
+            "free_dv_l1_mps": 10.550731676315902,
+            "keepout_ok": true,
+            "sat": 0,
+            "slot": 5
+          },
+          {
+            "dv_l1_mps": 10.552287520826612,
+            "dv_l2_mps": 9.392522078075423,
+            "free_dv_l1_mps": 10.552287520826612,
+            "keepout_ok": true,
+            "sat": 1,
+            "slot": 0
+          },
+          {
+            "dv_l1_mps": 9.078802549711735,
+            "dv_l2_mps": 9.078802549711735,
+            "free_dv_l1_mps": 9.078802549711735,
+            "keepout_ok": true,
+            "sat": 2,
+            "slot": 1
+          },
+          {
+            "dv_l1_mps": 10.550731676315905,
+            "dv_l2_mps": 10.150736585563237,
+            "free_dv_l1_mps": 10.550731676315905,
+            "keepout_ok": true,
+            "sat": 3,
+            "slot": 2
+          },
+          {
+            "dv_l1_mps": 10.55228752082661,
+            "dv_l2_mps": 9.392522078075427,
+            "free_dv_l1_mps": 10.55228752082661,
+            "keepout_ok": true,
+            "sat": 4,
+            "slot": 3
+          },
+          {
+            "dv_l1_mps": 9.078802549711739,
+            "dv_l2_mps": 9.078802549711739,
+            "free_dv_l1_mps": 9.078802549711739,
+            "keepout_ok": true,
+            "sat": 5,
+            "slot": 4
+          }
+        ],
+        "total_dv_l1_mps": 60.3636434937085
+      },
+      "truth_coverage": 0.3259162644289679,
+      "truth_min_sep_m": 7998.929272467456,
+      "truth_orbits": 2
+    },
+    "pco": {
+      "cw_coverage": 0.44542934327748174,
+      "cw_min_sep_m": 16000.00026405795,
+      "cw_worst_sep_any_along_track_drift_m": 0.0,
+      "hold_dv_per_orbit_j2_drag_off_per_sat_mps": [
+        0.41950217053159566,
+        0.41897853661441686,
+        0.4189408449396886,
+        0.4195040889057014,
+        0.41897879934661614,
+        0.41894232879192184
+      ],
+      "hold_dv_per_orbit_max_sat_mps": 0.6766131809546669,
+      "hold_dv_per_orbit_per_sat_mps": [
+        0.6452329139802641,
+        0.6766131809546669,
+        0.67624188961425,
+        0.634473042215643,
+        0.6124443677280565,
+        0.6273965912323568
+      ],
+      "hold_dv_per_orbit_total_mps": 3.8724019857252374,
+      "scenario": "data/scenarios/formation_pco_6sat.json",
+      "switch_from_cartwheel": {
+        "N": 48,
+        "T_s": 5676.978028525859,
+        "a_max_mps2": 0.01,
+        "d_safe_m": 2000.0,
+        "feasible": true,
+        "max_sat_dv_l1_mps": 9.160476500594271,
+        "min_pair_sep_during_switch_m": 11313.70849898476,
+        "per_sat": [
+          {
+            "dv_l1_mps": 9.16047650059427,
+            "dv_l2_mps": 9.16047650059427,
+            "free_dv_l1_mps": 9.16047650059427,
+            "keepout_ok": true,
+            "sat": 0,
+            "slot": 0
+          },
+          {
+            "dv_l1_mps": 9.159109682211458,
+            "dv_l2_mps": 9.159109682211458,
+            "free_dv_l1_mps": 9.159109682211458,
+            "keepout_ok": true,
+            "sat": 1,
+            "slot": 1
+          },
+          {
+            "dv_l1_mps": 9.159109682211458,
+            "dv_l2_mps": 9.15910968221146,
+            "free_dv_l1_mps": 9.159109682211458,
+            "keepout_ok": true,
+            "sat": 2,
+            "slot": 2
+          },
+          {
+            "dv_l1_mps": 9.160476500594271,
+            "dv_l2_mps": 9.160476500594271,
+            "free_dv_l1_mps": 9.160476500594271,
+            "keepout_ok": true,
+            "sat": 3,
+            "slot": 3
+          },
+          {
+            "dv_l1_mps": 9.15910968221146,
+            "dv_l2_mps": 9.159109682211461,
+            "free_dv_l1_mps": 9.15910968221146,
+            "keepout_ok": true,
+            "sat": 4,
+            "slot": 4
+          },
+          {
+            "dv_l1_mps": 9.15910968221146,
+            "dv_l2_mps": 9.15910968221146,
+            "free_dv_l1_mps": 9.15910968221146,
+            "keepout_ok": true,
+            "sat": 5,
+            "slot": 5
+          }
+        ],
+        "total_dv_l1_mps": 54.957391730034374
+      },
+      "truth_coverage": 0.4454297012878815,
+      "truth_min_sep_m": 15998.623277939343,
+      "truth_orbits": 2
+    },
+    "string": {
+      "cw_coverage": 0.30489073881373574,
+      "cw_min_sep_m": 8000.0,
+      "cw_worst_sep_any_along_track_drift_m": 0.0,
+      "hold_dv_per_orbit_j2_drag_off_per_sat_mps": [
+        0.6293861521464437,
+        0.2265799811451451,
+        0.02517560715210227,
+        0.02517560715820941,
+        0.2265799811039559,
+        0.6293861521491119
+      ],
+      "hold_dv_per_orbit_max_sat_mps": 0.8267518820343728,
+      "hold_dv_per_orbit_per_sat_mps": [
+        0.8267518820343728,
+        0.4382808527196992,
+        0.13705247709399151,
+        0.1370390907316282,
+        0.43818372057129706,
+        0.8259712321212228
+      ],
+      "hold_dv_per_orbit_total_mps": 2.8032792552722117,
+      "scenario": "data/scenarios/formation_string_6sat.json",
+      "switch_from_cartwheel": {
+        "N": 48,
+        "T_s": 5676.978028525859,
+        "a_max_mps2": 0.01,
+        "d_safe_m": 2000.0,
+        "feasible": true,
+        "max_sat_dv_l1_mps": 13.922382347145845,
+        "min_pair_sep_during_switch_m": 6379.895735322338,
+        "per_sat": [
+          {
+            "dv_l1_mps": 13.615760455432842,
+            "dv_l2_mps": 13.615760455432842,
+            "free_dv_l1_mps": 13.615760455432842,
+            "keepout_ok": true,
+            "sat": 0,
+            "slot": 2
+          },
+          {
+            "dv_l1_mps": 13.637535380126465,
+            "dv_l2_mps": 13.637535380126465,
+            "free_dv_l1_mps": 13.637535380126465,
+            "keepout_ok": true,
+            "sat": 1,
+            "slot": 5
+          },
+          {
+            "dv_l1_mps": 13.922382347145845,
+            "dv_l2_mps": 13.922382347145845,
+            "free_dv_l1_mps": 13.922382347145845,
+            "keepout_ok": true,
+            "sat": 2,
+            "slot": 4
+          },
+          {
+            "dv_l1_mps": 13.615760455432842,
+            "dv_l2_mps": 13.615760455432842,
+            "free_dv_l1_mps": 13.615760455432842,
+            "keepout_ok": true,
+            "sat": 3,
+            "slot": 3
+          },
+          {
+            "dv_l1_mps": 13.637535380126462,
+            "dv_l2_mps": 13.637535380126462,
+            "free_dv_l1_mps": 13.637535380126462,
+            "keepout_ok": true,
+            "sat": 4,
+            "slot": 0
+          },
+          {
+            "dv_l1_mps": 13.922382347145845,
+            "dv_l2_mps": 13.922382347145845,
+            "free_dv_l1_mps": 13.922382347145845,
+            "keepout_ok": true,
+            "sat": 5,
+            "slot": 1
+          }
+        ],
+        "total_dv_l1_mps": 82.3513563654103
+      },
+      "truth_coverage": 0.30489073881373574,
+      "truth_min_sep_m": 7999.587922952546,
+      "truth_orbits": 2
+    }
+  }
+}

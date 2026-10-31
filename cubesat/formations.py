@@ -1,7 +1,8 @@
 """Selectable drift-free formation shapes (HCW, LVLH: x radial, y along-track, z cross-track).
 
-Pure functions, SI units, no RNG. Not wired into sim.py / sim_v2.py yet (track C plan, step C3):
-`build_slots` still builds the v1 cartwheel, so every golden pin is untouched.
+Pure functions, SI units, no RNG. Wired in by `sim.build_slots` via `scenario.formation.shape`
+(track C step C3); the default `cartwheel` is byte-identical to the v1 slots, so every golden pin
+is untouched. Only engine v2 accepts the other shapes (the v1 allocator sweeps the cartwheel).
 
 Every slot lies on x = A cos u, y = y0 - 2A sin u, z = B cos(u + psi), u = n t + theta. That is
 drift-free because vy0 = -2 n x0 (HCW), so each shape repeats exactly once per orbit.
@@ -30,7 +31,8 @@ def slot_state(a: float, b: float, theta: float, n: float, psi: float = 0.0, y0:
     """6-D LVLH state [x, y, z, vx, vy, vz] at t = 0 on the drift-free relative orbit above."""
     c, s = math.cos(theta), math.sin(theta)
     cz, sz = math.cos(theta + psi), math.sin(theta + psi)
-    return np.array([a * c, y0 - 2.0 * a * s, b * cz, -a * n * s, -2.0 * a * n * c, -b * n * sz])
+    y = y0 - 2.0 * a * s if y0 else -2.0 * a * s  # y0 = 0: keep -0.0 bytes (= hcw slot, v1 log)
+    return np.array([a * c, y, b * cz, -a * n * s, -2.0 * a * n * c, -b * n * sz])
 
 
 def formation_slots(

@@ -1,0 +1,15 @@
+{
+  "name": "formation_gco_6sat",
+  "description": "Illustrative: 6 sats holding the 'gco' formation shape (cubesat/formations.py), 1 orbit, no failures, engine v2. A = 8 km.",
+  "seed": 42,
+  "engine": "v2",
+  "duration_s": 5676.0,
+  "dt_s": 2.0,
+  "chief": {"altitude_km": 500.0},
+  "formation": {"n_slots": 6, "radial_amp_km": 8.0, "phase_offset_deg": 0.0, "shape": "gco"},
+  "a_max_mps2": 0.01,
+  "gains": {"wn": 0.01, "zeta": 1.0},
+  "sensor": {"fov_half_angle_deg": 1.5, "grid_step_km": 2.0, "grid_extent_km": 30.0},
+  "roles": ["leader", "imager", "imager", "imager", "imager", "downlink"],
+  "failures": []
+}
