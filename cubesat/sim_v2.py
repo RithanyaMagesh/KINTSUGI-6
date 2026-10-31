@@ -249,7 +249,7 @@ class EngineV2:
             sat = self.faults.sats[i]
             if sat.stuck_vec is not None:
                 a_stuck[i], _ = thrust_limited(sat, u[i], dt)
-            elif sat.k > 0.0 and not sat.depleted:
+            else:
                 cmd = self.pd.command(lvlh[i, :3], lvlh[i, 3:], self.refs[i, :3], self.refs[i, 3:])
                 u[i], _ = thrust_limited(sat, cmd, dt)
         self.dv += np.linalg.norm(u + a_stuck, axis=1) * dt

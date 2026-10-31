@@ -34,7 +34,6 @@ class SatState:
     f_max_n: float = 0.04
     k: float = 1.0  # thrust health 0..1 (THRUSTER_OUT 0, PARTIAL_THRUST 0.5)
     stuck_vec: np.ndarray | None = None  # unit vector in ECI while a thruster is stuck open
-    stuck_k: float = 0.0
     payload_ok: bool = True
     radio_ok: bool = True
 
@@ -70,7 +69,7 @@ def thrust_limited(sat: SatState, a_cmd: np.ndarray, dt: float) -> tuple[np.ndar
 
     Commanded thrust: a_cmd (LVLH, m/s^2) is clipped to |a| <= k F_max / m (direction kept; a
     command under the cap passes through bit-unchanged). A stuck-open thruster ignores a_cmd
-    and fires stuck_k F_max along stuck_vec, so the result is then in ECI, not LVLH. Empty
+    and fires STUCK_K F_max along stuck_vec, so the result is then in ECI, not LVLH. Empty
     tank: zero. A burn that would overdraw the tank is truncated: the acceleration is scaled
     so the step delivers exactly the impulse the remaining propellant buys, and m_prop is
     set to exactly 0 (never negative). Acceleration uses the mass at the start of the step.
@@ -79,7 +78,7 @@ def thrust_limited(sat: SatState, a_cmd: np.ndarray, dt: float) -> tuple[np.ndar
         sat.k = 0.0
         return np.zeros(3), 0.0
     if sat.stuck_vec is not None:
-        a = sat.stuck_vec * (sat.stuck_k * sat.f_max_n / sat.m_kg)
+        a = sat.stuck_vec * (STUCK_K * sat.f_max_n / sat.m_kg)
     else:
         a = np.asarray(a_cmd, dtype=float)
         cap = sat.k * sat.f_max_n / sat.m_kg
@@ -100,10 +99,10 @@ def thrust_limited(sat: SatState, a_cmd: np.ndarray, dt: float) -> tuple[np.ndar
 def apply_failure(sat: SatState, mode: FailureMode, stuck_vec: np.ndarray | None = None) -> None:
     """Failure mode as resource damage (mutates sat). DEAD and EPS_DEGRADE (a fade that ends in
     a death, Phase-1 behaviour): all off. THRUSTER_OUT: k = 0. PARTIAL_THRUST: k = 0.5.
-    THRUSTER_STUCK_OPEN: fires stuck_k F_max along the fixed ECI direction stuck_vec (stored as
+    THRUSTER_STUCK_OPEN: fires STUCK_K F_max along the fixed ECI direction stuck_vec (stored as
     a unit vector; required). PAYLOAD_FAIL: payload_ok = False. RADIO_FAIL: radio_ok = False."""
     if mode in (FailureMode.DEAD, FailureMode.EPS_DEGRADE):
-        sat.k, sat.stuck_vec, sat.stuck_k = 0.0, None, 0.0
+        sat.k, sat.stuck_vec = 0.0, None
         sat.payload_ok = sat.radio_ok = False
     elif mode == FailureMode.THRUSTER_OUT:
         sat.k = 0.0
@@ -113,7 +112,6 @@ def apply_failure(sat: SatState, mode: FailureMode, stuck_vec: np.ndarray | None
         if stuck_vec is None or not np.linalg.norm(stuck_vec) > 0:
             raise ValueError("THRUSTER_STUCK_OPEN needs a non-zero stuck_vec (ECI direction)")
         sat.stuck_vec = np.asarray(stuck_vec, dtype=float) / np.linalg.norm(stuck_vec)
-        sat.stuck_k = STUCK_K
     elif mode == FailureMode.PAYLOAD_FAIL:
         sat.payload_ok = False
     elif mode == FailureMode.RADIO_FAIL:

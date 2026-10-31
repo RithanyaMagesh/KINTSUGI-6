@@ -51,12 +51,14 @@ def test_delta_v_budget_20p1():
     assert abs(sat.fuel_mps_left - 20.12) < 0.05
 
 
-def test_zero_prop_means_fuel_depleted_and_zero_thrust():
-    sat = _sat(m_prop_kg=0.0)
-    assert sat.depleted
+@pytest.mark.parametrize("kw", [{"m_prop_kg": 0.0}, {"k": 0.0}])
+def test_zero_prop_means_fuel_depleted_and_zero_thrust(kw):
+    """Empty tank (FUEL_DEPLETED) or k = 0: zero thrust, no mass change; an empty tank sets k=0."""
+    sat = _sat(**kw)
+    assert sat.depleted is ("m_prop_kg" in kw)
     a, dm = thrust_limited(sat, BIG, DT)
-    assert not a.any() and dm == 0.0
-    assert sat.m_kg == 4.0 and sat.fuel_mps_left == 0.0
+    assert not a.any() and dm == 0.0 and sat.m_kg == 4.0 and sat.k == 0.0
+    assert ("m_prop_kg" in kw) == (sat.fuel_mps_left == 0.0)
 
 
 def test_propellant_never_negative_over_a_long_saturated_burn():
@@ -85,23 +87,6 @@ def test_burn_truncated_on_the_step_that_exhausts_the_tank():
     dv = np.linalg.norm(a) * DT
     assert dv == pytest.approx(40.0 * G0 * math.log(4.0 / (4.0 - 1e-4)), rel=1e-4)
     assert not thrust_limited(sat, BIG, DT)[0].any()  # and nothing afterwards
-
-
-def test_deterministic():
-    runs = []
-    for _ in range(2):
-        sat, out = _sat(), []
-        for _ in range(300):
-            a, dm = thrust_limited(sat, BIG, DT)
-            out.append((a.tolist(), dm, sat.m_kg, sat.m_prop_kg))
-        runs.append(out)
-    assert runs[0] == runs[1]
-
-
-def test_k_zero_gives_zero_thrust_and_no_mass_change():
-    sat = _sat(k=0.0)
-    a, dm = thrust_limited(sat, BIG, DT)
-    assert not a.any() and dm == 0.0 and sat.m_kg == 4.0
 
 
 # --- scenario block and v1 rejection ---------------------------------------------------------

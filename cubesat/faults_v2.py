@@ -47,7 +47,6 @@ _MODE_STATUS = {
     FailureMode.PAYLOAD_FAIL: STATUS_PAYLOAD_FAILED,
     FailureMode.RADIO_FAIL: STATUS_RADIO_SILENT,
 }  # DEAD and EPS_DEGRADE map to STATUS_DEAD
-_PROGRADE = np.array([0.0, 1.0, 0.0])  # stuck direction when no velocity is given
 
 
 def _order(f: Failure) -> tuple[float, int]:
@@ -100,7 +99,7 @@ class Faults:
             self.t_fail[i], self.fail_mode[i] = t, "REENTRY"
         return {"type": "REENTRY", "payload": {"sat_id": i, "t": t, "altitude_m": altitude_m}}
 
-    def tick(self, t: float, vel_eci: np.ndarray | None = None) -> list[dict]:
+    def tick(self, t: float, vel_eci: np.ndarray) -> list[dict]:
         """Fade onsets, failures due at t, heartbeats and detection; returns this tick's events.
         vel_eci (N, 3): sat ECI velocities now; a stuck-open thruster fires along the failing
         sat's velocity direction at that instant (fixed in ECI afterwards)."""
@@ -125,18 +124,18 @@ class Faults:
             sat = self.sats[i]
             if self.status[i] in _TERMINAL:
                 continue
-            was_ok = (sat.k > 0.0, sat.payload_ok)
-            vec = _PROGRADE if vel_eci is None else vel_eci[i]
-            apply_failure(sat, f.mode, vec)
+            can_thrust, imaging = sat.k > 0.0, sat.payload_ok
+            apply_failure(sat, f.mode, vel_eci[i])
             new = _MODE_STATUS.get(f.mode, STATUS_DEAD)
             raised = _RANK[new] > _RANK[self.status[i]]
             if raised:
                 self.status[i] = new
             if raised or not self.fail_mode[i]:
                 self.t_fail[i], self.fail_mode[i] = f.t, f.mode.value
-            thruster_lost = f.mode == FailureMode.THRUSTER_OUT and was_ok[0]
-            payload_lost = f.mode == FailureMode.PAYLOAD_FAIL and was_ok[1]
-            if sat.radio_ok and (thruster_lost or payload_lost):  # self-reported, like v1
+            lost = (f.mode == FailureMode.THRUSTER_OUT and can_thrust) or (
+                f.mode == FailureMode.PAYLOAD_FAIL and imaging
+            )
+            if sat.radio_ok and lost:  # self-reported, like v1
                 self.mission = STATE_FAILURE_DETECTED
                 payload = {"sat_id": i, "mode": f.mode.value, "t_fail": f.t, "t_detect": t}
                 payload["self_report"] = True

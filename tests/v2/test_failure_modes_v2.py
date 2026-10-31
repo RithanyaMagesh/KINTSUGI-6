@@ -27,25 +27,16 @@ def _scn_dict(**kw):
 VEC = np.array([0.0, 3.0, 4.0])
 
 
-def test_mode_DEAD_semantics():
+@pytest.mark.parametrize(
+    "mode, k, payload_ok, radio_ok",
+    [("DEAD", 0.0, False, False), ("EPS_DEGRADE", 0.0, False, False),  # fade ends in death
+     ("THRUSTER_OUT", 0.0, True, True)],
+)
+def test_mode_flag_semantics_dead_eps_degrade_thruster_out(mode, k, payload_ok, radio_ok):
     sat = SatState()
-    apply_failure(sat, FailureMode.DEAD)
-    assert sat.k == 0.0 and not sat.payload_ok and not sat.radio_ok and sat.stuck_vec is None
+    apply_failure(sat, FailureMode(mode))
+    assert (sat.k, sat.payload_ok, sat.radio_ok, sat.stuck_vec) == (k, payload_ok, radio_ok, None)
     assert not thrust_limited(sat, BIG, DT)[0].any()
-
-
-def test_mode_THRUSTER_OUT_semantics():
-    sat = SatState()
-    apply_failure(sat, FailureMode.THRUSTER_OUT)
-    assert sat.k == 0.0 and sat.payload_ok and sat.radio_ok
-    assert not thrust_limited(sat, BIG, DT)[0].any()
-
-
-def test_mode_EPS_DEGRADE_semantics():
-    """Phase-1 behaviour kept: the fade ends in a death, so the resource damage is DEAD's."""
-    sat = SatState()
-    apply_failure(sat, FailureMode.EPS_DEGRADE)
-    assert sat.k == 0.0 and not sat.payload_ok and not sat.radio_ok
 
 
 def test_mode_PARTIAL_THRUST_semantics():
@@ -71,35 +62,23 @@ def test_mode_RADIO_FAIL_semantics():
 
 
 def test_mode_THRUSTER_STUCK_OPEN_semantics():
-    sat = SatState()
+    with pytest.raises(ValueError, match="stuck_vec"):
+        apply_failure(SatState(), FailureMode.THRUSTER_STUCK_OPEN)
+    sat = SatState(m_prop_kg=0.01)
     apply_failure(sat, FailureMode.THRUSTER_STUCK_OPEN, VEC)
-    assert sat.stuck_k == 1.0
     assert np.linalg.norm(sat.stuck_vec) == pytest.approx(1.0)  # stored as a unit ECI vector
     a, dm = thrust_limited(sat, np.zeros(3), DT)  # the command is ignored
-    assert np.allclose(a, VEC / 5.0 * 0.04 / 4.0, rtol=1e-12)  # constant stuck_k F_max / m
+    assert np.allclose(a, VEC / 5.0 * 0.04 / 4.0, rtol=1e-12)  # constant F_max / m along stuck_vec
     assert dm == pytest.approx(0.04 * DT / (40.0 * G0), rel=1e-12)
     m = sat.m_kg
     a2, _ = thrust_limited(sat, -BIG, DT)  # a different command changes nothing
     assert np.allclose(a2, VEC / 5.0 * 0.04 / m, rtol=1e-12)
-
-
-def test_stuck_open_needs_a_vector():
-    with pytest.raises(ValueError, match="stuck_vec"):
-        apply_failure(SatState(), FailureMode.THRUSTER_STUCK_OPEN)
-
-
-def test_stuck_open_stops_when_propellant_empty():
-    sat = SatState(m_prop_kg=0.01)
-    apply_failure(sat, FailureMode.THRUSTER_STUCK_OPEN, VEC)
-    n, last = 0, None
-    while not sat.depleted and n < 10_000:
+    n, last = 0, a2
+    while not sat.depleted and n < 10_000:  # stops when the propellant is empty
         last = thrust_limited(sat, np.zeros(3), DT)[0]
         n += 1
-    assert sat.depleted and n < 10_000 and last.any()
-    assert not thrust_limited(sat, np.zeros(3), DT)[0].any()  # valve stuck open, tank empty
-    assert sat.m_prop_kg == 0.0
-
-
+    assert sat.depleted and n < 10_000 and last.any() and sat.m_prop_kg == 0.0
+    assert not thrust_limited(sat, np.zeros(3), DT)[0].any()  # valve stuck open, tank dry
 
 
 @pytest.mark.parametrize(
@@ -220,7 +199,7 @@ def test_stuck_open_burns_constant_thrust_ignores_the_pd_and_stops_when_the_tank
     dv = [track[t]["dv_used"] for t in sorted(track)]
     steps = np.diff(dv)  # dv[k] is the total before the burn of tick k
     assert track[0.0]["status"] == "DEGRADED"
-    assert steps[0] == pytest.approx(0.01 * 2.0, rel=1e-3)  # constant stuck_k F_max / m
+    assert steps[0] == pytest.approx(0.01 * 2.0, rel=1e-3)  # constant F_max / m
     burn = [i for i, d in enumerate(steps) if d > 0]
     assert burn == list(range(len(burn))) and 8 <= len(burn) <= 11  # contiguous, ~9.8 steps
     assert steps[burn[-1]] < steps[burn[-2]] and not steps[len(burn) :].any()  # truncated step
