@@ -9,6 +9,11 @@ stackable = may share a sat with another role without penalty; needs = hardware 
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
+import numpy as np
+from scipy.optimize import linear_sum_assignment
+
 ROLE_SPECS: dict[str, dict] = {
     "leader": {"critical": True, "stackable": True, "needs": ("radio",)},  # software role
     "downlink": {"critical": True, "stackable": False, "needs": ("radio",)},  # + power (unmodelled)
@@ -40,3 +45,52 @@ def capability(status: str, payload_ok: bool, radio_ok: bool, role: str) -> bool
         return False
     have = {"payload": payload_ok, "radio": radio_ok}
     return all(have[need] for need in ROLE_SPECS[role]["needs"])
+
+
+DEFAULT_PRIORITY = ("downlink", "imager", "leader")
+INCAPABLE = 1e6  # finite on purpose: linear_sum_assignment must never see inf
+_EPS = 1e-9  # row-major index tie-break (AGENTS.md invariant 6)
+_STACK_PENALTY = 2.0  # per non-stackable role the sat already holds (above the 0/1 incumbent gap)
+
+
+def assign_roles(sats: list[dict], priority: Sequence[str] = DEFAULT_PRIORITY) -> list[list[str]]:
+    """Roles held by each sat (index = position in `sats`), a pure function of its input.
+
+    Each sat dict needs `status`, `payload_ok`, `radio_ok` and `roles` (the roles it holds NOW:
+    the incumbents; a dead sat's stale labels are ignored because it is incapable). Roles are
+    filled in `priority` order. Per role, seats = 1 for a critical role and
+    max(1, capable incumbents) otherwise (an imager never multiplies, a lost imager is not
+    replaced: this phase does not replan). Rows = sats, columns = seats,
+    scipy linear_sum_assignment; cost = INCAPABLE (1e6) if the sat cannot hold the role, else
+    0 for an incumbent, else 1 + 2 per non-stackable role it already holds (so a role stacks on
+    a busy sat only when no free capable sat exists), plus a 1e-9 row-major index epsilon
+    (ties go to the lowest id). A seat that lands on an incapable sat stays VACANT: see
+    vacant_roles. A capable sat left with nothing holds ["spare"]; an incapable or dead one []."""
+    priority = tuple(dict.fromkeys(r for r in priority if r != "spare"))
+    for role in priority:
+        capability("NOMINAL", True, True, role)  # raises ValueError for an unknown role
+    n = len(sats)
+    held: list[list[str]] = [[] for _ in range(n)]
+    for role in priority if n else ():
+        ok = [capability(s["status"], s["payload_ok"], s["radio_ok"], role) for s in sats]
+        inc = [o and role in s.get("roles", ()) for o, s in zip(ok, sats, strict=True)]
+        seats = 1 if ROLE_SPECS[role]["critical"] else max(1, sum(inc))
+        cost = np.empty((n, seats))
+        for i in range(n):
+            busy = sum(not ROLE_SPECS[r]["stackable"] for r in held[i])
+            cost[i] = INCAPABLE if not ok[i] else 0.0 if inc[i] else 1.0 + _STACK_PENALTY * busy
+        cost += _EPS * (np.arange(n)[:, None] * seats + np.arange(seats)[None, :])
+        for i, _ in zip(*linear_sum_assignment(cost), strict=True):
+            if ok[i]:  # a seat that landed on an incapable sat stays vacant
+                held[i].append(role)
+    for i, s in enumerate(sats):
+        if not held[i] and capability(s["status"], s["payload_ok"], s["radio_ok"], "spare"):
+            held[i] = ["spare"]
+    return held
+
+
+def vacant_roles(
+    assignment: list[list[str]], priority: Sequence[str] = DEFAULT_PRIORITY
+) -> list[str]:
+    """Roles of `priority` that no sat holds (reported, never given to an incapable sat)."""
+    return [r for r in priority if r != "spare" and not any(r in roles for roles in assignment)]
