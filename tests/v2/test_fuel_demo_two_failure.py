@@ -35,13 +35,15 @@ def test_two_failure_fuel_use_v2_measured():
             if e["type"] == "FUEL_DEPLETED":
                 dry[e["payload"]["sat_id"]] = x["t"]
     print(f"\n{'sat':>3} {'role':>9} {'status':>14} {'dv_used m/s':>12} {'fuel_used kg':>13}"
-          f" {'left m/s':>9} {'dry at t [s]':>13}")
+          f" {'left m/s':>9}")
     for s in last:
         used = MP - s["fuel_kg"]
         print(f"{s['id']:>3} {s['role']:>9} {s['status']:>14} {s['dv_used']:>12.4f} {used:>13.6f}"
-              f" {s['fuel_mps_left']:>9.4f} {dry.get(s['id'], float('nan')):>13.1f}")
+              f" {s['fuel_mps_left']:>9.4f}")
         assert s["fuel_kg"] >= 0.0
         # dv_used (sum of a dt) agrees with the rocket equation on the propellant burned
         want = ISP * G0 * math.log(M0 / (M0 - used)) if used > 0 else 0.0
         assert s["dv_used"] == pytest.approx(want, rel=1e-3, abs=1e-6)
-    print(f"tank {ISP * G0 * math.log(M0 / (M0 - MP)):.4f} m/s; dry sats: {sorted(dry)}")
+    names = {i: f"{t:.0f} s" for i, t in sorted(dry.items())} or "none"
+    tank = ISP * G0 * math.log(M0 / (M0 - MP))
+    print(f"tank {tank:.4f} m/s; sats that ran dry (id: time): {names}")
