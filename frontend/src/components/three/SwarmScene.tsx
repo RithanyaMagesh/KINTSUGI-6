@@ -86,10 +86,18 @@ export default function SwarmScene({ immersive = false, onController }: SwarmSce
     let prevSel = useUiStore.getState().selectedSatelliteId;
 
     let lastHandoff = useSimStore.getState().handoffs.at(-1); // only animate new ones
+    let lastLinks = useSimStore.getState().links;
+    let lastShape = useSimStore.getState().formationShape;
+    controller.setFormationShape(lastShape);
+    controller.setLinks(lastLinks);
     const unsubSim = useSimStore.subscribe((s) => {
+      if (s.formationShape !== lastShape) {
+        lastShape = s.formationShape;
+        controller.setFormationShape(lastShape);
+      }
       if (s.handoffs.at(-1) !== lastHandoff) {
         // the store keeps the last 40, so find the last one seen by identity
-        for (const h of s.handoffs.slice(s.handoffs.indexOf(lastHandoff!) + 1)) controller.handoff(h.from, h.to);
+        for (const h of s.handoffs.slice(s.handoffs.indexOf(lastHandoff!) + 1)) controller.handoff(h.from, h.to, h.role);
         lastHandoff = s.handoffs.at(-1);
       }
       controller.update({
@@ -98,6 +106,10 @@ export default function SwarmScene({ immersive = false, onController }: SwarmSce
         missionState: s.missionState,
         simTime: s.simTime ?? undefined,
       });
+      if (s.links !== lastLinks) {
+        lastLinks = s.links;
+        controller.setLinks(lastLinks); // after update(): beams join the satellites' new positions
+      }
       const state = s.missionState;
       const bannerState =
         state === "FAILURE_DETECTED" ||

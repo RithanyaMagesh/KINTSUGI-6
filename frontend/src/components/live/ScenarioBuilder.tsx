@@ -13,12 +13,15 @@ import { useRoleHistoryStore } from "../../stores/roleHistoryStore";
 import { useUiStore } from "../../stores/uiStore";
 import chrome from "../../styles/chrome.module.css";
 import { backend } from "../../api/backend";
+import FormationFacts from "../formation/FormationFacts";
 import FailureRowView from "./FailureRow";
 import NumberField from "./NumberField";
 import PhysicsSection from "./PhysicsSection";
 import SwarmSection from "./SwarmSection";
 import { postStart, type StartError, type StartResponse } from "./runApi";
 import {
+  FORMATION_SHAPES,
+  FORMATION_SHAPE_LABEL,
   MAX_SATS,
   POLICIES,
   SAT_COUNT_OPTIONS,
@@ -27,6 +30,7 @@ import {
   defaultRoles,
   sanitizeName,
   type FailureRow,
+  type FormationShape,
   type NumberValues,
   type PolicyId,
   type Role,
@@ -35,6 +39,15 @@ import styles from "./LivePage.module.css";
 
 const DEFAULT_FAILURE_T = 1200;
 type RunPhase = "idle" | "building" | "running" | "error";
+
+/** One-click demos: committed data/scenarios files (both cartwheel, engine v2,
+ * comms mesh/star, recovery.authority decentral/central, sat 0 DEAD at t = 1200 s). */
+const DEMOS = [
+  { file: "decentral_leader_kill_6sat.json", label: "Decentral swarm (mesh, consensus auction)" },
+  { file: "central_star_leader_kill_6sat.json", label: "Central swarm (star, one leader)" },
+] as const;
+const DEMO_SEED = 42;
+const DEMO_SPEED = 100;
 
 const DEFAULT_SANDBOX_NUMS: NumberValues = {
   seed: 42,
@@ -58,6 +71,7 @@ export default function ScenarioBuilder() {
   const [nSats, setNSats] = useState<number>(6);
   const [roles, setRoles] = useState<Role[]>(defaultRoles(6));
   const [policy, setPolicy] = useState<PolicyId>("hungarian");
+  const [shape, setShape] = useState<FormationShape>("cartwheel");
   const [runName, setRunName] = useState("");
   // Unscripted live sandbox by default: zero pre-scheduled failures
   const [failures, setFailures] = useState<FailureRow[]>([]);
@@ -107,12 +121,12 @@ export default function ScenarioBuilder() {
   async function startWithFallback(filename: string): Promise<StartResponse> {
     const baseReq = { scenario: filename, seed: nums.seed, speed: nums.speed };
     try {
-      return await postStart({ ...baseReq, policy, predictor });
+      return await postStart({ ...baseReq, policy, predictor }, shape);
     } catch (err) {
       if ((err as StartError).status !== 422) throw err;
     }
     try {
-      const res = await postStart({ ...baseReq, policy });
+      const res = await postStart({ ...baseReq, policy }, shape);
       if (predictor) {
         setPredictorNote(
           "This server does not support AI risk, so the run started without it.",
@@ -123,7 +137,7 @@ export default function ScenarioBuilder() {
       if ((errPolicyOnly as StartError).status !== 422) throw errPolicyOnly;
     }
     try {
-      const res = await postStart({ ...baseReq, predictor });
+      const res = await postStart({ ...baseReq, predictor }, shape);
       setPolicyNote(
         `This server does not support "${POLICIES.find((p) => p.id === policy)?.label ?? policy}", so the run uses its default recovery method.`,
       );
@@ -131,7 +145,7 @@ export default function ScenarioBuilder() {
     } catch (errPredOnly) {
       if ((errPredOnly as StartError).status !== 422) throw errPredOnly;
     }
-    const res = await postStart(baseReq);
+    const res = await postStart(baseReq, shape);
     setPolicyNote("This server does not support choosing a recovery method, so the run uses its default.");
     if (predictor) {
       setPredictorNote("This server does not support AI risk, so the run started without it.");
@@ -149,7 +163,7 @@ export default function ScenarioBuilder() {
       const customTypedName = sanitizeName(runName);
       const auto = customTypedName === "";
       const base = auto ? `live_${nSats}sat` : customTypedName;
-      const scenario = buildScenario({ ...nums, name: base }, roles, failures);
+      const scenario = buildScenario({ ...nums, name: base }, roles, failures, shape);
       let name = base;
       let saved: ScenarioUploadResult | null = null;
       for (let attempt = 1; ; attempt++) {
@@ -186,6 +200,37 @@ export default function ScenarioBuilder() {
     }
   }
 
+  async function runDemo(file: string): Promise<void> {
+    setError(null);
+    setPolicyNote(null);
+    setPredictorNote(null);
+    setPhase("building");
+    let starting = false;
+    try {
+      useRecoveryStore.getState().resetForNewRun();
+      useRoleHistoryStore.getState().resetForNewRun();
+      starting = true;
+      const started = await postStart(
+        { scenario: file, seed: DEMO_SEED, speed: DEMO_SPEED },
+        "cartwheel",
+      );
+      useUiStore.getState().setRunSpeed(started.speed ?? DEMO_SPEED);
+      useSimStore.getState().setSessionMeta({
+        scenario: started.scenario ?? file,
+        seed: started.seed ?? DEMO_SEED,
+        policy: started.policy,
+        minSepM: started.minSepM,
+      });
+      useSimStore.getState().setMode("live");
+      useReplayStore.getState().setActiveFile(null);
+      setPhase("running");
+    } catch (err) {
+      if (starting && (err as StartError).status !== 422) useSimStore.getState().reset();
+      setPhase("error");
+      setError(err instanceof Error ? err.message : "Demo failed to start");
+    }
+  }
+
   async function control(action: () => Promise<unknown>): Promise<void> {
     setControlling(true);
     setError(null);
@@ -213,7 +258,7 @@ export default function ScenarioBuilder() {
       ? "Starting…"
       : live
         ? `Running with ${liveCount} satellites. Fail one below.`
-        : `Ready: ${nSats} satellites at ${nums.altitudeKm} km altitude, ${nums.radialAmpKm} km formation radius.`;
+        : `Ready: ${nSats} satellites in a ${FORMATION_SHAPE_LABEL[shape].toLowerCase()} formation at ${nums.altitudeKm} km altitude, ${nums.radialAmpKm} km formation radius.`;
 
   return (
     <section className={styles.panel} aria-label="Live sandbox setup">
@@ -276,6 +321,29 @@ export default function ScenarioBuilder() {
         </div>
 
         <div className={styles.field}>
+          <label className={chrome.fieldLabel} htmlFor="builder-shape">
+            Formation
+          </label>
+          <select
+            id="builder-shape"
+            className={chrome.select}
+            value={shape}
+            disabled={building}
+            onChange={(e) => setShape(e.target.value as FormationShape)}
+          >
+            {FORMATION_SHAPES.map((s) => (
+              <option key={s} value={s}>
+                {FORMATION_SHAPE_LABEL[s]}
+              </option>
+            ))}
+          </select>
+          {shape !== "cartwheel" && (
+            <span className={chrome.hint}>Runs on the truth-dynamics engine (v2).</span>
+          )}
+          <FormationFacts shape={shape} />
+        </div>
+
+        <div className={styles.field}>
           <label className={chrome.fieldLabel} htmlFor="builder-policy">
             Recovery method
           </label>
@@ -311,6 +379,26 @@ export default function ScenarioBuilder() {
         >
           Stop run
         </button>
+
+        <div className={styles.field}>
+          <span className={chrome.fieldLabel}>Demos</span>
+          <div className={chrome.btnRow}>
+            {DEMOS.map((d) => (
+              <button
+                key={d.file}
+                type="button"
+                className={chrome.btn}
+                disabled={building}
+                onClick={() => void runDemo(d.file)}
+              >
+                {d.label}
+              </button>
+            ))}
+          </div>
+          <span className={chrome.hint}>
+            Both lose the first satellite at 20:00 of sim time; watch the leader functions move.
+          </span>
+        </div>
 
         <p className={styles.runStatus} aria-live="polite">
           {error !== null ? (

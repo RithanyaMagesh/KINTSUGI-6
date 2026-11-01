@@ -1,0 +1,119 @@
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--glass-line);
+  border-radius: var(--radius-control);
+  min-width: 0;
+}
+
+.caption {
+  color: var(--ink-muted);
+  font-size: var(--text-event);
+  margin: 0;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 11em) minmax(0, 1fr);
+  gap: var(--space-2);
+  font-size: var(--text-event);
+}
+
+.row dt {
+  color: var(--ink-muted);
+}
+
+.row dd {
+  margin: 0;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: baseline;
+}
+
+.lossBadge {
+  color: var(--status-caution);
+  border: 1px solid var(--status-caution);
+  border-radius: var(--radius-control);
+  padding: 0 var(--space-1);
+  font-size: var(--text-tick);
+}
+
+.drift {
+  margin: 0;
+  font-size: var(--text-event);
+}
+
+.safe {
+  color: var(--status-nominal);
+}
+
+.hazard {
+  color: var(--status-caution);
+}
+
+.switch {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.switchTitle {
+  margin: 0;
+  color: var(--ink);
+  font-size: var(--text-event);
+  font-weight: 600;
+}
+
+.bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.barRow {
+  display: grid;
+  grid-template-columns: 4em minmax(0, 1fr) 6.5em;
+  gap: var(--space-2);
+  align-items: center;
+  font-size: var(--text-tick);
+  font-family: var(--font-mono);
+}
+
+.barLabel {
+  color: var(--ink-muted);
+}
+
+.track {
+  display: block;
+  height: 8px;
+  background: var(--glass-line);
+  border-radius: var(--radius-control);
+  overflow: hidden;
+}
+
+.fill {
+  display: block;
+  height: 100%;
+  background: var(--ink-muted);
+}
+
+.barValue {
+  text-align: right;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}

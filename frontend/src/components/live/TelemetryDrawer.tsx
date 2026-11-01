@@ -18,7 +18,9 @@ import RoleTable from "../dashboard/RoleTable";
 import RecoveryLog from "../recovery/RecoveryLog";
 import EventLog from "../events/EventLog";
 import FleetTable from "./FleetTable";
-import { clock, faultLabel, km, slotLabel, stateLabel } from "./hudFormat";
+import { clock, faultLabel, functionLabel, km, slotLabel, stateLabel } from "./hudFormat";
+import FunctionChips, { hasFunctions } from "../comms/FunctionChips";
+import CommsCompare from "../comms/CommsCompare";
 import styles from "./ImmersiveLive.module.css";
 
 const TABS = [
@@ -48,11 +50,12 @@ const POLICY_NAME: Record<string, string> = {
 const pct = (v: number | null | undefined) => (v == null ? DASH : `${(v * 100).toFixed(1)}%`);
 const meters = (v: number | null | undefined) => (v == null ? DASH : v >= 1000 ? `${km(v)} km` : `${v.toFixed(0)} m`);
 
-function Row({ label, value, tone }: { label: string; value: string; tone?: string }) {
+function Row({ label, value, tone, wrap }: { label: string; value: string; tone?: string; wrap?: boolean }) {
+  const style = { ...(tone !== undefined ? { color: tone } : {}), ...(wrap === true ? { whiteSpace: "normal" as const } : {}) };
   return (
     <div className={styles.paramRow}>
       <dt>{label}</dt>
-      <dd style={tone !== undefined ? { color: tone } : undefined}>{value}</dd>
+      <dd style={Object.keys(style).length > 0 ? style : undefined}>{value}</dd>
     </div>
   );
 }
@@ -85,6 +88,13 @@ function MissionTab() {
     .map((r) => `${roleCounts[r]} ${r}`)
     .join(", ");
 
+  const links = s.links;
+  const locked = links.filter((l) => l.state === "LOCKED").length;
+  const groups = s.components.length;
+  // Decentral runs report consensus rounds; nobody holds the leader role then.
+  const decentral = s.consensusRounds !== null;
+  const fnNames = (fs: string[]) => fs.map(functionLabel).join(", ");
+
   return (
     <div className={styles.tabBody}>
       <h3 className={styles.groupTitle}>Now</h3>
@@ -102,11 +112,47 @@ function MissionTab() {
       <dl className={styles.params}>
         <Row label="Satellites" value={sats.length === 0 ? DASH : `${sats.length - lost} flying, ${lost} lost`} />
         <Row label="Flying, by role" value={sats.length === 0 ? DASH : rolesText || DASH} />
-        <Row label="Leader" value={sats.length === 0 ? DASH : holder("leader")} />
+        <Row label="Leader" value={sats.length === 0 ? DASH : decentral ? "None (decentral)" : holder("leader")} />
         <Row label="Downlink" value={sats.length === 0 ? DASH : holder("downlink")} />
         <Row label="Fuel spent, total" value={sats.length === 0 ? DASH : `${dv.toFixed(2)} m/s`} />
         <Row label="Fuel spent, most by one" value={sats.length === 0 ? DASH : `${maxDv.toFixed(2)} m/s`} />
       </dl>
+
+      {links.length > 0 && (
+        <>
+          <h3 className={styles.groupTitle}>Laser links</h3>
+          <dl className={styles.params}>
+            <Row label="Links locked" value={`${locked} of ${links.length}`} />
+            <Row
+              label="Talking groups"
+              value={groups === 0 ? "unmeasured" : groups > 1 ? `${groups}, swarm split` : "1"}
+              tone={groups > 1 ? "var(--status-caution)" : undefined}
+            />
+            {s.consensusRounds !== null && (
+              <Row label="Last consensus auction" value={`${s.consensusRounds} rounds (a count, not seconds)`} wrap />
+            )}
+            {decentral && (
+              <Row
+                label="Split-brain functions"
+                value={s.splitBrain.length === 0 ? "none" : `${fnNames(s.splitBrain)} (two holders)`}
+                tone={s.splitBrain.length > 0 ? "var(--status-caution)" : undefined}
+                wrap
+              />
+            )}
+            {decentral && (
+              <Row label="Vacant functions" value={s.functionsVacant.length === 0 ? "none" : fnNames(s.functionsVacant)} wrap />
+            )}
+          </dl>
+          <p className={styles.empty}>Link acquisition time is an assumption (30 s).</p>
+          {hasFunctions(sats) && (
+            <>
+              <h3 className={styles.groupTitle}>Leader functions</h3>
+              <FunctionChips />
+            </>
+          )}
+          <CommsCompare />
+        </>
+      )}
 
       <h3 className={styles.groupTitle}>Last failure</h3>
       {failure === null ? (

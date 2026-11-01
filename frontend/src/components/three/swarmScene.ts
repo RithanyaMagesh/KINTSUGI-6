@@ -25,9 +25,20 @@ import { SlotLayer } from "./sceneSlots";
 import { LabelLayer, labelPriority, type LabelItem } from "./sceneLabels";
 import { AutoFitController, earthFitRadius, FIT_FILL } from "./sceneCamera";
 import { FormationLines } from "./sceneLines";
+import { LinkBeams } from "./sceneLinks";
+import type { Link } from "../../types/telemetry";
 import { createEnvironment, EARTH_RADIUS_FACTOR, type Environment } from "./sceneEarth";
 import { SCENE_TOKENS, tokenColor } from "./sceneColors";
 import { SUN_DIR } from "./sceneGlobe";
+import { functionLabel, roleLabel } from "../live/hudFormat";
+import hud from "../live/ImmersiveLive.module.css";
+import sceneStyles from "./SwarmScene.module.css";
+
+/** Satellite roles (vs leader functions) a baton can carry. */
+const SAT_ROLES: ReadonlySet<string> = new Set(["leader", "downlink"]);
+const BATON_MS = 2400;
+const BATON_STAGGER_MS = 200; // a burst on one tick reads as a sequence
+const PULSE_MS = 900;
 
 /** Visual orbit phase per simulated second (2x real LEO mean motion, kept
  * from the original scene), and the Earth's spin as a fraction of it: a
@@ -40,6 +51,10 @@ const EARTH_SPIN_RATIO = 15.2;
 const LABEL_ALL_MAX = 10;
 
 export type CameraPreset = "reset" | "top" | "formation" | "focus";
+
+/** Formation shapes the ghost target-slot fit (utils/geometry fitFormation,
+ * a cartwheel fit) does not describe: their ghost slots are hidden. */
+const NON_CARTWHEEL_SHAPES: ReadonlySet<string> = new Set(["pco", "gco", "helix", "string"]);
 
 const FAILURE_STATES: ReadonlySet<string> = new Set([
   "FAILURE_DETECTED",
@@ -81,6 +96,9 @@ export class SwarmSceneController {
   private fit = new AutoFitController();
   private environment: Environment;
   private lines = new FormationLines();
+  private beams = new LinkBeams();
+  private hasLinks = false;
+  private formationShape: string | null = null;
   private bg = tokenColor(SCENE_TOKENS.void).clone();
 
   private toggles = { labels: true, trails: true, lines: true, slots: true };
@@ -100,8 +118,14 @@ export class SwarmSceneController {
   private followFly = 0; // seconds left in the fly-in
   private lastFollowPos = new THREE.Vector3();
   // Role batons: a gold token flying from the old holder to the new one.
-  private batons: { mesh: THREE.Mesh; from: string; to: string; start: number }[] = [];
+  private batons: { mesh: THREE.Mesh; label: HTMLDivElement; from: string; to: string; start: number }[] = [];
   private batonGeo = new THREE.OctahedronGeometry(1);
+  private lastBatonStart = 0;
+  // Own layer: the label layout pass hides every child of labels.root.
+  private batonLayer = document.createElement("div");
+  // Landing pulse: a gold ring that grows and fades on the receiving satellite.
+  private pulses: { mesh: THREE.Mesh; to: string; start: number }[] = [];
+  private pulseGeo = new THREE.RingGeometry(1.6, 1.9, 48);
 
   constructor(container: HTMLElement, onPick: (id: string | null) => void) {
     this.container = container;
@@ -119,6 +143,8 @@ export class SwarmSceneController {
     this.renderer.domElement.style.display = "block";
     container.appendChild(this.renderer.domElement);
     container.appendChild(this.labels.root);
+    this.batonLayer.className = sceneStyles.labelLayer;
+    container.appendChild(this.batonLayer);
 
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     // Eyes-on-the-Earth feel: weighty drag with momentum, zoom toward the
@@ -136,7 +162,7 @@ export class SwarmSceneController {
     this.scene.add(this.environment.group);
     this.environment.trackExtent(0);
 
-    this.scene.add(this.lines.healthy, this.lines.failed);
+    this.scene.add(this.lines.healthy, this.lines.failed, ...this.beams.objects);
 
     this.ro = new ResizeObserver(() => this.resize());
     this.ro.observe(container);
@@ -190,6 +216,37 @@ export class SwarmSceneController {
     this.syncAllObjects(satellites, fit);
   }
 
+  /** Laser crosslinks from the stream. Beams follow the satellites every
+   * frame; while a run reports links they replace the plain formation lines. */
+  setLinks(links: readonly Link[]): void {
+    this.beams.setLinks(links);
+    this.hasLinks = links.length > 0;
+    this.applyLineVisibility();
+    this.beams.updatePositions(this.records);
+  }
+
+  /** Scenario formation shape from the hello. The ghost slots assume a
+   * cartwheel, so any other known shape hides them; null (unknown) keeps them. */
+  setFormationShape(shape: string | null): void {
+    const next = shape === null ? null : shape.toLowerCase();
+    if (next === this.formationShape) return;
+    this.formationShape = next;
+    if (!this.slotsWanted()) this.slots.visible = false; // the next sync redraws them otherwise
+  }
+
+  private slotsWanted(): boolean {
+    return (
+      this.toggles.slots &&
+      (this.formationShape === null || !NON_CARTWHEEL_SHAPES.has(this.formationShape))
+    );
+  }
+
+  private applyLineVisibility(): void {
+    this.lines.setVisibility(this.toggles.lines);
+    if (this.hasLinks) this.lines.healthy.visible = false;
+    this.beams.setVisibility(this.toggles.lines);
+  }
+
   setOrbitViewMode(mode: OrbitViewMode): void {
     if (this.orbitMode === mode) return;
     this.orbitMode = mode;
@@ -218,6 +275,7 @@ export class SwarmSceneController {
     this.environment.refreshTheme();
     this.slots.refreshTheme();
     this.lines.refreshTheme();
+    this.beams.refreshTheme();
     const nSeats = Math.max(this.lastSats.length, 1);
     const fit = fitFormation(this.lastSats, nSeats);
     this.syncAllObjects(this.lastSats, fit);
@@ -228,8 +286,8 @@ export class SwarmSceneController {
       for (const rec of this.records.values()) clearSatelliteTrail(rec);
     }
     this.toggles = { ...t };
-    this.slots.visible = t.slots;
-    this.lines.setVisibility(t.lines);
+    this.slots.visible = this.slotsWanted();
+    this.applyLineVisibility();
   }
 
   applyPreset(preset: CameraPreset, focusSat: Satellite | null): void {
@@ -367,7 +425,9 @@ export class SwarmSceneController {
       }
     }
     this.lines.update(satellites, this.failureActive());
-    if (this.toggles.slots) {
+    if (this.hasLinks) this.lines.healthy.visible = false;
+    this.beams.updatePositions(this.records);
+    if (this.slotsWanted()) {
       this.slots.update(satellites, fit, this.extent || 1000, this.selectedId);
     } else {
       this.slots.visible = false;
@@ -391,28 +451,81 @@ export class SwarmSceneController {
     );
   }
 
-  /** Fly a role baton from one satellite to another (a role handoff). */
-  handoff(from: string, to: string): void {
+  /** Fly a role baton from one satellite to another (a role or leader
+   * function handoff). `what` is the role or function id it carries; a small
+   * label rides with the baton. Batons arriving together start 200 ms apart. */
+  handoff(from: string, to: string, what: string): void {
     if (this.reducedMotion || !this.records.has(from) || !this.records.has(to)) return;
     const mat = new THREE.MeshBasicMaterial({ color: tokenColor("--status-repaired"), transparent: true, depthTest: false });
     const mesh = new THREE.Mesh(this.batonGeo, mat);
     mesh.renderOrder = 10;
+    mesh.visible = false;
     this.scene.add(mesh);
-    this.batons.push({ mesh, from, to, start: performance.now() });
+    const label = document.createElement("div");
+    label.className = hud.batonLabel;
+    label.textContent = `${SAT_ROLES.has(what) ? roleLabel(what) : functionLabel(what)} to ${to}`;
+    label.style.opacity = "0";
+    this.batonLayer.appendChild(label);
+    const start = Math.max(performance.now(), this.lastBatonStart + BATON_STAGGER_MS);
+    this.lastBatonStart = start;
+    this.batons.push({ mesh, label, from, to, start });
+  }
+
+  private landPulse(to: string, now: number): void {
+    const mat = new THREE.MeshBasicMaterial({
+      color: tokenColor("--status-repaired"),
+      transparent: true,
+      side: THREE.DoubleSide,
+      depthTest: false,
+      depthWrite: false,
+    });
+    const mesh = new THREE.Mesh(this.pulseGeo, mat);
+    mesh.renderOrder = 10;
+    this.scene.add(mesh);
+    this.pulses.push({ mesh, to, start: now });
+  }
+
+  private updatePulses(now: number): void {
+    this.pulses = this.pulses.filter((p) => {
+      const rec = this.records.get(p.to);
+      const u = (now - p.start) / PULSE_MS;
+      if (rec === undefined || u >= 1) {
+        this.scene.remove(p.mesh);
+        (p.mesh.material as THREE.Material).dispose();
+        return false;
+      }
+      p.mesh.position.copy(rec.group.position);
+      p.mesh.quaternion.copy(this.camera.quaternion);
+      p.mesh.scale.setScalar(rec.marker.scale.x * (1 + 1.4 * u));
+      (p.mesh.material as THREE.MeshBasicMaterial).opacity = 0.9 * (1 - u);
+      return true;
+    });
+  }
+
+  private dropBaton(b: { mesh: THREE.Mesh; label: HTMLDivElement }): void {
+    this.scene.remove(b.mesh);
+    (b.mesh.material as THREE.Material).dispose();
+    b.label.remove();
   }
 
   private updateBatons(): void {
     const now = performance.now();
-    const BATON_MS = 2400;
+    this.updatePulses(now);
     this.batons = this.batons.filter((b) => {
       const a = this.records.get(b.from);
       const z = this.records.get(b.to);
       const u = (now - b.start) / BATON_MS;
-      if (a === undefined || z === undefined || u >= 1) {
-        this.scene.remove(b.mesh);
-        (b.mesh.material as THREE.Material).dispose();
+      if (a === undefined || z === undefined) {
+        this.dropBaton(b);
         return false;
       }
+      if (u >= 1) {
+        this.landPulse(b.to, now);
+        this.dropBaton(b);
+        return false;
+      }
+      if (u < 0) return true; // staggered: waiting its turn
+      b.mesh.visible = true;
       const e = u < 0.5 ? 2 * u * u : 1 - (-2 * u + 2) ** 2 / 2; // ease in-out
       const p = b.mesh.position.lerpVectors(a.group.position, z.group.position, e);
       const span = a.group.position.distanceTo(z.group.position);
@@ -421,14 +534,30 @@ export class SwarmSceneController {
       if (p.lengthSq() > 1e-9 && p.length() < r) p.setLength(r);
       b.mesh.scale.setScalar(this.camera.position.distanceTo(p) * 0.012);
       b.mesh.rotation.y = u * Math.PI * 4;
-      (b.mesh.material as THREE.MeshBasicMaterial).opacity = Math.min(1, 6 * (1 - u));
+      const fade = Math.min(1, 6 * (1 - u), 8 * u);
+      (b.mesh.material as THREE.MeshBasicMaterial).opacity = fade;
+      // DOM caption rides just above the baton on screen.
+      this.scratch.copy(p).applyMatrix4(this.camera.matrixWorldInverse);
+      if (this.scratch.z >= -0.5) {
+        b.label.style.opacity = "0";
+      } else {
+        this.scratch.copy(p).project(this.camera);
+        const x = (this.scratch.x * 0.5 + 0.5) * this.viewW;
+        const y = (-this.scratch.y * 0.5 + 0.5) * this.viewH;
+        b.label.style.transform = `translate(${Math.round(x)}px, ${Math.round(y - 14)}px) translate(-50%, -100%)`;
+        b.label.style.opacity = String(fade);
+      }
       return true;
     });
   }
 
   dispose(): void {
-    for (const b of this.batons) (b.mesh.material as THREE.Material).dispose();
+    for (const b of this.batons) this.dropBaton(b);
+    this.batons = [];
+    for (const p of this.pulses) (p.mesh.material as THREE.Material).dispose();
+    this.pulses = [];
     this.batonGeo.dispose();
+    this.pulseGeo.dispose();
     this.running = false;
     cancelAnimationFrame(this.raf);
     this.ro.disconnect();
@@ -445,11 +574,14 @@ export class SwarmSceneController {
     this.scene.remove(this.slots.group);
     this.lines.dispose();
     this.scene.remove(this.lines.healthy, this.lines.failed);
+    this.beams.dispose();
+    this.scene.remove(...this.beams.objects);
     this.scene.remove(this.environment.group);
     this.environment.dispose();
     this.renderer.dispose();
     this.renderer.domElement.remove();
     this.labels.dispose();
+    this.batonLayer.remove();
   }
 
   // ---- internals -----------------------------------------------------------
@@ -498,7 +630,7 @@ export class SwarmSceneController {
         show: this.toggles.labels && this.labelWanted(rec),
       });
     }
-    if (this.toggles.slots && this.records.size <= LABEL_ALL_MAX) {
+    if (this.slotsWanted() && this.records.size <= LABEL_ALL_MAX) {
       for (const slot of this.slots.labelItems()) {
         if (!slot.show) continue;
         const p = project(slot.pos);

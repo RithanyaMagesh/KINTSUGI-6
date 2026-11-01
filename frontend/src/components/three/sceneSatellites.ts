@@ -6,7 +6,8 @@
 // - "local" (Formation array view): maps raw LVLH coordinates [y, x, z] onto
 //   the close-up 2:1 Clohessy-Wiltshire relative formation grid.
 // All colors derive strictly from tokens.css via sceneColors.ts (§13.1).
-import { rolesLabel } from "../live/hudFormat";
+import { functionLabel, rolesLabel, satLabel } from "../live/hudFormat";
+import hud from "../live/ImmersiveLive.module.css";
 import * as THREE from "three";
 import type { Satellite } from "../../types/satellite";
 import type { OrbitViewMode } from "../../stores/uiStore";
@@ -295,11 +296,14 @@ export function createSatelliteRecord(
 
 function roleWord(sat: Satellite): string {
   if (sat.status === "failed") return "lost";
+  if (sat.cutOff === true) return satLabel(sat).toLowerCase(); // "cut off": alive, no link reaches it
   return rolesLabel(sat).toLowerCase();
 }
 
+/** Re-render key: the label DOM is rebuilt only when this changes. */
 function labelText(sat: Satellite): string {
-  return `${sat.id} ${roleWord(sat)}`;
+  const fns = sat.functions ?? [];
+  return `${sat.id} ${roleWord(sat)}|${sat.cutOff === true ? "cut" : ""}|${fns.join(",")}`;
 }
 
 function renderLabel(el: HTMLElement, sat: Satellite): void {
@@ -309,7 +313,15 @@ function renderLabel(el: HTMLElement, sat: Satellite): void {
   const role = document.createElement("span");
   role.className = styles.satLabelRole;
   role.textContent = roleWord(sat);
-  el.replaceChildren(id, role);
+  if (sat.status !== "failed" && sat.cutOff === true) role.style.color = "var(--status-caution)";
+  const parts: HTMLElement[] = [id, role];
+  for (const f of sat.functions ?? []) {
+    const chip = document.createElement("span");
+    chip.className = hud.fnChip;
+    chip.textContent = functionLabel(f);
+    parts.push(chip);
+  }
+  el.replaceChildren(...parts);
 }
 
 export function clearSatelliteTrail(rec: SatRecord): void {

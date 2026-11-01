@@ -1,0 +1,68 @@
+/* Leader-function chips. Colour = state only: split-brain is caution, vacant
+   is a dashed empty slot, a fresh holder change pulses in the repair gold. */
+.chips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.chip {
+  border: 1px solid var(--glass-line-strong);
+  border-radius: var(--radius-control);
+  padding: 4px 10px;
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--glass);
+  outline: 2px solid transparent;
+  outline-offset: 1px;
+}
+
+.name {
+  color: var(--ink-muted);
+}
+
+.holder {
+  font-variant-numeric: tabular-nums;
+}
+
+.chip[data-state="split"] {
+  border-color: var(--status-caution);
+}
+
+.warn {
+  color: var(--status-caution);
+}
+
+.chip[data-state="vacant"] {
+  border-style: dashed;
+  border-color: var(--ink-faint);
+  background: transparent;
+}
+
+.chip[data-state="vacant"] .holder {
+  color: var(--ink-faint);
+}
+
+.chip[data-pulse] {
+  animation: handoff 2s var(--motion-ease, ease-out) 1;
+}
+
+@keyframes handoff {
+  0%,
+  60% {
+    outline-color: var(--status-repaired);
+  }
+  100% {
+    outline-color: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip[data-pulse] {
+    animation: none;
+    outline-color: var(--status-repaired);
+  }
+}

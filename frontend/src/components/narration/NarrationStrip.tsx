@@ -18,7 +18,9 @@ import type { MissionState, Satellite } from "../../types/satellite";
 import { missionStateColor } from "../../utils/colors";
 import { formatSeconds } from "../../utils/format";
 import { WHY_LINE, slotLabel } from "../recovery/RecoveryLog";
-import { faultLabel, satLabel, stateLabel } from "../live/hudFormat";
+import { faultLabel, functionLabel, satLabel, stateLabel } from "../live/hudFormat";
+import type { SimEvent } from "../../types/events";
+import type { Handoff } from "../../stores/simStore";
 import styles from "./NarrationStrip.module.css";
 
 function Mono({ children }: { children: ReactNode }) {
@@ -53,6 +55,62 @@ function moversOf(assignment: AssignmentEvent | null) {
   };
 }
 
+/** Track C inputs (laser runs): talking groups, split-brain, recent handoffs. */
+interface CommsView {
+  simTime: number | null;
+  components: string[][];
+  splitBrain: string[];
+  events: SimEvent[];
+  handoffs: Handoff[];
+}
+
+const RECENT_S = 10; // sim seconds a handoff sentence stays up
+
+/** Laser-run sentences, highest priority first; null when none applies. */
+function commsSentence(satellites: Satellite[], c: CommsView): string | null {
+  const live = satellites.filter((s) => s.status !== "failed");
+  if (live.length > 0 && live.every((s) => s.cutOff === true)) {
+    return "Every satellite is cut off: no laser link reaches anyone.";
+  }
+  if (c.components.length > 1) {
+    const groups = c.components.map((g) => g.join(", ")).join(" | ");
+    let text = `Swarm split into ${c.components.length} groups: ${groups}.`;
+    if (c.splitBrain.length > 0) {
+      const names = c.splitBrain.map((f) => functionLabel(f).toLowerCase()).join(", ");
+      text += ` Split-brain: ${names} ${c.splitBrain.length === 1 ? "has" : "have"} two holders.`;
+    }
+    return text;
+  }
+  if (c.simTime === null) return null;
+  const since = c.simTime - RECENT_S;
+  // Decentral: the latest burst of consensus-auction handoffs (one per function).
+  const fnEvents = c.events.filter((e) => e.fn !== undefined && e.simTime >= since);
+  if (fnEvents.length > 0) {
+    const burstT = fnEvents[fnEvents.length - 1].simTime;
+    const latest = new Map<string, SimEvent>();
+    for (const e of fnEvents) if (e.simTime === burstT) latest.set(e.fn!, e);
+    const parts = [...latest.values()].map((e) => {
+      const to = e.toSats ?? [];
+      const name = functionLabel(e.fn!).toLowerCase();
+      if (to.length === 0) return `${name} vacant`;
+      return `${name} to ${to.join(" and ")}`;
+    });
+    const dead = c.events.find(
+      (e) => e.level === "critical" && e.satId !== undefined && e.cause !== "isolated" && e.simTime >= since && e.simTime <= burstT,
+    );
+    const n = latest.size;
+    return (
+      `Consensus auction: ${n} leader function${n === 1 ? "" : "s"} moved` +
+      (dead !== undefined ? ` after ${dead.satId} failed` : "") +
+      `: ${parts.join(", ")}.`
+    );
+  }
+  // Central: the leader role moved to another satellite.
+  const lead = [...c.handoffs].reverse().find((h) => h.role === "leader" && h.t >= since);
+  if (lead !== undefined) return `Leader role moved from ${lead.from} to ${lead.to}.`;
+  return null;
+}
+
 /** The story so far as clauses — every clause backed by a measured value. */
 function narrationFor(
   missionState: MissionState,
@@ -62,9 +120,14 @@ function narrationFor(
   assignment: AssignmentEvent | null,
   degradedSats: string[] = [],
   degradedInfo: Record<string, { tDegraded: number; degrade_s?: number }> = {},
+  comms: CommsView | null = null,
 ): ReactNode {
   const coverageNow = coverage ?? failure?.coverage.current ?? null;
   const { rows, movers } = moversOf(assignment);
+
+  // Laser runs (Track C): a split swarm or a handoff burst outranks the rest.
+  const commsText = comms === null ? null : commsSentence(satellites, comms);
+  if (commsText !== null) return commsText;
 
   const degradedSat = satellites.find((s) => s.status === "degraded");
   const degradedId = degradedSat?.id ?? (degradedSats.length > 0 ? degradedSats[0] : null);
@@ -231,6 +294,11 @@ export default function NarrationStrip() {
   const assignment = useRecoveryStore(selectLatestAssignment);
   const degradedSats = useRecoveryStore(selectDegradedSats);
   const degradedInfo = useRecoveryStore(selectDegradedInfo);
+  const simTime = useSimStore((s) => s.simTime);
+  const components = useSimStore((s) => s.components);
+  const splitBrain = useSimStore((s) => s.splitBrain);
+  const events = useSimStore((s) => s.events);
+  const handoffs = useSimStore((s) => s.handoffs);
 
   const { movers } = moversOf(assignment);
   const multiMovers =
@@ -264,6 +332,7 @@ export default function NarrationStrip() {
               assignment,
               degradedSats,
               degradedInfo,
+              { simTime, components, splitBrain, events, handoffs },
             )}
           </p>
           {multiMovers && (

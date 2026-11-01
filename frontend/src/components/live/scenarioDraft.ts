@@ -35,6 +35,21 @@ export const POLICIES = [
 ] as const;
 export type PolicyId = (typeof POLICIES)[number]["id"];
 
+/** Formation shapes (cubesat/scenario_models.py Formation.shape; geometry in
+ * cubesat/formations.py). Only cartwheel runs on engine v1; the others need
+ * `engine: "v2"` (cubesat/scenario.py rejects them on v1 with a 422). */
+export const FORMATION_SHAPES = ["cartwheel", "pco", "gco", "helix", "string"] as const;
+export type FormationShape = (typeof FORMATION_SHAPES)[number];
+
+/** Plain names (cubesat/formations.py module docstring table). */
+export const FORMATION_SHAPE_LABEL: Record<FormationShape, string> = {
+  cartwheel: "Cartwheel",
+  pco: "Projected circular",
+  gco: "General circular",
+  helix: "Helix",
+  string: "String",
+};
+
 /** Supported satellite counts in the builder (2–8 standard + 12–32 larger-swarm
  * roadmap seats, §4). */
 export const SAT_COUNT_OPTIONS = [2, 3, 4, 5, 6, 7, 8, 12, 16, 24, 32] as const;
@@ -118,18 +133,25 @@ export function buildScenario(
   n: BuilderNumbers,
   roles: Role[],
   failures: FailureRow[],
+  shape: FormationShape = "cartwheel",
 ): Record<string, unknown> {
+  // Cartwheel output stays byte-identical to the pre-picker draft (no shape,
+  // no engine key: the schema defaults are cartwheel and v1).
+  const cartwheel = shape === "cartwheel";
+  const formation: Record<string, unknown> = {
+    n_slots: roles.length,
+    radial_amp_km: clampNumber("radialAmpKm", n.radialAmpKm),
+    phase_offset_deg: clampNumber("phaseOffsetDeg", n.phaseOffsetDeg),
+  };
+  if (!cartwheel) formation.shape = shape;
   return {
     name: n.name,
     seed: clampNumber("seed", n.seed),
+    ...(cartwheel ? {} : { engine: "v2" }),
     duration_s: clampNumber("durationS", n.durationS),
     dt_s: clampNumber("dtS", n.dtS),
     chief: { altitude_km: clampNumber("altitudeKm", n.altitudeKm) },
-    formation: {
-      n_slots: roles.length,
-      radial_amp_km: clampNumber("radialAmpKm", n.radialAmpKm),
-      phase_offset_deg: clampNumber("phaseOffsetDeg", n.phaseOffsetDeg),
-    },
+    formation,
     a_max_mps2: clampNumber("aMax", n.aMax),
     gains: { wn: clampNumber("wn", n.wn), zeta: clampNumber("zeta", n.zeta) },
     sensor: {

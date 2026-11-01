@@ -979,3 +979,37 @@
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* Leader-function chip on a satellite's 3D label: neutral glass, no state colour. */
+.fnChip {
+  display: inline-block;
+  margin-left: 0.4em;
+  padding: 0 5px;
+  border: 1px solid var(--glass-line-strong);
+  border-radius: 999px;
+  background: var(--glass);
+  color: var(--ink-muted);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.4;
+  text-shadow: none;
+  vertical-align: 1px;
+}
+
+/* Caption riding a flying role baton in the 3D scene (placed by the controller). */
+.batonLabel {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  white-space: nowrap;
+  padding: 1px 7px;
+  border: 1px solid var(--glass-line-strong);
+  border-radius: 999px;
+  background: var(--glass-strong);
+  color: var(--status-repaired);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 1.4;
+  will-change: transform, opacity;
+}

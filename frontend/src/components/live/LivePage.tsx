@@ -4,6 +4,7 @@
 // readouts show. Setup (S) and Telemetry (T) slide in on demand; H hides the
 // whole interface for a clean stage; F goes fullscreen.
 import RunSummaryCard from "./RunSummaryCard";
+import AuctionBoard from "../comms/AuctionBoard";
 import { useCallback, useEffect, useRef, useState } from "react";
 import SwarmScene from "../three/SwarmScene.tsx"; // explicit: macOS is case-insensitive and would resolve swarmScene.ts
 import type { SwarmSceneController } from "../three/swarmScene";
@@ -187,6 +188,7 @@ export default function LivePage() {
         )}
 
         <footer className={styles.bottom}>
+          <AuctionBoard />
           <RunSummaryCard />
           {hasSats && (
             <div className={styles.narration}>

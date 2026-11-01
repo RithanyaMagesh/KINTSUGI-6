@@ -71,6 +71,7 @@ export function satLabel(sat: Satellite): string {
     case "RADIO_SILENT":
       return "Radio silent";
   }
+  if (sat.cutOff === true) return "Cut off"; // alive, but no laser link reaches it
   if (sat.stuck === true) return "Thruster stuck open";
   if (sat.thrust !== undefined && sat.thrust < 1 && sat.status !== "failed")
     return `${Math.round(sat.thrust * 100)}% thrust`;
@@ -125,4 +126,32 @@ export function eventText(msg: string): string {
     .replace(/\b(PAYLOAD_FAIL|PARTIAL_THRUST|THRUSTER_STUCK_OPEN|RADIO_FAIL|FUEL_DEPLETED|REENTERED|PAYLOAD_FAILED|RADIO_SILENT)\b/g, (w) =>
       faultLabel(w).toLowerCase(),
     );
+}
+
+/** Leader functions held by the consensus auction (decentral laser runs). */
+export const FUNCTIONS = [
+  "failure_detection",
+  "time_sync",
+  "formation_reference",
+  "collision_arbitration",
+  "task_scheduling",
+  "ground_relay",
+] as const;
+
+const FUNCTION_LABEL: Record<string, string> = {
+  failure_detection: "Detection",
+  time_sync: "Time sync",
+  formation_reference: "Formation reference",
+  collision_arbitration: "Collision arbitration",
+  task_scheduling: "Scheduling",
+  ground_relay: "Ground relay",
+};
+
+export function functionLabel(f: string): string {
+  return FUNCTION_LABEL[f] ?? f.charAt(0).toUpperCase() + f.slice(1).replace(/_/g, " ");
+}
+
+/** Plain words for a laser link state. */
+export function linkLabel(state: string): string {
+  return state === "LOCKED" ? "Locked" : state === "ACQUIRING" ? "Acquiring" : "Down";
 }

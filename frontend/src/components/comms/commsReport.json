@@ -1,0 +1,921 @@
+{
+ "_source": "Copied (subset, values unchanged) from data/eval/comms_report.json; regenerate with the command below. Vite cannot serve files outside frontend/ (server.fs.allow).",
+ "command": "uv run python -m cubesat.benchmark --mode comms --base data/scenarios/two_failure.json --report data/eval/comms_report.json",
+ "preregistration": "GATES.md, 2026-11-01 C5 pre-registration",
+ "dt_s": 2.0,
+ "failure_times_s": [
+  1200.0,
+  1500.0
+ ],
+ "rows": [
+  {
+   "cell": "laser-mesh-central",
+   "killed": [
+    0,
+    1
+   ],
+   "critical_vacancy_s": 8.0,
+   "function_vacancy_s": null,
+   "split_brain_s": null,
+   "consensus_rounds_max": null,
+   "function_vacancy_s_by_round_time": null
+  },
+  {
+   "cell": "laser-mesh-central",
+   "killed": [
+    0,
+    2
+   ],
+   "critical_vacancy_s": 4.0,
+   "function_vacancy_s": null,
+   "split_brain_s": null,
+   "consensus_rounds_max": null,
+   "function_vacancy_s_by_round_time": null
+  },
+  {
+   "cell": "laser-mesh-central",
+   "killed": [
+    0,
+    3
+   ],
+   "critical_vacancy_s": 4.0,
+   "function_vacancy_s": null,
+   "split_brain_s": null,
+   "consensus_rounds_max": null,
+   "function_vacancy_s_by_round_time": null
+  },
+  {
+   "cell": "laser-mesh-central",
+   "killed": [
+    0,
+    4
+   ],
+   "critical_vacancy_s": 4.0,
+   "function_vacancy_s": null,
+   "split_brain_s": null,
+   "consensus_rounds_max": null,
+   "function_vacancy_s_by_round_time": null
+  },
+  {
+   "cell": "laser-mesh-central",
+   "killed": [
+    0,
+    5
+   ],
+   "critical_vacancy_s": 8.0,
+   "function_vacancy_s": null,
+   "split_brain_s": null,
+   "consensus_rounds_max": null,
+   "function_vacancy_s_by_round_time": null
+  },
+  {
+   "cell": "laser-mesh-central",
+   "killed": [
+    1,
+    2
+   ],
+   "critical_vacancy_s": 0.0,
+   "function_vacancy_s": null,
+   "split_brain_s": null,
+   "consensus_rounds_max": null,
+   "function_vacancy_s_by_round_time": null
+  },
+  {
+   "cell": "laser-mesh-central",
+   "killed": [
+    1,
+    3
+   ],
+   "critical_vacancy_s": 0.0,
+   "function_vacancy_s": null,
+   "split_brain_s": null,
+   "consensus_rounds_max": null,
+   "function_vacancy_s_by_round_time": null
+  },
+  {
+   "cell": "laser-mesh-central",
+   "killed": [
+    1,
+    4
+   ],
+   "critical_vacancy_s": 0.0,
+   "function_vacancy_s": null,
+   "split_brain_s": null,
+   "consensus_rounds_max": null,
+   "function_vacancy_s_by_round_time": null
+  },
+  {
+   "cell": "laser-mesh-central",
+   "killed": [
+    1,
+    5
+   ],
+   "critical_vacancy_s": 4.0,
+   "function_vacancy_s": null,
+   "split_brain_s": null,
+   "consensus_rounds_max": null,
+   "function_vacancy_s_by_round_time": null
+  },
+  {
+   "cell": "laser-mesh-central",
+   "killed": [
+    2,
+    3
+   ],
+   "critical_vacancy_s": 0.0,
+   "function_vacancy_s": null,
+   "split_brain_s": null,
+   "consensus_rounds_max": null,
+   "function_vacancy_s_by_round_time": null
+  },
+  {
+   "cell": "laser-mesh-central",
+   "killed": [
+    2,
+    4
+   ],
+   "critical_vacancy_s": 0.0,
+   "function_vacancy_s": null,
+   "split_brain_s": null,
+   "consensus_rounds_max": null,
+   "function_vacancy_s_by_round_time": null
+  },
+  {
+   "cell": "laser-mesh-central",
+   "killed": [
+    2,
+    5
+   ],
+   "critical_vacancy_s": 4.0,
+   "function_vacancy_s": null,
+   "split_brain_s": null,
+   "consensus_rounds_max": null,
+   "function_vacancy_s_by_round_time": null
+  },
+  {
+   "cell": "laser-mesh-central",
+   "killed": [
+    3,
+    4
+   ],
+   "critical_vacancy_s": 0.0,
+   "function_vacancy_s": null,
+   "split_brain_s": null,
+   "consensus_rounds_max": null,
+   "function_vacancy_s_by_round_time": null
+  },
+  {
+   "cell": "laser-mesh-central",
+   "killed": [
+    3,
+    5
+   ],
+   "critical_vacancy_s": 4.0,
+   "function_vacancy_s": null,
+   "split_brain_s": null,
+   "consensus_rounds_max": null,
+   "function_vacancy_s_by_round_time": null
+  },
+  {
+   "cell": "laser-mesh-central",
+   "killed": [
+    4,
+    5
+   ],
+   "critical_vacancy_s": 4.0,
+   "function_vacancy_s": null,
+   "split_brain_s": null,
+   "consensus_rounds_max": null,
+   "function_vacancy_s_by_round_time": null
+  },
+  {
+   "cell": "laser-mesh-central",
+   "killed": [
+    0
+   ],
+   "critical_vacancy_s": 4.0,
+   "function_vacancy_s": null,
+   "split_brain_s": null,
+   "consensus_rounds_max": null,
+   "function_vacancy_s_by_round_time": null
+  },
+  {
+   "cell": "laser-star-central",
+   "killed": [
+    0,
+    1
+   ],
+   "critical_vacancy_s": 8.0,
+   "function_vacancy_s": null,
+   "split_brain_s": null,
+   "consensus_rounds_max": null,
+   "function_vacancy_s_by_round_time": null
+  },
+  {
+   "cell": "laser-star-central",
+   "killed": [
+    0,
+    2
+   ],
+   "critical_vacancy_s": 4.0,
+   "function_vacancy_s": null,
+   "split_brain_s": null,
+   "consensus_rounds_max": null,
+   "function_vacancy_s_by_round_time": null
+  },
+  {
+   "cell": "laser-star-central",
+   "killed": [
+    0,
+    3
+   ],
+   "critical_vacancy_s": 4.0,
+   "function_vacancy_s": null,
+   "split_brain_s": null,
+   "consensus_rounds_max": null,
+   "function_vacancy_s_by_round_time": null
+  },
+  {
+   "cell": "laser-star-central",
+   "killed": [
+    0,
+    4
+   ],
+   "critical_vacancy_s": 4.0,
+   "function_vacancy_s": null,
+   "split_brain_s": null,
+   "consensus_rounds_max": null,
+   "function_vacancy_s_by_round_time": null
+  },
+  {
+   "cell": "laser-star-central",
+   "killed": [
+    0,
+    5
+   ],
+   "critical_vacancy_s": 8.0,
+   "function_vacancy_s": null,
+   "split_brain_s": null,
+   "consensus_rounds_max": null,
+   "function_vacancy_s_by_round_time": null
+  },
+  {
+   "cell": "laser-star-central",
+   "killed": [
+    1,
+    2
+   ],
+   "critical_vacancy_s": 0.0,
+   "function_vacancy_s": null,
+   "split_brain_s": null,
+   "consensus_rounds_max": null,
+   "function_vacancy_s_by_round_time": null
+  },
+  {
+   "cell": "laser-star-central",
+   "killed": [
+    1,
+    3
+   ],
+   "critical_vacancy_s": 0.0,
+   "function_vacancy_s": null,
+   "split_brain_s": null,
+   "consensus_rounds_max": null,
+   "function_vacancy_s_by_round_time": null
+  },
+  {
+   "cell": "laser-star-central",
+   "killed": [
+    1,
+    4
+   ],
+   "critical_vacancy_s": 0.0,
+   "function_vacancy_s": null,
+   "split_brain_s": null,
+   "consensus_rounds_max": null,
+   "function_vacancy_s_by_round_time": null
+  },
+  {
+   "cell": "laser-star-central",
+   "killed": [
+    1,
+    5
+   ],
+   "critical_vacancy_s": 4.0,
+   "function_vacancy_s": null,
+   "split_brain_s": null,
+   "consensus_rounds_max": null,
+   "function_vacancy_s_by_round_time": null
+  },
+  {
+   "cell": "laser-star-central",
+   "killed": [
+    2,
+    3
+   ],
+   "critical_vacancy_s": 0.0,
+   "function_vacancy_s": null,
+   "split_brain_s": null,
+   "consensus_rounds_max": null,
+   "function_vacancy_s_by_round_time": null
+  },
+  {
+   "cell": "laser-star-central",
+   "killed": [
+    2,
+    4
+   ],
+   "critical_vacancy_s": 0.0,
+   "function_vacancy_s": null,
+   "split_brain_s": null,
+   "consensus_rounds_max": null,
+   "function_vacancy_s_by_round_time": null
+  },
+  {
+   "cell": "laser-star-central",
+   "killed": [
+    2,
+    5
+   ],
+   "critical_vacancy_s": 4.0,
+   "function_vacancy_s": null,
+   "split_brain_s": null,
+   "consensus_rounds_max": null,
+   "function_vacancy_s_by_round_time": null
+  },
+  {
+   "cell": "laser-star-central",
+   "killed": [
+    3,
+    4
+   ],
+   "critical_vacancy_s": 0.0,
+   "function_vacancy_s": null,
+   "split_brain_s": null,
+   "consensus_rounds_max": null,
+   "function_vacancy_s_by_round_time": null
+  },
+  {
+   "cell": "laser-star-central",
+   "killed": [
+    3,
+    5
+   ],
+   "critical_vacancy_s": 4.0,
+   "function_vacancy_s": null,
+   "split_brain_s": null,
+   "consensus_rounds_max": null,
+   "function_vacancy_s_by_round_time": null
+  },
+  {
+   "cell": "laser-star-central",
+   "killed": [
+    4,
+    5
+   ],
+   "critical_vacancy_s": 4.0,
+   "function_vacancy_s": null,
+   "split_brain_s": null,
+   "consensus_rounds_max": null,
+   "function_vacancy_s_by_round_time": null
+  },
+  {
+   "cell": "laser-star-central",
+   "killed": [
+    0
+   ],
+   "critical_vacancy_s": 4.0,
+   "function_vacancy_s": null,
+   "split_brain_s": null,
+   "consensus_rounds_max": null,
+   "function_vacancy_s_by_round_time": null
+  },
+  {
+   "cell": "laser-mesh-decentral",
+   "killed": [
+    0,
+    1
+   ],
+   "critical_vacancy_s": 36.0,
+   "function_vacancy_s": 36.0,
+   "split_brain_s": 178.0,
+   "consensus_rounds_max": 18,
+   "function_vacancy_s_by_round_time": {
+    "0.1": 1.8,
+    "0.5": 9.0,
+    "2.0": 36.0
+   }
+  },
+  {
+   "cell": "laser-mesh-decentral",
+   "killed": [
+    0,
+    2
+   ],
+   "critical_vacancy_s": 36.0,
+   "function_vacancy_s": 36.0,
+   "split_brain_s": 174.0,
+   "consensus_rounds_max": 18,
+   "function_vacancy_s_by_round_time": {
+    "0.1": 1.8,
+    "0.5": 9.0,
+    "2.0": 36.0
+   }
+  },
+  {
+   "cell": "laser-mesh-decentral",
+   "killed": [
+    0,
+    3
+   ],
+   "critical_vacancy_s": 36.0,
+   "function_vacancy_s": 36.0,
+   "split_brain_s": 1046.0,
+   "consensus_rounds_max": 18,
+   "function_vacancy_s_by_round_time": {
+    "0.1": 1.8,
+    "0.5": 9.0,
+    "2.0": 36.0
+   }
+  },
+  {
+   "cell": "laser-mesh-decentral",
+   "killed": [
+    0,
+    4
+   ],
+   "critical_vacancy_s": 36.0,
+   "function_vacancy_s": 36.0,
+   "split_brain_s": 172.0,
+   "consensus_rounds_max": 18,
+   "function_vacancy_s_by_round_time": {
+    "0.1": 1.8,
+    "0.5": 9.0,
+    "2.0": 36.0
+   }
+  },
+  {
+   "cell": "laser-mesh-decentral",
+   "killed": [
+    0,
+    5
+   ],
+   "critical_vacancy_s": 40.0,
+   "function_vacancy_s": 36.0,
+   "split_brain_s": 176.0,
+   "consensus_rounds_max": 18,
+   "function_vacancy_s_by_round_time": {
+    "0.1": 1.8,
+    "0.5": 9.0,
+    "2.0": 36.0
+   }
+  },
+  {
+   "cell": "laser-mesh-decentral",
+   "killed": [
+    1,
+    2
+   ],
+   "critical_vacancy_s": 50.0,
+   "function_vacancy_s": 50.0,
+   "split_brain_s": 894.0,
+   "consensus_rounds_max": 19,
+   "function_vacancy_s_by_round_time": {
+    "0.1": 2.5,
+    "0.5": 12.5,
+    "2.0": 50.0
+   }
+  },
+  {
+   "cell": "laser-mesh-decentral",
+   "killed": [
+    1,
+    3
+   ],
+   "critical_vacancy_s": 56.0,
+   "function_vacancy_s": 56.0,
+   "split_brain_s": 30.0,
+   "consensus_rounds_max": 19,
+   "function_vacancy_s_by_round_time": {
+    "0.1": 2.8000000000000003,
+    "0.5": 14.0,
+    "2.0": 56.0
+   }
+  },
+  {
+   "cell": "laser-mesh-decentral",
+   "killed": [
+    1,
+    4
+   ],
+   "critical_vacancy_s": 68.0,
+   "function_vacancy_s": 68.0,
+   "split_brain_s": 0.0,
+   "consensus_rounds_max": 19,
+   "function_vacancy_s_by_round_time": {
+    "0.1": 3.4000000000000004,
+    "0.5": 17.0,
+    "2.0": 68.0
+   }
+  },
+  {
+   "cell": "laser-mesh-decentral",
+   "killed": [
+    1,
+    5
+   ],
+   "critical_vacancy_s": 66.0,
+   "function_vacancy_s": 66.0,
+   "split_brain_s": 0.0,
+   "consensus_rounds_max": 19,
+   "function_vacancy_s_by_round_time": {
+    "0.1": 3.3000000000000003,
+    "0.5": 16.5,
+    "2.0": 66.0
+   }
+  },
+  {
+   "cell": "laser-mesh-decentral",
+   "killed": [
+    2,
+    3
+   ],
+   "critical_vacancy_s": 56.0,
+   "function_vacancy_s": 56.0,
+   "split_brain_s": 30.0,
+   "consensus_rounds_max": 19,
+   "function_vacancy_s_by_round_time": {
+    "0.1": 2.8000000000000003,
+    "0.5": 14.0,
+    "2.0": 56.0
+   }
+  },
+  {
+   "cell": "laser-mesh-decentral",
+   "killed": [
+    2,
+    4
+   ],
+   "critical_vacancy_s": 68.0,
+   "function_vacancy_s": 68.0,
+   "split_brain_s": 0.0,
+   "consensus_rounds_max": 19,
+   "function_vacancy_s_by_round_time": {
+    "0.1": 3.4000000000000004,
+    "0.5": 17.0,
+    "2.0": 68.0
+   }
+  },
+  {
+   "cell": "laser-mesh-decentral",
+   "killed": [
+    2,
+    5
+   ],
+   "critical_vacancy_s": 66.0,
+   "function_vacancy_s": 66.0,
+   "split_brain_s": 0.0,
+   "consensus_rounds_max": 19,
+   "function_vacancy_s_by_round_time": {
+    "0.1": 3.3000000000000003,
+    "0.5": 16.5,
+    "2.0": 66.0
+   }
+  },
+  {
+   "cell": "laser-mesh-decentral",
+   "killed": [
+    3,
+    4
+   ],
+   "critical_vacancy_s": 36.0,
+   "function_vacancy_s": 36.0,
+   "split_brain_s": 178.0,
+   "consensus_rounds_max": 18,
+   "function_vacancy_s_by_round_time": {
+    "0.1": 1.8,
+    "0.5": 9.0,
+    "2.0": 36.0
+   }
+  },
+  {
+   "cell": "laser-mesh-decentral",
+   "killed": [
+    3,
+    5
+   ],
+   "critical_vacancy_s": 40.0,
+   "function_vacancy_s": 36.0,
+   "split_brain_s": 170.0,
+   "consensus_rounds_max": 18,
+   "function_vacancy_s_by_round_time": {
+    "0.1": 1.8,
+    "0.5": 9.0,
+    "2.0": 36.0
+   }
+  },
+  {
+   "cell": "laser-mesh-decentral",
+   "killed": [
+    4,
+    5
+   ],
+   "critical_vacancy_s": 50.0,
+   "function_vacancy_s": 50.0,
+   "split_brain_s": 892.0,
+   "consensus_rounds_max": 19,
+   "function_vacancy_s_by_round_time": {
+    "0.1": 2.5,
+    "0.5": 12.5,
+    "2.0": 50.0
+   }
+  },
+  {
+   "cell": "laser-mesh-decentral",
+   "killed": [
+    0
+   ],
+   "critical_vacancy_s": 36.0,
+   "function_vacancy_s": 36.0,
+   "split_brain_s": 1012.0,
+   "consensus_rounds_max": 19,
+   "function_vacancy_s_by_round_time": {
+    "0.1": 1.8,
+    "0.5": 9.0,
+    "2.0": 36.0
+   }
+  },
+  {
+   "cell": "laser-star-decentral",
+   "killed": [
+    0,
+    1
+   ],
+   "critical_vacancy_s": 0.0,
+   "function_vacancy_s": 0.0,
+   "split_brain_s": 222.0,
+   "consensus_rounds_max": 9,
+   "function_vacancy_s_by_round_time": {
+    "0.1": 0.0,
+    "0.5": 0.0,
+    "2.0": 0.0
+   }
+  },
+  {
+   "cell": "laser-star-decentral",
+   "killed": [
+    0,
+    2
+   ],
+   "critical_vacancy_s": 0.0,
+   "function_vacancy_s": 0.0,
+   "split_brain_s": 176.0,
+   "consensus_rounds_max": 9,
+   "function_vacancy_s_by_round_time": {
+    "0.1": 0.0,
+    "0.5": 0.0,
+    "2.0": 0.0
+   }
+  },
+  {
+   "cell": "laser-star-decentral",
+   "killed": [
+    0,
+    3
+   ],
+   "critical_vacancy_s": 0.0,
+   "function_vacancy_s": 0.0,
+   "split_brain_s": 1014.0,
+   "consensus_rounds_max": 9,
+   "function_vacancy_s_by_round_time": {
+    "0.1": 0.0,
+    "0.5": 0.0,
+    "2.0": 0.0
+   }
+  },
+  {
+   "cell": "laser-star-decentral",
+   "killed": [
+    0,
+    4
+   ],
+   "critical_vacancy_s": 0.0,
+   "function_vacancy_s": 0.0,
+   "split_brain_s": 1014.0,
+   "consensus_rounds_max": 9,
+   "function_vacancy_s_by_round_time": {
+    "0.1": 0.0,
+    "0.5": 0.0,
+    "2.0": 0.0
+   }
+  },
+  {
+   "cell": "laser-star-decentral",
+   "killed": [
+    0,
+    5
+   ],
+   "critical_vacancy_s": 4.0,
+   "function_vacancy_s": 0.0,
+   "split_brain_s": 1014.0,
+   "consensus_rounds_max": 9,
+   "function_vacancy_s_by_round_time": {
+    "0.1": 0.0,
+    "0.5": 0.0,
+    "2.0": 0.0
+   }
+  },
+  {
+   "cell": "laser-star-decentral",
+   "killed": [
+    1,
+    2
+   ],
+   "critical_vacancy_s": 18.0,
+   "function_vacancy_s": 18.0,
+   "split_brain_s": 968.0,
+   "consensus_rounds_max": 9,
+   "function_vacancy_s_by_round_time": {
+    "0.1": 0.9,
+    "0.5": 4.5,
+    "2.0": 18.0
+   }
+  },
+  {
+   "cell": "laser-star-decentral",
+   "killed": [
+    1,
+    3
+   ],
+   "critical_vacancy_s": 18.0,
+   "function_vacancy_s": 18.0,
+   "split_brain_s": 130.0,
+   "consensus_rounds_max": 9,
+   "function_vacancy_s_by_round_time": {
+    "0.1": 0.9,
+    "0.5": 4.5,
+    "2.0": 18.0
+   }
+  },
+  {
+   "cell": "laser-star-decentral",
+   "killed": [
+    1,
+    4
+   ],
+   "critical_vacancy_s": 18.0,
+   "function_vacancy_s": 18.0,
+   "split_brain_s": 968.0,
+   "consensus_rounds_max": 9,
+   "function_vacancy_s_by_round_time": {
+    "0.1": 0.9,
+    "0.5": 4.5,
+    "2.0": 18.0
+   }
+  },
+  {
+   "cell": "laser-star-decentral",
+   "killed": [
+    1,
+    5
+   ],
+   "critical_vacancy_s": 22.0,
+   "function_vacancy_s": 18.0,
+   "split_brain_s": 968.0,
+   "consensus_rounds_max": 9,
+   "function_vacancy_s_by_round_time": {
+    "0.1": 0.9,
+    "0.5": 4.5,
+    "2.0": 18.0
+   }
+  },
+  {
+   "cell": "laser-star-decentral",
+   "killed": [
+    2,
+    3
+   ],
+   "critical_vacancy_s": 18.0,
+   "function_vacancy_s": 18.0,
+   "split_brain_s": 130.0,
+   "consensus_rounds_max": 9,
+   "function_vacancy_s_by_round_time": {
+    "0.1": 0.9,
+    "0.5": 4.5,
+    "2.0": 18.0
+   }
+  },
+  {
+   "cell": "laser-star-decentral",
+   "killed": [
+    2,
+    4
+   ],
+   "critical_vacancy_s": 18.0,
+   "function_vacancy_s": 18.0,
+   "split_brain_s": 968.0,
+   "consensus_rounds_max": 9,
+   "function_vacancy_s_by_round_time": {
+    "0.1": 0.9,
+    "0.5": 4.5,
+    "2.0": 18.0
+   }
+  },
+  {
+   "cell": "laser-star-decentral",
+   "killed": [
+    2,
+    5
+   ],
+   "critical_vacancy_s": 22.0,
+   "function_vacancy_s": 18.0,
+   "split_brain_s": 968.0,
+   "consensus_rounds_max": 9,
+   "function_vacancy_s_by_round_time": {
+    "0.1": 0.9,
+    "0.5": 4.5,
+    "2.0": 18.0
+   }
+  },
+  {
+   "cell": "laser-star-decentral",
+   "killed": [
+    3,
+    4
+   ],
+   "critical_vacancy_s": 18.0,
+   "function_vacancy_s": 18.0,
+   "split_brain_s": 0.0,
+   "consensus_rounds_max": 9,
+   "function_vacancy_s_by_round_time": {
+    "0.1": 0.9,
+    "0.5": 4.5,
+    "2.0": 18.0
+   }
+  },
+  {
+   "cell": "laser-star-decentral",
+   "killed": [
+    3,
+    5
+   ],
+   "critical_vacancy_s": 4.0,
+   "function_vacancy_s": 0.0,
+   "split_brain_s": 0.0,
+   "consensus_rounds_max": 9,
+   "function_vacancy_s_by_round_time": {
+    "0.1": 0.0,
+    "0.5": 0.0,
+    "2.0": 0.0
+   }
+  },
+  {
+   "cell": "laser-star-decentral",
+   "killed": [
+    4,
+    5
+   ],
+   "critical_vacancy_s": 22.0,
+   "function_vacancy_s": 18.0,
+   "split_brain_s": 968.0,
+   "consensus_rounds_max": 9,
+   "function_vacancy_s_by_round_time": {
+    "0.1": 0.9,
+    "0.5": 4.5,
+    "2.0": 18.0
+   }
+  },
+  {
+   "cell": "laser-star-decentral",
+   "killed": [
+    0
+   ],
+   "critical_vacancy_s": 0.0,
+   "function_vacancy_s": 0.0,
+   "split_brain_s": 1008.0,
+   "consensus_rounds_max": 9,
+   "function_vacancy_s_by_round_time": {
+    "0.1": 0.0,
+    "0.5": 0.0,
+    "2.0": 0.0
+   }
+  }
+ ],
+ "verdicts": {
+  "C5-H7": {
+   "threshold": ">= 15/16 kill sets with 0 s",
+   "value": 4,
+   "verdict": "FAIL"
+  },
+  "C5-H8": {
+   "threshold": "6/6 leader kills with > 0 s",
+   "value": 6,
+   "verdict": "PASS"
+  },
+  "C5-H9": {
+   "threshold": ">= 5/6 leader kills decentral <= central",
+   "value": 0,
+   "verdict": "FAIL"
+  }
+ }
+}
