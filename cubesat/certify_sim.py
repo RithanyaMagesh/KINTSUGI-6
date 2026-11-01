@@ -1,6 +1,7 @@
 """Forward simulation behind the certificate (physics Phase 5d). Pure: no RNG, no wall clock.
 
-It is the EngineV2 stepper (cubesat/sim_v2.py `_advance`) replayed on a copy of the swarm:
+It is the EngineV2 stepper (cubesat/step_v2.py `advance`, the SAME function) replayed on a copy
+of the swarm:
 truth RK4 (`truth.rk4_step`, the scenario's dt), chief J2-only (B = 0, no drag), active sats at
 `truth.area_active_m2`, DEAD sats at `truth.area_dead_m2`, the v1 `PDController` on the LVLH
 state against a seat reference advanced by the cached Phi(dt), every command through
@@ -24,15 +25,14 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from cubesat import truth
+from cubesat import step_v2, truth
 from cubesat.coverage import coverage_fraction
 from cubesat.faults_v2 import STATUS_REENTERED
 from cubesat.hcw import mean_motion, propagate, stm
 from cubesat.pd import PDController
 from cubesat.scenario import Scenario
-from cubesat.sim import STATUS_DEAD
-from cubesat.sim_v2 import REENTRY_ALTITUDE_M
-from cubesat.spacecraft import SatState, thrust_limited
+from cubesat.spacecraft import SatState
+from cubesat.step_v2 import REENTRY_ALTITUDE_M
 from cubesat.transfer import Transfer
 
 _EPS = 1e-9
@@ -65,12 +65,13 @@ class SwarmState:
     roles: list[list[str]]
     refs: np.ndarray
     hold: np.ndarray
+    declared: list[bool] | None = None  # heartbeat-declared (silent to the swarm); None = none
 
 
 def swarm_state_from_engine(engine) -> SwarmState:
     """Copy a live EngineV2's state. Reads only these attributes (none private): `k`, `dt`, `X`
     (row 0 chief, rows 1.. sats), `refs`, `hold`, `status` (property of `faults.status`),
-    `faults.sats`, `roles`."""
+    `faults.sats`, `faults.declared`, `roles`."""
     return SwarmState(
         t_s=engine.k * engine.dt,
         chief=np.array(engine.X[0], dtype=float),
@@ -80,6 +81,7 @@ def swarm_state_from_engine(engine) -> SwarmState:
         roles=[list(r) for r in engine.roles],
         refs=np.array(engine.refs, dtype=float),
         hold=np.array(engine.hold, dtype=float),
+        declared=list(engine.faults.declared),
     )
 
 
@@ -201,7 +203,6 @@ def simulate(
     refs = np.array(seats, dtype=float)
     phi = stm(dt, n)
     pd = PDController(scenario.gains.wn, scenario.gains.zeta, scenario.a_max_mps2)
-    b_active, b_dead = tr.cd * tr.area_active_m2 / tr.mass_kg, tr.cd * tr.area_dead_m2 / tr.mass_kg
     sched = burn_schedule(transfers, sats, dt)
     n_steps = max([n_steps] + [last for _, last in sched.values()])
     if n_steps > MAX_STEPS:
@@ -239,30 +240,8 @@ def simulate(
                 landing[i] = float(np.linalg.norm(lvlh[i, :3] - refs[i, :3]))
         if j == n_steps:
             break
-        u = np.zeros((count, 3))
-        a_stuck = np.zeros((count, 3))
-        for i, s in enumerate(status):
-            if s in (STATUS_DEAD, STATUS_REENTERED):
-                continue
-            sat = sats[i]
-            if sat.stuck_vec is not None:
-                a_stuck[i], _ = thrust_limited(sat, u[i], dt)
-            else:
-                if i in sched and j < sched[i][1]:
-                    cmd = sched[i][0][j]
-                else:
-                    cmd = pd.command(lvlh[i, :3], lvlh[i, 3:], refs[i, :3], refs[i, 3:])
-                u[i], _ = thrust_limited(sat, cmd, dt)
-        a_thrust = np.vstack([np.zeros(3), truth.thrust_eci(u, c[:3], c[3:]) + a_stuck])
-        b = np.array([0.0] + [b_dead if s == STATUS_DEAD else b_active for s in status])
-
-        def accel(r, v, b=b, a_thrust=a_thrust):
-            a = truth.accel_gravity(r) + truth.accel_drag(r, v, b, tr.density_factor) + a_thrust
-            return a + truth.accel_j2(r) if tr.j2_enabled else a
-
-        new = truth.rk4_step(X, dt, accel)
-        frozen = np.array([False] + [s == STATUS_REENTERED for s in status])
-        X = np.where(frozen[:, None], X, new)
+        cmd = {i: burn[j] for i, (burn, last) in sched.items() if j < last}
+        X, _, _ = step_v2.advance(X, lvlh, refs, status, sats, pd, dt, tr, cmd)
         refs = refs @ phi.T
     return SimResult(
         best, pair, t_best, landing, err, max_err, tail_err, n_steps, X, sats, status
