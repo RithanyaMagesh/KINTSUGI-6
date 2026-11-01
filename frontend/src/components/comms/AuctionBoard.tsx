@@ -4,7 +4,7 @@
 // downlink handoff, as "Role reassignment". The wire carries only the winners
 // and the round count, so no bids or scores are shown. The card stays about
 // 8 s (wall clock) after the last burst, then fades; it can be closed.
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSimStore } from "../../stores/simStore";
 import type { SimEvent } from "../../types/events";
 import { functionLabel, roleLabel } from "../live/hudFormat";
@@ -77,9 +77,14 @@ export default function AuctionBoard() {
   const [seen] = useState<string | null>(() => burst?.id ?? null);
   const [shown, setShown] = useState<Burst | null>(null);
   const [phase, setPhase] = useState<"in" | "out">("in");
+  // Restart the hold only when a NEW burst lands, not on every later event.
+  const latest = useRef(burst);
+  latest.current = burst;
+  const burstId = burst?.id ?? null;
   useEffect(() => {
-    if (burst === null || burst.id === seen) return;
-    setShown(burst);
+    const b = latest.current;
+    if (b === null || b.id === seen) return;
+    setShown(b);
     setPhase("in");
     const fade = window.setTimeout(() => setPhase("out"), HOLD_MS);
     const hide = window.setTimeout(() => setShown(null), HOLD_MS + FADE_MS);
@@ -87,7 +92,7 @@ export default function AuctionBoard() {
       window.clearTimeout(fade);
       window.clearTimeout(hide);
     };
-  }, [burst, seen]);
+  }, [burstId, seen]);
 
   if (shown === null) return null;
 

@@ -95,9 +95,22 @@ function commsSentence(satellites: Satellite[], c: CommsView): string | null {
       if (to.length === 0) return `${name} vacant`;
       return `${name} to ${to.join(" and ")}`;
     });
-    const dead = c.events.find(
-      (e) => e.level === "critical" && e.satId !== undefined && e.cause !== "isolated" && e.simTime >= since && e.simTime <= burstT,
-    );
+    // The failure that triggered this burst: the latest failure (critical,
+    // not a cut-off) after the previous handoff burst. The auction lands
+    // rounds x 2 s after the failure, so it is usually outside the 10 s window.
+    let prevBurstT = -Infinity;
+    for (const e of c.events) if (e.fn !== undefined && e.simTime < burstT) prevBurstT = Math.max(prevBurstT, e.simTime);
+    const dead = [...c.events]
+      .reverse()
+      .find(
+        (e) =>
+          e.level === "critical" &&
+          e.satId !== undefined &&
+          e.cause !== "isolated" &&
+          e.simTime > prevBurstT &&
+          e.simTime <= burstT &&
+          burstT - e.simTime <= 120,
+      );
     const n = latest.size;
     return (
       `Consensus auction: ${n} leader function${n === 1 ? "" : "s"} moved` +

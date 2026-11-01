@@ -96,8 +96,15 @@ export default function SwarmScene({ immersive = false, onController }: SwarmSce
         controller.setFormationShape(lastShape);
       }
       if (s.handoffs.at(-1) !== lastHandoff) {
-        // the store keeps the last 40, so find the last one seen by identity
-        for (const h of s.handoffs.slice(s.handoffs.indexOf(lastHandoff!) + 1)) controller.handoff(h.from, h.to, h.role);
+        // The store keeps the last 40: find the last one seen by identity. If it
+        // has rolled out of the window, take only the ones after its time, so old
+        // batons never fly again.
+        const i = lastHandoff === undefined ? -1 : s.handoffs.indexOf(lastHandoff);
+        const fresh =
+          i >= 0 || lastHandoff === undefined
+            ? s.handoffs.slice(i + 1)
+            : s.handoffs.filter((h) => h.t > lastHandoff!.t);
+        for (const h of fresh) controller.handoff(h.from, h.to, h.role);
         lastHandoff = s.handoffs.at(-1);
       }
       controller.update({

@@ -54,7 +54,7 @@ function Row({ label, value, tone, wrap }: { label: string; value: string; tone?
   const style = { ...(tone !== undefined ? { color: tone } : {}), ...(wrap === true ? { whiteSpace: "normal" as const } : {}) };
   return (
     <div className={styles.paramRow}>
-      <dt>{label}</dt>
+      <dt style={wrap === true ? { flexShrink: 0, maxWidth: "45%" } : undefined}>{label}</dt>
       <dd style={Object.keys(style).length > 0 ? style : undefined}>{value}</dd>
     </div>
   );

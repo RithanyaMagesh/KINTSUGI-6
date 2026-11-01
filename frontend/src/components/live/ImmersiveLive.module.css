@@ -1013,3 +1013,24 @@
   line-height: 1.4;
   will-change: transform, opacity;
 }
+
+/* ---- auction board, flush at the bottom of the Setup panel --------------- */
+
+.drawerFoot {
+  flex-shrink: 0;
+}
+
+.drawerFoot:empty {
+  display: none;
+}
+
+.drawerFoot > section {
+  width: 100%;
+  max-height: 45vh;
+  overflow-y: auto;
+  border-radius: 0 0 12px 12px;
+  border-width: 1px 0 0;
+  background: transparent;
+  backdrop-filter: none;
+  padding: var(--space-3) var(--space-4);
+}

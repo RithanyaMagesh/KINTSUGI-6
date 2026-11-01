@@ -496,7 +496,7 @@ export class SwarmSceneController {
       }
       p.mesh.position.copy(rec.group.position);
       p.mesh.quaternion.copy(this.camera.quaternion);
-      p.mesh.scale.setScalar(rec.marker.scale.x * (1 + 1.4 * u));
+      p.mesh.scale.setScalar(rec.marker.scale.x * (0.7 + 0.8 * u));
       (p.mesh.material as THREE.MeshBasicMaterial).opacity = 0.9 * (1 - u);
       return true;
     });

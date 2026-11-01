@@ -156,6 +156,10 @@ export default function LivePage() {
               <SatelliteList />
             </section>
           </div>
+          {/* flush at the bottom of the Setup panel, outside its scroll */}
+          <div className={styles.drawerFoot}>
+            <AuctionBoard />
+          </div>
         </aside>
 
         <aside className={styles.drawerRight} data-open={telemetryOpen || undefined} aria-label="Telemetry">
@@ -188,7 +192,6 @@ export default function LivePage() {
         )}
 
         <footer className={styles.bottom}>
-          <AuctionBoard />
           <RunSummaryCard />
           {hasSats && (
             <div className={styles.narration}>
