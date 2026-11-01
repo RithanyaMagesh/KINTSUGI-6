@@ -27,6 +27,16 @@ export interface Satellite {
   targetSlot?: string;
   failureType?: string; // "DEAD" | "THRUSTER_OUT" | "EPS_DEGRADE"
   risk?: number; // 0-1 failure-risk score — predictor-family frames only; omit when absent
+  // Engine v2 only (absent on v1 runs): docs/frontend-requests.md "Roles" / "v2 statuses".
+  roles?: string[]; // every role held, [] = none, ["spare"] = capable but idle
+  originalRole?: string; // scenario label ("was imager")
+  oldRole?: string; // previous frame's role, only on the tick it changed
+  fuelKg?: number; // propellant left [kg]
+  fuelMpsLeft?: number; // delta-v left [m/s]
+  thrust?: number; // thrust health k: 1 full, 0.5 half, 0 none
+  payloadOk?: boolean; // camera works
+  radioOk?: boolean; // heartbeat works
+  stuck?: boolean; // thruster stuck open
 }
 
 /** The three mission states in the timeline-spine order (§13.5). */

@@ -1,0 +1,783 @@
+[
+ {
+  "type": "event",
+  "sim_time": 300.0,
+  "level": "warning",
+  "message": "SAT-3 PAYLOAD_FAIL failure injected; recomputing trajectory..."
+ },
+ {
+  "type": "event",
+  "sim_time": 302.0,
+  "level": "warning",
+  "message": "SAT-3 camera failed; it keeps flying but can no longer image",
+  "sat_id": "SAT-3"
+ },
+ {
+  "type": "event",
+  "sim_time": 702.0,
+  "level": "warning",
+  "message": "SAT-4 RADIO_FAIL failure injected; recomputing trajectory..."
+ },
+ {
+  "type": "event",
+  "sim_time": 708.0,
+  "level": "warning",
+  "message": "SAT-4 lost its radio; it keeps flying but is silent",
+  "sat_id": "SAT-4"
+ },
+ {
+  "type": "event",
+  "sim_time": 1104.0,
+  "level": "warning",
+  "message": "SAT-5 PARTIAL_THRUST failure injected; recomputing trajectory..."
+ },
+ {
+  "type": "event",
+  "sim_time": 1506.0,
+  "level": "warning",
+  "message": "SAT-2 THRUSTER_STUCK_OPEN failure injected; recomputing trajectory..."
+ },
+ {
+  "type": "sim_state",
+  "sim_time": 1908.0,
+  "state": "FAILURE_DETECTED",
+  "scenario": "formation_cartwheel_6sat",
+  "seed": 42,
+  "sats": [
+   {
+    "id": "SAT-1",
+    "role": "leader",
+    "status": "healthy",
+    "r": [
+     -4118.418011412845,
+     -13715.876513761508,
+     -4118.464768278352
+    ],
+    "v": [
+     -7.5886464839894865,
+     9.122414812752952,
+     -7.595273495990615
+    ],
+    "dv_used": 0.15533421977226725,
+    "fuel_kg": 0.19841634497740263,
+    "fuel_mps_left": 19.965281159439417,
+    "k": 1.0,
+    "payload_ok": true,
+    "radio_ok": true,
+    "stuck": false,
+    "roles": [
+     "imager",
+     "leader"
+    ],
+    "original_role": "leader"
+   },
+   {
+    "id": "SAT-2",
+    "role": "imager",
+    "status": "degraded",
+    "r": [
+     -7643.1336821300765,
+     990.252646239934,
+     -7997.575328665609
+    ],
+    "v": [
+     2.767528540209079,
+     20.830709218509586,
+     0.15810151888902646
+    ],
+    "dv_used": 4.105225032077454,
+    "failure_type": "DEGRADED",
+    "fuel_kg": 0.15835560212846717,
+    "fuel_mps_left": 16.015287306681266,
+    "k": 1.0,
+    "payload_ok": true,
+    "radio_ok": true,
+    "stuck": true,
+    "roles": [
+     "imager"
+    ],
+    "original_role": "imager"
+   },
+   {
+    "id": "SAT-3",
+    "role": "spare",
+    "status": "degraded",
+    "r": [
+     -3878.7743343810916,
+     13993.016681114745,
+     -3880.0139976338664
+    ],
+    "v": [
+     7.741874898215888,
+     8.588826371585517,
+     7.7479447339223775
+    ],
+    "dv_used": 0.14589138438016921,
+    "failure_type": "PAYLOAD_FAILED",
+    "fuel_kg": 0.19851259821067335,
+    "fuel_mps_left": 19.974724002078684,
+    "k": 1.0,
+    "payload_ok": false,
+    "radio_ok": true,
+    "stuck": false,
+    "roles": [
+     "spare"
+    ],
+    "original_role": "imager"
+   },
+   {
+    "id": "SAT-4",
+    "role": "spare",
+    "status": "degraded",
+    "r": [
+     4119.659660750056,
+     13716.270631544672,
+     4118.544978050371
+    ],
+    "v": [
+     7.587559169145854,
+     -9.121187364392163,
+     7.595705445122952
+    ],
+    "dv_used": 0.23368690758031477,
+    "failure_type": "RADIO_SILENT",
+    "fuel_kg": 0.19761776554445942,
+    "fuel_mps_left": 19.886928426933643,
+    "k": 1.0,
+    "payload_ok": true,
+    "radio_ok": false,
+    "stuck": false,
+    "roles": [
+     "spare"
+    ],
+    "original_role": "imager"
+   },
+   {
+    "id": "SAT-5",
+    "role": "imager",
+    "status": "degraded",
+    "r": [
+     7997.991341580139,
+     -277.1473202633294,
+     7998.982487117703
+    ],
+    "v": [
+     -0.1532155948357955,
+     -17.71124574869609,
+     -0.15266845885147742
+    ],
+    "dv_used": 0.26429997853907633,
+    "failure_type": "DEGRADED",
+    "fuel_kg": 0.19730579699713363,
+    "fuel_mps_left": 19.856315337692674,
+    "k": 0.5,
+    "payload_ok": true,
+    "radio_ok": true,
+    "stuck": false,
+    "roles": [
+     "imager"
+    ],
+    "original_role": "imager"
+   },
+   {
+    "id": "SAT-6",
+    "role": "downlink",
+    "status": "healthy",
+    "r": [
+     3879.3838034378578,
+     -13993.703936104983,
+     3880.309452719138
+    ],
+    "v": [
+     -7.739964126204715,
+     -8.588696734132895,
+     -7.748647299861974
+    ],
+    "dv_used": 0.20591671654147817,
+    "fuel_kg": 0.19790078429212873,
+    "fuel_mps_left": 19.914698641317532,
+    "k": 1.0,
+    "payload_ok": true,
+    "radio_ok": true,
+    "stuck": false,
+    "roles": [
+     "downlink"
+    ],
+    "original_role": "downlink"
+   }
+  ],
+  "coverage": 0.3298647242455775,
+  "min_sep": 11314.69889059047,
+  "metrics": {
+   "detection_latency_s": 4.0,
+   "replanning_latency_ms": null
+  }
+ },
+ {
+  "type": "event",
+  "sim_time": 1908.0,
+  "level": "warning",
+  "message": "SAT-1 DEAD failure injected; recomputing trajectory..."
+ },
+ {
+  "type": "sim_state",
+  "sim_time": 1910.0,
+  "state": "FAILURE_DETECTED",
+  "scenario": "formation_cartwheel_6sat",
+  "seed": 42,
+  "sats": [
+   {
+    "id": "SAT-1",
+    "role": "leader",
+    "status": "failed",
+    "r": [
+     -4133.584927163667,
+     -13697.600819127756,
+     -4133.635867721967
+    ],
+    "v": [
+     -7.578263052512879,
+     9.156076627326874,
+     -7.585135546792701
+    ],
+    "dv_used": 0.15533421977226725,
+    "failure_type": "DEAD",
+    "fuel_kg": 0.19841634497740263,
+    "fuel_mps_left": 19.965281159439417,
+    "k": 0.0,
+    "payload_ok": false,
+    "radio_ok": false,
+    "stuck": false,
+    "roles": [
+     "imager",
+     "leader"
+    ],
+    "original_role": "leader"
+   },
+   {
+    "id": "SAT-2",
+    "role": "imager",
+    "status": "degraded",
+    "r": [
+     -7637.553832159852,
+     1031.9146633050239,
+     -7997.240160784779
+    ],
+    "v": [
+     2.812339313885065,
+     20.836707000217814,
+     0.17775343138923297
+    ],
+    "dv_used": 4.125435444693487,
+    "failure_type": "DEGRADED",
+    "fuel_kg": 0.15815165888587157,
+    "fuel_mps_left": 15.99507637340472,
+    "k": 1.0,
+    "payload_ok": true,
+    "radio_ok": true,
+    "stuck": true,
+    "roles": [
+     "imager"
+    ],
+    "original_role": "imager"
+   },
+   {
+    "id": "SAT-3",
+    "role": "spare",
+    "status": "degraded",
+    "r": [
+     -3863.2810959169233,
+     14010.157388299913,
+     -3864.518128344959
+    ],
+    "v": [
+     7.751357095062996,
+     8.554505543865922,
+     7.757434452107149
+    ],
+    "dv_used": 0.14595568782110915,
+    "failure_type": "PAYLOAD_FAILED",
+    "fuel_kg": 0.1985119427418876,
+    "fuel_mps_left": 19.974659698632465,
+    "k": 1.0,
+    "payload_ok": false,
+    "radio_ok": true,
+    "stuck": false,
+    "roles": [
+     "spare"
+    ],
+    "original_role": "imager"
+   },
+   {
+    "id": "SAT-4",
+    "role": "spare",
+    "status": "degraded",
+    "r": [
+     4134.8246847704295,
+     13697.997458622618,
+     4133.716958644516
+    ],
+    "v": [
+     7.577458553302051,
+     -9.154782611757625,
+     7.58558506114362
+    ],
+    "dv_used": 0.23378999652338706,
+    "failure_type": "RADIO_SILENT",
+    "fuel_kg": 0.1976167149558531,
+    "fuel_mps_left": 19.886825337977015,
+    "k": 1.0,
+    "payload_ok": true,
+    "radio_ok": false,
+    "stuck": false,
+    "roles": [
+     "spare"
+    ],
+    "original_role": "imager"
+   },
+   {
+    "id": "SAT-5",
+    "role": "imager",
+    "status": "degraded",
+    "r": [
+     7997.665334122263,
+     -312.56366023583973,
+     7998.657737919675
+    ],
+    "v": [
+     -0.17279152574185003,
+     -17.710516365826958,
+     -0.17228104163671468
+    ],
+    "dv_used": 0.26451187294908024,
+    "failure_type": "DEGRADED",
+    "fuel_kg": 0.19730363773083612,
+    "fuel_mps_left": 19.856103443225404,
+    "k": 0.5,
+    "payload_ok": true,
+    "radio_ok": true,
+    "stuck": false,
+    "roles": [
+     "imager"
+    ],
+    "original_role": "imager"
+   },
+   {
+    "id": "SAT-6",
+    "role": "downlink",
+    "status": "healthy",
+    "r": [
+     3863.894385725029,
+     -14010.844377334477,
+     3864.812179195423
+    ],
+    "v": [
+     -7.749446949303493,
+     -8.554369300677752,
+     -7.758136629984637
+    ],
+    "dv_used": 0.20618263115676208,
+    "fuel_kg": 0.19789807414072894,
+    "fuel_mps_left": 19.914432726612173,
+    "k": 1.0,
+    "payload_ok": true,
+    "radio_ok": true,
+    "stuck": false,
+    "roles": [
+     "downlink"
+    ],
+    "original_role": "downlink"
+   }
+  ],
+  "coverage": 0.24245577523413112,
+  "min_sep": 11315.165400738837,
+  "metrics": {
+   "detection_latency_s": 4.0,
+   "replanning_latency_ms": null
+  }
+ },
+ {
+  "type": "sim_state",
+  "sim_time": 1912.0,
+  "state": "FAILURE_DETECTED",
+  "scenario": "formation_cartwheel_6sat",
+  "seed": 42,
+  "sats": [
+   {
+    "id": "SAT-1",
+    "role": "none",
+    "status": "failed",
+    "r": [
+     -4148.731038784701,
+     -13679.257852314811,
+     -4148.786678775098
+    ],
+    "v": [
+     -7.567842363615368,
+     9.189693485292263,
+     -7.5749601615534745
+    ],
+    "dv_used": 0.15533421977226725,
+    "failure_type": "DEAD",
+    "fuel_kg": 0.19841634497740263,
+    "fuel_mps_left": 19.965281159439417,
+    "k": 0.0,
+    "payload_ok": false,
+    "radio_ok": false,
+    "stuck": false,
+    "roles": [],
+    "original_role": "leader",
+    "old_role": "leader"
+   },
+   {
+    "id": "SAT-2",
+    "role": "imager",
+    "status": "degraded",
+    "r": [
+     -7631.884253003855,
+     1073.5884663266588,
+     -7996.865717151118
+    ],
+    "v": [
+     2.8572576690898925,
+     20.84248753076647,
+     0.19740461333574533
+    ],
+    "dv_used": 4.145646898648366,
+    "failure_type": "DEGRADED",
+    "fuel_kg": 0.15794771564327598,
+    "fuel_mps_left": 15.974864398735674,
+    "k": 1.0,
+    "payload_ok": true,
+    "radio_ok": true,
+    "stuck": true,
+    "roles": [
+     "imager"
+    ],
+    "original_role": "imager"
+   },
+   {
+    "id": "SAT-3",
+    "role": "leader",
+    "status": "degraded",
+    "r": [
+     -3847.768930942312,
+     14027.229425939402,
+     -3849.0033164816364
+    ],
+    "v": [
+     7.760801401445786,
+     8.520142790799326,
+     7.766886117190382
+    ],
+    "dv_used": 0.14601934163505803,
+    "failure_type": "PAYLOAD_FAILED",
+    "fuel_kg": 0.19851129389509672,
+    "fuel_mps_left": 19.974596044813357,
+    "k": 1.0,
+    "payload_ok": false,
+    "radio_ok": true,
+    "stuck": false,
+    "roles": [
+     "leader"
+    ],
+    "original_role": "imager",
+    "old_role": "spare"
+   },
+   {
+    "id": "SAT-4",
+    "role": "spare",
+    "status": "degraded",
+    "r": [
+     4149.969470491904,
+     13679.657146633006,
+     4148.868686216654
+    ],
+    "v": [
+     7.567320880420169,
+     -9.188332925454983,
+     7.575427480672674
+    ],
+    "dv_used": 0.23389305475801303,
+    "failure_type": "RADIO_SILENT",
+    "fuel_kg": 0.19761566468047528,
+    "fuel_mps_left": 19.886722279728826,
+    "k": 1.0,
+    "payload_ok": true,
+    "radio_ok": false,
+    "stuck": false,
+    "roles": [
+     "spare"
+    ],
+    "original_role": "imager"
+   },
+   {
+    "id": "SAT-5",
+    "role": "imager",
+    "status": "degraded",
+    "r": [
+     7997.300175598372,
+     -347.9784621038824,
+     7998.293788173531
+    ],
+    "v": [
+     -0.19236664354480174,
+     -17.70970010033591,
+     -0.19189275963533936
+    ],
+    "dv_used": 0.26472354063563874,
+    "failure_type": "DEGRADED",
+    "fuel_kg": 0.19730148077608228,
+    "fuel_mps_left": 19.855891775481787,
+    "k": 0.5,
+    "payload_ok": true,
+    "radio_ok": true,
+    "stuck": false,
+    "roles": [
+     "imager"
+    ],
+    "original_role": "imager"
+   },
+   {
+    "id": "SAT-6",
+    "role": "downlink",
+    "status": "healthy",
+    "r": [
+     3848.386040213395,
+     -14027.916135810554,
+     3849.2959638861716
+    ],
+    "v": [
+     -7.75889191827669,
+     -8.519999943620459,
+     -7.767587893430923
+    ],
+    "dv_used": 0.20644903018299998,
+    "fuel_kg": 0.19789535905414496,
+    "fuel_mps_left": 19.914166327495444,
+    "k": 1.0,
+    "payload_ok": true,
+    "radio_ok": true,
+    "stuck": false,
+    "roles": [
+     "downlink"
+    ],
+    "original_role": "downlink"
+   }
+  ],
+  "coverage": 0.2445369406867846,
+  "min_sep": 11315.686905031118,
+  "metrics": {
+   "detection_latency_s": 4.0,
+   "replanning_latency_ms": null
+  }
+ },
+ {
+  "type": "event",
+  "sim_time": 1912.0,
+  "level": "critical",
+  "message": "SAT-1 DEAD failure detected",
+  "sat_id": "SAT-1"
+ },
+ {
+  "type": "event",
+  "sim_time": 1912.0,
+  "level": "info",
+  "message": "SAT-1 leader role handed to SAT-3 because SAT-1 failed",
+  "sat_id": "SAT-1"
+ },
+ {
+  "type": "event",
+  "sim_time": 3462.0,
+  "level": "warning",
+  "message": "SAT-2 ran out of propellant and can no longer maneuver",
+  "sat_id": "SAT-2"
+ },
+ {
+  "type": "sim_state",
+  "sim_time": 5676.0,
+  "state": "FAILURE_DETECTED",
+  "scenario": "formation_cartwheel_6sat",
+  "seed": 42,
+  "sats": [
+   {
+    "id": "SAT-1",
+    "role": "none",
+    "status": "failed",
+    "r": [
+     8085.371988084009,
+     -700.2456470122474,
+     8011.805621088856
+    ],
+    "v": [
+     -0.11350547311047277,
+     -17.87001141042588,
+     -0.04758156632288864
+    ],
+    "dv_used": 0.15533421977226725,
+    "failure_type": "DEAD",
+    "fuel_kg": 0.19841634497740263,
+    "fuel_mps_left": 19.965281159439417,
+    "k": 0.0,
+    "payload_ok": false,
+    "radio_ok": false,
+    "stuck": false,
+    "roles": [],
+    "original_role": "leader"
+   },
+   {
+    "id": "SAT-2",
+    "role": "imager",
+    "status": "degraded",
+    "r": [
+     21129.727685717065,
+     -178590.9237001538,
+     4242.555678156946
+    ],
+    "v": [
+     -35.69782105408635,
+     -43.4555177047708,
+     -7.569257726250549
+    ],
+    "dv_used": 20.120091377344213,
+    "failure_type": "FUEL_DEPLETED",
+    "fuel_kg": 0.0,
+    "fuel_mps_left": 0.0,
+    "k": 0.0,
+    "payload_ok": true,
+    "radio_ok": true,
+    "stuck": true,
+    "roles": [
+     "imager"
+    ],
+    "original_role": "imager"
+   },
+   {
+    "id": "SAT-3",
+    "role": "leader",
+    "status": "degraded",
+    "r": [
+     -3991.5517805525506,
+     -13864.09314103891,
+     -3992.6768125409035
+    ],
+    "v": [
+     -7.676179600276653,
+     8.838482464350694,
+     -7.671148881455315
+    ],
+    "dv_used": 0.5576181919078439,
+    "failure_type": "PAYLOAD_FAILED",
+    "fuel_kg": 0.1943179147985921,
+    "fuel_mps_left": 19.562997059612584,
+    "k": 1.0,
+    "payload_ok": false,
+    "radio_ok": true,
+    "stuck": false,
+    "roles": [
+     "leader"
+    ],
+    "original_role": "imager"
+   },
+   {
+    "id": "SAT-4",
+    "role": "spare",
+    "status": "degraded",
+    "r": [
+     -8000.499044902348,
+     -16.721229114869477,
+     -7999.659483205071
+    ],
+    "v": [
+     -0.01151650240848932,
+     17.70563018016467,
+     -0.008644452484125605
+    ],
+    "dv_used": 0.5532031673875274,
+    "failure_type": "RADIO_SILENT",
+    "fuel_kg": 0.19436287179998912,
+    "fuel_mps_left": 19.567412082212932,
+    "k": 1.0,
+    "payload_ok": true,
+    "radio_ok": false,
+    "stuck": false,
+    "roles": [
+     "spare"
+    ],
+    "original_role": "imager"
+   },
+   {
+    "id": "SAT-5",
+    "role": "imager",
+    "status": "degraded",
+    "r": [
+     -4007.8959187858145,
+     13847.05915464963,
+     -4007.1073921823054
+    ],
+    "v": [
+     7.665555578854149,
+     8.86853601630311,
+     7.662200303929907
+    ],
+    "dv_used": 0.5536184335922125,
+    "failure_type": "DEGRADED",
+    "fuel_kg": 0.19435864325700666,
+    "fuel_mps_left": 19.566996818359172,
+    "k": 0.5,
+    "payload_ok": true,
+    "radio_ok": true,
+    "stuck": false,
+    "roles": [
+     "imager"
+    ],
+    "original_role": "imager"
+   },
+   {
+    "id": "SAT-6",
+    "role": "downlink",
+    "status": "healthy",
+    "r": [
+     3992.8214815883216,
+     13864.471162317413,
+     3992.7511485262426
+    ],
+    "v": [
+     7.675120250301288,
+     -8.83718510979812,
+     7.671561893220885
+    ],
+    "dv_used": 0.555646025386991,
+    "fuel_kg": 0.1943379968097956,
+    "fuel_mps_left": 19.564969228721882,
+    "k": 1.0,
+    "payload_ok": true,
+    "radio_ok": true,
+    "stuck": false,
+    "roles": [
+     "downlink"
+    ],
+    "original_role": "downlink"
+   }
+  ],
+  "coverage": 0.1425598335067638,
+  "min_sep": 11314.129165340477,
+  "metrics": {
+   "detection_latency_s": 0.0,
+   "replanning_latency_ms": null
+  }
+ },
+ {
+  "type": "run_summary",
+  "coverage_mean_last_orbit": 0.2520435043483456,
+  "sim_time": 5676.0,
+  "scenario": "formation_cartwheel_6sat",
+  "seed": 42
+ },
+ {
+  "type": "event",
+  "sim_time": 5676.0,
+  "level": "info",
+  "message": "Run complete"
+ }
+]

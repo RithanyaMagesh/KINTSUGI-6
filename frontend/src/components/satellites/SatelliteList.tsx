@@ -1,13 +1,11 @@
 // Satellite list — status as color AND text (§22 accessibility rule). The
 // leader role renders in the leader token, always paired with the text label
 // (§13.1). Rows come only from the live stream — none, no rows.
-// Appendix D: suspect satellites carry a SUSPECT text label next to the status
-// label (caution token — text always present, colorblind rule); the optional
-// per-satellite risk field renders only when a frame actually carries it
-// (the Risk column exists for that frame — nothing is invented when absent).
+// The optional per-satellite risk field renders only when a frame actually
+// carries it (the Risk column exists for that frame — nothing is invented).
 import { useSimStore } from "../../stores/simStore";
 import { useUiStore } from "../../stores/uiStore";
-import { suspectFor } from "../../stores/roleHistoryStore";
+import { faultLabel, rolesLabel, satLabel, statusLabel } from "../live/hudFormat";
 import { satelliteStatusColor } from "../../utils/colors";
 import { formatMsPerS } from "../../utils/format";
 import chrome from "../../styles/chrome.module.css";
@@ -31,11 +29,11 @@ export default function SatelliteList() {
     <table className={styles.table}>
       <thead>
         <tr>
-          <th scope="col" className={styles.th}>ID</th>
+          <th scope="col" className={styles.th}>Satellite</th>
           <th scope="col" className={styles.th}>Role</th>
           <th scope="col" className={styles.th}>Status</th>
-          {riskOnWire && <th scope="col" className={styles.thRight}>Risk</th>}
-          <th scope="col" className={styles.thRight}>Δv used</th>
+          {riskOnWire && <th scope="col" className={styles.thRight}>AI risk</th>}
+          <th scope="col" className={styles.thRight}>Fuel spent</th>
         </tr>
       </thead>
       <tbody>
@@ -53,8 +51,7 @@ export default function SatelliteList() {
   );
 }
 
-/** One row. The suspect verdict is read per row so each row subscribes to its
- * own slice of the verdicts record. */
+/** One selectable row. */
 function SatelliteRow(props: {
   sat: Satellite;
   selected: boolean;
@@ -62,7 +59,6 @@ function SatelliteRow(props: {
   onSelect: (id: string) => void;
 }) {
   const sat = props.sat;
-  const verdict = suspectFor(sat.id);
 
   return (
     <tr
@@ -79,24 +75,23 @@ function SatelliteRow(props: {
         }
       }}
     >
-      <td className={styles.mono}>{sat.id}</td>
-      <td className={sat.role === "leader" ? styles.leader : styles.role}>{sat.role}</td>
+      <td className={styles.id}>{sat.id}</td>
+      <td className={sat.role === "leader" ? styles.leader : styles.role}>{rolesLabel(sat)}</td>
       <td className={styles.status}>
         <span className={styles.dot} style={{ background: satelliteStatusColor(sat.status) }} />
-        {sat.status}
-        {sat.failureType !== undefined && (
-          <span className={styles.failureType}> {sat.failureType}</span>
+        {satLabel(sat)}
+        {sat.failureType !== undefined && satLabel(sat) === statusLabel(sat.status) && (
+          <span className={styles.failureType}> ({faultLabel(sat.failureType)})</span>
         )}
-        {verdict?.suspect && <span className={styles.suspect}> SUSPECT</span>}
       </td>
       {props.showRisk && (
         // Column alignment: an empty cell keeps the row's columns aligned when
         // this satellite's frame row carries no risk (nothing is rendered).
-        <td className={styles.monoRight}>
+        <td className={styles.numRight}>
           {sat.risk !== undefined ? sat.risk.toFixed(2) : ""}
         </td>
       )}
-      <td className={styles.monoRight}>{formatMsPerS(sat.dv_used)}</td>
+      <td className={styles.numRight}>{formatMsPerS(sat.dv_used)}</td>
     </tr>
   );
 }

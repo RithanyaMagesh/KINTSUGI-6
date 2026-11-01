@@ -4,8 +4,8 @@
 // actually carries a score for.
 //
 // Claims honesty (audit_out/AUDIT.md + ENDGAME_PLAN §7): the LightGBM model is
-// strictly display-only — cut from the control loop by the pre-registered
-// oracle sweep (+0.0235 pp vs 0.5 pp threshold). Reactive 4 s heartbeat
+// strictly display-only — not wired into the control loop (an open decision;
+// the sweeps disagree, see GATES.md). Reactive 4 s heartbeat
 // detection drives all reassignments; no risk number is ever invented.
 import { useState } from "react";
 import { useSimStore } from "../../stores/simStore";
@@ -24,9 +24,9 @@ export default function RiskPanel() {
   );
 
   return (
-    <section className={styles.panel} aria-label="AI early warning">
+    <section className={styles.panel} aria-label="AI risk">
       <div className={styles.panelHead}>
-        <h2 className={chrome.panelTitle}>AI early warning (display-only)</h2>
+        <h2 className={chrome.panelTitle}>AI risk (shown only, not used for decisions)</h2>
         <label className={styles.toggle}>
           <input
             type="checkbox"
@@ -61,16 +61,12 @@ export default function RiskPanel() {
               ))}
             </ul>
             <p className={chrome.hint}>
-              Display-only LightGBM precursor score (sats[].risk); cut from the
-              control loop by the oracle kill switch (+0.0235 pp vs 0.5 pp
-              threshold). Reactive 4 s heartbeat detection drives recovery.
+              A learned risk score per satellite. It never triggers recovery; missed heartbeats do.
             </p>
           </>
         ) : (
           <p className={styles.riskAbsent}>
-            No sats[].risk scores on the stream — enable &quot;AI risk overlay&quot; before
-            starting a run to attach the offline LightGBM precursor scores
-            (display-only, not in the control loop; <a href="#/docs">see Docs</a>).
+            Turn on AI risk in Setup before starting a run to see scores.
           </p>
         ))}
     </section>

@@ -1,30 +1,15 @@
 // Docs — the reference page: architecture, physics, wire contract, recovery
-// policies, AI model status, reproducibility. Reference tone; every claim
-// names its source (docs/MASTER_PROMPT.md, docs/FRONTEND_SPEC.md, docs/
-// IMPLEMENTATION_NOTES.md, docs/ENDGAME_PLAN.md §7, GATES.md decisions,
-// AGENTS.md commands). Commands and state literals render mono (§13.2);
-// definition-list rows, not cards (§13.3). Route names and file names are
-// taken from the tree (cubesat/api.py routes verified 2026-10-04).
+// policies, AI model status, reproducibility, and where each headline number
+// comes from. Technical prose is fine here; file paths and spec numbers are not.
 import PageShell from "../../pages/PageShell";
 import styles from "./pages.module.css";
-
-// The serve/run commands of record — AGENTS.md "Commands" section, verbatim.
-const COMMANDS = `uv sync --locked
-uv run ruff check .
-uv run pytest -q
-uv run python -m cubesat.run --scenario data/scenarios/two_failure.json --seed 42 --out data/logs/two_failure.jsonl
-uv run uvicorn cubesat.api:app --port 8000`;
-
-// The sealed pipeline's repro of record (GATES.md, P4 Gate 0).
-const PREDICTOR_COMMAND = `uv run python files/predictor_pipeline.py run --out out2`;
 
 export default function DocsPage() {
   return (
     <PageShell title="Docs">
       <p className={styles.lede}>
-        The system behind the console, in reference form. Sources: docs/MASTER_PROMPT.md,
-        docs/FRONTEND_SPEC.md, docs/IMPLEMENTATION_NOTES.md, docs/ENDGAME_PLAN.md, and the
-        GATES.md decision ledger.
+        The system behind KINTSUGI-6, in reference form, and where every number on the
+        overview page comes from.
       </p>
 
       <section className={styles.section} aria-labelledby="docs-arch">
@@ -40,22 +25,17 @@ export default function DocsPage() {
           <div className={styles.dlRow}>
             <span className={styles.dt}>Scenario</span>
             <p className={styles.dd}>
-              <span className={styles.lit}>data/scenarios/*.json</span> — pydantic-validated:
-              chief orbit, formation slots, roles, failure schedule, controller gains,
-              allocation settings. The console&apos;s{" "}
-              <span className={styles.lit}>Add your own scenario…</span> uploads here (POST{" "}
-              <span className={styles.lit}>/scenarios/upload</span>, server-side validation).
+              A validated JSON file: chief orbit, formation slots, roles, failure schedule,
+              controller gains and allocation settings. The live page builds one from your
+              setup choices and the server validates it before running.
             </p>
           </div>
           <div className={styles.dlRow}>
             <span className={styles.dt}>Sim core</span>
             <p className={styles.dd}>
-              <span className={styles.lit}>cubesat/sim.py</span> — a pure step function
-              (deterministic; the replanner runs between steps). Failure schedule, heartbeat
-              detection, the mission state machine, and the two-step allocation live here with{" "}
-              <span className={styles.lit}>cubesat/hcw.py</span>,{" "}
-              <span className={styles.lit}>cubesat/pd.py</span> and{" "}
-              <span className={styles.lit}>cubesat/allocate.py</span>.
+              A pure, deterministic step function; the replanner runs between steps. It holds
+              the failure schedule, heartbeat detection, the mission state machine, the orbit
+              dynamics, the slot controller and the two-step allocation.
             </p>
           </div>
           <div className={styles.dlRow}>
@@ -72,8 +52,7 @@ export default function DocsPage() {
           <div className={styles.dlRow}>
             <span className={styles.dt}>Wire</span>
             <p className={styles.dd}>
-              One FastAPI service (<span className={styles.lit}>cubesat/api.py</span>) serves
-              REST control, the <span className={styles.lit}>/ws/state</span> stream, and the
+              One FastAPI service serves REST control, the <span className={styles.lit}>/ws/state</span> stream, and the
               built console as static files. Replay playback is backend-owned and streams over
               the same socket.
             </p>
@@ -81,10 +60,9 @@ export default function DocsPage() {
           <div className={styles.dlRow}>
             <span className={styles.dt}>Console</span>
             <p className={styles.dd}>
-              React 18 + TypeScript + Zustand + Recharts + plain Three.js. One deserializer (
-              <span className={styles.lit}>src/api/deserializer.ts</span>) serves live WS and
-              replay alike; every displayed value traces to it, otherwise the UI renders{" "}
-              <span className={styles.lit}>unmeasured</span>.
+              React 18 + TypeScript + Zustand + Recharts + plain Three.js. One deserializer
+              serves live and replay alike; every displayed value traces to it, otherwise the
+              UI says &quot;unmeasured&quot;.
             </p>
           </div>
         </div>
@@ -111,17 +89,18 @@ z'' + n²z          = az`}</pre>
         </p>
         <p className={styles.p}>
           Stated plainly, the two known limitations: the CW linearization error grows with
-          separation — measured at 3.1 m over 3 orbits for a 1 km ellipse but 2984.5 m at the
-          11 km formation scale — and the engine limit is mission-shaping. The committed demo
+          separation — measured at 3.1 m over 3 orbits for a 1 km ellipse and 1578.5 m at the
+          8 km demo scale — and the engine limit is mission-shaping. The committed demo
           scenario carries <span className={styles.lit}>a_max</span> = 0.1 m/s² because the
-          measured default 0.01 m/s² cannot complete the 8 km-scale transfers at all (CW
-          dynamics cap what a saturated controller can chase); the resulting delta-v bill, up
-          to 193.68 m/s per satellite, is shown as measured rather than tuned away.
+          default 0.01 m/s² diverged on the 8 km-scale transfers in the 2026-09-28 sweep (not
+          re-run since); the resulting delta-v bill, 193.68 m/s on the busiest satellite in
+          the two-failure run and 251.24 m/s worst over all 15 pairs, is shown as measured
+          rather than tuned away.
         </p>
         <p className={`${styles.p} ${styles.muted}`}>
-          Verification behind these numbers: STM vs numerical integration, ellipse closure,
-          CW-vs-Kepler cross-checks, saturation and determinism tests — the commands are in
-          docs/IMPLEMENTATION_NOTES.md.
+          Verification behind these numbers: state-transition matrix vs numerical
+          integration, ellipse closure, CW-vs-Kepler cross-checks, saturation and determinism
+          tests, all in the automated test suite.
         </p>
       </section>
 
@@ -152,8 +131,7 @@ z'' + n²z          = az`}</pre>
               , <span className={styles.lit}>POST /failure/inject</span>,{" "}
               <span className={styles.lit}>GET /replay/files</span>,{" "}
               <span className={styles.lit}>{"GET /replay/file/{filename}"}</span>,{" "}
-              <span className={styles.lit}>POST /replay/load|pause|resume|seek|speed|stop</span>{" "}
-              (routes as implemented in cubesat/api.py).
+              <span className={styles.lit}>POST /replay/load|pause|resume|seek|speed|stop</span>.
             </p>
           </div>
         </div>
@@ -166,55 +144,55 @@ z'' + n²z          = az`}</pre>
         <p className={styles.p}>
           The engine&apos;s default is the two-step allocation: choose the survivors&apos;
           formation (feasible in separation and delta-v, maximizing coverage), then assign
-          survivors to slots by Hungarian assignment on the cost matrix —{" "}
-          <span className={styles.lit}>cubesat/allocate.py</span>.
+          survivors to slots by Hungarian assignment on the cost matrix (the cheapest overall
+          matching of survivors to slots).
         </p>
         <p className={styles.p}>
           Four benchmark policies exist for comparison — the measurement benchmark runs all 15
-          possible two-failure pairs of the 6-satellite formation against each of them (
-          <span className={styles.lit}>cubesat/benchmark.py</span>, policy order{" "}
-          <span className={styles.lit}>do_nothing, even_split, greedy, hungarian,
-          hungarian_keepout</span>):
+          possible two-failure pairs of the 6-satellite formation against each of them and
+          the shipped policy; the committed sweep compares four of them, 60 runs in all
+          (the keep-out variant is measured separately and was cut):
         </p>
         <div className={styles.dl}>
           <div className={styles.dlRow}>
-            <span className={styles.dt}>do_nothing</span>
+            <span className={styles.dt}>Do nothing</span>
             <p className={styles.dd}>
               Detection only — survivors hold their original slots. The baseline every
               recovery is measured against.
             </p>
           </div>
           <div className={styles.dlRow}>
-            <span className={styles.dt}>even_split</span>
+            <span className={styles.dt}>Even split</span>
             <p className={styles.dd}>
               Even redistribution — the naive rule from the RL-retasking literature,
-              re-implemented as a benchmark and adapted to formation slots (
-              <span className={styles.lit}>cubesat/benchmark_policies.py</span>). Cited, not
-              claimed as ours.
+              re-implemented as a benchmark and adapted to formation slots. Cited, not claimed
+              as ours.
             </p>
           </div>
           <div className={styles.dlRow}>
-            <span className={styles.dt}>greedy</span>
+            <span className={styles.dt}>Greedy</span>
             <p className={styles.dd}>
               Nearest-seat fallback — survivors in order take their cheapest available slot;
               the engine&apos;s graceful-degradation toggle.
             </p>
           </div>
           <div className={styles.dlRow}>
-            <span className={styles.dt}>hungarian_keepout</span>
+            <span className={styles.dt}>Hungarian with keep-out</span>
             <p className={styles.dd}>
               The shipped Hungarian path plus one extra cost term: a per-seat keep-out penalty
-              pushing assignments away from coasting dead satellites (
-              <span className={styles.lit}>cubesat/benchmark_policies.py</span>).
+              pushing assignments away from coasting dead satellites.
             </p>
           </div>
         </div>
         <p className={styles.p}>
-          What the comparison showed on the committed demo scenario (seed 42): no-recovery
-          coverage drops 15.91 points after the two failures; recovery ends +4.93 points above
-          the no-recovery baseline, with detection latency 4 s, recovery complete at
-          t = 3114 s, worst separation 3095.1 m (threshold 2000 m), and delta-v up to 193.68
-          m/s on the hardest-working satellite.
+          On the committed two-failure demo (the SAT-2/SAT-3 pair, the best of the 15 pairs):
+          no-recovery coverage drops 15.91 points; recovery ends +4.93 points above it, and
+          recovery completes at t = 3114 s. Across all 15 pairs the mean is −2.13 points
+          (per-pair range −10.14 to +4.93): the policy protects the critical roles, not
+          coverage. Detection takes 4 s by construction (3 missed heartbeats at 2 s ticks).
+          Closest approach was 3095.1 m in this pair; the worst survivor-to-dead clearance
+          over all 15 pairs is 1852.5 m, under the 2000 m planning floor, which applies to
+          destination slots, not transfers.
         </p>
       </section>
 
@@ -226,19 +204,15 @@ z'' + n²z          = az`}</pre>
           A LightGBM failure-risk model was trained as a proof of concept on synthetic
           degradation telemetry (bus voltage, state of charge, thrust duty, heartbeat latency
           and jitter) generated around the simulator&apos;s own deterministic failure
-          schedule. The pipeline and the model artifact are sealed and hash-pinned —{" "}
-          <span className={styles.lit}>files/predictor_pipeline.py</span> (source sha256
-          self-enforced by <span className={styles.lit}>out2/test_manifest.json</span>) and{" "}
-          <span className={styles.lit}>models/predictor.txt</span> (
-          <span className={styles.lit}>models/predictor_manifest.json</span>, LightGBM 4.7.0).
-          CI verifies the hashes; it never retrains.
+          schedule. The pipeline and the model are sealed and pinned by SHA-256 hashes
+          (LightGBM 4.7.0); CI verifies the hashes and never retrains.
         </p>
         <p className={styles.p}>
           Offline, on the held-out test runs, the model detects every slow-failure precursor
           and flags them earlier than the EWMA/CUSUM baselines — a paired median lead gain of
-          260.0 s, 31 of 31 paired events earlier (sign-test p ≈ 9.3e-10) — but the caveats
-          are part of the result: it does not generalize to unseen failure families (family
-          holdout 0/15), and sudden death is unpredictable by construction (1 of 16 events; a
+          260.0 s over EWMA (a gain over the baseline, not its own lead time), 31 of 31 paired
+          events earlier (sign-test p ≈ 9.3e-10), at 0.48 false alarms per satellite-orbit.
+          Generalization to unseen failure families is unmeasured, and sudden death is unpredictable by construction (1 of 16 events; a
           satellite that dies without warning has no precursor — the reactive 4 s detection is
           the safety net).
         </p>
@@ -246,15 +220,12 @@ z'' + n²z          = az`}</pre>
           It is not wired into the swarm. Before any integration, a pre-registered kill switch
           ran an oracle sweep — an idealized trigger that knows each failure time exactly,
           sweeping warning lead times — asking whether warning is worth anything to the
-          mission. Maximum measured gain: 0.0235 percentage points of critical-seat health,
-          far below the pre-declared 0.5 point threshold, so the verdict was CUT: the demo
-          ships reactive-only, plus the measured value-of-warning curve. The Suspect
-          annotation in the satellite detail is a rule-based drift detector, not this model.
+          mission. On the Gate-2 sweep (sudden deaths) even a perfect warning added at most
+          0.0235 percentage points, so that verdict was CUT. The later gradual-power-fade
+          sweep came out CLEAR (+1.80 points at 300 s of warning, +10.60 best). Whether to wire
+          warnings into the control loop is still an open decision, so the demo stays
+          reactive and the model is display-only.
         </p>
-        <p className={`${styles.p} ${styles.muted}`}>
-          Reproduce the sealed results (the outputs must stay byte-identical afterward):
-        </p>
-        <pre className={styles.cmd}>{PREDICTOR_COMMAND}</pre>
       </section>
 
       <section className={styles.section} aria-labelledby="docs-repro">
@@ -268,12 +239,46 @@ z'' + n²z          = az`}</pre>
           replay is frozen evidence, and any run anyone reproduces matches the run that
           produced every number on this page.
         </p>
-        <p className={styles.p}>The commands of record:</p>
-        <pre className={styles.cmd}>{COMMANDS}</pre>
-        <p className={`${styles.p} ${styles.muted}`}>
-          The fourth command writes the demo log the console replays; the fifth serves the
-          API, the WebSocket and the console on port 8000.
+        <p className={styles.p}>
+          The repository README lists the exact commands that regenerate every log and
+          benchmark.
         </p>
+      </section>
+
+      <section className={styles.section} aria-labelledby="docs-numbers">
+        <h2 className={styles.sectionTitle} id="docs-numbers">
+          Where the overview numbers come from
+        </h2>
+        <div className={styles.dl}>
+          <div className={styles.dlRow}>
+            <span className={styles.dt}>4 s detection</span>
+            <p className={styles.dd}>
+              Three missed heartbeats at 2 s ticks with ideal comms, so 4 s by construction
+              for a kill-type failure, not a measured detector latency.
+            </p>
+          </div>
+          <div className={styles.dlRow}>
+            <span className={styles.dt}>15 / 15 pairs</span>
+            <p className={styles.dd}>
+              Across all 15 two-failure pairs of the 6-satellite formation, the shipped policy
+              keeps both the leader and the downlink role held in every pair; with no
+              recovery that happens in 6 of 15.
+            </p>
+          </div>
+          <div className={styles.dlRow}>
+            <span className={styles.dt}>60 runs</span>
+            <p className={styles.dd}>
+              The benchmark: 15 failure pairs, each run under 4 policies, no-recovery included.
+            </p>
+          </div>
+          <div className={styles.dlRow}>
+            <span className={styles.dt}>Byte-identical</span>
+            <p className={styles.dd}>
+              Re-running the same scenario with the same seed on the same machine reproduces
+              the log exactly, checked against a committed SHA-256 hash in the test suite.
+            </p>
+          </div>
+        </div>
       </section>
     </PageShell>
   );

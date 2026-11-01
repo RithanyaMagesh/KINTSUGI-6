@@ -12,7 +12,7 @@ export function missionStateColor(state: MissionState | null): string {
     case "RECONFIGURING":
       return "var(--status-caution)";
     case "RECOVERED":
-      return "var(--status-info)";
+      return "var(--status-repaired)";
     case "DEGRADED":
       return "var(--status-caution)";
     default:
@@ -31,7 +31,7 @@ export function satelliteStatusColor(status: string): string {
     case "reconfiguring":
       return "var(--status-caution)";
     case "recovered":
-      return "var(--status-info)";
+      return "var(--status-repaired)";
     default:
       return "var(--ink-faint)";
   }

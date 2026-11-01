@@ -13,13 +13,14 @@ import type {
   SimStateMessage,
 } from "../types/events";
 import type { Satellite } from "../types/satellite";
-import type { SimEvent, EventLevel } from "../types/events";
+import type { SimEvent, EventLevel, RunSummary } from "../types/events";
 import type { SimFrame, SimMode } from "../types/telemetry";
 
 export type Deserialized =
   | { kind: "frame"; frame: SimFrame }
   | { kind: "event"; event: SimEvent }
   | { kind: "reassignment"; reassignment: RoleReassignmentMessage }
+  | { kind: "summary"; summary: RunSummary }
   | {
       kind: "hello";
       mode: SimMode;
@@ -28,6 +29,8 @@ export type Deserialized =
       /** Recovery policy the session reports (additive `policy` field). null
        * while the backend predates the field — never guessed (invariant 1). */
       policy: string | null;
+      /** Scenario keep-out floor [m]; null = unknown (replay / stopped). */
+      minSepM: number | null;
     };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -73,7 +76,26 @@ export function toSatellite(raw: unknown): Satellite | null {
     targetSlot: typeof raw.target_slot === "string" ? raw.target_slot : undefined,
     failureType: typeof raw.failure_type === "string" ? raw.failure_type : undefined,
     risk: typeof raw.risk === "number" ? raw.risk : undefined,
+    roles: Array.isArray(raw.roles) ? raw.roles.filter((x): x is string => typeof x === "string") : undefined,
+    originalRole: str(raw.original_role),
+    oldRole: str(raw.old_role),
+    fuelKg: num(raw.fuel_kg),
+    fuelMpsLeft: num(raw.fuel_mps_left),
+    thrust: num(raw.k),
+    payloadOk: bool(raw.payload_ok),
+    radioOk: bool(raw.radio_ok),
+    stuck: bool(raw.stuck),
   };
+}
+
+function num(x: unknown): number | undefined {
+  return typeof x === "number" && Number.isFinite(x) ? x : undefined;
+}
+function str(x: unknown): string | undefined {
+  return typeof x === "string" && x.length > 0 ? x : undefined;
+}
+function bool(x: unknown): boolean | undefined {
+  return typeof x === "boolean" ? x : undefined;
 }
 
 /** sim_state -> SimFrame (the §15.1 frame shape). INIT maps to the empty
@@ -113,11 +135,17 @@ const LEVELS: EventLevel[] = ["info", "warning", "critical"];
 function toEvent(msg: EventMessage): SimEvent | null {
   if (typeof msg.message !== "string") return null;
   const level = LEVELS.includes(msg.level as EventLevel) ? (msg.level as EventLevel) : "info";
-  return {
+  const raw = msg as unknown as Record<string, unknown>;
+  const ev: SimEvent = {
     simTime: typeof msg.sim_time === "number" ? msg.sim_time : 0,
     level,
     message: msg.message,
   };
+  for (const [k, w] of [["satId", "sat_id"], ["from", "from"], ["to", "to"], ["label", "label"]] as const) {
+    const v = str(raw[w]);
+    if (v !== undefined) ev[k] = v;
+  }
+  return ev;
 }
 
 /** Parse one raw wire message. Returns null for anything that is not one of
@@ -147,6 +175,15 @@ export function deserializeMessage(raw: unknown): Deserialized | null {
       if (!Array.isArray(r.assignments)) return null;
       return { kind: "reassignment", reassignment: r };
     }
+    case "run_summary":
+      return {
+        kind: "summary",
+        summary: {
+          coverageMeanLastOrbit: num(raw.coverage_mean_last_orbit) ?? null,
+          simTime: num(raw.sim_time) ?? null,
+          scenario: str(raw.scenario) ?? null,
+        },
+      };
     case "hello": {
       const mode = raw.mode === "live" || raw.mode === "replay" ? raw.mode : "stopped";
       return {
@@ -155,6 +192,7 @@ export function deserializeMessage(raw: unknown): Deserialized | null {
         scenario: typeof raw.scenario === "string" ? raw.scenario : null,
         seed: typeof raw.seed === "number" ? raw.seed : null,
         policy: readPolicy(raw),
+        minSepM: typeof raw.min_sep_m === "number" ? raw.min_sep_m : null,
       };
     }
     default:

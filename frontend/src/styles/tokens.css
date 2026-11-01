@@ -22,8 +22,16 @@
   --status-nominal: #2fbf71; /* healthy / active imager / nominal curve */
   --status-caution: #e0a020; /* reconfiguring / Hungarian transfer / warnings */
   --status-failed: #e05252; /* failure / critical / ballistic keep-out hazard */
-  --status-info: #5b9bf0; /* recovered / informational / active selection */
-  --status-leader: #f5cc4d; /* leader marker & crown — always paired with text */
+  --status-info: #5b9bf0; /* informational / active selection — never "recovered" (that is gold) */
+  --status-leader: #b9a8ff; /* leader marker & crown — violet so gold stays "repaired" only */
+  --status-repaired: #d4a84b; /* kintsugi gold — "recovered/repaired" and nothing else */
+
+  /* -- Immersive live view: glass HUD over the full-bleed 3D stage */
+  --space-void: #020305; /* full-screen stage behind the globe */
+  --glass: rgba(8, 11, 15, 0.62);
+  --glass-strong: rgba(8, 11, 15, 0.86);
+  --glass-line: rgba(232, 236, 242, 0.1);
+  --glass-line-strong: rgba(232, 236, 242, 0.22);
 
   --focus-ring: #e8ecf2; /* 2px outline on :focus-visible */
 
@@ -41,12 +49,14 @@
   --hero-red: #e5484d; /* the broken satellite */
   --hero-star: #c9d2de;
   --hero-light-key: #ffffff;
+  --hero-sun: #fffaf2; /* the sun from orbit: near-white, hard */
+  --hero-sun-glow: #ffe2b8; /* faint glare around it (camera bloom, not a corona) */
   --hero-light-rim: #6f9bff;
   --cubesat-frame: #c3c8cf; /* anodized aluminium rails */
   --cubesat-cap: #2a2f36;
-  --cubesat-panel: #1e4fd6; /* solar cells */
-  --cubesat-panel-line: #3d6cf2;
-  --cubesat-panel-gap: #0a1020;
+  --cubesat-panel: #2a3f8f; /* triple-junction cells: deep navy, near black */
+  --cubesat-panel-line: #7d8799; /* silver contact fingers */
+  --cubesat-panel-gap: #0b0e14;
   --cubesat-gold: #c9a44a; /* tape antennas */
 
   /* -- 3D scene extras — read through components/three/sceneColors.ts */
@@ -102,7 +112,13 @@
   --status-caution: #b87800;
   --status-failed: #c82828;
   --status-info: #1d64c8;
-  --status-leader: #a87600;
+  --status-leader: #6b55c9;
+  --status-repaired: #95701f;
+
+  --glass: rgba(255, 255, 255, 0.7);
+  --glass-strong: rgba(255, 255, 255, 0.92);
+  --glass-line: rgba(17, 22, 31, 0.1);
+  --glass-line-strong: rgba(17, 22, 31, 0.22);
 
   --focus-ring: #11161f;
 
@@ -114,4 +130,29 @@
   --scene-cw-ellipse: #168045;
   --scene-cone: #168045;
   --scene-star: #64748b;
+}
+
+/* The live view is space: it keeps the dark palette even in light mode, so
+   the glass HUD and labels stay readable over the black stage. */
+:root[data-theme="light"] [data-stage="space"] {
+  --bg: #0b0d10;
+  --panel: #11151b;
+  --panel-raised: #181e26;
+  --border: #222933;
+  --border-strong: #343f4e;
+  --ink: #e8ecf2;
+  --ink-muted: #98a2b0;
+  --ink-faint: #5e6875;
+  --status-nominal: #2fbf71;
+  --status-caution: #e0a020;
+  --status-failed: #e05252;
+  --status-info: #5b9bf0;
+  --status-leader: #b9a8ff;
+  --status-repaired: #d4a84b;
+  --glass: rgba(8, 11, 15, 0.62);
+  --glass-strong: rgba(8, 11, 15, 0.86);
+  --glass-line: rgba(232, 236, 242, 0.1);
+  --glass-line-strong: rgba(232, 236, 242, 0.22);
+  --focus-ring: #e8ecf2;
+  color-scheme: dark;
 }

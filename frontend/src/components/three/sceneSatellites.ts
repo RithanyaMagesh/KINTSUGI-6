@@ -6,6 +6,7 @@
 // - "local" (Formation array view): maps raw LVLH coordinates [y, x, z] onto
 //   the close-up 2:1 Clohessy-Wiltshire relative formation grid.
 // All colors derive strictly from tokens.css via sceneColors.ts (§13.1).
+import { rolesLabel } from "../live/hudFormat";
 import * as THREE from "three";
 import type { Satellite } from "../../types/satellite";
 import type { OrbitViewMode } from "../../stores/uiStore";
@@ -13,13 +14,55 @@ import { ORBIT_INCLINATION_RAD, ORBIT_RADIUS_FACTOR } from "./sceneEarth";
 import { SCENE_TOKENS, statusToken, tokenColor } from "./sceneColors";
 import type { LabelLayer } from "./sceneLabels";
 import styles from "./SwarmScene.module.css";
+import {
+  buildCubeSat,
+  makeGeoms,
+  makeMaterials,
+  panelTexture,
+  type Geoms,
+  type SatMaterials,
+} from "./cubeSatModel";
+
+// One shared CubeSat kit (geometry + two material sets) for every satellite:
+// "live" for flying spacecraft, "dark" for dead ones coasting ballistically.
+let kit: { geoms: Geoms; live: SatMaterials; dark: SatMaterials } | null = null;
+function cubeSatKit(): { geoms: Geoms; live: SatMaterials; dark: SatMaterials } {
+  if (kit === null) {
+    const panel = panelTexture();
+    const dark = makeMaterials(panel);
+    for (const m of Object.values(dark)) {
+      m.color.multiplyScalar(0.35);
+      m.emissive.copy(tokenColor(statusToken("failed"))).multiplyScalar(0.1); // charred, red-tinted; not a flat pink block
+    }
+    kit = { geoms: makeGeoms(), live: makeMaterials(panel), dark };
+  }
+  return kit;
+}
+
+/** Model size relative to the marker's world radius (the status ring sits at
+ * 1.55-1.82 marker units; the 3U body is 3 units tall). */
+const MODEL_SCALE = 1.6; // exaggerated on purpose, like NASA Eyes: true scale would be invisible
+/** Physical model size as a fraction of the scene extent: when the camera
+ * flies in close, the CubeSat grows past its screen-size floor and fills the
+ * view (the 3U body is 3 units tall). */
+const MODEL_PHYS = 0.03;
+
+// Swarm-size scaling: past a handful of satellites, every model shrinks so a
+// 50-satellite swarm reads as a constellation instead of a wall of panels.
+let countScale = 1;
+export function setSwarmCount(n: number): void {
+  countScale = Math.min(1, Math.max(0.3, Math.sqrt(6 / Math.max(n, 1))));
+}
+export function swarmCountScale(): number {
+  return countScale;
+}
 
 export const TRAIL_MAX = 220;
 export const TRAIL_INTERVAL_MS = 150;
 
-export const MARKER_TARGET_PX = 8.5;
+export const MARKER_TARGET_PX = 17;
 export const MARKER_MIN_PX = 4.0;
-export const MARKER_MAX_PX = 16;
+export const MARKER_MAX_PX = 30;
 export const MARKER_WORLD_MAX = 0.11;
 
 export const MARKER_EXTENT = 2.5;
@@ -65,7 +108,7 @@ export function lvlhToScene(r: Satellite["r"]): [number, number, number] {
   const psi = x === 0 && y === 0 ? 0 : Math.atan2(-y / 2, x);
   const theta = psi + coordState.orbitPhase;
   const rho = Math.hypot(x, y / 2);
-  const radialOffset = Math.min(Math.max((rho - A) * 0.35, -E * 0.45), E * 0.85);
+  const radialOffset = Math.min(Math.max((rho - A) * 0.35, -E * 0.3), E * 0.85);
   const R = E * ORBIT_RADIUS_FACTOR + radialOffset;
   const yFlat = Math.min(Math.max((z - x) * 0.3, -E * 0.45), E * 0.45);
   const xOrb = R * Math.cos(theta);
@@ -88,6 +131,8 @@ export interface SatRecord {
   driftVector: THREE.Line;
   labelEl: HTMLButtonElement;
   trail: THREE.Line;
+  model: THREE.Group;
+  modelFailed: boolean;
   trailPositions: Float32Array;
   trailColors: Float32Array;
   trailCount: number;
@@ -191,6 +236,11 @@ export function createSatelliteRecord(
   driftVector.visible = false;
   group.add(driftVector);
 
+  const k = cubeSatKit();
+  const model = buildCubeSat(k.geoms, sat.status === "failed" ? k.dark : k.live);
+  model.rotation.set(0.35, 0, Math.PI / 2); // long axis along the orbit track
+  group.add(model);
+
   const labelEl = document.createElement("button");
   labelEl.type = "button";
   labelEl.className = styles.satLabel;
@@ -199,7 +249,7 @@ export function createSatelliteRecord(
   labelEl.style.lineHeight = "1.3";
   labels.root.appendChild(labelEl);
   const text = labelText(sat);
-  labelEl.textContent = text;
+  renderLabel(labelEl, sat);
   labelEl.dataset.labelKey = text;
   labelEl.addEventListener("click", () => onPick(sat.id));
 
@@ -232,6 +282,8 @@ export function createSatelliteRecord(
     driftVector,
     labelEl,
     trail,
+    model,
+    modelFailed: sat.status === "failed",
     trailPositions,
     trailColors,
     trailCount: 0,
@@ -241,10 +293,23 @@ export function createSatelliteRecord(
   };
 }
 
+function roleWord(sat: Satellite): string {
+  if (sat.status === "failed") return "lost";
+  return rolesLabel(sat).toLowerCase();
+}
+
 function labelText(sat: Satellite): string {
-  const roleShort = sat.role === "leader" ? "leader" : sat.role === "downlink" ? "downlink" : "imager";
-  if (sat.status === "failed") return `${sat.id} · DEAD`;
-  return `${sat.id} · ${roleShort}`;
+  return `${sat.id} ${roleWord(sat)}`;
+}
+
+function renderLabel(el: HTMLElement, sat: Satellite): void {
+  const id = document.createElement("span");
+  id.className = styles.satLabelId;
+  id.textContent = sat.id;
+  const role = document.createElement("span");
+  role.className = styles.satLabelRole;
+  role.textContent = roleWord(sat);
+  el.replaceChildren(id, role);
 }
 
 export function clearSatelliteTrail(rec: SatRecord): void {
@@ -253,7 +318,7 @@ export function clearSatelliteTrail(rec: SatRecord): void {
 }
 
 export function disposeSatelliteRecord(rec: SatRecord, scene: THREE.Scene): void {
-  scene.remove(rec.group, rec.trail);
+  scene.remove(rec.group, rec.trail); // model geometry/materials are the shared kit
   rec.disc.geometry.dispose();
   (rec.disc.material as THREE.Material).dispose();
   rec.ring.geometry.dispose();
@@ -282,12 +347,28 @@ export function syncSatellite(
   const extent = opts.extent ?? 1000;
 
   (rec.disc.material as THREE.MeshBasicMaterial).color = statusCol;
-  (rec.disc.material as THREE.MeshBasicMaterial).opacity = failed ? 0.78 : 1;
+  // The 3D model is the body now; the disc stays as an invisible pick target.
+  (rec.disc.material as THREE.MeshBasicMaterial).opacity = 0;
+  if (failed !== rec.modelFailed) {
+    rec.modelFailed = failed;
+    const mats = failed ? cubeSatKit().dark : cubeSatKit().live;
+    rec.model.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      const cur = mesh.material as THREE.MeshStandardMaterial;
+      const from = failed ? cubeSatKit().live : cubeSatKit().dark;
+      const key = (Object.keys(from) as Array<keyof SatMaterials>).find((kk) => from[kk] === cur);
+      if (key !== undefined) mesh.material = mats[key];
+    });
+  }
   const ringMat = rec.ring.material as THREE.MeshBasicMaterial;
-  ringMat.color = selected ? tokenColor(SCENE_TOKENS.focus) : statusCol;
-  ringMat.opacity = failed ? 0.65 : selected ? 0.98 : 0.62;
-  rec.leaderRing.visible = sat.role === "leader" && !failed;
-  rec.cross.visible = failed;
+  // The 3D CubeSat is the satellite now — no flat badges around it. Only the
+  // selected one gets a thin focus ring; status lives in the model tint and
+  // the label colour.
+  ringMat.color = tokenColor(SCENE_TOKENS.focus);
+  ringMat.opacity = selected ? 0.45 : 0;
+  rec.leaderRing.visible = false;
+  rec.cross.visible = false;
   rec.trail.visible = opts.showTrails;
   rec.status = sat.status;
   rec.role = sat.role;
@@ -309,7 +390,7 @@ export function syncSatellite(
   const text = labelText(sat);
   if (text !== rec.lastLabelText) {
     rec.lastLabelText = text;
-    rec.labelEl.textContent = text;
+    renderLabel(rec.labelEl, sat);
     rec.labelEl.dataset.labelKey = text;
   }
   rec.labelEl.style.color = `var(${statusToken(sat.status)})`;
@@ -336,8 +417,19 @@ export function updateMarkerView(
     extent,
   );
   const pulse = status === "failed" && !reducedMotion ? 1 + 0.22 * Math.sin(elapsed * 5) : 1;
-  rec.marker.scale.setScalar(size.world * pulse);
-  rec.screenR = size.screenPx;
+  const modelScale = Math.max(size.world * MODEL_SCALE, extent * MODEL_PHYS) * countScale;
+  rec.model.scale.setScalar(modelScale);
+  // Pick disc + focus ring wrap the model, so the click target and label
+  // offset match what you see.
+  rec.marker.scale.setScalar(modelScale * 1.25 * pulse);
+  // Close up (physical size beats the screen-size floor) the focus ring is a
+  // big grey donut around the spacecraft: show it only from afar.
+  rec.ring.visible = modelScale <= size.world * MODEL_SCALE * countScale * 1.5;
+  if (!reducedMotion) {
+    // Slow roll so the panels catch the sun; dead satellites tumble faster.
+    rec.model.rotation.y = elapsed * (status === "failed" ? 0.9 : 0.25);
+  }
+  rec.screenR = size.screenPx * (modelScale / Math.max(size.world, 1e-9)) * 0.9;
 }
 
 export function pushTrail(

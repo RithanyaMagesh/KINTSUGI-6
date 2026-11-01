@@ -1,4 +1,4 @@
-// Δv used per satellite — §7.5 chart 4. Per-sat stepped lines (stepAfter:
+// Fuel spent (Δv) per satellite. Per-sat stepped lines (stepAfter:
 // dv_used changes only when a burn is commanded). Series colors come from the
 // §13.1 token set with §13.4 line-style variation; every line carries its
 // direct end-of-line SAT label — never a legend chip row.
@@ -38,11 +38,11 @@ export default function DvChart() {
 
   return (
     <TelemetryChart
-      title="Δv used per satellite"
+      title="Fuel spent per satellite"
       data={data}
       xKey="t"
-      xLabel="t [s]"
-      yLabel="Δv [m/s]"
+      xLabel="Time (s)"
+      yLabel="Fuel spent (m/s)"
       yTickFormat={(v) => v.toFixed(1)}
       endLabelX={last?.t ?? null}
       endLabelY={(s) => {

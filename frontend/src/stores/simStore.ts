@@ -7,7 +7,7 @@
 import { create } from "zustand";
 import type { ConnectionState, Metrics, SimMode } from "../types/telemetry";
 import type { MissionState, Satellite } from "../types/satellite";
-import type { SimEvent } from "../types/events";
+import type { RunSummary, SimEvent } from "../types/events";
 import { deserializeMessage } from "../api/deserializer";
 
 const MAX_EVENTS = 200; // drop-oldest, matching the backend hub's bounding
@@ -25,6 +25,9 @@ interface SimStore {
    * unmeasured: the Recovery-mode readout renders "unmeasured", never a
    * guessed default (repo invariant 1). */
   policy: string | null;
+  /** Keep-out floor of the running scenario [m] (hello / start response);
+   * null = unknown, the UI then shows no floor rather than a guessed 2 km. */
+  minSepM: number | null;
   satellites: Satellite[];
   metrics: Partial<Metrics>;
   events: SimEvent[];
@@ -40,7 +43,16 @@ interface SimStore {
       targetSlot: string | null;
     }>;
     costTotal: number | null;
+    method: string | null; // do_no_harm_hold = kept formation, nobody moved
+    keptFormation: boolean;
   } | null;
+  /** Leader/downlink holder changes, oldest first (the role batons). Derived
+   * from consecutive frames, so v1 and v2 runs behave the same. */
+  handoffs: Handoff[];
+  /** Last sole live holder per critical role (survives a vacancy). */
+  roleHolders: Record<string, string>;
+  /** End-of-run card (run_summary message); null until the run ends. */
+  runSummary: RunSummary | null;
   /** Roles from the LAST frame, keyed by sat id — lets the next role_reassignment
    * message show what each satellite did before the replan. */
   priorRoles: Record<string, string>;
@@ -51,6 +63,7 @@ interface SimStore {
     scenario?: string | null;
     seed?: number | null;
     policy?: string | null;
+    minSepM?: number | null;
   }): void;
   applyMessage(raw: unknown): void;
   reset(): void;
@@ -64,12 +77,34 @@ const initial = {
   scenario: null,
   seed: null,
   policy: null as string | null,
+  minSepM: null as number | null,
   satellites: [] as Satellite[],
   metrics: {} as Partial<Metrics>,
   events: [] as SimEvent[],
   lastReassignment: null,
   priorRoles: {} as Record<string, string>,
+  handoffs: [] as Handoff[],
+  roleHolders: {} as Record<string, string>,
+  runSummary: null as RunSummary | null,
 };
+
+const CRITICAL_ROLES = ["leader", "downlink"] as const;
+const MAX_HANDOFFS = 40;
+
+export interface Handoff {
+  t: number;
+  role: string;
+  from: string;
+  to: string;
+}
+
+/** The one live satellite holding `role`, or undefined when none or several do. */
+export function soleHolder(sats: Satellite[], role: string): string | undefined {
+  const live = sats.filter(
+    (s) => s.status !== "failed" && (s.roles !== undefined ? s.roles.includes(role) : s.role === role),
+  );
+  return live.length === 1 ? live[0].id : undefined;
+}
 
 export const useSimStore = create<SimStore>((set, get) => ({
   ...initial,
@@ -81,6 +116,7 @@ export const useSimStore = create<SimStore>((set, get) => ({
       scenario: meta.scenario !== undefined ? meta.scenario : state.scenario,
       seed: meta.seed !== undefined ? meta.seed : state.seed,
       policy: meta.policy !== undefined ? meta.policy : state.policy,
+      minSepM: meta.minSepM !== undefined ? meta.minSepM : state.minSepM,
     })),
 
   applyMessage: (raw) => {
@@ -95,10 +131,11 @@ export const useSimStore = create<SimStore>((set, get) => ({
           // always carry the active policy; stopped/replay omit it (unknown),
           // so absence keeps whatever was measured rather than clobbering.
           return {
-            mode: msg.mode === "stopped" ? state.mode : msg.mode,
+            mode: msg.mode,
             scenario: msg.scenario ?? state.scenario,
             seed: msg.seed ?? state.seed,
             policy: msg.policy ?? state.policy,
+            minSepM: msg.minSepM ?? state.minSepM,
           };
         case "frame": {
           // INIT-derived empty state (cubesat/wire.py to_sim_state): resets the
@@ -118,6 +155,9 @@ export const useSimStore = create<SimStore>((set, get) => ({
               events: [],
               lastReassignment: null,
               priorRoles: {},
+              handoffs: [],
+              roleHolders: {},
+              runSummary: null,
               missionState: null,
             };
           }
@@ -132,7 +172,20 @@ export const useSimStore = create<SimStore>((set, get) => ({
             const prev = state.satellites.find((p) => p.id === sat.id);
             priorRoles[sat.id] = prev !== undefined ? prev.role : sat.role;
           }
+          const roleHolders = { ...state.roleHolders };
+          let handoffs = state.handoffs;
+          for (const role of CRITICAL_ROLES) {
+            const now = soleHolder(msg.frame.satellites, role);
+            if (now === undefined) continue; // vacant or ambiguous: keep the last holder
+            const before = roleHolders[role];
+            if (before !== undefined && before !== now) {
+              handoffs = [...handoffs, { t: msg.frame.simTime, role, from: before, to: now }].slice(-MAX_HANDOFFS);
+            }
+            roleHolders[role] = now;
+          }
           return {
+            roleHolders,
+            handoffs,
             simTime: msg.frame.simTime,
             missionState: msg.frame.missionState as MissionState,
             scenario: msg.frame.scenario ?? state.scenario,
@@ -147,6 +200,8 @@ export const useSimStore = create<SimStore>((set, get) => ({
             mode: state.mode === "stopped" ? "live" : state.mode,
           };
         }
+        case "summary":
+          return { runSummary: msg.summary };
         case "event":
           return {
             events: [...state.events, msg.event].slice(-MAX_EVENTS),
@@ -165,6 +220,8 @@ export const useSimStore = create<SimStore>((set, get) => ({
                 typeof msg.reassignment.cost_total === "number"
                   ? msg.reassignment.cost_total
                   : null,
+              method: typeof msg.reassignment.method === "string" ? msg.reassignment.method : null,
+              keptFormation: msg.reassignment.kept_formation === true,
             },
             // target_slot per satellite already arrives on the next sim_state;
             // nothing is invented here for rows the log does not carry.

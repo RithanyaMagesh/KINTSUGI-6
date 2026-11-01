@@ -17,12 +17,12 @@ import { boundingSphere, fitDistance } from "../../utils/geometry";
 import { lvlhToScene } from "./sceneSatellites";
 import type { EnvFrame } from "./sceneEarth";
 
-export const FIT_FILL = 0.575; // managed fit: subject fills 50-65% of the viewport (midpoint)
+export const FIT_FILL = 0.9; // the orbit ring meets the window edge: Earth fills the screen // managed fit: the full-screen live view fills the window
 const FIT_RESPONSE = 1.8; // 1/s ease rate — gentle re-fit, never snappy
 // Formation-tight/focus modes only: the fit target sits this x formation-radius
 // BELOW the formation centre (scene +y = zenith) so the swarm rides above
 // screen centre. Earth-centred mode has no lift — Earth IS the centre.
-const FRAME_LIFT = 0.3;
+const FRAME_LIFT = 0; // the camera view offset already lifts the picture
 
 /** Fit radius for the Earth-centred frame: the whole orbit ring plus the
  * flying formation riding it (measured satellite distance from the ring

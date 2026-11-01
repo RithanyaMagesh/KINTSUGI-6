@@ -223,3 +223,6 @@ Wire pass-through needed in `cubesat/wire.py` (owned by T5; not edited by the la
 - Event `CERTIFICATE` `{passed, level, min_sep_m, worst_fuel_margin_mps, roles_ok, coverage, hold_coverage, landing_error_m, reasons: [..]}` (= `certify.Certificate.event_payload()`), one per executed plan, same tick as its RECOVERY_LEVEL.
 - Event `EVASIVE_MANEUVER` (v2 ladder form) `{sat_id, other_id, closest_m, t_closest_s, t}`; the v1 form carries `range_m` instead of `closest_m`.
 Display: "unmeasured" for any missing number; never show a level without its certificate.
+
+## Requests from the frontend owner (2026-11-01)
+1. **Keep-out floor on the wire.** The console reads `hello.min_sep_m` and the `POST /simulation/start` response `min_sep_m` (metres, the scenario's `allocation.min_sep_km` × 1000) to label "Closest approach" and draw the keep-out line on the separation chart (claims audit rows 19-20). Neither is sent on `backend`, so the UI shows no floor ("unmeasured") instead of a hard-coded 2 km. Please add `min_sep_m` to the live hello and the start response (absent for replays).

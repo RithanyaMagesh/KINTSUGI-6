@@ -1,4 +1,4 @@
-// Event markers — §13.4: labeled vertical ticks with mono sim-time stamps at
+// Event markers — labeled vertical ticks with sim-time stamps at
 // failure / replan / recovery. Values come from the mission-state transitions
 // recorded by the history sampler; nothing is invented (invariant 1).
 // Display decision: RECONFIGURING is dropped — it fires within seconds of
@@ -7,9 +7,11 @@
 import { ReferenceLine } from "recharts";
 import { TICK_STYLE } from "./TelemetryChart";
 import type { ChartMarker } from "../../stores/historyStore";
+import { clock, stateLabel } from "../live/hudFormat";
 
-function markerColor(level: ChartMarker["level"]): string {
-  switch (level) {
+function markerColor(m: ChartMarker): string {
+  if (m.label === "RECOVERED") return "var(--status-repaired)"; // gold = recovered only
+  switch (m.level) {
     case "critical":
       return "var(--status-failed)";
     case "caution":
@@ -19,31 +21,23 @@ function markerColor(level: ChartMarker["level"]): string {
   }
 }
 
-/** Mission-state literals (backend enum) to operator words for the tick label. */
-const WORD: Record<string, string> = {
-  FAILURE_DETECTED: "failure",
-  REPLANNING: "replan",
-  RECOVERED: "recovered",
-  DEGRADED: "degraded",
-};
-
 export function EventMarkers({ markers }: { markers: ChartMarker[] }) {
   const shown = markers.filter((m) => m.label !== "RECONFIGURING");
   return (
     <>
       {shown.map((m, i) => {
-        const word = WORD[m.label] ?? m.label.toLowerCase();
+        const word = stateLabel(m.label);
         return (
           <ReferenceLine
             key={`${m.label}-${m.t}-${i}`}
             x={m.t}
-            stroke={markerColor(m.level)}
+            stroke={markerColor(m)}
             strokeDasharray="4 4"
             label={{
-              value: `${word} t+${m.t.toFixed(0)}s`,
+              value: `${word} ${clock(m.t)}`,
               position: i % 2 === 0 ? "insideTopLeft" : "insideTopRight",
               ...TICK_STYLE,
-              fill: markerColor(m.level),
+              fill: markerColor(m),
             }}
           />
         );

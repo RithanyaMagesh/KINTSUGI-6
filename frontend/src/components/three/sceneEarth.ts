@@ -9,13 +9,15 @@
 import * as THREE from "three";
 import { SCENE_TOKENS, tokenColor } from "./sceneColors";
 import type { OrbitViewMode } from "../../stores/uiStore";
+import { buildGlobe } from "./sceneGlobe";
 
-export const EARTH_RADIUS_FACTOR = 1.45;
+export const EARTH_RADIUS_FACTOR = 1.8; // big globe: the swarm skims just above the air, like real LEO
 export const ORBIT_RADIUS_FACTOR = 2.35;
 export const ORBIT_INCLINATION_RAD = (22 * Math.PI) / 180;
 const EARTH_SPIN_RATE = 0.025;
 const STAR_RADIUS_FACTOR = 45;
-const STAR_COUNT = 800;
+const STAR_COUNT = 2400;
+const BRIGHT_STARS = 260; // the first N stars render larger and brighter
 
 /** Deterministic LCG: identical starfield and continent texture on every load
  * (repo invariant 2: no unseeded RNG). */
@@ -135,61 +137,6 @@ function buildEarthTexture(): THREE.CanvasTexture {
   return tex;
 }
 
-function buildEarthGlobe(): {
-  group: THREE.Group;
-  rebuildTexture: () => void;
-  dispose: () => void;
-} {
-  const globe = new THREE.Group();
-  const sphereGeo = new THREE.SphereGeometry(1, 64, 48);
-  let tex = buildEarthTexture();
-  const sphereMat = new THREE.MeshBasicMaterial({ map: tex });
-  const sphereMesh = new THREE.Mesh(sphereGeo, sphereMat);
-  globe.add(sphereMesh);
-
-  return {
-    group: globe,
-    rebuildTexture: () => {
-      tex.dispose();
-      tex = buildEarthTexture();
-      sphereMat.map = tex;
-      sphereMat.needsUpdate = true;
-    },
-    dispose: () => {
-      tex.dispose();
-      sphereGeo.dispose();
-      sphereMat.dispose();
-    },
-  };
-}
-
-/** Subtle blue atmospheric rim around Earth. */
-function buildAtmosphere(): THREE.Mesh {
-  const mat = new THREE.ShaderMaterial({
-    uniforms: { uColor: { value: tokenColor(SCENE_TOKENS.atmo) } },
-    vertexShader: /* glsl */ `
-      varying vec3 vNormal;
-      void main() {
-        vNormal = normalize(normalMatrix * normal);
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-      }
-    `,
-    fragmentShader: /* glsl */ `
-      uniform vec3 uColor;
-      varying vec3 vNormal;
-      void main() {
-        float rim = pow(clamp(0.72 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 0.0, 2.0), 3.4);
-        gl_FragColor = vec4(uColor * rim * 0.45, 1.0);
-      }
-    `,
-    side: THREE.BackSide,
-    blending: THREE.AdditiveBlending,
-    transparent: true,
-    depthWrite: false,
-  });
-  return new THREE.Mesh(new THREE.SphereGeometry(1.11, 64, 48), mat);
-}
-
 /** Inclined Chief-Orbit Ring encircling Earth at [0, 0, 0]. */
 function buildOrbitRing(): THREE.Line {
   const N = 256;
@@ -209,7 +156,7 @@ function buildOrbitRing(): THREE.Line {
     new THREE.LineDashedMaterial({
       color: tokenColor(SCENE_TOKENS.orbit),
       transparent: true,
-      opacity: 0.55,
+      opacity: 0.22,
       dashSize: 0.08,
       gapSize: 0.05,
       depthWrite: false,
@@ -231,16 +178,18 @@ export interface Environment {
   refreshTheme(): void;
   frame(): EnvFrame;
   update(dt: number, reducedMotion: boolean): void;
+  /** Drive the Earth's spin from the sim clock (radians); null = idle spin. */
+  setEarthSpin(angle: number | null): void;
   dispose(): void;
 }
 
 export function createEnvironment(): Environment {
   const group = new THREE.Group();
 
-  const earthGlobe = buildEarthGlobe();
-  const atmo = buildAtmosphere();
+  let fallbackTex = buildEarthTexture();
+  const globe = buildGlobe(fallbackTex, tokenColor(SCENE_TOKENS.atmo));
   const earthGroup = new THREE.Group();
-  earthGroup.add(earthGlobe.group, atmo);
+  earthGroup.add(globe.group);
   group.add(earthGroup);
 
   const ring = buildOrbitRing();
@@ -267,9 +216,17 @@ export function createEnvironment(): Environment {
     opacity: 0.4,
     depthWrite: false,
   });
+  starMat.size = 1.1;
+  starMat.opacity = 0.55;
   const stars = new THREE.Points(starGeo, starMat);
+  const brightGeo = new THREE.BufferGeometry();
+  brightGeo.setAttribute("position", new THREE.BufferAttribute(starPos.slice(0, BRIGHT_STARS * 3), 3));
+  const brightMat = starMat.clone();
+  brightMat.size = 2.2;
+  brightMat.opacity = 0.9;
+  const brightStars = new THREE.Points(brightGeo, brightMat);
   const starGroup = new THREE.Group();
-  starGroup.add(stars);
+  starGroup.add(stars, brightStars);
   group.add(starGroup);
 
   let currentMode: OrbitViewMode = "global";
@@ -316,6 +273,7 @@ export function createEnvironment(): Environment {
   place(1000);
 
   let earthSpin = 0;
+  let spinOverride: number | null = null;
   return {
     group,
     trackExtent(maxR: number): number {
@@ -331,30 +289,42 @@ export function createEnvironment(): Environment {
       place(Math.max(extent, 1000));
     },
     refreshTheme(): void {
-      earthGlobe.rebuildTexture();
-      (atmo.material as THREE.ShaderMaterial).uniforms.uColor.value = tokenColor(SCENE_TOKENS.atmo);
+      fallbackTex.dispose();
+      fallbackTex = buildEarthTexture();
+      globe.setFallbackMap(fallbackTex);
+      globe.setAtmoColor(tokenColor(SCENE_TOKENS.atmo));
       (ring.material as THREE.LineDashedMaterial).color = tokenColor(SCENE_TOKENS.orbit);
       starMat.color = tokenColor(SCENE_TOKENS.star);
+      brightMat.color = tokenColor(SCENE_TOKENS.star);
       rebuildGrid(Math.max(extent, 1000));
     },
     frame(): EnvFrame {
       return envFrame;
     },
+    setEarthSpin(angle: number | null): void {
+      // Handing back to the idle spin keeps the current angle (no jump).
+      if (angle === null && spinOverride !== null) earthSpin += spinOverride;
+      spinOverride = angle;
+    },
     update(dt: number, reducedMotion: boolean): void {
-      if (!reducedMotion && currentMode === "global") {
-        earthSpin += dt * EARTH_SPIN_RATE;
-        earthGlobe.group.rotation.y = earthSpin;
+      if (spinOverride !== null) {
+        globe.surface.rotation.y = earthSpin + spinOverride;
+      } else if (!reducedMotion && currentMode === "global") {
+        earthSpin += dt * EARTH_SPIN_RATE; // idle: no run streaming
+        globe.surface.rotation.y = earthSpin;
       }
+      globe.update(dt, reducedMotion || currentMode !== "global");
     },
     dispose(): void {
       if (grid !== null) grid.dispose();
-      earthGlobe.dispose();
-      atmo.geometry.dispose();
-      (atmo.material as THREE.Material).dispose();
+      globe.dispose();
+      fallbackTex.dispose();
       ring.geometry.dispose();
       (ring.material as THREE.Material).dispose();
       starGeo.dispose();
       starMat.dispose();
+      brightGeo.dispose();
+      brightMat.dispose();
     },
   };
 }

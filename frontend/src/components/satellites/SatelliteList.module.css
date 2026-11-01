@@ -8,7 +8,7 @@
   text-align: left;
   color: var(--ink-muted);
   font-weight: 500;
-  border-bottom: 1px solid var(--border-strong);
+  border-bottom: 1px solid var(--glass-line-strong);
   padding: var(--space-1) var(--space-1);
 }
 
@@ -17,7 +17,7 @@
 }
 
 .row {
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--glass-line);
   cursor: pointer;
   transition: background var(--motion-duration) var(--motion-ease);
 }
@@ -30,13 +30,11 @@
   background: var(--panel-raised);
 }
 
-.mono {
-  font-family: var(--font-mono);
+.id {
   padding: var(--space-1);
 }
 
-.monoRight {
-  font-family: var(--font-mono);
+.numRight {
   text-align: right;
   padding: var(--space-1);
   font-variant-numeric: tabular-nums;
@@ -66,15 +64,7 @@
 
 .failureType {
   color: var(--ink-muted);
-  font-family: var(--font-mono);
   font-size: 13px;
-}
-
-/* Appendix D: suspect annotation — caution token, always with the literal
-   text "SUSPECT" (colorblind rule). An annotation, never a status color. */
-.suspect {
-  color: var(--status-caution);
-  font-weight: 500;
 }
 
 /* §13.3: keyboard focus on a selectable row gets the same signal as hover. */

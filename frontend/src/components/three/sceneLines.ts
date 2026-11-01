@@ -1,12 +1,14 @@
 // Formation pair lines — §7.2 formation lines + §7.3 failure coloring.
-// Supports up to MAX_SATS = 50 (the backend schema ceiling in cubesat/scenario.py)
+// Buffers sized for up to 50 satellites (backend cap is 32)
 // so large swarms never silently truncate formation links.
 import * as THREE from "three";
 import type { Satellite } from "../../types/satellite";
 import { lvlhToScene } from "./sceneSatellites";
 import { SCENE_TOKENS, statusToken, tokenColor } from "./sceneColors";
 
-const MAX_SATS = 50; // matches backend scenario schema max N=50
+const MAX_SATS = 50; // design ceiling for the live view
+const ALL_PAIRS_MAX = 8; // up to here every pair is linked (the classic look)
+const LINK_K = 2; // larger swarms: each satellite links to its 2 nearest
 const PAIR_CAPACITY = ((MAX_SATS * (MAX_SATS - 1)) / 2) * 2 * 3; // vertices * floats
 
 export class FormationLines {
@@ -38,22 +40,46 @@ export class FormationLines {
     this.failedPositions = failed.pos;
   }
 
-  /** Split every satellite pair into the healthy or failed-touching buffer. */
+  /** Formation links. Small swarms (<= ALL_PAIRS_MAX) link every pair; larger
+   * ones link each satellite to its LINK_K nearest neighbours only — a 50-sat
+   * all-pairs mesh is 1,225 lines and reads as noise. Links touching a failed
+   * satellite go to the failure buffer (shown only during a failure). */
   update(sats: Satellite[], failureActive: boolean): void {
     this.failureActive = failureActive;
     let hv = 0;
     let fv = 0;
-    for (let a = 0; a < sats.length; a++) {
-      for (let b = a + 1; b < sats.length; b++) {
-        const touchesFailed = sats[a].status === "failed" || sats[b].status === "failed";
-        const target = touchesFailed ? this.failedPositions : this.healthyPositions;
-        const v = touchesFailed ? fv : hv;
-        if (v + 6 > target.length) continue;
-        target.set(lvlhToScene(sats[a].r), v);
-        target.set(lvlhToScene(sats[b].r), v + 3);
-        if (touchesFailed) fv += 6;
-        else hv += 6;
+    const n = sats.length;
+    const pairs: Array<[number, number]> = [];
+    if (n <= ALL_PAIRS_MAX) {
+      for (let a = 0; a < n; a++) for (let b = a + 1; b < n; b++) pairs.push([a, b]);
+    } else {
+      const seen = new Set<number>();
+      for (let a = 0; a < n; a++) {
+        const near: Array<[number, number]> = [];
+        for (let b = 0; b < n; b++) {
+          if (b === a) continue;
+          const ra = sats[a].r;
+          const rb = sats[b].r;
+          near.push([Math.hypot(ra[0] - rb[0], ra[1] - rb[1], ra[2] - rb[2]), b]);
+        }
+        near.sort((x, y) => x[0] - y[0] || x[1] - y[1]);
+        for (const [, b] of near.slice(0, LINK_K)) {
+          const key = Math.min(a, b) * 1000 + Math.max(a, b);
+          if (seen.has(key)) continue;
+          seen.add(key);
+          pairs.push([Math.min(a, b), Math.max(a, b)]);
+        }
       }
+    }
+    for (const [a, b] of pairs) {
+      const touchesFailed = sats[a].status === "failed" || sats[b].status === "failed";
+      const target = touchesFailed ? this.failedPositions : this.healthyPositions;
+      const v = touchesFailed ? fv : hv;
+      if (v + 6 > target.length) continue;
+      target.set(lvlhToScene(sats[a].r), v);
+      target.set(lvlhToScene(sats[b].r), v + 3);
+      if (touchesFailed) fv += 6;
+      else hv += 6;
     }
     for (const [seg, count] of [
       [this.healthy, hv],

@@ -33,7 +33,7 @@ export function statusToken(status: string): string {
     case "reconfiguring":
       return "--status-caution";
     case "recovered":
-      return "--status-info";
+      return "--status-repaired";
     default:
       return "--ink-faint";
   }
@@ -47,6 +47,8 @@ export const SCENE_TOKENS = {
   inkMuted: "--ink-muted",
   inkFaint: "--ink-faint",
   leader: "--status-leader",
+  repaired: "--status-repaired",
+  void: "--space-void",
   focus: "--focus-ring",
   earthOcean: "--scene-earth-ocean",
   earthLand: "--scene-earth-land",

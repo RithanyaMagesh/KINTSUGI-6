@@ -1,7 +1,6 @@
 // The signature element (§13.5): the state-machine timeline spine —
-// NOMINAL → FAILURE_DETECTED → REPLANNING → RECONFIGURING → RECOVERED as a
-// horizontal rail with real event ticks and mono sim-time stamps from the
-// stream. No data, no story — the empty state says so.
+// Nominal, Failure detected, Replanning, Moving to new slots, Recovered as a
+// horizontal rail with real event ticks and sim-time stamps from the stream. No data, no story — the empty state says so.
 // In replay mode the spine seeks: state nodes and stamps are buttons that
 // call the same server-side seek the ReplayControls use (POST /replay/seek),
 // targeting the measured phase-start times from recoveryStore.
@@ -11,6 +10,8 @@ import { useReplayStore } from "../../stores/replayStore";
 import { useRecoveryStore, selectPhaseStarts } from "../../stores/recoveryStore";
 import { backend } from "../../api/backend";
 import { STATE_SPINE, type MissionState } from "../../types/satellite";
+import { clock, eventText, stateLabel } from "../live/hudFormat";
+import { rewindStores } from "../controls/ReplayControls";
 import chrome from "../../styles/chrome.module.css";
 import styles from "./Timeline.module.css";
 
@@ -30,6 +31,8 @@ export default function Timeline() {
   function seekTo(t: number): void {
     // Same plumbing ReplayControls uses: the backend owns replay playback
     // (POST /replay/seek) and the next frames arrive over /ws/state.
+    const now = useSimStore.getState().simTime;
+    if (now !== null && t < now) rewindStores(); // keep later events from leaking backwards
     useReplayStore.getState().setCurrentTime(t);
     backend
       .replaySeek(t)
@@ -48,8 +51,8 @@ export default function Timeline() {
           const canSeek = replay && reached && tStart !== undefined;
           const label =
             tStart !== undefined
-              ? `Seek to ${state} at t + ${tStart.toFixed(1)} s`
-              : `Seek to ${state}`;
+              ? `Jump to ${stateLabel(state)} at ${clock(tStart)}`
+              : `Jump to ${stateLabel(state)}`;
           const node = (
             <span
               className={`${styles.node} ${reached ? styles.reached : ""} ${i === activeIndex ? styles.active : ""}`}
@@ -72,7 +75,7 @@ export default function Timeline() {
                 node
               )}
               <span className={`${styles.nodeLabel} ${reached ? styles.labelReached : ""}`}>
-                {state}
+                {stateLabel(state)}
               </span>
             </div>
           );
@@ -86,16 +89,16 @@ export default function Timeline() {
               left: `${Math.min(100, Math.max(0, (event.simTime / railEnd) * 100))}%`,
               background: event.level === "critical" ? "var(--status-failed)" : "var(--status-caution)",
             }}
-            title={`t + ${event.simTime.toFixed(1)} s — ${event.message}`}
+            title={`${clock(event.simTime)}: ${eventText(event.message)}`}
           />
         ))}
       </div>
       <div className={styles.stamps}>
         {notable.slice(-2).map((event, i) => {
-          const label = `Seek to t + ${event.simTime.toFixed(1)} s`;
+          const label = `Jump to ${clock(event.simTime)}`;
           const stamp = (
             <>
-              t + {event.simTime.toFixed(1)} s · {event.message}
+              {clock(event.simTime)}: {eventText(event.message)}
             </>
           );
           return replay ? (

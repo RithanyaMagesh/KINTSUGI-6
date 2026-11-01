@@ -1,10 +1,7 @@
 // Physics + controls fieldset for the builder (extracted to keep
 // ScenarioBuilder under the ~300-line style rule). Data-driven: every labeled
-// number input is one FIELD_DEFS entry, so the form stays uniform and each
-// label/tooltip is grounded in cubesat/scenario.py field descriptions or
-// docs/MASTER_PROMPT.md — no invented explanations. Gains and the sensor grid
-// collapse into the "Advanced physics" details (collapsed by default, per the
-// live-page brief).
+// number input is one FIELD_DEFS entry, so the form stays uniform. Gains and
+// the sensor grid collapse into a details block (collapsed by default).
 import chrome from "../../styles/chrome.module.css";
 import NumberField from "./NumberField";
 import type { NumberValues } from "./scenarioDraft";
@@ -26,10 +23,10 @@ const MAIN_FIELDS: FieldDef[] = [
   {
     key: "aMax",
     id: "builder-amax",
-    label: "a_max (m/s²)",
+    label: "Max thrust (m/s²)",
     step: "0.005",
     min: "0.0001",
-    tip: "Thrust saturation. 0.01 m/s² is the documented engine default — cold-gas class for an ~8 kg CubeSat (MASTER_PROMPT 3.4, labeled assumption).",
+    tip: "The most acceleration a thruster can give. 0.01 m/s² is roughly a small cold-gas thruster on an 8 kg CubeSat.",
   },
   {
     key: "seed",
@@ -37,7 +34,7 @@ const MAIN_FIELDS: FieldDef[] = [
     label: "Seed",
     step: "1",
     min: "0",
-    tip: "RNG seed. Same scenario + seed gives a byte-identical log (repo invariant 2).",
+    tip: "Random seed. The same settings and seed always give the same run.",
   },
   {
     key: "speed",
@@ -45,7 +42,7 @@ const MAIN_FIELDS: FieldDef[] = [
     label: "Speed (×)",
     step: "10",
     min: "1",
-    tip: "Wire playback multiplier; the backend default is 100 (cubesat/wire.py StartRequest).",
+    tip: "How many times faster than real time the run plays.",
   },
   {
     key: "durationS",
@@ -53,16 +50,16 @@ const MAIN_FIELDS: FieldDef[] = [
     label: "Duration (s)",
     step: "100",
     min: "1",
-    tip: "Simulated duration in seconds (cubesat/scenario.py duration_s).",
+    tip: "How long the simulated run lasts, in seconds.",
   },
   {
     key: "dtS",
     id: "builder-dt",
-    label: "dt (s)",
+    label: "Time step (s)",
     step: "0.5",
     min: "0.1",
     max: "10",
-    tip: "Fixed integration step, seconds; the validator allows 0 < dt <= 10 (cubesat/scenario.py).",
+    tip: "Simulation time step, in seconds (up to 10).",
   },
 ];
 
@@ -70,18 +67,18 @@ const ADVANCED_FIELDS: FieldDef[] = [
   {
     key: "wn",
     id: "builder-wn",
-    label: "wn (rad/s)",
+    label: "Controller speed (rad/s)",
     step: "0.005",
     min: "0.0001",
-    tip: "PD natural frequency, rad/s (cubesat/scenario.py Gains).",
+    tip: "How quickly each satellite steers back toward its slot.",
   },
   {
     key: "zeta",
     id: "builder-zeta",
-    label: "zeta",
+    label: "Controller damping",
     step: "0.1",
     min: "0.1",
-    tip: "PD damping ratio (cubesat/scenario.py Gains).",
+    tip: "How much the steering avoids overshooting the slot; 1 means no overshoot.",
   },
   {
     key: "fovHalfAngleDeg",
@@ -90,7 +87,7 @@ const ADVANCED_FIELDS: FieldDef[] = [
     step: "0.5",
     min: "0.1",
     max: "45",
-    tip: "Imager half field of view, degrees; 0 < fov <= 45 (cubesat/scenario.py Sensor).",
+    tip: "Half the imager's field of view, in degrees (up to 45).",
   },
   {
     key: "gridStepKm",
@@ -98,7 +95,7 @@ const ADVANCED_FIELDS: FieldDef[] = [
     label: "Grid step (km)",
     step: "0.5",
     min: "0.1",
-    tip: "Target grid spacing in the (y, z) plane, km (cubesat/scenario.py Sensor).",
+    tip: "Spacing of the ground points used to measure coverage, in km.",
   },
   {
     key: "gridExtentKm",
@@ -106,7 +103,7 @@ const ADVANCED_FIELDS: FieldDef[] = [
     label: "Grid extent (km)",
     step: "5",
     min: "1",
-    tip: "Half-extent of the square target grid, km (cubesat/scenario.py Sensor).",
+    tip: "Half the width of the square ground area used to measure coverage, in km.",
   },
 ];
 
@@ -141,10 +138,10 @@ function renderFields(
 export default function PhysicsSection({ values, onNumber, disabled }: Props) {
   return (
     <fieldset className={styles.group} disabled={disabled}>
-      <legend className={chrome.panelTitle}>Physics and controls</legend>
+      <legend className={chrome.panelTitle}>Physics</legend>
       <div className={styles.fieldGrid}>{renderFields(MAIN_FIELDS, values, onNumber, disabled)}</div>
       <details className={styles.advanced}>
-        <summary className={styles.advancedSummary}>Advanced physics</summary>
+        <summary className={styles.advancedSummary}>Controller and imager</summary>
         <div className={styles.fieldGrid}>
           {renderFields(ADVANCED_FIELDS, values, onNumber, disabled)}
         </div>

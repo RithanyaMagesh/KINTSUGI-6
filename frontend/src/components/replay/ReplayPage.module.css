@@ -74,8 +74,7 @@
 }
 
 .runName {
-  font-family: var(--font-mono);
-  font-size: var(--text-event);
+  font-size: var(--text-body);
   color: var(--ink);
   overflow-wrap: anywhere;
 }
@@ -84,21 +83,9 @@
   color: var(--ink-faint);
 }
 
-.runLabel {
-  font-size: var(--text-body);
-  color: var(--ink-muted);
-}
-
 .runScenario {
-  font-family: var(--font-mono);
   font-size: var(--text-event);
   color: var(--ink-muted);
-  overflow-wrap: anywhere;
-}
-
-.command {
-  font-family: var(--font-mono);
-  font-size: var(--text-event);
   overflow-wrap: anywhere;
 }
 
@@ -127,6 +114,7 @@
   min-height: 0;
   padding: 0;
   overflow: hidden;
+  display: flex; /* the 3D viewport (flex: 1) fills the whole panel */
 }
 
 .storyZone {

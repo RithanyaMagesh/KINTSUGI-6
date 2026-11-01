@@ -20,6 +20,13 @@ import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import { LineSegments2 } from "three/examples/jsm/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/examples/jsm/lines/LineSegmentsGeometry.js";
 import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
+import {
+  buildCubeSat,
+  makeGeoms,
+  makeMaterials,
+  panelTexture,
+  type SatMaterials,
+} from "../three/cubeSatModel";
 
 export interface LandingSceneHandle {
   setProgress(p: number): void;
@@ -36,6 +43,7 @@ export interface TelemetryCard {
 const N_SATS = 6;
 const BROKEN = 2; // SAT-3
 const TAU = Math.PI * 2;
+const SUN_DEPTH = 40; // view-space depth of the sun sprite
 
 function cssVar(name: string): string {
   const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -73,39 +81,6 @@ function makeRand(seed: number): () => number {
 
 // ---------------------------------------------------------------- textures
 
-function panelTexture(): THREE.CanvasTexture {
-  const w = 128;
-  const h = 384;
-  const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
-  const g = canvas.getContext("2d") as CanvasRenderingContext2D;
-  g.fillStyle = cssVar("--cubesat-panel-gap");
-  g.fillRect(0, 0, w, h);
-  const pad = 5;
-  const cw = (w - pad * 3) / 2;
-  const ch = (h - pad * 7) / 6;
-  for (let r = 0; r < 6; r += 1) {
-    for (let c = 0; c < 2; c += 1) {
-      const x = pad + c * (cw + pad);
-      const y = pad + r * (ch + pad);
-      g.fillStyle = cssVar("--cubesat-panel");
-      g.fillRect(x, y, cw, ch);
-      g.strokeStyle = cssVar("--cubesat-panel-line");
-      g.lineWidth = 1;
-      for (let k = 1; k < 4; k += 1) {
-        g.beginPath();
-        g.moveTo(x, y + (ch * k) / 4);
-        g.lineTo(x + cw, y + (ch * k) / 4);
-        g.stroke();
-      }
-    }
-  }
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 4;
-  return tex;
-}
 
 /** The wordmark as a texture, with a jagged gold kintsugi seam through it. */
 function drawWordmark(canvas: HTMLCanvasElement): void {
@@ -146,22 +121,22 @@ function cardTexture(card: TelemetryCard): THREE.CanvasTexture {
   const r = 18;
   g.beginPath();
   g.roundRect(4, 4, w - 8, h - 8, r);
-  g.fillStyle = cssVar("--panel");
+  g.fillStyle = cssVar("--hero-bg"); // hero token, not --panel: the stage stays black in light mode
   g.fill();
   g.lineWidth = 3;
   g.strokeStyle = card.tone === "gold" ? cssVar("--hero-gold") : cssVar("--hero-line-strong");
   g.stroke();
   g.textBaseline = "alphabetic";
-  g.fillStyle = cssVar("--hero-ink-faint");
-  g.font = `500 30px "IBM Plex Mono", monospace`;
-  g.fillText(card.label.toUpperCase(), 32, 64);
+  g.fillStyle = cssVar("--hero-ink-muted");
+  g.font = `500 32px "IBM Plex Sans", "Segoe UI", sans-serif`;
+  g.fillText(card.label, 32, 64);
   g.fillStyle =
     card.tone === "gold"
       ? cssVar("--hero-gold-bright")
       : card.tone === "green"
         ? cssVar("--status-nominal")
         : cssVar("--hero-ink");
-  g.font = `500 48px "IBM Plex Mono", monospace`;
+  g.font = `600 48px "IBM Plex Sans", "Segoe UI", sans-serif`;
   g.fillText(card.value, 32, 132);
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
@@ -169,86 +144,108 @@ function cardTexture(card: TelemetryCard): THREE.CanvasTexture {
   return tex;
 }
 
-// ---------------------------------------------------------------- CubeSat
-
-interface SatMaterials {
-  frame: THREE.MeshStandardMaterial;
-  cap: THREE.MeshStandardMaterial;
-  panel: THREE.MeshStandardMaterial;
-  gold: THREE.MeshStandardMaterial;
-}
-
-interface Geoms {
-  rail: THREE.BoxGeometry;
-  ringX: THREE.BoxGeometry;
-  ringZ: THREE.BoxGeometry;
-  cap: THREE.BoxGeometry;
-  face: THREE.PlaneGeometry;
-  antenna: THREE.BoxGeometry;
-  lens: THREE.CylinderGeometry;
-}
-
-function makeGeoms(): Geoms {
-  return {
-    rail: new THREE.BoxGeometry(0.08, 3.04, 0.08),
-    ringX: new THREE.BoxGeometry(1.06, 0.05, 0.05),
-    ringZ: new THREE.BoxGeometry(0.05, 0.05, 1.06),
-    cap: new THREE.BoxGeometry(0.9, 0.04, 0.9),
-    face: new THREE.PlaneGeometry(0.86, 2.9),
-    antenna: new THREE.BoxGeometry(0.018, 0.018, 3.4),
-    lens: new THREE.CylinderGeometry(0.16, 0.16, 0.1, 24),
-  };
-}
-
-function makeMaterials(panelMap: THREE.Texture): SatMaterials {
-  return {
-    frame: new THREE.MeshStandardMaterial({ color: col("--cubesat-frame"), metalness: 0.85, roughness: 0.32 }),
-    cap: new THREE.MeshStandardMaterial({ color: col("--cubesat-cap"), metalness: 0.6, roughness: 0.5 }),
-    panel: new THREE.MeshStandardMaterial({ map: panelMap, metalness: 0.2, roughness: 0.55, side: THREE.DoubleSide }),
-    gold: new THREE.MeshStandardMaterial({ color: col("--cubesat-gold"), metalness: 0.9, roughness: 0.3 }),
-  };
-}
-
-/** A 3U CubeSat, 1 x 3 x 1 units, centred, long axis = +y, deployed wings. */
-function buildCubeSat(g: Geoms, m: SatMaterials): THREE.Group {
-  const sat = new THREE.Group();
-  const add = (geo: THREE.BufferGeometry, mat: THREE.Material, x: number, y: number, z: number) => {
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.set(x, y, z);
-    sat.add(mesh);
-    return mesh;
-  };
-  for (const sx of [-0.5, 0.5]) {
-    for (const sz of [-0.5, 0.5]) add(g.rail, m.frame, sx, 0, sz);
-  }
-  for (const y of [-1.5, -0.5, 0.5, 1.5]) {
-    add(g.ringX, m.frame, 0, y, 0.5);
-    add(g.ringX, m.frame, 0, y, -0.5);
-    add(g.ringZ, m.frame, 0.5, y, 0);
-    add(g.ringZ, m.frame, -0.5, y, 0);
-  }
-  add(g.cap, m.cap, 0, 1.5, 0);
-  add(g.cap, m.cap, 0, -1.5, 0);
-  add(g.lens, m.cap, 0, -1.56, 0);
-  const faces: Array<[number, number, number]> = [
-    [0, 0, 0.505],
-    [Math.PI, 0, -0.505],
-    [Math.PI / 2, 0.505, 0],
-    [-Math.PI / 2, -0.505, 0],
-  ];
-  for (const [ry, x, z] of faces) add(g.face, m.panel, x, 0, z).rotation.y = ry;
-  for (const s of [-1, 1]) add(g.face, m.panel, s * 0.98, 0, 0.5);
-  for (const s of [-1, 1]) {
-    const a = new THREE.Mesh(g.antenna, m.gold);
-    a.position.set(s * 0.9, 1.5, -0.9);
-    a.rotation.set(0, s * 0.78, 0);
-    a.rotateX(-0.12);
-    sat.add(a);
-  }
-  return sat;
-}
 
 // ---------------------------------------------------------------- scene
+
+/** The visible sun: a warm glow, a white-hot core and a fan of soft radial
+ * rays (seeded, so identical on every load) that turn very slowly. Additive
+ * and above the bloom threshold, so the composer adds a gentle glare. */
+function buildSun(): {
+  group: THREE.Group;
+  update(t: number): void;
+  setFade(f: number): void;
+  dispose(): void;
+} {
+  const hex = (name: string, alpha: number) =>
+    `#${new THREE.Color(cssVar(name)).getHexString()}${Math.round(alpha * 255).toString(16).padStart(2, "0")}`;
+  const radial = (size: number, stops: Array<[number, string, number]>) => {
+    const c = document.createElement("canvas");
+    c.width = c.height = size;
+    const g = c.getContext("2d") as CanvasRenderingContext2D;
+    const grad = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    for (const [at, name, alpha] of stops) grad.addColorStop(at, hex(name, alpha));
+    g.fillStyle = grad;
+    g.fillRect(0, 0, size, size);
+    return c;
+  };
+  const tex = (c: HTMLCanvasElement) => {
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  };
+
+  const coreTex = tex(radial(256, [
+    [0, "--hero-sun", 1], [0.22, "--hero-sun", 1], [0.4, "--hero-sun", 0.55], [0.7, "--hero-sun-glow", 0.12], [1, "--hero-sun-glow", 0],
+  ]));
+  const glowTex = tex(radial(512, [
+    [0, "--hero-sun-glow", 0.55], [0.15, "--hero-sun-glow", 0.25], [0.4, "--hero-sun-glow", 0.07], [0.7, "--hero-sun-glow", 0.015], [1, "--hero-sun-glow", 0],
+  ]));
+
+  // Rays: thin tapered wedges from the centre, each a gradient that fades out
+  // along its length; varied lengths and widths, then softened with a blur.
+  const N = 1024;
+  const rc = document.createElement("canvas");
+  rc.width = rc.height = N;
+  const g = rc.getContext("2d") as CanvasRenderingContext2D;
+  g.filter = "blur(5px)";
+  g.globalCompositeOperation = "lighter";
+  const rnd = makeRand(7);
+  const RAYS = 44;
+  for (let i = 0; i < RAYS; i += 1) {
+    const ang = (i / RAYS) * TAU + (rnd() - 0.5) * 0.12;
+    const len = (0.22 + rnd() * 0.28) * N;
+    const half = 0.006 + rnd() * 0.018;
+    const grad = g.createRadialGradient(N / 2, N / 2, 0, N / 2, N / 2, len);
+    grad.addColorStop(0, hex("--hero-sun", 0.55));
+    grad.addColorStop(0.3, hex("--hero-sun-glow", 0.22));
+    grad.addColorStop(1, hex("--hero-sun-glow", 0));
+    g.fillStyle = grad;
+    g.beginPath();
+    g.moveTo(N / 2, N / 2);
+    g.lineTo(N / 2 + Math.cos(ang - half) * len, N / 2 + Math.sin(ang - half) * len);
+    g.lineTo(N / 2 + Math.cos(ang + half) * len, N / 2 + Math.sin(ang + half) * len);
+    g.closePath();
+    g.fill();
+  }
+  const raysTex = tex(rc);
+
+  const sprite = (map: THREE.Texture, scale: number, boost: number) => {
+    const m = new THREE.SpriteMaterial({
+      map,
+      color: new THREE.Color(1, 1, 1).multiplyScalar(boost),
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      depthTest: false,
+      fog: false,
+      toneMapped: false,
+    });
+    const sp = new THREE.Sprite(m);
+    sp.scale.setScalar(scale);
+    sp.renderOrder = -1;
+    return sp;
+  };
+  const group = new THREE.Group();
+  const glow = sprite(glowTex, 14.5, 0.8);
+  const rays = sprite(raysTex, 13, 0.6);
+  const raysB = sprite(raysTex, 9.5, 0.35);
+  const core = sprite(coreTex, 2.1, 1.15); // softer centre spot
+  group.add(glow, rays, raysB, core);
+  return {
+    group,
+    setFade(f: number) {
+      for (const sp of [glow, rays, raysB, core]) (sp.material as THREE.SpriteMaterial).opacity = f;
+      group.visible = f > 0.003;
+    },
+    update(t: number) {
+      (rays.material as THREE.SpriteMaterial).rotation = t * 0.015;
+      (raysB.material as THREE.SpriteMaterial).rotation = -t * 0.01 + 0.3;
+    },
+    dispose() {
+      for (const tx of [coreTex, glowTex, raysTex]) tx.dispose();
+      for (const sp of [glow, rays, raysB, core]) (sp.material as THREE.Material).dispose();
+    },
+  };
+}
 
 export function createLandingScene(
   canvas: HTMLCanvasElement,
@@ -271,14 +268,29 @@ export function createLandingScene(
   const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 300);
   camera.position.set(0, 1.4, 14);
 
-  // Lights.
-  scene.add(new THREE.AmbientLight(col("--hero-light-key"), 0.3));
-  const key = new THREE.DirectionalLight(col("--hero-light-key"), 1.5);
-  key.position.set(-6, 7, 9);
-  scene.add(key);
-  const rim = new THREE.DirectionalLight(col("--hero-light-rim"), 1.6);
-  rim.position.set(7, -3, -8);
-  scene.add(rim);
+  // The sun is pinned to the upper-right of the SCREEN (a child of the
+  // camera, placed on resize), and it lights the swarm as a point light that
+  // fades with distance: satellites that drift into that corner flare up,
+  // the rest of the ring stays in dim shade. No directional light and no
+  // environment reflections, so nothing glints on the far side.
+  scene.add(camera);
+  // Soft sky fill (hemisphere light: diffuse only, no specular) keeps every
+  // satellite readable without adding glints away from the sun.
+  scene.add(new THREE.HemisphereLight(col("--hero-ink-muted"), col("--hero-bg"), 1.3));
+  scene.add(new THREE.AmbientLight(col("--hero-light-rim"), 0.2));
+  const sunLight = new THREE.PointLight(col("--hero-sun"), 78, 15, 2);
+  camera.add(sunLight);
+  const sun = buildSun();
+  camera.add(sun.group);
+  // Story lighting for the sections below the hero: as the sun fades out on
+  // scroll, a soft sky light fades in. Hemisphere light is diffuse only (no
+  // specular), so from the second section on nothing reflects or glints;
+  // the satellites just read clearly. Reflections belong to the sun alone.
+  const storyLight = new THREE.HemisphereLight(col("--hero-light-key"), col("--hero-light-rim"), 0);
+  storyLight.position.set(-2, 6, 4);
+  scene.add(storyLight);
+
+
   const goldLight = new THREE.PointLight(col("--hero-gold"), 0, 14, 1.6);
   scene.add(goldLight);
   const redLight = new THREE.PointLight(col("--hero-red"), 0, 6, 2);
@@ -348,6 +360,15 @@ export function createLandingScene(
   const sats: Array<{ group: THREE.Group; mats: SatMaterials; halo: THREE.Mesh }> = [];
   for (let j = 0; j < N_SATS; j += 1) {
     const mats = makeMaterials(panelMap);
+    // No environment to mirror out here, so very metallic frames render
+    // black: tone them down to read as brushed aluminium.
+    mats.frame.metalness = 0.45;
+    mats.frame.roughness = 0.4;
+    mats.cap.metalness = 0.3;
+    // Tape antennas: dull gold, so they don't flare into bright lines.
+    mats.gold.metalness = 0.2;
+    mats.gold.roughness = 0.75;
+    mats.gold.color.multiplyScalar(0.55);
     const group = buildCubeSat(geoms, mats);
     scene.add(group);
     const halo = new THREE.Mesh(
@@ -415,6 +436,7 @@ export function createLandingScene(
     cardMeshes.length = 0;
     for (const c of cards) {
       const mat = new THREE.MeshBasicMaterial({ map: cardTexture(c), transparent: true, opacity: 0, depthWrite: false, toneMapped: false });
+      mat.color.setScalar(0.78); // under the 0.82 bloom threshold: crisp text, no glow
       const mesh = new THREE.Mesh(cardGeo, mat);
       scene.add(mesh);
       cardMeshes.push(mesh);
@@ -452,6 +474,13 @@ export function createLandingScene(
     camera.aspect = w / h;
     aspect = camera.aspect;
     camera.updateProjectionMatrix();
+    // Pin the sun to the upper-right of the view at depth SUN_DEPTH; the
+    // light sits on the same sight line but inside the ring's corner, so the
+    // satellites passing there are the ones it lights.
+    const halfH = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+    const dir = new THREE.Vector3(0.74 * halfH * camera.aspect, 0.66 * halfH, -1);
+    sun.group.position.copy(dir).multiplyScalar(SUN_DEPTH);
+    sunLight.position.copy(dir).multiplyScalar(13);
   };
   resize();
   const ro = new ResizeObserver(resize);
@@ -614,6 +643,13 @@ export function createLandingScene(
       lerp(14, 12.6, a) + 0.6 * f * (1 - r),
     );
     camera.lookAt(center.x * 0.45, center.y * 0.5, 0);
+    if (!reduceMotion) sun.update(t);
+    // The sun belongs to the hero: it fades out as you scroll to the next
+    // section (and back in on the way up), its light with it.
+    const sunFade = (1 - smooth(0.02, 0.16, p)) * smooth(0.2, 1.8, t); // eases in on load
+    sun.setFade(sunFade);
+    sunLight.intensity = 78 * sunFade;
+    storyLight.intensity = 2.6 * (1 - sunFade);
     composer.render();
   }
   raf = requestAnimationFrame(frame);
@@ -640,6 +676,7 @@ export function createLandingScene(
     dispose() {
       running = false;
       cancelAnimationFrame(raf);
+      sun.dispose();
       ro.disconnect();
       document.removeEventListener("visibilitychange", onVisibility);
       for (const sat of sats) {

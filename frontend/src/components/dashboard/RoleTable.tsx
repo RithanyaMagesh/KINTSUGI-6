@@ -9,10 +9,9 @@
 //   distance      — derived from measured position vs the fitted seat
 //                   (utils/geometry.ts); "unmeasured" when the fit is not
 //                   possible
-//   cost total    — measured only when the log carried cost_total; per-sat
-//                   cost is not on the wire, so there is no per-row cost
-//                   column rather than a column of invented numbers.
 import { useSimStore } from "../../stores/simStore";
+import { roleLabel } from "../live/hudFormat";
+import { slotLabel } from "../recovery/RecoveryLog";
 import { fitFormation, distanceToSeat } from "../../utils/geometry";
 import chrome from "../../styles/chrome.module.css";
 import styles from "./RoleTable.module.css";
@@ -24,7 +23,7 @@ export default function RoleTable() {
   if (reassignment === null) {
     return (
       <p className={chrome.hint}>
-        No role changes yet — roles reassign when a failure triggers replanning.
+        No role changes yet. Roles are reassigned when a failure triggers a replan.
       </p>
     );
   }
@@ -40,8 +39,8 @@ export default function RoleTable() {
           <th scope="col" className={styles.th}>Satellite</th>
           <th scope="col" className={styles.th}>Old role</th>
           <th scope="col" className={styles.th}>New role</th>
-          <th scope="col" className={styles.th}>Target slot</th>
-          <th scope="col" className={styles.thRight}>Distance to target</th>
+          <th scope="col" className={styles.th}>New slot</th>
+          <th scope="col" className={styles.thRight}>Distance to slot</th>
         </tr>
       </thead>
       <tbody>
@@ -50,30 +49,22 @@ export default function RoleTable() {
           const dist = sat !== null ? distanceToSeat(sat, fit) : null;
           return (
             <tr key={row.satelliteId}>
-              <td className={styles.mono}>{row.satelliteId}</td>
+              <td className={styles.cell}>{row.satelliteId}</td>
               <td className={styles.cell}>
-                {row.oldRole ?? "unmeasured"}
+                {row.oldRole !== null ? roleLabel(row.oldRole) : "unmeasured"}
                 {row.newRole !== null && row.oldRole !== null && row.oldRole !== row.newRole && (
                   <span className={styles.changed}> changed</span>
                 )}
               </td>
-              <td className={styles.cell}>{row.newRole ?? "unmeasured"}</td>
-              <td className={styles.mono}>{row.targetSlot ?? "unassigned"}</td>
-              <td className={styles.monoRight}>
+              <td className={styles.cell}>{row.newRole !== null ? roleLabel(row.newRole) : "unmeasured"}</td>
+              <td className={styles.cell}>{row.targetSlot !== null ? slotLabel(row.targetSlot) : "unassigned"}</td>
+              <td className={styles.numRight}>
                 {dist === null ? "unmeasured" : `${dist.toFixed(1)} m`}
               </td>
             </tr>
           );
         })}
       </tbody>
-      <tfoot>
-        <tr>
-          <td colSpan={4} className={styles.footLabel}>Assignment cost total (t + {reassignment.simTime.toFixed(1)} s)</td>
-          <td className={styles.footValue}>
-            {reassignment.costTotal === null ? "unmeasured" : reassignment.costTotal.toFixed(2)}
-          </td>
-        </tr>
-      </tfoot>
     </table>
   );
 }

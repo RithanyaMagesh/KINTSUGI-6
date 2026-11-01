@@ -138,6 +138,8 @@ export interface StartResponse {
   speed: number;
   policy: string | null;
   predictor: boolean;
+  /** Scenario keep-out floor [m] (absent on older backends). */
+  minSepM: number | null;
 }
 
 export interface ScenarioUploadResult {
@@ -203,6 +205,7 @@ export async function startSimulation(opts: StartOptions): Promise<StartResponse
           ? opts.policy
           : null,
     predictor: typeof raw.predictor === "boolean" ? raw.predictor : Boolean(opts.predictor),
+    minSepM: typeof raw.min_sep_m === "number" ? raw.min_sep_m : null,
   };
 }
 

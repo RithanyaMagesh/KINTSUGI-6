@@ -6,6 +6,7 @@
 import { useState } from "react";
 import chrome from "../../styles/chrome.module.css";
 import { MODE_DESCRIPTION, type FailureMode, type FailureRow } from "./scenarioDraft";
+import { faultLabel } from "./hudFormat";
 import styles from "./LivePage.module.css";
 
 interface Props {
@@ -80,7 +81,7 @@ export default function FailureRowView({ row, maxSat, disabled, onChange, onRemo
       <td>
         <select
           className={chrome.select}
-          aria-label={`Failure mode for SAT-${row.satId + 1}: ${MODE_DESCRIPTION[row.mode]}`}
+          aria-label={`Fault for SAT-${row.satId + 1}: ${MODE_DESCRIPTION[row.mode]}`}
           value={row.mode}
           disabled={disabled}
           onChange={(e) => {
@@ -93,7 +94,7 @@ export default function FailureRowView({ row, maxSat, disabled, onChange, onRemo
         >
           {(Object.keys(MODE_DESCRIPTION) as FailureMode[]).map((m) => (
             <option key={m} value={m}>
-              {`${m} — ${MODE_DESCRIPTION[m]}`}
+              {faultLabel(m)}
             </option>
           ))}
         </select>
@@ -106,8 +107,8 @@ export default function FailureRowView({ row, maxSat, disabled, onChange, onRemo
             value={degradeText}
             disabled={disabled}
             placeholder="Fade (s)"
-            title="Fade horizon in seconds"
-            aria-label={`Degrade horizon in seconds for SAT-${row.satId + 1}`}
+            title="Fade time in seconds"
+            aria-label={`Fade time in seconds for SAT-${row.satId + 1}`}
             onChange={(e) => setDegradeText(e.target.value)}
             onBlur={commitDegrade}
             style={{ marginTop: "4px" }}

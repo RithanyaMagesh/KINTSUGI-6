@@ -20,15 +20,15 @@ export default function GroundCoverageChart() {
       title="Ground coverage over time"
       data={data}
       xKey="t"
-      xLabel="t [s]"
-      yLabel="coverage"
+      xLabel="Time (s)"
+      yLabel="Coverage"
       yDomain={[0, 1]}
       yTickFormat={(v) => `${(v * 100).toFixed(0)}%`}
       endLabelX={last?.t ?? null}
       endLabelY={() => (last?.coverage ?? null)}
       series={[{ key: "coverage", label: "coverage", color: "var(--status-nominal)" }]}
       height={200}
-      caption="Measured single-run curve (the wire streams one run at a time, never synthetic reference curves). Measured P0 benchmark: +4.93 coverage pts vs no-recovery on two_failure (seed 42) and +4.93 pts worst-case floor across all C(6,2)=15 two-failure pairs (mean −2.13 pts during transit)."
+      caption="This run only. Markers show the failure, the replan and the recovery."
     >
       <EventMarkers markers={markers} />
     </TelemetryChart>

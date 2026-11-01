@@ -73,9 +73,9 @@
 /* ---- Collapsible setup accordion ----------------------------------------- */
 
 .setupAccordion {
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-control);
-  background: var(--bg);
+  border: 1px solid var(--glass-line);
+  border-radius: 8px;
+  background: var(--glass);
 }
 
 .setupSummary {
@@ -96,7 +96,7 @@
 }
 
 .setupSummary:hover {
-  background: var(--panel-raised);
+  background: var(--glass-line);
 }
 
 .setupSummary:focus-visible {
@@ -104,19 +104,12 @@
   outline-offset: -2px;
 }
 
-.setupBadge {
-  font-family: var(--font-mono);
-  font-size: var(--text-event);
-  color: var(--status-info);
-  flex: none;
-}
-
 .setupBody {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-2);
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--glass-line);
 }
 
 /* ---- form scaffolding ---------------------------------------------------- */
@@ -143,17 +136,17 @@
   gap: var(--space-2);
 }
 
-/* Input values are numbers a reader scans (§13.2): mono. */
+/* Input values are numbers a reader scans: tabular figures. */
 .numberInput,
 .cellInput {
-  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   width: 100%;
   min-width: 0;
 }
 
 .advanced {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-control);
+  border: 1px solid var(--glass-line);
+  border-radius: 8px;
   padding: var(--space-2);
 }
 
@@ -195,7 +188,7 @@
 }
 
 .rowValue {
-  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   font-size: var(--text-body);
   color: var(--ink);
   text-align: right;
@@ -264,7 +257,6 @@
 }
 
 .riskId {
-  font-family: var(--font-mono);
   font-size: var(--text-body);
   color: var(--ink);
 }
@@ -274,8 +266,8 @@
 .riskTrack {
   display: block;
   height: 8px;
-  background: var(--bg);
-  border: 1px solid var(--border-strong);
+  background: var(--glass);
+  border: 1px solid var(--glass-line-strong);
   border-radius: var(--radius-control);
   overflow: hidden;
 }
@@ -287,7 +279,7 @@
 }
 
 .riskValue {
-  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   font-size: var(--text-body);
   color: var(--ink);
   text-align: right;
@@ -298,20 +290,13 @@
   font-size: var(--text-body);
 }
 
-.riskAbsent a {
-  color: var(--status-info);
-}
-
-.riskAbsent a:hover {
-  text-decoration: underline;
-}
-
 /* ---- run row --------------------------------------------------------------- */
 
 .runBtn {
   width: 100%;
   justify-content: center;
-  border-color: var(--status-info);
+  border-color: var(--glass-line-strong);
+  font-weight: 600;
 }
 
 .runStatus {
@@ -349,7 +334,6 @@
 }
 
 .roleSeat {
-  font-family: var(--font-mono);
   font-size: var(--text-body);
   color: var(--ink-muted);
 }
