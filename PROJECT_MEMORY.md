@@ -81,7 +81,10 @@ scenario JSON → scenario.py (pydantic) → sim.run_scenario (pure; list[dict])
 ## 5. Do-NOT-claim list (each was measured wrong or doesn't exist)
 "Overshoot-free" (4.99%) · runs on standard cold-gas hardware · AI in the live control loop · autonomous THRUSTER_OUT detection (older note; now self-reports — check sim.py) · recovery raises *average* coverage · full physics (J2/drag) · cloud-deployed (localhost; G6 todo) · decentralized consensus (centralized Hungarian) · predictor generalizes to unseen fault families.
 
-## 6. Current state (2026-10-31, after v2 Phase 0 and the three audits)
+## 6. Current state
+**As of 2026-11-01 read `docs/HANDOFF_2026-11-01.md` first** (state table per track, next steps, merge plan, opt-in fields, numbers, frontend gap, open decisions). The paragraph below is the older 2026-10-31 snapshot.
+
+### 2026-10-31 snapshot (after v2 Phase 0 and the three audits)
 - Branch `backend` (renamed from `v2` on 2026-10-31; built from origin/phase0-fixes f702c05): Phase 0 `8f750ab`, Simplify (backend/docs only, frontend frozen), re-measure (`v2: E` commits, 224 tests incl. slow green). Branches kept: `master` (treated as "main", not renamed), `backend`, `frontend` (another session owns it; never rebase or force-push it). Merge `backend` into master only when v2 is fully done; commit prefix stays `v2:`.
 - Gates: full suite (incl. slow) 215 passed, ruff clean, frontend build ok at 8f750ab. G6 (deploy) and G7 todo.
 - 15-pair benchmark (committed `data/eval/benchmark_results.json`): hungarian 0.2698 on all pairs, critical roles held 15/15 vs do_nothing 6/15, worst per-sat Δv 251.2 m/s, worst survivor-dead separation 1852.5 m (< 2 km floor).
