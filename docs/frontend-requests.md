@@ -214,3 +214,12 @@ Only with `recovery.authority = "decentral"` (requires laser comms). Central and
 - Expect bursts: one death reshuffles several functions (8 handoffs in C4's 300 s ring test). Animate them together, not one by one.
 - Size: mean `sim_state` on the 600 s 6-sat laser run with decentral authority grows 3047.2 → 3304.0 bytes/frame (mesh, +8.4 %) and 2989.6 → 3288.9 (star, +10.0 %).
 - Comparison numbers (vacancy, split-brain, rounds per cell) come only from `data/eval/comms_report.json` (C5). The decentral-vs-central vacancy depends on the one-round-per-tick assumption: show the round-time sensitivity rows with it, never a bare ranking.
+
+## Recovery ladder (2026-11-01, Phase 5d-2, branch `ladder`; engine v2 with `recovery.ladder: true` only)
+Wire pass-through needed in `cubesat/wire.py` (owned by T5; not edited by the ladder track). All are optional: logs without the ladder never carry them.
+- Tick `state` (existing key) takes the mission states `NOMINAL`, `FAILURE_DETECTED`, `PLANNING`, `RECONFIGURING`, `RECOVERED`, `DEGRADED_MISSION`, `MISSION_LOST` on ladder runs (`wire._STATE_LABELS` only knows the v1 pairs).
+- Event `MISSION_STATE` `{from, to, reason}` on every change (plain sentence: "Mission: RECONFIGURING → RECOVERED (every live sat within 50 m / 0.05 m/s for 60 s)").
+- Event `RECOVERY_LEVEL` `{level: "L1".."L4" | null, reason, trigger, rejected: [{level, why}], shed_roles: [..], dv_planned_mps, cripple?: {sat_id, dv_with_mps | null, dv_abandon_mps | null}}`; `level: null` = no certified plan, nothing executed (warning).
+- Event `CERTIFICATE` `{passed, level, min_sep_m, worst_fuel_margin_mps, roles_ok, coverage, hold_coverage, landing_error_m, reasons: [..]}` (= `certify.Certificate.event_payload()`), one per executed plan, same tick as its RECOVERY_LEVEL.
+- Event `EVASIVE_MANEUVER` (v2 ladder form) `{sat_id, other_id, closest_m, t_closest_s, t}`; the v1 form carries `range_m` instead of `closest_m`.
+Display: "unmeasured" for any missing number; never show a level without its certificate.

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from cubesat.scenario_models import MAX_DURATION_S, MAX_SATS
 
@@ -48,3 +48,23 @@ class Recovery(BaseModel):
     over the LOCKED laser links (cubesat/decentral.py); needs comms.model "laser"."""
 
     authority: Literal["central", "decentral"] = "central"
+    # exclude_if / None: the defaults stay out of model_dump, so fingerprints do not change
+    ladder: bool = Field(
+        default=False,
+        exclude_if=lambda v: not v,
+        description="Engine v2 only: on a declared failure run the recovery ladder L0-L5 "
+        "(cubesat/ladder.py) and execute only certified plans; False = no plan, roles only",
+    )
+    coverage_floor: float | None = Field(
+        default=None, ge=0, le=1, allow_inf_nan=False,
+        description="Ladder only: a plan below this coverage fraction fails its certificate "
+        "(then L4, DEGRADED_MISSION); None = no floor (illustrative knob)",
+    )
+
+    @model_validator(mode="after")
+    def _ladder_is_central(self) -> Recovery:
+        if self.ladder and self.authority == "decentral":
+            raise ValueError('recovery.ladder needs authority "central" (the leader is a role)')
+        if self.coverage_floor is not None and not self.ladder:
+            raise ValueError("recovery.coverage_floor is read by the ladder only: set ladder true")
+        return self

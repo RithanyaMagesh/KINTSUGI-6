@@ -17,6 +17,19 @@ REQUIRED_ROLES = tuple(r for r, spec in ROLE_SPECS.items() if spec["critical"])
 DEAD = ("DEAD", "REENTERED")
 
 
+def passive(sat) -> bool:
+    """Cannot thrust: k = 0 or an empty tank, and not firing stuck open (a DRY stuck-open sat
+    is passive: its stuck vector stays set but nothing comes out). Shared by the certificate,
+    the ladder and the executor (one rule)."""
+    return (sat.k <= 0.0 or sat.depleted) and (sat.stuck_vec is None or sat.depleted)
+
+
+def commandable(status: str, declared: bool) -> bool:
+    """A reporting sat the swarm can reach: not declared silent (with laser comms a healthy
+    but isolated sat is declared and cannot be commanded either)."""
+    return capability(status, True, True, "leader") and not declared
+
+
 def check_fuel_planned(movers, state, cmd_ok, fuel_reserve, dt, tail, reasons):
     """Static fuel and cannot-move checks. Returns (worst planned margin, its sat, the movers
     that may be flown); (0.0, None, {}) when nothing moves. Failing movers are not simulated.
@@ -67,8 +80,9 @@ def check_fuel_flown(state, res, fuel_reserve, reasons):
     return worst, worst_sat
 
 
-def check_roles(final_roles, state, scenario, reasons):
-    """Roles check; capability is judged on the TRUE status and flags, never on belief."""
+def check_roles(final_roles, state, scenario, reasons, shed=()):
+    """Roles check; capability is judged on the TRUE status and flags, never on belief. A role
+    in `shed` (the ladder's L4 degraded mission) may be vacant; it is still never misheld."""
 
     def can(i, role):
         s = state.sats[i]
@@ -77,7 +91,7 @@ def check_roles(final_roles, state, scenario, reasons):
     vacant, found = [], []
     for role in (r for r in REQUIRED_ROLES if r in scenario.roles):
         holders = [i for i, rs in enumerate(final_roles) if role in rs]
-        if not any(can(i, role) for i in holders):
+        if not any(can(i, role) for i in holders) and role not in shed:
             vacant.append(role)
         if len(holders) > 1:
             found.append(f"{role} held by sats {holders}")

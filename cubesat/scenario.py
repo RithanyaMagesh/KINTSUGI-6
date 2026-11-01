@@ -134,6 +134,8 @@ class Scenario(BaseModel):
         laser = self.comms is not None and self.comms.model == "laser"
         if self.recovery is not None and self.recovery.authority == "decentral" and not laser:
             raise ValueError('recovery.authority "decentral" requires comms.model "laser"')
+        if self.recovery is not None and self.recovery.ladder and self.engine != "v2":
+            raise ValueError('recovery.ladder requires engine "v2"')
         return self
 
     @model_validator(mode="after")

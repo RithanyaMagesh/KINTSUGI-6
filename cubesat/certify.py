@@ -35,7 +35,9 @@ from cubesat.certify_checks import (
     check_fuel_flown,
     check_fuel_planned,
     check_roles,
+    commandable,
 )
+from cubesat.certify_checks import passive as is_passive
 from cubesat.certify_sim import (
     CertificateCancelled,
     SwarmState,
@@ -46,7 +48,7 @@ from cubesat.certify_sim import (
     validate_state,
 )
 from cubesat.hcw import mean_motion, propagate
-from cubesat.roles_v2 import ROLE_SPECS, capability
+from cubesat.roles_v2 import ROLE_SPECS
 from cubesat.scenario import Scenario
 from cubesat.transfer import Transfer
 
@@ -163,9 +165,11 @@ def certify(
     landing_tol_m: float = 50.0,
     coverage_floor: float | None = None,
     cancel_event: threading.Event | None = None,
+    shed_roles: tuple[str, ...] = (),
 ) -> Certificate:
     """Certificate for `plan` from `state` (never mutated). ValueError on malformed input,
-    CertificateCancelled (a RuntimeError) when cancel_event is set between simulation steps."""
+    CertificateCancelled (a RuntimeError) when cancel_event is set between simulation steps.
+    shed_roles: critical roles the plan may leave vacant (the ladder's L4 degraded mission)."""
     if _finite(d_safe_m, "d_safe_m") <= 0.0:
         raise ValueError(f"d_safe_m must be > 0, got {d_safe_m!r}")
     if _finite(horizon_orbits, "horizon_orbits") <= 0.0:
@@ -182,12 +186,11 @@ def certify(
     period, dt = 2.0 * math.pi / n, scenario.dt_s
     _check_inputs(plan, state, scenario, period)
     items = {int(it.sat_id): it for it in plan.items}
-    cmd_ok = [capability(s, True, True, "leader") for s in state.status]  # a reporting sat
+    declared = state.declared or [False] * len(state.sats)
+    cmd_ok = [commandable(s, d) for s, d in zip(state.status, declared, strict=True)]
     live = [i for i in range(len(state.sats)) if state.status[i] not in DEAD]  # a re-entry counts
-    passive = {  # cannot thrust at the start: coasts, not judged by settled, keeps its seat
-        i for i in live
-        if (state.sats[i].k <= 0.0 or state.sats[i].depleted) and state.sats[i].stuck_vec is None
-    }
+    # cannot thrust at the start: coasts, not judged by settled, keeps its seat
+    passive = {i for i in live if is_passive(state.sats[i])}
     seats_now = np.array(state.refs, dtype=float)
     notes, reasons = [], []
     for i, it in items.items():
@@ -225,7 +228,7 @@ def certify(
     final_roles = [
         list(items[i].roles) if i in items else list(r) for i, r in enumerate(state.roles)
     ]
-    vacant, roles_ok = check_roles(final_roles, state, scenario, reasons)
+    vacant, roles_ok = check_roles(final_roles, state, scenario, reasons, shed_roles)
     active = [i for i in live if i not in passive]
     far = {i for i in active if res.tail_err_m[i] > landing_tol_m}
     dry = {i for i in live if state.sats[i].m_prop_kg > 0.0 >= res.final_sats[i].m_prop_kg}
