@@ -175,8 +175,6 @@ What the backend delivers, so the console can size its work: at most 30 `sim_sta
 9. **Show what is decimated.** At speed 1000 the console receives one frame per about 17 ticks (30 Hz cap) and at speed 60 irregular spacing; the time axis and the "frames received" readout should come from `sim_time`, never from a frame count. Cost: none; this is a labelling request.
 10. **Ask for a measured budget before the L3 pass.** Target from the master map: 60 fps at 1920x1080, no long task above 50 ms. Baseline: unmeasured. Bundle size (audit A-18, one 1.28 MB chunk) and gzip (audit B-21) are separate and also unmeasured on the wire.
 
-## Requests from the frontend owner (2026-11-01)
-1. **Keep-out floor on the wire.** The console reads `hello.min_sep_m` and the `POST /simulation/start` response `min_sep_m` (metres, the scenario's `allocation.min_sep_km` × 1000) to label "Closest approach" and draw the keep-out line on the separation chart (claims audit rows 19-20). Neither is sent on `backend`, so the UI shows no floor ("unmeasured") instead of a hard-coded 2 km. Please add `min_sep_m` to the live hello and the start response (absent for replays).
 7. **(C4 landed in the log, not yet on the wire.)** With `recovery.authority = "decentral"` no sat holds `leader`; per-sat `functions`, top-level `consensus_rounds` (a count), `split_brain`, `functions_vacant`, and `FUNCTION_HANDOFF{function, from: [ids], to: [ids]}` (lists: in a partition each component has its own holder). Show a vacant function as an empty chip slot, split-brain as one chip per holder with a warning.
 
 ### Track C — C6 wire (2026-11-01, branch `evidence`; backend only, build later)
@@ -225,3 +223,6 @@ Wire pass-through needed in `cubesat/wire.py` (owned by T5; not edited by the la
 - Event `CERTIFICATE` `{passed, level, min_sep_m, worst_fuel_margin_mps, roles_ok, coverage, hold_coverage, landing_error_m, reasons: [..]}` (= `certify.Certificate.event_payload()`), one per executed plan, same tick as its RECOVERY_LEVEL.
 - Event `EVASIVE_MANEUVER` (v2 ladder form) `{sat_id, other_id, closest_m, t_closest_s, t}`; the v1 form carries `range_m` instead of `closest_m`.
 Display: "unmeasured" for any missing number; never show a level without its certificate.
+
+## Requests from the frontend owner (2026-11-01)
+1. **Keep-out floor on the wire.** The console reads `hello.min_sep_m` and the `POST /simulation/start` response `min_sep_m` (metres, the scenario's `allocation.min_sep_km` × 1000) to label "Closest approach" and draw the keep-out line on the separation chart (claims audit rows 19-20). Neither is sent on `backend`, so the UI shows no floor ("unmeasured") instead of a hard-coded 2 km. Please add `min_sep_m` to the live hello and the start response (absent for replays).
