@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import math
 import os
 import re
 from contextlib import asynccontextmanager
@@ -21,6 +22,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ValidationError
@@ -36,6 +38,7 @@ from cubesat.wire import (
     SeekRequest,
     SpeedRequest,
     StartRequest,
+    to_event,
 )
 
 # WS emit-cadence cap (section 10); tests monkeypatch this to 0 to neutralize
@@ -72,6 +75,8 @@ async def lifespan(_app: FastAPI):
     get_state()  # one Session + Hub per process (section 5.4)
     yield
     global _state
+    if _state is not None:
+        _state.session.shutdown()  # cancel in-flight compute threads (B-5/B-23)
     _state = None
 
 
@@ -84,16 +89,40 @@ app = FastAPI(title="cubesat-swarm", version=__version__, lifespan=lifespan)
 # strips the port before matching. Token auth was considered and intentionally
 # NOT added: it would need frontend changes to stay usable, and frontend/src
 # is out of bounds -- the localhost bind remains the demo's real boundary.
-app.add_middleware(
-    TrustedHostMiddleware,
-    allowed_hosts=[
-        host.strip()
-        for host in os.environ.get(
-            "CUBESAT_ALLOWED_HOSTS", "localhost,127.0.0.1,testserver"
-        ).split(",")
-        if host.strip()
-    ],
-)
+def _allowed_hosts() -> list[str]:
+    """Always localhost / 127.0.0.1 / [::1] (container healthchecks and local use must
+    never break, audit B-8); CUBESAT_ALLOWED_HOSTS adds more (comma-separated), `*`
+    allows any. "testserver" (the TestClient host) is kept only when the env is unset,
+    exactly as before."""
+    extra = os.environ.get("CUBESAT_ALLOWED_HOSTS")
+    base = ["localhost", "127.0.0.1", "[::1]"]
+    if extra is None:
+        return [*base, "testserver"]
+    return base + [host.strip() for host in extra.split(",") if host.strip()]
+
+
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=_allowed_hosts())
+
+
+def _describe_errors(errors, skip: int = 0) -> str:
+    """pydantic errors -> one plain-English sentence per problem, "<field>: <reason>"
+    (kit section 4 "422 fails loudly"). Never echoes the offending input, URLs or
+    paths -- the default FastAPI body did, and a NaN input crashed its encoder."""
+    parts = []
+    for err in errors:
+        if err["type"] == "json_invalid":
+            parts.append("request body: is not valid JSON")
+            continue
+        field = ".".join(str(x) for x in err["loc"][skip:]) or "request body"
+        parts.append(f"{field}: {err['msg']}")
+    return "; ".join(parts)
+
+
+@app.exception_handler(RequestValidationError)
+async def _loud_422(_request: Request, exc: RequestValidationError) -> JSONResponse:
+    return JSONResponse(
+        status_code=422, content={"detail": _describe_errors(exc.errors(), skip=1)}
+    )
 
 
 @app.middleware("http")
@@ -162,10 +191,15 @@ def health() -> dict:
 
 
 def _scenario_listing(directory: Path) -> list[str]:
-    """Sorted .json names in a scenarios dir; [] never 500 (section 7.1)."""
+    """Sorted scenario .json names (provenance *.meta.json sidecars excluded: starting one
+    is a 500, audit B-18) in a scenarios dir; [] never 500 (section 7.1)."""
     if not directory.is_dir():
         return []
-    return sorted(p.name for p in directory.iterdir() if p.is_file() and p.suffix == ".json")
+    return sorted(
+        p.name
+        for p in directory.iterdir()
+        if p.is_file() and p.suffix == ".json" and not p.name.endswith(".meta.json")
+    )
 
 
 @app.get("/scenarios")
@@ -225,6 +259,20 @@ def _sanitize_scenario_name(name: str | None) -> str:
     return cleaned
 
 
+def _first_non_finite(node, path: str = "") -> str | None:
+    """Dotted path of the first NaN/+-Infinity in an uploaded scenario, else None
+    (B-14: the stored file would stream NaN to the browser as invalid JSON)."""
+    if isinstance(node, float) and not math.isfinite(node):
+        return path or "scenario"
+    if isinstance(node, dict):
+        children = ((f"{path}.{k}" if path else str(k), v) for k, v in node.items())
+    elif isinstance(node, list):
+        children = ((f"{path}.{i}" if path else str(i), v) for i, v in enumerate(node))
+    else:
+        return None
+    return next((hit for hit in (_first_non_finite(v, p) for p, v in children) if hit), None)
+
+
 @app.post("/scenarios/upload")
 def scenarios_upload(req: UploadRequest) -> dict:
     """Save a console-authored scenario into the scenarios dir. Overwrites are
@@ -261,6 +309,12 @@ def scenarios_upload(req: UploadRequest) -> dict:
     # written) is exactly the inert payload. The size cap measures the exact
     # serialization that will be written to disk.
     payload = _sanitize_scenario_labels(req.scenario)
+    bad = _first_non_finite(payload)
+    if bad is not None:
+        raise HTTPException(
+            status_code=422,
+            detail=f"invalid scenario: {bad}: Input should be a finite number",
+        )
     serialized = json.dumps(payload, indent=2, sort_keys=True) + "\n"
     if len(serialized) > MAX_UPLOAD_BYTES:
         raise HTTPException(
@@ -272,7 +326,9 @@ def scenarios_upload(req: UploadRequest) -> dict:
         # what was validated is what load_scenario will parse at start time.
         Scenario.model_validate_json(serialized)
     except ValidationError as exc:
-        raise HTTPException(status_code=422, detail=f"invalid scenario: {exc}") from None
+        raise HTTPException(
+            status_code=422, detail=f"invalid scenario: {_describe_errors(exc.errors())}"
+        ) from None
     directory.mkdir(parents=True, exist_ok=True)  # only after every check passed
     candidate.write_text(serialized, encoding="utf-8", newline="\n")
     return {"status": "saved", "filename": candidate.name,
@@ -292,12 +348,12 @@ def replay_file(filename: str) -> FileResponse:
     used to be servable, e.g. an operator-pointed CUBESAT_LOG_DIR with
     non-log files in it)."""
     base = log_dir().resolve()
-    candidate = (base / Path(filename).name).resolve()
-    if (
-        base not in candidate.parents
-        or not candidate.is_file()
-        or candidate.suffix != ".jsonl"
-    ):
+    try:
+        candidate = (base / Path(filename).name).resolve()
+        found = candidate.is_file()
+    except ValueError:  # embedded NUL: not a file name (B-15)
+        raise HTTPException(status_code=404, detail="replay file not found") from None
+    if base not in candidate.parents or not found or candidate.suffix != ".jsonl":
         raise HTTPException(status_code=404, detail="replay file not found")
     return FileResponse(candidate)
 
@@ -404,6 +460,21 @@ async def replay_stop() -> dict:
     return {"status": "stopped", "mode": session.mode}
 
 
+def _wire_text(msg: dict) -> str:
+    """Strict-JSON encoding of one WS message (allow_nan=False). A message that
+    carries NaN/Infinity (e.g. a replay log with a corrupt position) would reach
+    the browser as the token NaN and throw in JSON.parse; it is replaced by a
+    critical event instead -- never fabricated zeros, never invalid JSON."""
+    try:
+        return json.dumps(msg, allow_nan=False, separators=(",", ":"), ensure_ascii=False)
+    except ValueError:
+        t = msg.get("sim_time")
+        t = t if isinstance(t, (int, float)) and math.isfinite(t) else 0.0
+        what = f"dropped a {msg.get('type')} message containing NaN/Infinity"
+        note = to_event("critical", t, what)
+        return json.dumps(note, allow_nan=False, separators=(",", ":"))
+
+
 @app.websocket("/ws/state")
 async def ws_state(ws: WebSocket) -> None:
     """Section 6.3: accept -> hello -> snapshot -> reader/writer tasks; ping ->
@@ -415,8 +486,8 @@ async def ws_state(ws: WebSocket) -> None:
     reader: asyncio.Task | None = None
     writer: asyncio.Task | None = None
     try:
-        await ws.send_json(state.session.hello())
-        await ws.send_json(state.session.snapshot())
+        await ws.send_text(_wire_text(state.session.hello()))
+        await ws.send_text(_wire_text(state.session.snapshot()))
 
         async def read_loop() -> None:
             while True:
@@ -430,13 +501,13 @@ async def ws_state(ws: WebSocket) -> None:
                     await ws.close(code=1003)
                     return
                 if isinstance(msg, dict) and msg.get("type") == "ping":
-                    await ws.send_json({"type": "pong"})
+                    await ws.send_text(_wire_text({"type": "pong"}))
                 # anything else ignored (section 6.3)
 
         async def write_loop() -> None:
             while True:
                 msg = await queue.get()
-                await ws.send_json(msg)
+                await ws.send_text(_wire_text(msg))
 
         reader = asyncio.create_task(read_loop())
         writer = asyncio.create_task(write_loop())

@@ -1,6 +1,0 @@
-{
-  "summary":  "Implementation plan for semantic Light/Dark theme tokens in tokens.css + uiStore propagation, and seamless 'Global Orbit' vs 'Formation Array' 3D camera perspectives without canvas re-mounting.",
-  "updatedAt":  "2026-10-26T16:13:54.848074410Z",
-  "requestFeedback":  true,
-  "userFacing":  true
-}

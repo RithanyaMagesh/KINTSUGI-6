@@ -4,6 +4,8 @@ Written 2026-10-31 from the source tree at HEAD `c56f13b` (branch `frontend-land
 Every claim points to `file:line` or to a command output pasted below. Line numbers are for this HEAD; re-check them after any edit.
 Plain English first, then the maths, then the reference.
 
+**Re-measure note (2026-10-31, branch `v2-evidence`):** the benchmark/Δv/keep-out/scenario numbers below were re-checked against regenerated artifacts; where they changed they are corrected in place and GATES.md (2026-10-31 sections) wins on any disagreement. Source line numbers refer to the 2026-10-31 HEAD named above and may have moved.
+
 ---
 
 ## 1. One-page overview
@@ -14,7 +16,7 @@ Plain English first, then the maths, then the reference.
 3. Each satellite has a "slot" on one shared, naturally repeating ellipse. A PD controller with a thrust cap keeps it there.
 4. Each satellite has a role: 1 leader, 4 imagers, 1 downlink. Only imagers count toward ground coverage.
 5. At scripted times satellites fail: DEAD (silent), THRUSTER_OUT (reports itself), or EPS_DEGRADE (fades, then dies).
-6. A heartbeat monitor notices silence after 3 missed ticks (4 s at 2 s steps).
+6. A heartbeat monitor notices silence after 3 missed ticks (4 s at 2 s steps — (K−1)·dt by construction, not a measured detector latency).
 7. The replanner picks a new formation for the survivors (a sweep over phase offsets), re-elects any lost critical role, and assigns survivors to seats with the Hungarian algorithm.
 8. The survivors fly to their new seats under the same capped PD controller. The swarm counts as "recovered" once everyone is within 5% of the longest transfer distance.
 9. Every 2 s tick logs positions, velocities, Δv used, coverage (fraction of a ground grid seen) and the closest pair distance.
@@ -192,8 +194,8 @@ README ("Honesty / limitations"):
 > **The failure demo needs more thrust than that assumption.** `two_failure.json` carries `a_max = 0.1 m/s^2` (~800 mN at 8 kg): at 1e-2 the G2 PD diverges on formation-scale transfers at every spacing swept (4–11 km, measured 2026-09-28 — burn-induced Coriolis radial oscillations exceed the saturated controller's authority), so the demo flies 0.1 m/s^2 with 8 km slots and per-sat Δv up to 193.68 m/s — above a realistic cold-gas budget. The proper fix is an impulsive/MPC transfer planner (future work).
 
 What it implies physically:
-- The default `A_MAX_DEFAULT = 1e-2` assumes an ~8 kg CubeSat with a ~150 mN cold-gas thruster (`pd.py:24-27`).
-- The demo needs about 5× that thrust (0.8 N).
+- The default `A_MAX_DEFAULT = 1e-2` is 80 mN on an assumed 8 kg CubeSat (`pd.py:24-27` comments it as cold-gas class; 150 mN on 8 kg would be 0.019 m/s², so those two figures disagree — audit C-13).
+- The demo's a_max = 0.1 m/s² is 10× the default (800 mN at 8 kg), and 5.3× the 150 mN figure.
 - Per-satellite Δv reaches ~194 m/s (§9.1). HANDOFF.md §3 Phase C puts this at "~22× the module's entire budget" for a VACCO CuSP MiPS cold-gas unit (8.8 m/s at 8 kg).
 - The benchmark measures a control algorithm. It is not a flight claim.
 
@@ -319,8 +321,8 @@ Worked arithmetic for two_failure's second replan: `transfer_lower_bound_s = 945
 - `min_sep` = smallest distance among **all** pairs, dead included, every tick (`sim.py:354-359`).
 - **2 km** (`allocation.min_sep_km`) is a **planning constraint**. It is checked only on candidate destination formations at replan time (`allocate.py:82-97`). It is **not enforced during transfers.**
 - **1 km** (`safety.evade_radius_m`) is the **reactive trigger** for the evasion burn (`sim.py:596-626`).
-- Between 1 and 2 km nothing acts. Measured: Hungarian's worst survivor-to-dead clearance across the 15-pair benchmark is **1322.6 m** (`data/eval/benchmark_results.json` `policies_summary.hungarian.worst_min_sep_survivor_dead_m`), below the 2 km planning floor. `eps_leader_6sat` dips to 959.4 m and triggers evasion (§9.1).
-- On two_failure itself the worst `min_sep` is **3095.1 m at t = 1620 s** (`tests/test_fault.py:145`; §9.1).
+- Between 1 and 2 km nothing acts. Measured: Hungarian's worst survivor-to-dead clearance across the 15-pair benchmark is **1852.5 m** (corrected 2026-10-31 from 1322.6 m, which is `hungarian_keepout`'s number; `data/eval/benchmark_results.json` `policies_summary.hungarian.worst_min_sep_survivor_dead_m`), below the 2 km planning floor. `eps_leader_6sat` triggers evasion at 959.4 m (t = 2740) and its worst `min_sep` at HEAD is 868.0 m at t = 2746 (§9.1).
+- On two_failure itself the worst all-pairs `min_sep` is **3095.1 m at t = 1620 s** (`tests/test_fault.py:145`; §9.1). That is one pair; "min separation" is three different metrics in this repo (all-pairs here, survivor-vs-dead in the benchmark rows, run-window survivor-vs-dead in the keep-out report — audit C-10).
 
 ---
 
@@ -364,10 +366,10 @@ It then calls the pure core. The ensemble is still reproducible from its command
 | **Comms delays / packet loss** | heartbeat and self-report are instantaneous and lossless; replanner is centralised with perfect knowledge | unmeasured; README "Ideal comms and sensing; centralized replanner" |
 | **Fuel mass change** | a_max constant, mass never decreases; Δv is ∫‖u‖dt, not a rocket-equation budget | n/a |
 | **Real thruster limits** | continuous throttle, any direction, no minimum impulse bit, no duty cycle | a_max = 0.1 m/s² ≈ 0.8 N at 8 kg vs ~150 mN cold-gas assumption (`pd.py:24-27`; README) |
-| **Collision during transfers** | 2 km is checked only on destination formations at replan; transfers are only guarded by the 1 km reactive evasion | Hungarian worst survivor-dead clearance **1322.6 m** across 15 pairs (`benchmark_results.json`); eps_leader 959.4 m (§9.1) |
+| **Collision during transfers** | 2 km is checked only on destination formations at replan; transfers are only guarded by the 1 km reactive evasion | Hungarian worst survivor-dead clearance **1852.5 m** across 15 pairs (`benchmark_results.json`); eps_leader_6sat worst `min_sep` 868.0 m, evasion at 959.4 m (§9.1) |
 | **Earth curvature / ground geometry** | flat ground plane, footprint from chief altitude | `coverage.py:3-9` |
 | **Partial failures** | modes are total (dead / no thrust / fade-then-dead); no partial thrust, imager-only loss, or comms-only loss | — |
-| **Controller optimality** | PD is far from fuel-optimal | 193.68 m/s sat spent 155.09 m/s in one episode vs a 47.81 m/s two-impulse reference (3.24×; mean 2.58×, worst 5.64×) — HANDOFF.md §3 Phase C, `data/eval/dv_lower_bounds.json`; see Q9 on "lower bound" |
+| **Controller optimality** | PD is far from fuel-optimal | 193.68 m/s sat spent 155.09 m/s in one episode vs a 47.81 m/s two-impulse reference (3.24×; mean 2.95×, worst 5.72×, regenerated 2026-10-31) — HANDOFF.md §3 Phase C, `data/eval/dv_lower_bounds.json`; see Q9 on "lower bound" |
 
 ---
 
@@ -414,7 +416,7 @@ Same scenario with `recovery_enabled=False` (in-memory `model_copy`, no file wri
 eps_leader_6sat (reassign_on_degrade: true, sat 0 EPS_DEGRADE t=2400, degrade_s=1800):
   t=600  DEGRADE_START sat 0      t=602  ORACLE_SWAP leader 0 -> 1 (mode degrade_trigger)
   t=2404 FAILURE_DETECTED sat 0   t=2408 ASSIGNMENT hungarian
-  t=2742/2744 EVASIVE_MANEUVER sats 4<->5, range 959.4 m (t=2740)
+  t=2742/2744 EVASIVE_MANEUVER sats 4<->5, range 959.4 m (t=2740); worst min_sep 868.0 m at t=2746
   t=3664 RECOVERED               SUMMARY 0.349
 thruster_leader_6sat (sat 0 THRUSTER_OUT t=2400):
   t=2400 FAILURE_DETECTED self_report   t=2404 ASSIGNMENT method do_no_harm_hold
@@ -431,21 +433,21 @@ thruster_leader_6sat (sat 0 THRUSTER_OUT t=2400):
 | Pre-failure coverage (two_failure) | **0.3796 (38.0%)** | `tests/test_fault.py:160`; §9.1(b) | `uv run python -m pytest tests/test_fault.py -s -q` |
 | No-recovery last-orbit coverage | **0.2205 (22.1%)** | §9.1(b); README; GATES G4 | same |
 | With-recovery last-orbit coverage | **0.2698 (27.0%)** | §9.1(b); README | `uv run python -m cubesat.run --scenario data/scenarios/two_failure.json --seed 42 --out data/logs/two_failure.jsonl` |
-| Recovery gain on two_failure | **+4.93 pts** (≈31% of lost coverage) | README; `tests/test_fault.py:182` | `uv run python -m pytest tests/test_fault.py -s -q` |
+| Recovery gain on two_failure (pair (1,2), the best case of 15) | **+4.93 pts** (≈31% of lost coverage) | README; `tests/test_fault.py:182` | `uv run python -m pytest tests/test_fault.py -s -q` |
 | Worst min_sep, two_failure | **3095.1 m @ 1620 s** | `tests/test_fault.py:145`; §9.1(b) | same |
-| Worst survivor–dead clearance, 15-pair Hungarian | **1322.6 m** | `data/eval/benchmark_results.json` | `uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark --report data/eval/benchmark_results.json --policies do_nothing,even_split,greedy,hungarian` |
+| Worst survivor–dead clearance, 15-pair Hungarian | **1852.5 m** | `data/eval/benchmark_results.json` | `uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --out data/eval/benchmark --report data/eval/benchmark_results.json --policies do_nothing,even_split,greedy,hungarian` |
 | Hungarian mean gain vs do-nothing, 15 pairs | **−2.13 pts** (worst-case retained 0.2698 vs 0.2205) | `data/eval/benchmark_results.json` | same |
-| even_split worst survivor–dead | **3.4×10⁻⁹ m** (seat on a dead sat) | same | same |
-| Monte Carlo (20 jittered runs) | hungarian mean **0.26915** vs do_nothing **0.22028**, mean gain **+4.886 pts** | `data/eval/monte_carlo_results.json`; GATES.md | `uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json` |
+| even_split worst survivor–dead | **722.8 m** (`policies_summary.even_split.worst_min_sep_survivor_dead_m`; obstacle-blind by construction) | same | same |
+| Monte Carlo (20 jittered runs of ONE pair, (1,2), four jittered scalars) | hungarian mean **0.26915** vs do_nothing **0.22028**, mean gain **+4.886 pts** | `data/eval/monte_carlo_results.json`; GATES.md | `uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json` |
 | Max per-sat Δv, two_failure | **193.68 m/s** (sat 0, the leader) | §9.1(b); README | run command above |
-| Δv vs two-impulse reference | 155.09 vs 47.81 m/s (**3.24×**) | `data/eval/dv_lower_bounds.json`; HANDOFF §3 | `uv run python -m cubesat.dv_bound --base data/scenarios/two_failure.json --p0-dir data/eval/benchmark --report data/eval/dv_lower_bounds.json --csv data/eval/dv_lower_bounds.csv` |
+| Δv vs fixed-time two-impulse reference | 155.09 vs 47.81 m/s (**3.24×**; mean over 15 pairs 2.95×) | `data/eval/dv_lower_bounds.json`; HANDOFF §3 | `uv run python -m cubesat.dv_bound --base data/scenarios/two_failure.json --p0-dir data/eval/benchmark --report data/eval/dv_lower_bounds.json --csv data/eval/dv_lower_bounds.csv` |
 | CW-vs-Kepler error, 3 orbits | **3.101 m** (1 km) / **1578.5 m** (8 km) / 2984.5 m (11 km) | `cw_curve.py:61-63`; `data/eval/cw_error_report.json` | `uv run python -m cubesat.benchmark --mode cw-curve --base data/scenarios/two_failure.json --report data/eval/cw_error_report.json --csv data/eval/cw_error_curve.csv --svg data/eval/cw_error_curve.svg` |
 | STM vs ODE | 1.358e-12 pos / 5.597e-10 vel (rel) | §9.1(a) | `uv run python -m pytest tests/test_hcw.py -s -q` |
 | PD 1 km step | overshoot 4.99%, settle 746 s, 6.411 m/s | §9.1(a) | `uv run python -m pytest tests/test_pd.py -s -q` |
 | Slot holding cost | 1.403e-12 m/s per orbit | §9.1(a) | same |
 | Candidate formations per replan (two_failure) | **12** (1 amp × 12 phases) | `two_failure.json`; `allocate.py:154-161` | read the file |
 | Footprint radius | 13,093 m | `coverage.py:24-27` | python one-liner in §6.1 |
-| Predictor critical-seat gain | **+0.0235 pp** vs 0.5 pp threshold ⇒ CUT | GATES.md; HANDOFF §6 | see `files/ORACLE_SWEEP.md` |
+| Oracle (perfect-warning) critical-seat gain | Gate-2 sweep 2026-10-04: **+0.0235 pp** (= 4 s / 17028 s) vs 0.5 pp threshold ⇒ CUT; gradual-EPS sweep `data/eval/oracle_sweep_v2.json`: verdict **CLEAR**, **+1.7968 pp** at L = 300 s, **+10.6048 pp** best (L = 1800 s); integration into the loop is a user decision | GATES.md; HANDOFF §6 | `uv run python files/oracle_sweep_v2.py` (see `files/ORACLE_SWEEP.md`) |
 
 ---
 
@@ -553,11 +555,11 @@ Every new mode touches the same chain:
 Listed rather than guessed. None were changed.
 
 1. **The do-no-harm hold shuffles roles without moving anyone.** `allocate.py:267-276` returns `seats` (the re-elected, interleaved role layout) with identity pairs. `sim.py:477-482` then assigns `roles[sat] = seats[idx]` by index, so roles move between satellites that didn't move. Observed in `thruster_leader_6sat` (§9.1c): downlink moved from sat 5 to sat 4 and sat 5 became an imager, with no seat change. The hold's coverage is also estimated with the **old** `survivor_roles` (`allocate.py:268-270`) but applied with the **new** ones. The path is not documented in ARCHITECTURE.md.
-2. **`except TypeError` around `replan`** (`sim.py:440-476`). This exists so seam replanners without the `current_slots` parameter (`benchmark_policies.py:42-55, 131-144`) still work. But it would also swallow a genuine TypeError raised *inside* `replan` and silently re-run without the do-no-harm check.
+2. **`except TypeError` around `replan`** (`sim.py:440-476`; removed on branch `v2-evidence` by commit 8d18251 — the seam policies now accept `current_slots`, but `hungarian_keepout` ignores it, so it still runs without the do-no-harm hold). This exists so seam replanners without the `current_slots` parameter (`benchmark_policies.py:42-55, 131-144`) still work. But it would also swallow a genuine TypeError raised *inside* `replan` and silently re-run without the do-no-harm check.
 3. **THRUSTER_OUT keeps its role.** In `thruster_leader_6sat` the final roles have **two leaders**: sat 0 (THRUSTER_OUT) and sat 2 (§9.1c). Re-election ignores non-NOMINAL holders, but `roles[0]` is never cleared. A THRUSTER_OUT **imager** also keeps counting toward coverage while it drifts off its seat (`sim.py:350` excludes only DEAD). Arguably physical (its camera works), but it is not stated anywhere.
 4. **The leader moves because of the imager interleave.** `seat_roles_for` puts imagers on even seats (`allocate.py:71-78`), which pushes the surviving leader to seat 1 (§9.1b, assignment `(0,1,leader)`). The leader then spends the most Δv (193.68 m/s). Whether a surviving critical-role holder should be allowed to keep its slot is a design question.
 5. **"RECOVERED" is a loose criterion.** The tolerance is 5% of the longest transfer, position only (`sim.py:91, 533, 564-571`). For two_failure that is about 1.1 km (§5.5 arithmetic), and velocity error is ignored. A satellite could be "recovered" while still moving fast relative to its seat.
-6. **The 2 km separation floor is not enforced during transfers.** It is checked only on destination formations (`allocate.py:82-97`). Evasion starts at 1 km (`scenario.py:160-162`). Measured below 2 km: 1322.6 m (benchmark), 959.4 m (eps_leader). `tests/test_fault.py:145` asserts the floor only on two_failure.
+6. **The 2 km separation floor is not enforced during transfers.** It is checked only on destination formations (`allocate.py:82-97`). Evasion starts at 1 km (`scenario.py:160-162`). Measured below 2 km: 1852.5 m (benchmark, hungarian), 868.0 m (eps_leader_6sat `min_sep`, HEAD). `tests/test_fault.py:145` asserts the floor only on two_failure.
 7. **Evasion is not inert on all committed scenarios.** `scenario.py:152-155` says the default radius "never fires on any canonical run". It fires on `eps_leader_6sat` (§9.1c). The claim seems to mean the G4/P0 canonical set (nominal, two_failure), which is what `tests/test_collision_avoidance.py:173` checks.
 8. **The obstacle model during replan treats DEGRADED sats as coasting** (`sim.py:438` uses `status != NOMINAL`), but DEGRADED sats actually PD-hold their seat (`sim.py:634`). The separation check may then be against the wrong trajectory for a fading sat.
 9. **The "lower bound" in `dv_bound.py` is a fixed-time two-impulse solution**, not a proven minimum-fuel bound. A different transfer time, or more impulses, can sometimes cost less. The ratio is a fair efficiency indicator, but calling it a "physics lower bound" (`dv_bound.py:21-23`) overstates it.

@@ -1,0 +1,76 @@
+{
+  "schema": "perf_gc_probe/1",
+  "command": "uv run python -m cubesat.perf_gc --base data/scenarios --scenario live_24sat --report data/eval/perf_gc_probe.json --repeats 3",
+  "scenario": "live_24sat",
+  "repeats": 3,
+  "inputs": {
+    "live_24sat.json": "3d42b2c83dd3ba696286efbbc9cf3629ccb02963fd4d36249e9bb67504ea5192"
+  },
+  "n_ticks": 8515,
+  "load": {
+    "start": [
+      3.24609375,
+      2.97900390625,
+      4.66845703125
+    ],
+    "end": [
+      3.79638671875,
+      3.18994140625,
+      4.62109375
+    ]
+  },
+  "modes": {
+    "gc_on": {
+      "total_s": {
+        "median": 11.0494,
+        "min": 11.0195,
+        "max": 11.2012,
+        "n": 3
+      },
+      "tick_ms_max": {
+        "median": 71.056,
+        "min": 68.1354,
+        "max": 71.6109,
+        "n": 3
+      },
+      "tick_ms_p99": {
+        "median": 1.51356,
+        "min": 1.51341,
+        "max": 1.5639,
+        "n": 3
+      },
+      "n_ticks_over_5ms": {
+        "median": 6.0,
+        "min": 6.0,
+        "max": 6.0,
+        "n": 3
+      }
+    },
+    "gc_off": {
+      "total_s": {
+        "median": 10.6387,
+        "min": 10.6377,
+        "max": 10.7358,
+        "n": 3
+      },
+      "tick_ms_max": {
+        "median": 2.56112,
+        "min": 2.46679,
+        "max": 2.57483,
+        "n": 3
+      },
+      "tick_ms_p99": {
+        "median": 1.3212,
+        "min": 1.31006,
+        "max": 1.37608,
+        "n": 3
+      },
+      "n_ticks_over_5ms": {
+        "median": 0.0,
+        "min": 0.0,
+        "max": 0.0,
+        "n": 3
+      }
+    }
+  }
+}

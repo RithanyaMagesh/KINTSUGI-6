@@ -12,6 +12,7 @@ wall clock (AGENTS.md invariant 2). SI units (invariant 3), LVLH (invariant 4).
 
 from __future__ import annotations
 
+import itertools
 import math
 
 import numpy as np
@@ -52,6 +53,7 @@ def even_split_replan(
     n: float,
     a_max: float,
     t_replan: float,
+    current_slots: list | None = None,  # sim seam kwarg; unused by this policy
 ) -> tuple[FormationPlan, list[tuple[int, int]], float, str, float, np.ndarray]:
     """Policy 2 -- even redistribution, ADAPTED from the RL-retasking literature's
     even-split rule (which splits TASK LOAD among survivors). The adaptation
@@ -141,6 +143,7 @@ def hungarian_keepout_replan(
     n: float,
     a_max: float,
     t_replan: float,
+    current_slots: list | None = None,  # sim seam kwarg; unused by this policy
 ) -> tuple[FormationPlan, list[tuple[int, int]], float, str, float, np.ndarray]:
     """Policy 5 -- the shipped Hungarian path with ONE extra additive cost term:
     C = build_cost_matrix(...) + W4 * keep-out penalty per seat (dead satellites
@@ -188,3 +191,92 @@ def hungarian_keepout_replan(
     d = np.linalg.norm(surv_pos[:, None, :] - seat_pos[None, :, :], axis=2)
     max_transfer = max((float(d[r, c]) for r, c in pairs), default=0.0)
     return plan, pairs, total, "hungarian_keepout", max_transfer, cost
+
+
+_CRITICAL_ROLES = ("leader", "downlink")
+
+
+def role_swap_only_replan(
+    survivor_states: list,
+    survivor_roles: list[str],
+    survivor_fuel: list[float],
+    obstacle_states: list,
+    original_roles: list[str],
+    allocation,
+    base_amp_m: float,
+    r_f: float,
+    grid: np.ndarray,
+    n: float,
+    a_max: float,
+    t_replan: float,
+    current_slots: list | None = None,
+) -> tuple[FormationPlan, list[tuple[int, int]], float, str, float, np.ndarray]:
+    """Baseline `role_swap_only` (zero Delta-v; GATES.md 2026-10-31 pre-registration):
+    re-elect the lost critical roles IN PLACE among the survivors -- no seat change,
+    no formation sweep, identity assignment, max_transfer 0.
+
+    Rule (deterministic, given survivor order = ascending sat id): survivors keep
+    their current seats (`current_slots`, which the sim always passes) and roles;
+    for each critical role (leader, downlink, in that order) that appears in
+    original_roles but has no surviving holder, the lowest-id surviving sat holding
+    a non-critical role is promoted -- preferring a role held by more than one
+    survivor (counted before any promotion; e.g. imager), so unique roles are only
+    sacrificed as a last resort.
+    Deliberately NOT seat_roles_for's index-interleave relabelling, which re-lays
+    roles onto seats and so would move sats."""
+    if current_slots is None:
+        raise ValueError("role_swap_only needs current_slots (the sim seam passes them)")
+    roles = list(survivor_roles)
+    # "exists more than once" is counted among the survivors BEFORE any promotion
+    # (static), so a unique role is spared as long as duplicated ones remain.
+    dup_roles = {r for r in roles if roles.count(r) > 1}
+    for crit in _CRITICAL_ROLES:
+        if crit not in original_roles or crit in roles:
+            continue
+        pool = [i for i, r in enumerate(roles) if r not in _CRITICAL_ROLES]
+        dup = [i for i in pool if roles[i] in dup_roles]
+        if pool:
+            roles[(dup or pool)[0]] = crit
+    k = len(roles)
+    slots = list(current_slots)
+    coverage = _coverage_estimate(slots, roles, r_f=r_f, grid=grid, n=n, t_replan=t_replan)
+    plan = FormationPlan(base_amp_m, 0.0, slots, roles, coverage, "role_swap_only")
+    return plan, _identity_pairs(k), 0.0, "role_swap_only", 0.0, np.zeros((k, k))
+
+
+def role_swap_best_replan(
+    survivor_states: list,
+    survivor_roles: list[str],
+    survivor_fuel: list[float],
+    obstacle_states: list,
+    original_roles: list[str],
+    allocation,
+    base_amp_m: float,
+    r_f: float,
+    grid: np.ndarray,
+    n: float,
+    a_max: float,
+    t_replan: float,
+    current_slots: list | None = None,
+) -> tuple[FormationPlan, list[tuple[int, int]], float, str, float, np.ndarray]:
+    """Baseline `role_swap_best` (audit C-4 check, NOT pre-registered): role_swap_only with the
+    best-case promotee. Same zero-Delta-v in-place re-election, same pool (surviving sats with a
+    non-critical role), but the lost critical roles (leader, then downlink) go to the distinct
+    pool members that maximise the coverage estimate; ties keep the first (lowest ids)
+    choice. An upper bound on what any in-place promotion rule can keep."""
+    if current_slots is None:
+        raise ValueError("role_swap_best needs current_slots (the sim seam passes them)")
+    slots = list(current_slots)
+    lost = [c for c in _CRITICAL_ROLES if c in original_roles and c not in survivor_roles]
+    pool = [i for i, r in enumerate(survivor_roles) if r not in _CRITICAL_ROLES]
+    best_roles, best = list(survivor_roles), -1.0
+    for pick in itertools.permutations(pool, min(len(lost), len(pool))):
+        trial = list(survivor_roles)
+        for i, crit in zip(pick, lost, strict=False):
+            trial[i] = crit
+        cov = _coverage_estimate(slots, trial, r_f=r_f, grid=grid, n=n, t_replan=t_replan)
+        if cov > best:
+            best_roles, best = trial, cov
+    k = len(best_roles)
+    plan = FormationPlan(base_amp_m, 0.0, slots, best_roles, best, "role_swap_best")
+    return plan, _identity_pairs(k), 0.0, "role_swap_best", 0.0, np.zeros((k, k))

@@ -13,11 +13,11 @@ tests/test_fault.py pattern) plus the committed data/scenarios/two_failure.json
 -- no RNG, no wall clock (AGENTS.md 2), so every run is an exact replay.
 """
 
-import hashlib
 import json
 import math
 from pathlib import Path
 
+from cubesat.canon import canonical_log_hash
 from cubesat.scenario import load_scenario
 from cubesat.sim import run_scenario
 
@@ -27,12 +27,10 @@ TWO_FAILURE = ROOT / "data" / "scenarios" / "two_failure.json"
 # Round key regression pin: sha256 of the canonical two_failure log (both
 # failures DEAD, so nothing in the failure-semantics round may move a byte).
 # Serialization is exactly cubesat/run.py's (json.dumps, sort_keys, LF).
-CANONICAL_TWO_FAILURE_SHA256_SET = {
-    "450d537107c36205880b4e7a63e9d804e64e6352553b97b019cf3961ed044801",  # win32 UCRT
-    "b8f72df8d1c75043bf72ca78dfbbccb9b9a6d8d64117072460d62da3c834a362",  # linux glibc
-}
+# Canonical pin of the two_failure log (cubesat.canon.canonical_log_hash: floats
+# zeroed below 1e-6, else 5 significant digits); pinned on macOS arm64, 2026-10-31.
 CANONICAL_TWO_FAILURE_SHA256 = (
-    "450d537107c36205880b4e7a63e9d804e64e6352553b97b019cf3961ed044801"
+    "84a05c372fe47a186b5c87b728b7adbee18855159dabecb64afcbb4972852ade"
 )
 
 # Small 4-sat base: dt 2 s, 1 km slots. min_sep is set explicitly (0.5 km) so
@@ -231,5 +229,5 @@ def test_canonical_two_failure_sha_unchanged():
     failures, no degrade, no self-report) stays byte-identical through the
     Addendum v1.2 core diffs -- the whole round is default-inert."""
     lines = run_scenario(load_scenario(TWO_FAILURE))
-    digest = hashlib.sha256(_serialized(lines).encode("utf-8")).hexdigest()
-    assert digest in CANONICAL_TWO_FAILURE_SHA256_SET, f"golden sha mismatch: got {digest}"
+    digest = canonical_log_hash(lines)
+    assert digest == CANONICAL_TWO_FAILURE_SHA256, f"canonical golden mismatch: got {digest}"

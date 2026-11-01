@@ -42,12 +42,12 @@
         "std": 0.0045499479338702385
       },
       "min_sep_survivor_dead_m": {
-        "min": 10198.99658262773
+        "min": 10198.996582627722
       },
       "n_runs": 20,
       "total_dv_mps": {
-        "max": 2.896727743586691e-10,
-        "mean": 2.648452239253254e-10
+        "max": 2.7297962451205537e-10,
+        "mean": 2.495955765527619e-10
       }
     },
     "hungarian": {
@@ -57,12 +57,12 @@
         "std": 0.0024682700856299
       },
       "min_sep_survivor_dead_m": {
-        "min": 1787.7238719698796
+        "min": 1787.723871969878
       },
       "n_runs": 20,
       "total_dv_mps": {
-        "max": 2255.3311952841245,
-        "mean": 801.2274419109647
+        "max": 2255.33119528412,
+        "mean": 801.2274419109563
       }
     }
   },
@@ -70,7 +70,11 @@
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.2235269926572759,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1265.7494516534312,
@@ -81,26 +85,30 @@
         "radial_amp_multiplier": 1.0394736058118728
       },
       "log": "mc_run_000__do_nothing.jsonl",
-      "log_sha256": "3d3828f37910cb6db066fafce34c287ff277b7e768feabb198a21067ada9e6ed",
-      "min_sep_survivor_dead_m": 11760.301369572453,
+      "log_sha256": "e2b49149c050c465acc8cf1cb91f428e9e262a2b29a69c97bc8464beb371012b",
+      "min_sep_survivor_dead_m": 11760.301369572473,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
-        8.519122081733349e-11,
-        1.0284610954757713e-12,
-        1.7825893718749054e-12,
-        8.583365350071052e-11,
-        2.2290186955423763e-11,
-        7.098031934270336e-11
+        7.988724705167558e-11,
+        9.438991425172811e-13,
+        1.7552044021923953e-12,
+        8.052636660477161e-11,
+        2.180112157275434e-11,
+        6.682735013043636e-11
       ],
       "policy": "do_nothing",
       "prefailure_mean_coverage": 0.3844139447948671,
       "run": 0,
-      "total_dv_mps": 2.671064310835218e-10
+      "total_dv_mps": 2.5174118890434756e-10
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.271183775559611,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1265.7494516534312,
@@ -111,26 +119,30 @@
         "radial_amp_multiplier": 1.0394736058118728
       },
       "log": "mc_run_000__hungarian.jsonl",
-      "log_sha256": "5acacf1f42ef0af1f2d46804c647e287650d547de3d5504ef6997ebb4457f140",
-      "min_sep_survivor_dead_m": 4390.359041784242,
+      "log_sha256": "c11a37d4566fe78d3c24f4e8fb9f586ea565da7baf03b3ad39cf974c8b84b8bb",
+      "min_sep_survivor_dead_m": 4390.359041784226,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
-        281.1985623865235,
-        1.0284610954757713e-12,
-        21.000000000001574,
-        64.64791438708532,
-        137.58133061790144,
-        83.2938353487205
+        281.1985623865164,
+        9.438991425172811e-13,
+        21.000000000001528,
+        64.64791438708353,
+        137.58133061789806,
+        83.29383534871626
       ],
       "policy": "hungarian",
       "prefailure_mean_coverage": 0.3844139447948671,
       "run": 0,
-      "total_dv_mps": 587.7216427402334
+      "total_dv_mps": 587.7216427402167
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.22432786382917583,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1102.6025634930359,
@@ -141,26 +153,30 @@
         "radial_amp_multiplier": 1.0572128610553908
       },
       "log": "mc_run_001__do_nothing.jsonl",
-      "log_sha256": "568c48a3534ad36efceaba2bcb0e8cc91e91485d564cc1d58d841883ea80dfff",
-      "min_sep_survivor_dead_m": 11960.998158002498,
+      "log_sha256": "fdd2c56f939d7940470eff9e0df66d61b8d803c1d7ea5b1ab9e9cb622ae559f3",
+      "min_sep_survivor_dead_m": 11960.998158002501,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
-        8.97248574006274e-11,
-        9.096171448906204e-13,
-        1.881875199434591e-12,
-        8.97248574006274e-11,
-        2.91337246306397e-11,
-        6.671420898463829e-11
+        8.435230923443824e-11,
+        8.701673944900245e-13,
+        1.811458784689361e-12,
+        8.379428248010504e-11,
+        2.792652218154115e-11,
+        6.334330105603046e-11
       ],
       "policy": "do_nothing",
       "prefailure_mean_coverage": 0.390135577372604,
       "run": 1,
-      "total_dv_mps": 2.78089140760858e-10
+      "total_dv_mps": 2.620980411312943e-10
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.2713472485768501,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1102.6025634930359,
@@ -171,26 +187,30 @@
         "radial_amp_multiplier": 1.0572128610553908
       },
       "log": "mc_run_001__hungarian.jsonl",
-      "log_sha256": "da8d7ff0ca871b6624a6aa88c2412bcb008396453f319c835b6846b7260217ac",
-      "min_sep_survivor_dead_m": 5957.630185388901,
+      "log_sha256": "b439aa48f0c65b3cc88b1e94879c998f4d72546e7e2ab05862aeae101170e99d",
+      "min_sep_survivor_dead_m": 5957.630185388906,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
         1591.8000000002262,
-        9.096171448906204e-13,
-        29.562831526715456,
-        403.14731362328337,
-        117.46423128299385,
-        113.35681885090476
+        8.701673944900245e-13,
+        29.562831526715296,
+        403.14731362327854,
+        117.46423128299398,
+        113.35681885090497
       ],
       "policy": "hungarian",
       "prefailure_mean_coverage": 0.390135577372604,
       "run": 1,
-      "total_dv_mps": 2255.3311952841245
+      "total_dv_mps": 2255.33119528412
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.22611910292165868,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1110.7472718421309,
@@ -201,26 +221,30 @@
         "radial_amp_multiplier": 1.0853529977697203
       },
       "log": "mc_run_002__do_nothing.jsonl",
-      "log_sha256": "94f311539ef322ebc6ddaa885697e81b570208b5add01bdec84b984e68917bfb",
-      "min_sep_survivor_dead_m": 12279.36744681117,
+      "log_sha256": "f253ede9b397c5c8b32463f4aa2d124dd9bba40577cab3c63a5076de0f722f59",
+      "min_sep_survivor_dead_m": 12279.367446811539,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
-        9.351150227184198e-11,
-        1.0187667072072722e-12,
-        1.5495519505147149e-12,
-        9.357668893820795e-11,
-        5.969392121750498e-11,
-        4.0322343273392167e-11
+        8.772487243611829e-11,
+        1.0357364660528417e-12,
+        1.5226521705830442e-12,
+        8.772830137223011e-11,
+        5.664688684658505e-11,
+        3.832117522048603e-11
       ],
       "policy": "do_nothing",
       "prefailure_mean_coverage": 0.39729111611855156,
       "run": 2,
-      "total_dv_mps": 2.896727743586691e-10
+      "total_dv_mps": 2.7297962451205537e-10
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.2718237394342734,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1110.7472718421309,
@@ -231,26 +255,30 @@
         "radial_amp_multiplier": 1.0853529977697203
       },
       "log": "mc_run_002__hungarian.jsonl",
-      "log_sha256": "336cf2eda254b574874674439396e0d86aaaa92c64a851e1f3eefa8eae4adfe0",
-      "min_sep_survivor_dead_m": 3132.1767702077746,
+      "log_sha256": "dc322f79b788b1607791ff5a069450a690e36d96b925a462e0c60945c15b2e61",
+      "min_sep_survivor_dead_m": 3132.176770206925,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
-        317.6224791944506,
-        1.0187667072072722e-12,
-        32.22415719242508,
-        393.3051308846245,
-        50.02563603420329,
-        37.76347888800641
+        317.62247919444934,
+        1.0357364660528417e-12,
+        32.22415719242509,
+        393.30513088461845,
+        50.0256360341992,
+        37.76347888800462
       ],
       "policy": "hungarian",
       "prefailure_mean_coverage": 0.39729111611855156,
       "run": 2,
-      "total_dv_mps": 830.9408821937109
+      "total_dv_mps": 830.9408821936977
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.21625317645299472,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1234.5276288193593,
@@ -261,26 +289,30 @@
         "radial_amp_multiplier": 0.9454477443569553
       },
       "log": "mc_run_003__do_nothing.jsonl",
-      "log_sha256": "2d92a8292ee4547b3abfed9f17bbfd88210f34984241ce7a6b0b9c84884b7dad",
+      "log_sha256": "026b7469c5dbb764c5f882228149140449cd6023ec998cb6d908850f65bb6dbc",
       "min_sep_survivor_dead_m": 10696.520299369078,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
-        8.392194815106312e-11,
-        8.827832828495107e-13,
-        1.416289567166152e-12,
-        8.409106934720416e-11,
-        4.752671825944233e-11,
-        3.956563577954742e-11
+        7.846908942286527e-11,
+        8.707712213858116e-13,
+        1.4317446341102172e-12,
+        7.845604363106566e-11,
+        4.4935193353290384e-11,
+        3.77957759953184e-11
       ],
       "policy": "do_nothing",
       "prefailure_mean_coverage": 0.3672617183422069,
       "run": 3,
-      "total_dv_mps": 2.574044443872727e-10
+      "total_dv_mps": 2.4195861825803576e-10
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.2668543063227771,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1234.5276288193593,
@@ -291,26 +323,30 @@
         "radial_amp_multiplier": 0.9454477443569553
       },
       "log": "mc_run_003__hungarian.jsonl",
-      "log_sha256": "6b31bc442eb85c15bdc9ffe40c621a3eece53be3bfb8dbb3d576b7ca2fc02e52",
-      "min_sep_survivor_dead_m": 4922.344877920976,
+      "log_sha256": "30fdd9dcafae99813b0e78a8065fabffa8661bc25566a4253a4485f724b3ed03",
+      "min_sep_survivor_dead_m": 4922.344877920982,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
-        241.07607888320496,
-        8.827832828495107e-13,
-        31.438561273185254,
-        227.9577417056453,
-        46.73986543147914,
-        25.9130855503204
+        241.07607888320288,
+        8.707712213858116e-13,
+        31.43856127318529,
+        227.95774170564226,
+        46.73986543147564,
+        25.91308555031792
       ],
       "policy": "hungarian",
       "prefailure_mean_coverage": 0.3672617183422069,
       "run": 3,
-      "total_dv_mps": 573.125332843836
+      "total_dv_mps": 573.1253328438248
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.22304903567413745,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1213.1003488838003,
@@ -321,26 +357,30 @@
         "radial_amp_multiplier": 1.026332879824413
       },
       "log": "mc_run_004__do_nothing.jsonl",
-      "log_sha256": "1f18f2a603b78f75d82d72a9621cc817c65614b87e1a4c9488180ad770f2e541",
-      "min_sep_survivor_dead_m": 11611.631139184643,
+      "log_sha256": "c1173c251afa33fa96589a282be32d7e8a240a17d5be61cf3b82ad1dca7f02d7",
+      "min_sep_survivor_dead_m": 11611.631139184461,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
-        8.589771473535605e-11,
-        9.59410541966572e-13,
-        1.5144206225846412e-12,
-        8.597190969254514e-11,
-        2.366632102623026e-11,
-        6.919365779439563e-11
+        8.114170834774743e-11,
+        9.010819383033026e-13,
+        1.5241924376686903e-12,
+        8.112366021456633e-11,
+        2.274830723339734e-11,
+        6.496901347718844e-11
       ],
       "policy": "do_nothing",
       "prefailure_mean_coverage": 0.3832910185882018,
       "run": 4,
-      "total_dv_mps": 2.672034344130783e-10
+      "total_dv_mps": 2.5240796364887155e-10
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.2713021652111093,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1213.1003488838003,
@@ -351,26 +391,30 @@
         "radial_amp_multiplier": 1.026332879824413
       },
       "log": "mc_run_004__hungarian.jsonl",
-      "log_sha256": "c69b92e4151c50eed5180baebc71af1c6f03b218c4197aaa04523b518c57212b",
-      "min_sep_survivor_dead_m": 2055.3652942780686,
+      "log_sha256": "52c0f8afeca1fca3a941007aceb1788d37040946b60abe3006e1b4bdcb916026",
+      "min_sep_survivor_dead_m": 2055.365294278067,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
         165.34498919971858,
-        9.59410541966572e-13,
-        15.00000000000137,
-        28.241960626297537,
-        144.0074573122187,
-        96.08727663641399
+        9.010819383033026e-13,
+        15.0000000000014,
+        28.241960626297494,
+        144.00745731221846,
+        96.0872766364144
       ],
       "policy": "hungarian",
       "prefailure_mean_coverage": 0.3832910185882018,
       "run": 4,
-      "total_dv_mps": 448.6816837746511
+      "total_dv_mps": 448.6816837746512
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.22582404512148502,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1261.9410576204898,
@@ -381,26 +425,30 @@
         "radial_amp_multiplier": 1.0786242242644395
       },
       "log": "mc_run_005__do_nothing.jsonl",
-      "log_sha256": "546f23af15d790dd980471bd66431eb2e78262f5e9ca27e15ae2ee1e9b9242ea",
-      "min_sep_survivor_dead_m": 12203.240074281151,
+      "log_sha256": "fcad6cebe4a72f3d17eaf19d125b67176200857ad406e1a5570372d34039b20c",
+      "min_sep_survivor_dead_m": 12203.240074281168,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
-        8.49578764123422e-11,
-        1.0362643069221433e-12,
-        1.8269850746096896e-12,
-        8.552290828269813e-11,
-        1.8222970149806537e-11,
-        8.358785975676013e-11
+        7.942785992518978e-11,
+        1.0093165411128454e-12,
+        1.819856862491152e-12,
+        7.996387725944845e-11,
+        1.8071283755902026e-11,
+        7.757709921876635e-11
       ],
       "policy": "do_nothing",
       "prefailure_mean_coverage": 0.39090619748644023,
       "run": 5,
-      "total_dv_mps": 2.7515486398313885e-10
+      "total_dv_mps": 2.578692935629106e-10
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.27181347655426735,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1261.9410576204898,
@@ -411,26 +459,30 @@
         "radial_amp_multiplier": 1.0786242242644395
       },
       "log": "mc_run_005__hungarian.jsonl",
-      "log_sha256": "7ab62acd09af87231381ccc4d56731fcb55101ac97c173b9109d23ba101d53a0",
-      "min_sep_survivor_dead_m": 4445.724396472042,
+      "log_sha256": "2f36366ca47457037fe9f09dc0ba40b362cf213e5a677bbd4970a8665384b073",
+      "min_sep_survivor_dead_m": 4445.724396472016,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
-        185.37683288580794,
-        1.0362643069221433e-12,
-        4.867414580593451,
-        65.05446216713543,
-        133.67898033463317,
-        55.70611198588012
+        185.37683288580436,
+        1.0093165411128454e-12,
+        4.867414580593419,
+        65.05446216713119,
+        133.67898033462822,
+        55.70611198587784
       ],
       "policy": "hungarian",
       "prefailure_mean_coverage": 0.39090619748644023,
       "run": 5,
-      "total_dv_mps": 444.68380195405115
+      "total_dv_mps": 444.683801954036
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.21332239114841262,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1266.8120392977028,
@@ -441,26 +493,30 @@
         "radial_amp_multiplier": 0.9087607531574458
       },
       "log": "mc_run_006__do_nothing.jsonl",
-      "log_sha256": "5fcf266aa4f95b3e43b084c0f2cd9e983257f1f60f1d1db1c0043ddeb694f355",
-      "min_sep_survivor_dead_m": 10281.454313887702,
+      "log_sha256": "ebf9fa3d5567a274cbff2f501d8d9aa96af658146d3abc7d444bdc74dd260cb2",
+      "min_sep_survivor_dead_m": 10281.454313887743,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
-        8.125662147087434e-11,
-        9.193131263607307e-13,
-        1.226317836129056e-12,
-        8.114975356021418e-11,
-        4.533536012067929e-11,
-        3.969623863785736e-11
+        7.576873686676452e-11,
+        8.512447261229744e-13,
+        1.2120768310630647e-12,
+        7.576667952172643e-11,
+        4.2940714801639564e-11,
+        3.784355257008742e-11
       ],
       "policy": "do_nothing",
       "prefailure_mean_coverage": 0.35868591142901224,
       "run": 6,
-      "total_dv_mps": 2.4958360475211497e-10
+      "total_dv_mps": 2.3438300531740395e-10
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.2653680213790452,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1266.8120392977028,
@@ -471,26 +527,30 @@
         "radial_amp_multiplier": 0.9087607531574458
       },
       "log": "mc_run_006__hungarian.jsonl",
-      "log_sha256": "845b05c378b62a181cdd0c46978ea5f0fde38faf24658cf8a1c1fbd2441732d0",
-      "min_sep_survivor_dead_m": 5005.334882489682,
+      "log_sha256": "4ae9c3c26cada41cf01905c3abcb2abbcac9d5396cab4f2cfaa9df6a99005267",
+      "min_sep_survivor_dead_m": 5005.334882489686,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
-        133.41240097539503,
-        9.193131263607307e-13,
-        13.600000000001105,
-        10.887885388062813,
-        158.09833143172978,
-        46.90913984250128
+        133.4124009753946,
+        8.512447261229744e-13,
+        13.600000000001092,
+        10.887885388062696,
+        158.09833143173017,
+        46.9091398425013
       ],
       "policy": "hungarian",
       "prefailure_mean_coverage": 0.35868591142901224,
       "run": 6,
-      "total_dv_mps": 362.9077576376909
+      "total_dv_mps": 362.90775763769074
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.2268180783563558,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1117.0294780962115,
@@ -501,26 +561,30 @@
         "radial_amp_multiplier": 1.093501946486842
       },
       "log": "mc_run_007__do_nothing.jsonl",
-      "log_sha256": "2d02becb555ca437da3704cb8fefb7838a92c6cd5d8bb737deb04adf19839a81",
-      "min_sep_survivor_dead_m": 12371.5622810691,
+      "log_sha256": "d306a74547d5ed3be17a87923af95321c4afc0abe069264a0b241a06f67ea99a",
+      "min_sep_survivor_dead_m": 12371.56228106928,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
-        9.20824435926243e-11,
-        1.0393410308641603e-12,
-        1.7991993818267185e-12,
-        9.220231952364342e-11,
-        3.1892708841983706e-11,
-        6.879657766631933e-11
+        8.640694572299812e-11,
+        9.417195648845257e-13,
+        1.8008775264669595e-12,
+        8.636541408512197e-11,
+        3.024081031173061e-11,
+        6.466963830192818e-11
       ],
       "policy": "do_nothing",
       "prefailure_mean_coverage": 0.3983626179497728,
       "run": 7,
-      "total_dv_mps": 2.878125900372616e-10
+      "total_dv_mps": 2.704254055131304e-10
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.27226834205739225,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1117.0294780962115,
@@ -531,16 +595,16 @@
         "radial_amp_multiplier": 1.093501946486842
       },
       "log": "mc_run_007__hungarian.jsonl",
-      "log_sha256": "dae264f694358fc313b469268d36da123a137d09bfeda67761d5b1f2b6106de2",
-      "min_sep_survivor_dead_m": 10627.842261104523,
+      "log_sha256": "de161e4a7c9ad65faba001ca52c983d248c361a31583c798eb615e6b4c39cf6d",
+      "min_sep_survivor_dead_m": 10627.842261104526,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
-        1590.400000000226,
-        1.0393410308641603e-12,
-        39.148884037276666,
-        22.88441582218662,
-        170.15492460071846,
-        228.5959047594928
+        1590.4000000002259,
+        9.417195648845257e-13,
+        39.148884037276595,
+        22.88441582218673,
+        170.15492460071886,
+        228.59590475949227
       ],
       "policy": "hungarian",
       "prefailure_mean_coverage": 0.3983626179497728,
@@ -550,7 +614,11 @@
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.21549812170969318,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1158.1980859531566,
@@ -561,26 +629,30 @@
         "radial_amp_multiplier": 0.9378942718168571
       },
       "log": "mc_run_008__do_nothing.jsonl",
-      "log_sha256": "77a7ac59afee325f24bed6c71fac6b762937bb36fd0cb00e66e43f89411d3539",
-      "min_sep_survivor_dead_m": 10611.0624130153,
+      "log_sha256": "da73c803106e41e818869b9b40eec28901607283d5fe6939091f79bb0b4b03c8",
+      "min_sep_survivor_dead_m": 10611.062413015386,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
-        8.345718763589445e-11,
-        7.759051818052839e-13,
-        1.3141276037074041e-12,
-        8.345606589006996e-11,
-        4.582335039761332e-11,
-        4.26169677338188e-11
+        7.864339938495426e-11,
+        7.856561969487658e-13,
+        1.2900516594247837e-12,
+        7.864371326397267e-11,
+        4.325285446892527e-11,
+        4.068228678127696e-11
       ],
       "policy": "do_nothing",
       "prefailure_mean_coverage": 0.3652750367792171,
       "run": 8,
-      "total_dv_mps": 2.5744360444290924e-10
+      "total_dv_mps": 2.432979617555027e-10
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.26650573493400054,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1158.1980859531566,
@@ -591,16 +663,16 @@
         "radial_amp_multiplier": 0.9378942718168571
       },
       "log": "mc_run_008__hungarian.jsonl",
-      "log_sha256": "810b827ff9a971dc4f3ce933ee9024e87c472e395df1d2e85dd1162c361c4a56",
-      "min_sep_survivor_dead_m": 5412.23106725373,
+      "log_sha256": "5614315c8941bcb29e8bc722950108221f94bac91663aca295ba2123c23608a8",
+      "min_sep_survivor_dead_m": 5412.23106725372,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
-        131.3857330418552,
-        7.759051818052839e-13,
-        29.60000000000103,
-        13.565095001353018,
-        171.08242667616278,
-        80.632016523467
+        131.38573304185508,
+        7.856561969487658e-13,
+        29.600000000001007,
+        13.565095001353264,
+        171.08242667616247,
+        80.63201652346716
       ],
       "policy": "hungarian",
       "prefailure_mean_coverage": 0.3652750367792171,
@@ -610,7 +682,11 @@
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.22330267542285814,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1111.1811612805132,
@@ -621,26 +697,30 @@
         "radial_amp_multiplier": 1.0339627989365021
       },
       "log": "mc_run_009__do_nothing.jsonl",
-      "log_sha256": "374f898aa8ac2d403a436aef324474c1c3f372d0f16272a3e19ba9a47aa40d2e",
+      "log_sha256": "e4e0119578128d361ad273f07dad4b80f4efbf97db45c89356cb557faace9e46",
       "min_sep_survivor_dead_m": 11697.95370836339,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
-        8.819683909219907e-11,
-        9.623178351882815e-13,
-        1.376819676174795e-12,
-        8.824188751634053e-11,
-        6.598947422715861e-11,
-        2.8225989013768603e-11
+        8.277839188730259e-11,
+        1.0047623904650964e-12,
+        1.3698133021341166e-12,
+        8.278220300501762e-11,
+        6.24959964243021e-11,
+        2.7071514329636655e-11
       ],
       "policy": "do_nothing",
       "prefailure_mean_coverage": 0.3880475224399045,
       "run": 9,
-      "total_dv_mps": 2.729933273608299e-10
+      "total_dv_mps": 2.575026813388582e-10
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.27111486765099907,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1111.1811612805132,
@@ -651,26 +731,30 @@
         "radial_amp_multiplier": 1.0339627989365021
       },
       "log": "mc_run_009__hungarian.jsonl",
-      "log_sha256": "e7c03b2cbfe096299ec126e9e14aec126f094f0e5af1fa8e4ab9d8bf57d1625d",
-      "min_sep_survivor_dead_m": 2482.1625201282777,
+      "log_sha256": "e884a48d59f02abfb16fec5204d5f2514598fc34cea0c07a5a7c9667d30722df",
+      "min_sep_survivor_dead_m": 2482.1625201282754,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
-        294.9674311514078,
-        9.623178351882815e-13,
-        37.60000000000102,
-        183.8564250000391,
-        91.5699583910175,
-        87.81810366165298
+        294.96743115140293,
+        1.0047623904650964e-12,
+        37.600000000000996,
+        183.85642500003576,
+        91.56995839101525,
+        87.81810366164908
       ],
       "policy": "hungarian",
       "prefailure_mean_coverage": 0.3880475224399045,
       "run": 9,
-      "total_dv_mps": 695.8119182041194
+      "total_dv_mps": 695.811918204105
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.21753383726517703,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1184.9164605293593,
@@ -681,26 +765,30 @@
         "radial_amp_multiplier": 0.9624733282764082
       },
       "log": "mc_run_010__do_nothing.jsonl",
-      "log_sha256": "4bfbbb1fbf829aa6cdc911551b9638da503a297979dd8ea5ccee18464d3f9483",
-      "min_sep_survivor_dead_m": 10889.142817534219,
+      "log_sha256": "84205bcb9ba8d0867c0421f61f57da4d397f0f0801dbc7820ef42b2d1ea65f32",
+      "min_sep_survivor_dead_m": 10889.14281753412,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
-        8.389629830672906e-11,
-        7.886962253110362e-13,
-        1.6475801219098598e-12,
-        8.389629830672906e-11,
-        3.091989206564615e-11,
-        5.779613117092298e-11
+        7.76963497404544e-11,
+        8.160957987510814e-13,
+        1.6493829432054592e-12,
+        7.76963497404544e-11,
+        2.9599882745996076e-11,
+        5.4711252160823424e-11
       ],
       "policy": "do_nothing",
       "prefailure_mean_coverage": 0.3702088009082725,
       "run": 10,
-      "total_dv_mps": 2.5894489619724817e-10
+      "total_dv_mps": 2.421693131296848e-10
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.26760606228321954,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1184.9164605293593,
@@ -711,26 +799,30 @@
         "radial_amp_multiplier": 0.9624733282764082
       },
       "log": "mc_run_010__hungarian.jsonl",
-      "log_sha256": "7c24352a1bbcd474cab2b4fe901dc06e2a7e5476c4f20161caac26326914755c",
-      "min_sep_survivor_dead_m": 2279.4571502972144,
+      "log_sha256": "986dc7ee693fcca4566b33ae100e688f7f6913e3ad679a373d0d3800d51c2f4f",
+      "min_sep_survivor_dead_m": 2279.457150297099,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
-        215.7875573408894,
-        7.886962253110362e-13,
-        40.80000000000133,
-        128.00030590946025,
-        179.84360661360904,
-        164.95021854393045
+        215.7875573408859,
+        8.160957987510814e-13,
+        40.80000000000135,
+        128.00030590945667,
+        179.84360661360682,
+        164.95021854392647
       ],
       "policy": "hungarian",
       "prefailure_mean_coverage": 0.3702088009082725,
       "run": 10,
-      "total_dv_mps": 729.3816884078913
+      "total_dv_mps": 729.3816884078781
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.21704525087060375,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1279.7423523348482,
@@ -741,26 +833,30 @@
         "radial_amp_multiplier": 0.9576656207860488
       },
       "log": "mc_run_011__do_nothing.jsonl",
-      "log_sha256": "98d4f3aeda8ff9d93a662673cc1877d0773305bfa4f6f991a32e91e91984ee68",
-      "min_sep_survivor_dead_m": 10834.749731510961,
+      "log_sha256": "f3b32defcbe439d193bd94097fb15055ec8ca0d167dbf0ee9fc4523639af2338",
+      "min_sep_survivor_dead_m": 10834.749731510923,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
-        8.449327380184024e-11,
-        9.63528591604347e-13,
-        1.4551500809749828e-12,
-        8.422509874790086e-11,
-        5.1238322421904295e-11,
-        3.712442328078566e-11
+        7.879697463815603e-11,
+        9.250038803576816e-13,
+        1.4501366531185404e-12,
+        7.878982975762708e-11,
+        4.857321613801572e-11,
+        3.5018583456955846e-11
       ],
       "policy": "do_nothing",
       "prefailure_mean_coverage": 0.36979058272632676,
       "run": 11,
-      "total_dv_mps": 2.594997969250104e-10
+      "total_dv_mps": 2.435537445242309e-10
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.2672596900830157,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1279.7423523348482,
@@ -771,26 +867,30 @@
         "radial_amp_multiplier": 0.9576656207860488
       },
       "log": "mc_run_011__hungarian.jsonl",
-      "log_sha256": "5666bf0565d40374e006ade1b4280fae475437264384c23dca28497d05a3acdf",
-      "min_sep_survivor_dead_m": 4366.27924323273,
+      "log_sha256": "b8d41056f85da8c44aed88eff1e7d2b4b2638c1104bcdf1751578d913f9c9cb0",
+      "min_sep_survivor_dead_m": 4366.279243232818,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
-        192.3836775365282,
-        9.63528591604347e-13,
-        30.60000000000112,
-        112.72798867599356,
-        164.2773372651346,
-        119.13097337102408
+        192.38367753652457,
+        9.250038803576816e-13,
+        30.600000000001135,
+        112.72798867599002,
+        164.27733726512983,
+        119.1309733710213
       ],
       "policy": "hungarian",
       "prefailure_mean_coverage": 0.36979058272632676,
       "run": 11,
-      "total_dv_mps": 619.1199768486825
+      "total_dv_mps": 619.1199768486678
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.21297821813678147,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1243.7989209539942,
@@ -801,26 +901,30 @@
         "radial_amp_multiplier": 0.901472453950201
       },
       "log": "mc_run_012__do_nothing.jsonl",
-      "log_sha256": "796af9f6502f2fb8d924a4f0492d23d23b48d0474f8d9ac7713bb508718b012d",
-      "min_sep_survivor_dead_m": 10198.99658262773,
+      "log_sha256": "47587ea064faf72f481378d0fa93ff5a28d3762540907f067bd7ad2c934c9d48",
+      "min_sep_survivor_dead_m": 10198.996582627722,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
-        7.377500076285109e-11,
-        9.733090596917748e-13,
-        9.809533081580034e-13,
-        7.376578727089502e-11,
-        5.957453768487268e-11,
-        2.2413274596428548e-11
+        6.994605566788072e-11,
+        8.492368902360869e-13,
+        1.0251879103908631e-12,
+        6.9955832144356e-11,
+        5.595264637408372e-11,
+        2.1420491419883827e-11
       ],
       "policy": "do_nothing",
       "prefailure_mean_coverage": 0.35742510982999354,
       "run": 12,
-      "total_dv_mps": 2.314828626828971e-10
+      "total_dv_mps": 2.1914945040683123e-10
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.2649915936016808,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1243.7989209539942,
@@ -831,26 +935,30 @@
         "radial_amp_multiplier": 0.901472453950201
       },
       "log": "mc_run_012__hungarian.jsonl",
-      "log_sha256": "0a88218ff3485b7cce66760d45ad27857cf80feef5921be99095fbde0f101f50",
-      "min_sep_survivor_dead_m": 1787.7238719698796,
+      "log_sha256": "acacee9fb6830085b07a2465b0aa94a88b589abd3b5afae7156fdbe9e5817c92",
+      "min_sep_survivor_dead_m": 1787.723871969878,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
-        184.65942479830562,
-        9.733090596917748e-13,
-        14.200000000000873,
-        241.25544336826417,
-        61.70463576321454,
-        70.49608684990893
+        184.6594247983039,
+        8.492368902360869e-13,
+        14.20000000000091,
+        241.25544336826104,
+        61.704635763210455,
+        70.49608684990653
       ],
       "policy": "hungarian",
       "prefailure_mean_coverage": 0.35742510982999354,
       "run": 12,
-      "total_dv_mps": 572.3155907796951
+      "total_dv_mps": 572.3155907796837
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.22423879669198055,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1268.8618506005132,
@@ -861,26 +969,30 @@
         "radial_amp_multiplier": 1.0561458062043936
       },
       "log": "mc_run_013__do_nothing.jsonl",
-      "log_sha256": "af17f717564817808952eebb12f5baa71d7f9516c7d984e304ab190fb5cb1be2",
-      "min_sep_survivor_dead_m": 11948.925783825507,
+      "log_sha256": "46b8565abf589d39023b0697a6e8b2f6804cc13f7066b99e170f0a7aa4a3267e",
+      "min_sep_survivor_dead_m": 11948.92578382546,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
-        9.169602242112422e-11,
-        1.0276770659660179e-12,
-        1.763687914940307e-12,
-        9.129358712923209e-11,
-        3.348656280159925e-11,
-        6.429273772654147e-11
+        8.61253858607579e-11,
+        8.590320657476772e-13,
+        1.7405469754939885e-12,
+        8.610699982058494e-11,
+        3.160394320832413e-11,
+        6.039867168462201e-11
       ],
       "policy": "do_nothing",
       "prefailure_mean_coverage": 0.3891533589518792,
       "run": 13,
-      "total_dv_mps": 2.8356027505940334e-10
+      "total_dv_mps": 2.6683457961553067e-10
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.2713241570968365,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1268.8618506005132,
@@ -891,26 +1003,30 @@
         "radial_amp_multiplier": 1.0561458062043936
       },
       "log": "mc_run_013__hungarian.jsonl",
-      "log_sha256": "4c300d87e63273cd729873cd86641e1f6616c1fbd0e28730db7b7f6b07bb7cd8",
-      "min_sep_survivor_dead_m": 3674.595999101883,
+      "log_sha256": "c4fc037871977410ff7d85e837be8df3f2bb879f6d2044a8c9b99df71bd077ee",
+      "min_sep_survivor_dead_m": 3674.5959991015366,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
-        175.6152598262661,
-        1.0276770659660179e-12,
+        175.61525982626665,
+        8.590320657476772e-13,
         27.40000000000142,
-        117.11329872419779,
-        167.40072209985945,
-        67.83066600856691
+        117.11329872419776,
+        167.4007220998585,
+        67.83066600856687
       ],
       "policy": "hungarian",
       "prefailure_mean_coverage": 0.3891533589518792,
       "run": 13,
-      "total_dv_mps": 555.3599466588927
+      "total_dv_mps": 555.3599466588921
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.2142357874689502,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1190.1397861292016,
@@ -921,26 +1037,30 @@
         "radial_amp_multiplier": 0.9229060147071947
       },
       "log": "mc_run_014__do_nothing.jsonl",
-      "log_sha256": "37492299da4a32d46c3cfad75d357647e61967dbb4fd11ae2036a53a457eb9ce",
-      "min_sep_survivor_dead_m": 10441.489637221617,
+      "log_sha256": "7cf8793636cc13e74eff83d3c7498cbd40ebe82785bf1086a746b77b862bc991",
+      "min_sep_survivor_dead_m": 10441.48963722161,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
-        7.491772080002708e-11,
-        1.000519453817958e-12,
-        1.1584904752762522e-12,
-        7.491772080002708e-11,
-        6.332666481133801e-11,
-        1.979348498537615e-11
+        7.096709665759768e-11,
+        9.820277856364264e-13,
+        1.1938006138351854e-12,
+        7.054755830350985e-11,
+        5.997050148956202e-11,
+        1.898502537527316e-11
       ],
       "policy": "do_nothing",
       "prefailure_mean_coverage": 0.3608761846231205,
       "run": 14,
-      "total_dv_mps": 2.351146013258625e-10
+      "total_dv_mps": 2.2264601022541433e-10
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.26613663778521185,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1190.1397861292016,
@@ -951,26 +1071,30 @@
         "radial_amp_multiplier": 0.9229060147071947
       },
       "log": "mc_run_014__hungarian.jsonl",
-      "log_sha256": "47d0b76d518c08a7b6c96bd82053dfbdff6df6b9f5a56c169f744254d65d2436",
+      "log_sha256": "b4784b2f3a582de032424ccf30b57cebb51240c603881543686ce994fe06266b",
       "min_sep_survivor_dead_m": 6622.525786449812,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
-        155.1552776256457,
-        1.000519453817958e-12,
-        31.803820121467293,
-        254.39031033778147,
-        50.6124162319544,
-        16.277913041509006
+        155.15527762564525,
+        9.820277856364264e-13,
+        31.803820121467307,
+        254.39031033778133,
+        50.61241623195428,
+        16.277913041508732
       ],
       "policy": "hungarian",
       "prefailure_mean_coverage": 0.3608761846231205,
       "run": 14,
-      "total_dv_mps": 508.23973735835887
+      "total_dv_mps": 508.2397373583579
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.2240225431489961,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1240.416710829713,
@@ -981,26 +1105,30 @@
         "radial_amp_multiplier": 1.0529997714832051
       },
       "log": "mc_run_015__do_nothing.jsonl",
-      "log_sha256": "42e6db207c8c6aad250b0b29b7c1bc1e9ca59d269f74c8fe48733387d55ee0e6",
-      "min_sep_survivor_dead_m": 11913.332498859758,
+      "log_sha256": "63526dc029d36115081fd3fd54056930fedd4f45f80e60b9608c7198c15674fa",
+      "min_sep_survivor_dead_m": 11913.332498859672,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
-        9.071396314774376e-11,
-        8.384988444099919e-13,
-        1.6396033792236772e-12,
-        9.085656739329494e-11,
-        4.487030382034693e-11,
-        5.423061476388596e-11
+        8.601465755520928e-11,
+        8.488372037710914e-13,
+        1.6181602969427887e-12,
+        8.601514769009648e-11,
+        4.2706398661718307e-11,
+        5.198748066150673e-11
       ],
       "policy": "do_nothing",
       "prefailure_mean_coverage": 0.39002749752421745,
       "run": 15,
-      "total_dv_mps": 2.8314955134890525e-10
+      "total_dv_mps": 2.691906820692447e-10
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.2713817025311561,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1240.416710829713,
@@ -1011,26 +1139,30 @@
         "radial_amp_multiplier": 1.0529997714832051
       },
       "log": "mc_run_015__hungarian.jsonl",
-      "log_sha256": "6a9c419edc3134f688508b9cfe7761d12c6cf291172af7d520aaadd7d672fe63",
-      "min_sep_survivor_dead_m": 3907.733178464443,
+      "log_sha256": "e35a1b1e80b383cbfcc123217955070fa2a73b66be117c9059fe42342ea7d6ba",
+      "min_sep_survivor_dead_m": 3907.7331784644202,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
-        196.3191334294627,
-        8.384988444099919e-13,
-        6.036286148987451,
-        89.4914353736344,
-        155.6577173240407,
-        114.76413878502169
+        196.3191334294631,
+        8.488372037710914e-13,
+        6.036286148987445,
+        89.49143537363473,
+        155.65771732404102,
+        114.76413878502167
       ],
       "policy": "hungarian",
       "prefailure_mean_coverage": 0.39002749752421745,
       "run": 15,
-      "total_dv_mps": 562.2687110611478
+      "total_dv_mps": 562.2687110611488
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.21731501800219113,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1232.3323968001419,
@@ -1041,26 +1173,30 @@
         "radial_amp_multiplier": 0.9607900196125224
       },
       "log": "mc_run_016__do_nothing.jsonl",
-      "log_sha256": "6e11d1cf83a2eb2dd7142d2a39fdd82fa4ddbdaea5cff8e72fa6c034a310545e",
-      "min_sep_survivor_dead_m": 10870.098276458326,
+      "log_sha256": "157ac9caa68ec8528cf33b837a937694d9291a12ff282627e5622a2da48eb270",
+      "min_sep_survivor_dead_m": 10870.098276458319,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
-        8.531043251216199e-11,
-        8.863402280973455e-13,
-        1.4644686441902486e-12,
-        8.535396935452531e-11,
-        4.0694915724561423e-11,
-        4.888851442516288e-11
+        7.97539768550998e-11,
+        8.412804797884118e-13,
+        1.4839268685095715e-12,
+        7.977451334073071e-11,
+        3.794059431369075e-11,
+        4.6078252449182334e-11
       ],
       "policy": "do_nothing",
       "prefailure_mean_coverage": 0.37015230960456175,
       "run": 16,
-      "total_dv_mps": 2.625986408886992e-10
+      "total_dv_mps": 2.458725443070016e-10
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.26743195985454565,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1232.3323968001419,
@@ -1071,26 +1207,30 @@
         "radial_amp_multiplier": 0.9607900196125224
       },
       "log": "mc_run_016__hungarian.jsonl",
-      "log_sha256": "6f88c2d44a08b35000fe367ff04e904106ffe462f7befad95ed4c5b672720d64",
-      "min_sep_survivor_dead_m": 6274.96770022499,
+      "log_sha256": "ad15f5a39b103a6833a73d3fca492c15101a2fba565b0ce0383f609951fa96b3",
+      "min_sep_survivor_dead_m": 6274.9677002249355,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
-        225.8481705458172,
-        8.863402280973455e-13,
-        26.74132537699371,
-        108.41051132108431,
-        146.1115488313402,
-        14.495365005278776
+        225.84817054581632,
+        8.412804797884118e-13,
+        26.741325376993753,
+        108.41051132108079,
+        146.1115488313363,
+        14.495365005276657
       ],
       "policy": "hungarian",
       "prefailure_mean_coverage": 0.37015230960456175,
       "run": 16,
-      "total_dv_mps": 521.6069210805151
+      "total_dv_mps": 521.6069210805047
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.2190395483746347,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1087.3962802963056,
@@ -1101,26 +1241,30 @@
         "radial_amp_multiplier": 0.9817057287449272
       },
       "log": "mc_run_017__do_nothing.jsonl",
-      "log_sha256": "d0c38b5eae7a28d483ba7be316a0dedbf75dad79f4418b27bbc130db740d556a",
-      "min_sep_survivor_dead_m": 11106.732615603898,
+      "log_sha256": "5223abb4c37232ff0900efed7ad7dbaffbb0ad3c5858cd7f5400a68d43fd0e74",
+      "min_sep_survivor_dead_m": 11106.73261560387,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
-        8.446029026611641e-11,
-        8.292772630481492e-13,
-        1.214597961263405e-12,
-        8.42517664765033e-11,
-        6.392252138967539e-11,
-        2.537764397562069e-11
+        7.892808173596335e-11,
+        8.231751293767376e-13,
+        1.23504869637299e-12,
+        7.890616660001745e-11,
+        6.001191501200797e-11,
+        2.4604182108467555e-11
       ],
       "policy": "do_nothing",
       "prefailure_mean_coverage": 0.37525058150211177,
       "run": 17,
-      "total_dv_mps": 2.6005609733222737e-10
+      "total_dv_mps": 2.4450856928220607e-10
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.26867376833527656,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1087.3962802963056,
@@ -1131,26 +1275,30 @@
         "radial_amp_multiplier": 0.9817057287449272
       },
       "log": "mc_run_017__hungarian.jsonl",
-      "log_sha256": "d17a9da664ed1734f347323bc45b1cecc9838fa92505cd5124605d0ccfb49dfe",
-      "min_sep_survivor_dead_m": 2490.574254552125,
+      "log_sha256": "fa62b6a975f00e12fb6e20d7c2765141d38a14a9ae277e8a4fc90fc99979d049",
+      "min_sep_survivor_dead_m": 2490.574254551866,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
-        185.72220319186144,
-        8.292772630481492e-13,
-        38.800000000000864,
-        64.27285524994338,
-        204.3887833719435,
-        135.2270332490464
+        185.7222031918578,
+        8.231751293767376e-13,
+        38.80000000000089,
+        64.27285524993869,
+        204.38878337193975,
+        135.2270332490429
       ],
       "policy": "hungarian",
       "prefailure_mean_coverage": 0.37525058150211177,
       "run": 17,
-      "total_dv_mps": 628.4108750627964
+      "total_dv_mps": 628.4108750627809
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.2169162318076707,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1284.8167375843598,
@@ -1161,26 +1309,30 @@
         "radial_amp_multiplier": 0.9562767784043993
       },
       "log": "mc_run_018__do_nothing.jsonl",
-      "log_sha256": "a5040cd48c05d73771b5ccdbc9ac7de5199bfe65d46c2876c5c8f36bc8c5be3f",
-      "min_sep_survivor_dead_m": 10819.036724123373,
+      "log_sha256": "97b39f3f20b02ab294e528b1fa43f7e3c27f228258d4131433932aac5cf65b59",
+      "min_sep_survivor_dead_m": 10819.036724123365,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
-        7.391308557863177e-11,
-        1.137500775326328e-12,
-        1.0660364001841655e-12,
-        7.397410752587567e-11,
-        6.931983165759275e-11,
-        1.6359466224369685e-11
+        7.010464011146891e-11,
+        1.1115832440672283e-12,
+        1.0326169451914015e-12,
+        7.013473904327548e-11,
+        6.534928558864836e-11,
+        1.5973234486060718e-11
       ],
       "policy": "do_nothing",
       "prefailure_mean_coverage": 0.3686138887854959,
       "run": 18,
-      "total_dv_mps": 2.3577002816198036e-10
+      "total_dv_mps": 2.2370609941871208e-10
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.2671841846086856,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1284.8167375843598,
@@ -1191,26 +1343,30 @@
         "radial_amp_multiplier": 0.9562767784043993
       },
       "log": "mc_run_018__hungarian.jsonl",
-      "log_sha256": "44d9ec38b7008170b4d1fb2e5f3aad2691356a2ca4478d23022cb1cb6c513255",
-      "min_sep_survivor_dead_m": 2919.994666069598,
+      "log_sha256": "9b6b28fd83464a4411fa78202b0bec0d3e2a7342783e5bfc23f9e340854e5507",
+      "min_sep_survivor_dead_m": 2919.9946660695937,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
-        297.1563468152587,
-        1.137500775326328e-12,
-        3.807337574846457,
-        149.59615082632564,
-        43.58169739646746,
-        77.98852076197664
+        297.1563468152553,
+        1.1115832440672283e-12,
+        3.807337574846434,
+        149.596150826322,
+        43.58169739646552,
+        77.98852076197281
       ],
       "policy": "hungarian",
       "prefailure_mean_coverage": 0.3686138887854959,
       "run": 18,
-      "total_dv_mps": 572.1300533748761
+      "total_dv_mps": 572.1300533748632
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.22428791190343803,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1150.462501864004,
@@ -1221,26 +1377,30 @@
         "radial_amp_multiplier": 1.0567796418212827
       },
       "log": "mc_run_019__do_nothing.jsonl",
-      "log_sha256": "e058bbfaba372a21d5049eef6a3efb585bff3714508ae377904a3e8163e3f73d",
-      "min_sep_survivor_dead_m": 11956.096996532624,
+      "log_sha256": "464b5c1c038f203881f4afd4b0d488a6d776c2a29f7aa5d1d323b357e3669d10",
+      "min_sep_survivor_dead_m": 11956.096996532613,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
-        9.166012666757931e-11,
-        8.295948614942248e-13,
-        1.7165209900414418e-12,
-        9.171192450166276e-11,
-        4.5219310021597055e-11,
-        5.312603596224461e-11
+        8.698785115625971e-11,
+        9.571175713476542e-13,
+        1.6634894247237997e-12,
+        8.700919739378784e-11,
+        4.2538924005192466e-11,
+        5.046017458265964e-11
       ],
       "policy": "do_nothing",
       "prefailure_mean_coverage": 0.39147047346514047,
       "run": 19,
-      "total_dv_mps": 2.842635130046194e-10
+      "total_dv_mps": 2.696167541339711e-10
     },
     {
       "command": "uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json",
       "coverage_mean_last_orbit": 0.2713358861025577,
+      "critical_roles_held_end": true,
+      "critical_seat_frac": 1.0,
+      "critical_vacancy_s": 0.0,
       "duration_s": 17028.0,
+      "imagers_end": 2,
       "jitter": {
         "failure_times_s": [
           1150.462501864004,
@@ -1251,21 +1411,21 @@
         "radial_amp_multiplier": 1.0567796418212827
       },
       "log": "mc_run_019__hungarian.jsonl",
-      "log_sha256": "937df1efca1dce565f0627fc8fb455dc87921783406cb2b3fe28c3ba5f278257",
-      "min_sep_survivor_dead_m": 6875.80333586801,
+      "log_sha256": "f001b073ab01c2425ab6280bc648b7c55b94e6820abae0efab48ee7a14ccda25",
+      "min_sep_survivor_dead_m": 6875.803335868041,
       "n_ticks": 8515,
       "per_sat_dv_mps": [
         1587.000000000225,
-        8.295948614942248e-13,
-        39.20000000000136,
-        120.91443374745495,
-        179.79558321156605,
-        152.1517055320294
+        9.571175713476542e-13,
+        39.20000000000131,
+        120.91443374744983,
+        179.7955832115622,
+        152.1517055320258
       ],
       "policy": "hungarian",
       "prefailure_mean_coverage": 0.39147047346514047,
       "run": 19,
-      "total_dv_mps": 2079.0617224912776
+      "total_dv_mps": 2079.0617224912653
     }
   ],
   "runs": 20,

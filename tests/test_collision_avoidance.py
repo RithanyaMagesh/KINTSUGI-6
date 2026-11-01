@@ -242,4 +242,5 @@ def test_proximity_stress_scenario_runs(stress_scenario, stress_lines):
             f"SAT-{payload['sat_id'] + 1} evasive maneuver "
             f"(SAT-{payload['other_id'] + 1}, range {payload['range_m']:.0f} m)"
         ),
+        "sat_id": f"SAT-{payload['sat_id'] + 1}",  # additive wire key (2026-10-31)
     }

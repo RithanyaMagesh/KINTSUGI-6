@@ -1,168 +1,40 @@
-"""Scenario schema (pydantic v2). Scenarios are external JSON files (locked decision)."""
+"""Scenario schema (pydantic v2). Scenarios are external JSON files (locked decision).
+
+The leaf models and MAX_* bounds live in cubesat/scenario_models.py and are re-exported
+here, so ``from cubesat.scenario import Failure`` (etc.) keeps working with the same objects."""
 
 from __future__ import annotations
 
-from enum import StrEnum
 from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
-# Resource bounds (audit: scenarios are uploaded through the API by an
-# unauthenticated console user, so every derived allocation must be bounded --
-# target_grid materializes (2*extent/step+1)^2 points per tick, the sweeps
-# multiply into the replan's candidate count, and duration/dt set the tick
-# count). Each cap sits ~5x above every committed scenario, benchmark and
-# sweep value (largest legit: 961 grid points, 12-entry phase sweep, 8 sats,
-# 8515 ticks), so canonical runs validate unchanged and logs stay
-# byte-identical (AGENTS.md invariant 2).
-MAX_GRID_POINTS = 10_000
-MAX_SWEEP_ENTRIES = 64
-MAX_SATS = 32
-MAX_FAILURES = 64
-MAX_DURATION_S = 86_400.0
-MAX_TICKS = 100_000
-
-
-class FailureMode(StrEnum):
-    """DEAD: no comms, no thrust, coasts ballistically. THRUSTER_OUT: reports, cannot
-    maneuver. EPS_DEGRADE: gradual power death -- with degrade_s > 0 the sat reports
-    DEGRADED for degrade_s before dying exactly like DEAD; degrade_s == 0 is sudden."""
-
-    DEAD = "DEAD"
-    THRUSTER_OUT = "THRUSTER_OUT"
-    EPS_DEGRADE = "EPS_DEGRADE"
-
-
-class ChiefOrbit(BaseModel):
-    altitude_km: float = Field(
-        gt=160, lt=2000, description="Circular chief altitude above Earth, km"
-    )
-
-
-class Formation(BaseModel):
-    n_slots: int = Field(
-        ge=2, le=MAX_SATS, description="Number of phase-spaced passive-ellipse slots"
-    )
-    radial_amp_km: float = Field(
-        gt=0, description="Radial amplitude of each drift-free 2:1 ellipse, km"
-    )
-    phase_offset_deg: float = Field(
-        default=0.0, description="Common phase offset of all slots, deg"
-    )
-
-
-class Gains(BaseModel):
-    wn: float = Field(gt=0, description="PD natural frequency, rad/s")
-    zeta: float = Field(gt=0, description="PD damping ratio")
-
-
-class Sensor(BaseModel):
-    fov_half_angle_deg: float = Field(gt=0, le=45, description="Imager half field of view, deg")
-    grid_step_km: float = Field(gt=0, description="Target grid spacing in the (y, z) plane, km")
-    grid_extent_km: float = Field(gt=0, description="Half-extent of the square target grid, km")
-
-    @model_validator(mode="after")
-    def _grid_fits_budget(self) -> Sensor:
-        # coverage.target_grid materializes (2*extent/step+1)^2 points per tick;
-        # only gt=0 bounds would let one uploaded scenario pin unbounded memory
-        # in the shared server process (audit, medium). Same point-count formula
-        # as cubesat/coverage.py:33-35.
-        n_per_axis = int(round(2.0 * self.grid_extent_km / self.grid_step_km)) + 1
-        if n_per_axis * n_per_axis > MAX_GRID_POINTS:
-            raise ValueError(
-                f"target grid is {n_per_axis}x{n_per_axis} = {n_per_axis ** 2} points, "
-                f"above the {MAX_GRID_POINTS}-point budget; raise grid_step_km or "
-                f"lower grid_extent_km"
-            )
-        return self
-
-
-class Failure(BaseModel):
-    t: float = Field(ge=0, description="Failure time, sim seconds")
-    sat_id: int = Field(ge=0)
-    mode: FailureMode
-    degrade_s: float = Field(
-        default=0.0, ge=0,
-        description="EPS_DEGRADE fade length, s: the sat is DEGRADED from "
-        "max(t - degrade_s, 0) and dies at t; 0 = sudden (DEAD-equivalent "
-        "run; the FAILURE_DETECTED mode label stays EPS_DEGRADE)",
-    )
-
-
-class Detection(BaseModel):
-    """Heartbeat monitoring: every non-DEAD sat reports once per tick; a sat that
-    stops reporting is declared failed after missed_ticks_k consecutive misses."""
-
-    missed_ticks_k: int = Field(
-        ge=1, default=3, description="Missed heartbeat ticks before declaring failure"
-    )
-
-
-class Allocation(BaseModel):
-    """Two-step allocation parameters (MASTER_PROMPT 3.3). Weights apply to the
-    normalized cost terms; the sweep grids are the survivor-formation candidates."""
-
-    w1: float = Field(gt=0, default=1.0, description="Weight of normalized distance")
-    w2: float = Field(gt=0, default=0.5, description="Weight of normalized distance/fuel")
-    w3: float = Field(ge=0, default=2.0, description="Weight of role mismatch (0/1)")
-    min_sep_km: float = Field(
-        gt=0, default=2.0,
-        description="Min pairwise separation constraint, km (dead sats included)",
-    )
-    dv_budget_mps: float = Field(
-        gt=0, default=100.0,
-        description="Per-transfer delta-v budget for seat reachability, m/s",
-    )
-    amp_sweep: list[float] = Field(
-        default_factory=lambda: [1.0],
-        min_length=1,
-        max_length=MAX_SWEEP_ENTRIES,
-        description="Radial-amplitude multipliers swept for the survivor formation",
-    )
-    phase_sweep_deg: list[float] = Field(
-        default_factory=lambda: [0.0, 60.0, 120.0, 180.0, 240.0, 300.0],
-        min_length=1,
-        max_length=MAX_SWEEP_ENTRIES,
-        description="Formation phase offsets swept, deg",
-    )
-    method: Literal["hungarian", "greedy"] = Field(
-        default="hungarian",
-        description="Assignment method; 'greedy' forces the fallback (demo toggle)",
-    )
-
-
-class Oracle(BaseModel):
-    """Oracle early-warning parameters (Phase 2). Gated default-off; byte-inert when disabled."""
-
-    enabled: bool = Field(
-        default=False, description="True = oracle early warning active"
-    )
-    lead_s: float = Field(
-        default=0.0, ge=0.0, description="Warning lead time L in seconds"
-    )
-
-
-class Safety(BaseModel):
-    """Evasive collision avoidance (BACKEND_SPEC Addendum v1.2 item 5): a discrete
-    bounded evasion maneuver -- explicitly NOT potential fields (MASTER_PROMPT 2
-    lock preserved; min_sep stays logged every step). A sat inside evade_radius_m
-    of another burns straight away from it at a_max for evade_ticks ticks; while
-    the range is still inside the radius when the counter expires, a new episode
-    starts (continuous burn until clear). Default-inertness is GEOMETRIC, not
-    flag-off: at the 1000 m default radius the maneuver never fires on any
-    canonical run (P0 worst survivor-dead clearance 1322.6 m, G4 worst min_sep
-    3095.1 m -- GATES.md), so committed scenarios keep byte-identical logs."""
-
-    evasion_enabled: bool = Field(
-        default=True, description="True = evasive collision avoidance active"
-    )
-    evade_radius_m: float = Field(
-        default=1000.0, gt=0, description="Keep-out radius that triggers evasion, m"
-    )
-    evade_ticks: int = Field(
-        default=25, ge=1, description="Ticks per evasion episode (bounded burn length)"
-    )
+from cubesat.scenario_models import (  # noqa: F401  (re-exports: the public scenario API)
+    MAX_DURATION_S,
+    MAX_FAILURES,
+    MAX_GRID_POINTS,
+    MAX_SATS,
+    MAX_SWEEP_ENTRIES,
+    MAX_TICKS,
+    ROLE_PRIORITY,
+    V2_ONLY_MODES,
+    Allocation,
+    ChiefOrbit,
+    Comms,
+    Detection,
+    Failure,
+    FailureMode,
+    Formation,
+    Gains,
+    LaserTerminal,
+    Oracle,
+    Recovery,
+    Safety,
+    Sensor,
+    Spacecraft,
+    Truth,
+)
 
 
 class Scenario(BaseModel):
@@ -209,6 +81,26 @@ class Scenario(BaseModel):
     allocation: Allocation = Field(default_factory=Allocation)
     oracle: Oracle = Field(default_factory=Oracle)
     safety: Safety = Field(default_factory=Safety)
+    truth: Truth = Field(default_factory=Truth)
+    spacecraft: Spacecraft = Field(default_factory=Spacecraft)
+    role_priority: list[str] = Field(
+        default_factory=lambda: list(ROLE_PRIORITY),
+        description="Engine v2 only: order in which capability roles are filled each tick "
+        "(cubesat/roles_v2.py). Must be a permutation of downlink, imager, leader (spare is "
+        "only an output label). v1 never reads it.",
+    )
+    engine: Literal["v1", "v2"] = Field(
+        default="v1",
+        description="'v1' = frozen linear-CW engine (every committed log); "
+        "'v2' = truth-dynamics engine (cubesat/sim_v2.py)",
+    )
+
+    comms: Comms | None = Field(
+        default=None, description="Inter-satellite links (track C); absent = ideal comms"
+    )
+    recovery: Recovery | None = Field(
+        default=None, description="Leader authority (track C4); absent = central"
+    )
 
     @property
     def n_sats(self) -> int:
@@ -221,6 +113,59 @@ class Scenario(BaseModel):
                 raise ValueError(
                     f"failure references sat_id={failure.sat_id}, but only {self.n_sats} sats exist"
                 )
+        return self
+
+    @model_validator(mode="after")
+    def _v2_only_failure_modes(self) -> Scenario:
+        # the frozen v1 engine treats every unknown mode as DEAD; refuse instead of misreading
+        if self.engine != "v2":
+            for f in self.failures:
+                if f.mode in V2_ONLY_MODES:
+                    raise ValueError(
+                        f'failure mode {f.mode.value} (sat {f.sat_id}) requires engine "v2"; '
+                        f'this scenario uses engine "{self.engine}"'
+                    )
+        return self
+
+    @model_validator(mode="after")
+    def _laser_comms_needs_v2(self) -> Scenario:
+        if self.comms is not None and self.comms.model == "laser" and self.engine != "v2":
+            raise ValueError('comms.model "laser" requires engine "v2"')
+        laser = self.comms is not None and self.comms.model == "laser"
+        if self.recovery is not None and self.recovery.authority == "decentral" and not laser:
+            raise ValueError('recovery.authority "decentral" requires comms.model "laser"')
+        if self.recovery is not None and self.recovery.ladder and self.engine != "v2":
+            raise ValueError('recovery.ladder requires engine "v2"')
+        return self
+
+    @model_validator(mode="after")
+    def _v1_only_cartwheel(self) -> Scenario:
+        # the v1 allocator's formation sweep rebuilds cartwheel slots; refuse instead of mixing
+        if self.engine != "v2" and self.formation.shape != "cartwheel":
+            raise ValueError(
+                f'formation.shape "{self.formation.shape}" requires engine "v2"; '
+                f'this scenario uses engine "{self.engine}"'
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _role_priority_is_a_permutation(self) -> Scenario:
+        if sorted(self.role_priority) != sorted(ROLE_PRIORITY):
+            raise ValueError(
+                f"role_priority={self.role_priority} must be a permutation of "
+                f"{', '.join(sorted(ROLE_PRIORITY))}"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _propellant_fits_in_wet_mass(self) -> Scenario:
+        # v2 only: v1 never reads the block, and a v1 scenario with a tiny truth.mass_kg stays valid
+        if self.engine == "v2" and self.spacecraft.m_prop_kg > 0.5 * self.truth.mass_kg:
+            raise ValueError(
+                f"spacecraft.m_prop_kg={self.spacecraft.m_prop_kg} exceeds half the wet mass "
+                f"truth.mass_kg={self.truth.mass_kg}: the dry mass must be at least half the "
+                f"wet mass (the drag model keeps the wet mass)"
+            )
         return self
 
     @model_validator(mode="after")

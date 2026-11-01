@@ -29,7 +29,6 @@ Wire contract pinned here (frontend integration contract):
 from __future__ import annotations
 
 import asyncio
-import hashlib
 import json
 from pathlib import Path
 
@@ -41,6 +40,7 @@ import cubesat.allocate as allocate
 import cubesat.sim as sim_module
 from cubesat.api import app
 from cubesat.benchmark_policies import even_split_replan
+from cubesat.canon import canonical_log_hash
 from cubesat.scenario import load_scenario
 from cubesat.session import Hub, Session, SessionError
 from cubesat.wire import POLICY_VALUES
@@ -103,13 +103,9 @@ EVEN_SPLIT_GOLDEN = [
         ("SAT-6", "downlink", "slot_3"),
     ]),
 ]
-EVEN_SPLIT_TWO_FAILURE_LOG_SHA256_SET = {
-    "657679fbf1ac2151e1d859a775c36ef9c6e919f124e2ed58f2b40671408f3826",  # win32 UCRT
-    "73a9e1d520358a983b6f04179e83ecdb90eb97a9fbc746ba157ce79c4a307044",  # linux glibc
-}
-EVEN_SPLIT_TWO_FAILURE_LOG_SHA256 = (
-    "657679fbf1ac2151e1d859a775c36ef9c6e919f124e2ed58f2b40671408f3826"
-)
+EVEN_SPLIT_TWO_FAILURE_CANONICAL_SHA256 = (
+    "b9f743e0a99a15aa2970f7f0525ef011784b77e4e0751d112a9fdaf7d36a7d9c"
+)  # cubesat.canon.canonical_log_hash
 
 # The hungarian reference for the SAME first replan tick, from the committed
 # wire golden fixture (tests/fixtures/wire_golden.json, t=1208.0
@@ -274,10 +270,8 @@ def test_policy_even_split_golden_assignment(tmp_path):
     # role_reassignment shape unchanged (no policy key invented there)
     assert all("policy" not in m for m in reassign)
     # end-to-end determinism pin: bytes exactly as cubesat.run writes them
-    raw = "".join(line + "\n" for line in _log_bytes(lines)).encode("utf-8")
-    assert (
-        hashlib.sha256(raw).hexdigest() in EVEN_SPLIT_TWO_FAILURE_LOG_SHA256_SET
-    )
+    digest = canonical_log_hash("".join(line + "\n" for line in _log_bytes(lines)).encode("utf-8"))
+    assert digest == EVEN_SPLIT_TWO_FAILURE_CANONICAL_SHA256, f"canonical mismatch: {digest}"
     # the run really completed
     assert lines[-1]["state"] == "SUMMARY"
 

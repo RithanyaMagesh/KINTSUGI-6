@@ -67,6 +67,17 @@ def test_api_scenarios_listing(tmp_path, monkeypatch):
     assert response.json() == {"scenarios": ["nominal.json", "two_failure.json"]}
 
 
+def test_api_scenarios_listing_skips_meta_sidecars(tmp_path, monkeypatch):
+    import cubesat.api
+
+    scenarios = tmp_path / "scenarios"
+    scenarios.mkdir()
+    (scenarios / "x.json").write_text("{}", encoding="utf-8")
+    (scenarios / "x.meta.json").write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(cubesat.api, "scenarios_dir", lambda: scenarios)
+    assert client.get("/scenarios").json() == {"scenarios": ["x.json"]}
+
+
 def test_api_scenarios_listing_empty_dir_never_500(tmp_path, monkeypatch):
     import cubesat.api
 
@@ -423,3 +434,14 @@ def test_api_replay_corrupt_load_skips_and_warns(tmp_path, monkeypatch):
     # the session is up (replay mode) but holds no frames; reset cleans up
     assert client.get("/health").json()["mode"] == "replay"
     assert client.post("/simulation/reset").json()["mode"] == "stopped"
+
+
+def test_api_replay_file_nul_byte_is_404_not_500(tmp_path, monkeypatch):
+    """Audit B-15: Path.resolve() raises ValueError on an embedded NUL, which
+    used to surface as a 500."""
+    import cubesat.api
+
+    log_dir = _log_dir(tmp_path / "logs", {"two_failure.jsonl": "{}\n"})
+    monkeypatch.setattr(cubesat.api, "log_dir", lambda: log_dir)
+    for name in ("%00", "a%00b.jsonl", "two_failure.jsonl%00"):
+        assert client.get(f"/replay/file/{name}").status_code == 404, name

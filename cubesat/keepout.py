@@ -203,6 +203,57 @@ def _min_clearance(entries: list[dict]) -> float:
     return min(e["run_window_min_clearance_m"] for e in entries)
 
 
+def keepout_verdict(
+    min_wo: float,
+    min_w: float,
+    binding_wo: bool,
+    binding_w: bool,
+    identical: bool,
+    radius: float,
+) -> tuple[str, str]:
+    """KEEP/CUT and its sentence, both computed from the measured worst
+    run-window clearances (C-1: the sentence used to be hard-coded "improves").
+    min_wo belongs to policy 'hungarian' (do-no-harm hold on), min_w to
+    'hungarian_keepout' (exclusion term on, hold off): see KEEPOUT_NOTES."""
+    wo = f"{min_wo:.1f} m for hungarian (without the exclusion)"
+    w = f"{min_w:.1f} m for hungarian_keepout (with the exclusion)"
+    if not binding_wo and not binding_w:
+        return "CUT", (
+            f"keep-out never binding ({wo}; {w}; both >= threshold {radius:.1f} m); "
+            "term not added"
+        )
+    if identical:
+        return "CUT", (
+            f"policy-5 exclusion never fired: {w} equals {wo} on every pair; the "
+            f"sphere is entered by post-replan dead-sat drift, which seat selection at "
+            f"replan time cannot prevent; policy 5 cut"
+        )
+    if min_w > min_wo + 1e-9:
+        return "KEEP", (
+            f"the exclusion improves the worst clearance: {w} vs {wo} "
+            f"(threshold {radius:.1f} m); policy 5 kept"
+        )
+    if min_w < min_wo - 1e-9:
+        return "CUT", (
+            f"the exclusion worsens the worst clearance: {w} vs {wo} "
+            f"(threshold {radius:.1f} m); policy 5 cut"
+        )
+    return "CUT", (
+        f"worst clearance unchanged by the exclusion: {w} vs {wo} "
+        f"(threshold {radius:.1f} m); no measured benefit; policy 5 cut"
+    )
+
+
+KEEPOUT_NOTES = (
+    "Confound (audit C-1/B4): policy 'hungarian' runs WITH the do-no-harm hold "
+    "(allocate.replan may return do_no_harm_hold) while policy 'hungarian_keepout' "
+    "runs WITHOUT it (benchmark_policies.hungarian_keepout_replan accepts but "
+    "ignores current_slots), so the with/without comparison changes two things at "
+    "once: the exclusion term and the hold. The verdict is therefore about the "
+    "policy pair, not about the exclusion term alone."
+)
+
+
 def keepout_report(
     *,
     log_paths: dict[str, list[Path]],
@@ -255,41 +306,9 @@ def keepout_report(
             comparison["min_clearance_with_exclusion_m"] = min_w
             comparison["binding_with_exclusion"] = binding_w
             comparison["exclusion_changed_any_clearance"] = not identical
-            if not binding_wo and not binding_w:
-                decision = "CUT"
-                comparison["decision_text"] = (
-                    f"keep-out never binding (measured min {min_wo:.1f} m >= threshold "
-                    f"{keepout_radius_m:.1f} m); term not added"
-                )
-            elif binding_wo and not binding_w:
-                decision = "KEEP"
-                comparison["decision_text"] = (
-                    f"keep-out binding without the exclusion (min {min_wo:.1f} m < "
-                    f"{keepout_radius_m:.1f} m); the exclusion raises the min to "
-                    f"{min_w:.1f} m; policy 5 kept"
-                )
-            elif identical:
-                # The sphere IS entered, but the exclusion provably never fires:
-                # with- and without-exclusion clearances are identical to <1e-9 m
-                # on every (pair, dead sat) -- the entry is post-replan drift,
-                # which seat selection at replan time cannot prevent.
-                decision = "CUT"
-                comparison["decision_text"] = (
-                    f"policy-5 exclusion never fired: run-window min clearance with the "
-                    f"exclusion ({min_w:.1f} m) is identical to without ({min_wo:.1f} m) "
-                    f"on every pair, both below the {keepout_radius_m:.1f} m keep-out "
-                    f"radius -- the 2 km sphere IS entered by post-replan dead-sat "
-                    f"drift, which seat selection at replan time cannot prevent; the "
-                    f"term provides no measured benefit; policy 5 cut per "
-                    f"ENDGAME_PLAN 5(c)/10 cut order"
-                )
-            else:
-                decision = "KEEP"
-                comparison["decision_text"] = (
-                    f"keep-out binding in both runs ({min_wo:.1f} m without, "
-                    f"{min_w:.1f} m with, threshold {keepout_radius_m:.1f} m) but the "
-                    f"exclusion improves the worst clearance; policy 5 kept"
-                )
+            decision, comparison["decision_text"] = keepout_verdict(
+                min_wo, min_w, binding_wo, binding_w, identical, keepout_radius_m
+            )
         else:
             comparison["decision_text"] = (
                 f"run-window min {min_wo:.1f} m vs threshold {keepout_radius_m:.1f} m "
@@ -306,5 +325,6 @@ def keepout_report(
         "policies": sorted(log_paths),
         "per_policy": per_policy,
         "keepout_binding_comparison": comparison,
+        "notes": KEEPOUT_NOTES,
         "j2_drag_caveat": J2_DRAG_CAVEAT,
     }

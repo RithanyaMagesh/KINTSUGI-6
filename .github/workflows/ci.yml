@@ -5,12 +5,38 @@ on: [push, pull_request]
 jobs:
   test:
     strategy:
+      fail-fast: false  # one OS failing must not hide the other's result
       matrix:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
       - run: uv sync --locked
       - run: uv run ruff check .
-      - run: uv run pytest
+      # Full suite (incl. slow Kepler cross-check) on ubuntu; fast suite on windows.
+      # Golden pins use cubesat.canon.canonical_log_hash, so both OSes share one pin.
+      - if: runner.os == 'Linux'
+        run: uv run python -m pytest
+      - if: runner.os != 'Linux'
+        run: uv run python -m pytest -m "not slow"
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      # Raw hex colours live only in src/styles/tokens.css (FRONTEND_SPEC 13.7).
+      - run: "! (grep -rnE '#[0-9a-fA-F]{3,8}' src | grep -v 'styles/tokens.css')"

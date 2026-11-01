@@ -1,6 +1,7 @@
 # PROJECT_MEMORY.md — agentic memory for KINTSUGI-6 (CubeSat swarm self-healing)
 
-Built 2026-10-31 by reading AGENTS.md, README, GATES.md, docs/{ARCHITECTURE,HANDOFF,IMPLEMENTATION_NOTES,LIVE_IMPORT_DESIGN,...}, the source tree and git history (HEAD `c56f13b`, 2026-10-30).
+Built 2026-10-31, refreshed 2026-10-31 after v2 Phase 0 + audits, by reading AGENTS.md, README, GATES.md, docs/{ARCHITECTURE,HANDOFF,IMPLEMENTATION_NOTES,LIVE_IMPORT_DESIGN,...}, the source tree and git history (HEAD `c56f13b`, 2026-10-30).
+**Master spec for the current work: `docs/superpowers/specs/KINTSUGI-6_v2_master_map.md`; order, merged problem map and decisions: `docs/superpowers/plans/2026-10-31-v2-plan.md`; physics tasks: `docs/superpowers/plans/2026-10-31-physics-v2-plan.md`; audits: `docs/audit/2026-10-31-{a,b,c}.md`.**
 **Read this first, then the doc named in "Where to read deeper" for the area you touch. The tree beats every doc (including this one) — verify before relying.**
 Repo root = `AVISHKHAR/backend/` (git remote `dptel22/Cubesat`, branch master). `AVISHKHAR/` itself holds only `.claude/`.
 
@@ -42,15 +43,17 @@ scenario JSON → scenario.py (pydantic) → sim.run_scenario (pure; list[dict])
 
 **Seam pattern (key architectural idea):** recovery policies, predictor, benchmark variants enter by **rebinding `cubesat.sim.replan` at session/benchmark layer** (`session._install_seam/_restore_seam`, `benchmark_policies.py`) or wire passthrough — *no core diff*. `"hungarian"` is deliberately NOT in `_POLICY_REPLANNERS` so default runs stay byte-identical. Process-global ⇒ **one Session per process** is load-bearing.
 
+**Hash pins:** `cubesat/canon.py canonical_log_hash` (5 significant digits + 1e-6 floor) is the ONLY golden-pin form; no per-OS maps (tests: test_cli, test_failure_modes, test_oracle_sweep_v3, test_policy_selection). Same-machine byte identity is tested separately.
+
 **Analysis layer (pure, zero core diff):** `benchmark.py` (modes: 15-pair × 5-policy, pareto, keepout-report, cw-curve, monte-carlo) · `benchmark_policies.py` · `pareto.py` · `keepout.py` (must not import sim) · `cw_curve.py` · `dv_bound.py` (two-impulse CW Δv bounds) · `monte_carlo.py` (jitters scenario params from one PCG64 stream OUTSIDE the core — the sim consumes no RNG so seed sweeps alone are vacuous).
 
-**Import layer:** `cluster_import.py` (CelesTrak OMM → *hypothetical* swarm on a real chief orbit; stdlib, no SGP4, eccentricity gate; FIREFLY demo) · `live_import.py` + `_live_network.py` (newer: GRACE-FO etc. ingestion, 2:1 formation fitting via Hungarian, SSRF-hardened client: host whitelist celestrak/space-track/n2yo, 5 MB cap, 30 s cumulative deadline, credential redaction, atomic TTL cache, protected-dir/file output confinement, `.meta.json` provenance sidecar) · `live_import_e2e.py` (ingest → run twice → assert byte-identical → check lifecycle).
+**Import layer:** `cluster_import.py` (CelesTrak OMM → *hypothetical* swarm on a real chief orbit; stdlib, no SGP4, eccentricity gate; FIREFLY demo) · `live_import.py` + `_live_network.py` (newer: GRACE-FO etc. ingestion, 2:1 formation fitting via Hungarian, SSRF-hardened client: host whitelist celestrak only, 5 MB cap, 30 s cumulative deadline, credential redaction, atomic TTL cache, protected-dir/file output confinement, `.meta.json` provenance sidecar).
 
 **Predictor (display-only):** repo-root package `predictor/runtime.py` (NOT under cubesat/); frozen `models/predictor.txt` (sha `37900918…`, tau 0.02568, K_ALARM=3, STRIDE=10, L3600, 132 features); sealed pipeline `files/predictor_pipeline.py` (src sha `deefeae1…`, self-enforcing via `out2/test_manifest.json`); CI hash-checks, **never retrains**. Opt-in `predictor:true` → `sats[].risk` on the wire. Nothing in sim/allocation consumes risk (pinned: `tests/test_predictor_wire.py`).
 
 **Frontend** (`frontend/`, React 18 + TS + Vite 7 + Zustand + Recharts + plain Three.js [no R3F] + CSS Modules, vendored IBM Plex): hash router `#/` landing (now a 3D "KINTSUGI-6" page: `components/landing/landingScene.ts`), `#/live` (control seat: ScenarioBuilder → upload → start), `#/replay` (playback only), `#/tutorial`, `#/faq`, `#/docs`. Data flow: `useWebSocket` → one `api/deserializer.ts` → stores (`simStore`, `recoveryStore`, `roleHistoryStore`, `historyStore`, `replayStore`, `sceneStore`, `uiStore`). 3D in `components/three/*` (Earth at ring center, constant-screen-size markers, label declutter). **Design law** FRONTEND_SPEC §13: raw hex ONLY in `styles/tokens.css` (grep gate), color = state only, no metric-card grids, `unmeasured` for missing numbers, avoid-ai-design scanner clean.
 
-**Data:** `data/scenarios/` (nominal, two_failure, single_failure_n4, cascading_n8, leader_failure_6sat, thruster_leader_6sat, eps_{leader,imager,downlink}_6sat, proximity_stress, firefly_swarm, live_e2e_swarm(+.meta); **untracked** live_{2,6,6_2,6_3,12}sat) · `data/logs/` (canonical two_failure/nominal JSONL) · `data/eval/` (benchmark, pareto, keepout, cw_error, dv_lower_bounds, oracle_sweep v2/v3, monte_carlo + manifests) · `data/celestrak/` snapshots.
+**Data:** `data/scenarios/` (nominal, two_failure, single_failure_n4, cascading_n8, leader_failure_6sat, thruster_leader_6sat, eps_{leader,imager,downlink}_6sat, proximity_stress, firefly_swarm, live_{2,6,8,12,16,24}sat) · `data/logs/` (canonical two_failure/nominal JSONL) · `data/eval/` (benchmark, pareto, keepout, cw_error, dv_lower_bounds, oracle_sweep v2/v3, monte_carlo + manifests) · `data/celestrak/` snapshots.
 
 **Tests:** `tests/` (~30 files; 123 collected as of 2026-10-26, more since: test_live_import, test_failure_modes, test_collision_avoidance, test_oracle_sweep_v2/v3). Golden wire fixtures in `tests/fixtures/`.
 
@@ -70,28 +73,36 @@ scenario JSON → scenario.py (pydantic) → sim.run_scenario (pure; list[dict])
 | Live import is stdlib+SSRF-hardened, scenario is *hypothetical swarm on a real orbit* | No real cluster is HCW-tight; never say "recovering <real mission>". |
 | Frontend rebuilt 3+ times; REPLAY playback-only, LIVE = control seat | User rejected v1 (cluttered, nothing explains, 3D blobs). |
 | Vite 5→7 bump | Cleared 9 Dependabot alerts; Node ≥20.19/22.12. |
+| Phase 0 (v2, commit 8f750ab): canonical hash sig=5 not 9; phase0-fixes' sim.py change reverted | 9 digits flipped the hash 20/20 under platform-scale noise (1,791/12,642 floats are rounding noise; dead sats at ~1.25e6 m); sig=5 flipped 0/20. The sim.py change differed only in hold `slot_index` numbering; dv_bound fixed instead. Cross-OS equality unverified until CI. |
+| Roles on failed sats cleared in v2 only (`roles: []`, `role: "none"`, `original_role`) | Map Q5: v1 keeps labels (no golden churn); benchmark counts NOMINAL holders only. |
+| Critical-role metrics are the headline (hungarian 15/15, do_nothing 6/15; mean vacancy 5.9 s vs 9,418 s) | Committed in benchmark_results.json via `critical_*` fields. Recovery is NOT a coverage win: gain negative on the 9 pairs containing sat 0 or 5 (−2.84..−10.14 pts), mean −2.13. |
+| D1 sgp4 approved (add at start of L2) · D2 predictor retired after P4 measures the detector (hidden from UI now) · D3 v1 retired only after v2 passes C1–C5 · D4 graphify dropped | User decisions 2026-10-31. |
 
 ## 5. Do-NOT-claim list (each was measured wrong or doesn't exist)
 "Overshoot-free" (4.99%) · runs on standard cold-gas hardware · AI in the live control loop · autonomous THRUSTER_OUT detection (older note; now self-reports — check sim.py) · recovery raises *average* coverage · full physics (J2/drag) · cloud-deployed (localhost; G6 todo) · decentralized consensus (centralized Hungarian) · predictor generalizes to unseen fault families.
 
-## 6. Current state (2026-10-31)
-- Gates: G0–G4 PASS (tagged), G5 PASS-untagged, **G6 (deploy) and G7 (README/demo polish) todo**.
-- Latest commits (all 2026-10-30): `c56f13b` 3D landing · `a2a2c2f` live-import + e2e determinism · `a39cef1` oracle sweep v3 + `reassign_on_degrade` + security hardening · `b73638a` multi-sat core, scenario zoo, monte carlo, collision avoidance.
-- Working tree untracked: `data/scenarios/live_*sat.json`, `docs/KINTSUGI-6_{3D_landing,frontend_build}_prompt.md`, `docs/frames/`.
-- **Stale docs:** ARCHITECTURE.md is dated 2026-09-28 ("G5 not started", api.py skeleton) — wrong now. HANDOFF.md is dated 2026-10-26: predates live-import, oracle v3, security round, 3D landing. `graphify-out/` graph dated 2026-09-29 (295 nodes) — predates ~everything after cluster_import; re-run `/graphify .` if you rely on it.
-- Last verified full-suite green on record: not re-run by this memory pass — **run `uv run python -m pytest -q` before trusting counts.**
-- Env quirks: `uv run pytest` may be spawn-blocked on Windows (use `uv run python -m pytest`); `--basetemp=.pytest_tmp` pinned; `-m "not slow"` is repaired by `cubesat/_pytest_gate_fix.py`; Mimosa security hook blocks variable-path `open()` writes and `.py` Bash writes; Dockerfile is multi-stage-owed per BACKEND_SPEC §8.2 (check current Dockerfile); `npm run dev|start` serves on port 3000.
+## 6. Current state
+**As of 2026-11-01 read `docs/HANDOFF_2026-11-01.md` first** (state table per track, next steps, merge plan, opt-in fields, numbers, frontend gap, open decisions). The paragraph below is the older 2026-10-31 snapshot.
+
+### 2026-10-31 snapshot (after v2 Phase 0 and the three audits)
+- Branch `backend` (renamed from `v2` on 2026-10-31; built from origin/phase0-fixes f702c05): Phase 0 `8f750ab`, Simplify (backend/docs only, frontend frozen), re-measure (`v2: E` commits, 224 tests incl. slow green). Branches kept: `master` (treated as "main", not renamed), `backend`, `frontend` (another session owns it; never rebase or force-push it). Merge `backend` into master only when v2 is fully done; commit prefix stays `v2:`.
+- Gates: full suite (incl. slow) 215 passed, ruff clean, frontend build ok at 8f750ab. G6 (deploy) and G7 todo.
+- 15-pair benchmark (committed `data/eval/benchmark_results.json`): hungarian 0.2698 on all pairs, critical roles held 15/15 vs do_nothing 6/15, worst per-sat Δv 251.2 m/s, worst survivor-dead separation 1852.5 m (< 2 km floor).
+- Audit headline problems (full lists in docs/audit): false on-screen claims (landing "75 runs / 5 policies", headline pair shown as swarm-wide, "oracle CUT"), unserialized live sessions (inject rewinds playback, abandoned runs keep burning CPU, live EPS injection shows no fade), Docker CMD/healthcheck broken, stale Pareto/dv_bound/keep-out artifacts, no strong baseline (zero-Δv role swap ties/beats hungarian on 6/15 pairs), Monte Carlo varies only pair (1,2).
+- Order: Simplify → re-measure stale evidence → EngineV2 (physics 1.1–1.5) → streaming sessions → V1 → fuel → roles → ψ → LP/MPC → certificate+ladder → V2 → metrics → incidents → real-orbit live (adds sgp4) → perf → packs+pre-registered benchmark → deploy. Stop after each phase.
+- Stale docs still in tree: ARCHITECTURE.md (2026-09-28), HANDOFF.md (2026-10-26), PHYSICS_ENGINE_EXPLAINED.md (c56f13b tree), JUDGE_PREP/FAQ/Docs page numbers (audit C claims table: 46 of 150 do not reproduce).
+- Untracked scratch under data/scenarios (`live_*sat*.json`) come from UI uploads; do not commit.
+- Env quirks: use `uv run python -m pytest` (CI uses it); `--basetemp=.pytest_tmp` pinned; Mimosa hook blocks variable-path `open()` writes; `brew install libomp` needed for LightGBM tests on macOS; Docker daemon not running here (image never built); `npm run dev|start` serves on port 3000.
 
 ## 7. Commands
 ```
 uv sync --locked
 uv run ruff check .
-uv run python -m pytest -q                       # full
+uv run python -m pytest -q                       # full (215 tests at 8f750ab)
 uv run python -m pytest -q -m "not slow" -x      # fast
 uv run python -m cubesat.run --scenario data/scenarios/two_failure.json --seed 42 --out data/logs/two_failure.jsonl
 uv run uvicorn cubesat.api:app --port 8000       # UI + API + WS in one process
 uv run python -m cubesat.benchmark --base data/scenarios/two_failure.json --mode monte-carlo --report data/eval/monte_carlo_results.json
-uv run python -m cubesat.live_import_e2e         # live import determinism check (uses cache/offline fallback)
 cd frontend && npm run build                     # tsc + vite gate
 grep -rnE '#[0-9a-fA-F]{3,8}' frontend/src | grep -v tokens.css   # must print nothing
 ```
@@ -124,6 +135,6 @@ Roadmap (HANDOFF §10): CBBA decentralized control · more realistic failures (b
 | Measurement plan, claims policy | `docs/ENDGAME_PLAN.md`, `docs/AI_LAYER_PLAN.md` |
 | Live import design/threat model | `docs/LIVE_IMPORT_DESIGN.md` |
 | Predictor provenance + kill switch | `files/INTEGRATION_PROMPT.md`, `files/ORACLE_SWEEP.md`, `models/predictor_manifest.json` |
-| Code graph (stale, 2026-09-29) | `graphify-out/GRAPH_REPORT.md`, `graph.json` |
+| Code graph (archived, stale 2026-09-29, do not rely) | `docs/archive/graphify-out/` |
 
 *Maintenance rule: when a gate lands, a decision changes, or a number is re-measured, update §4, §6 and the date at the top of this file in the same change.*

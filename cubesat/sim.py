@@ -64,7 +64,8 @@ import numpy as np
 
 from cubesat.allocate import replan
 from cubesat.coverage import coverage_fraction, footprint_radius, target_grid
-from cubesat.hcw import mean_motion, propagate, slot_initial_state
+from cubesat.formations import formation_slots
+from cubesat.hcw import mean_motion, propagate
 from cubesat.pd import PDController, bang_bang_time_lower_bound
 from cubesat.scenario import FailureMode, Scenario
 
@@ -132,18 +133,14 @@ def _swap_critical_seat(
 
 
 def build_slots(scenario: Scenario, n: float) -> list[np.ndarray]:
-    """Slot initial states, sat i on slot i: phase = phase_offset_deg + 360*j/n_slots.
-    The schema has no cross-track amplitude, so it equals radial_amp_km (planar
-    relative orbit, z in phase with x); that spreads the ground (y, z) centers
-    around a ring instead of pairing them on top of each other."""
-    amp = scenario.formation.radial_amp_km * 1000.0
-    offset = math.radians(scenario.formation.phase_offset_deg)
-    return [
-        slot_initial_state(
-            amp, amp, offset + 2.0 * math.pi * j / scenario.formation.n_slots, n
-        )
-        for j in range(scenario.formation.n_slots)
-    ]
+    """Slot initial states, sat i on slot i: phase = phase_offset_deg + 360*j/n_slots, on the
+    `formation.shape` relative orbit (cubesat/formations.py). The default cartwheel has the
+    cross-track amplitude equal to radial_amp_km (z in phase with x; the v1 slots, byte for
+    byte), which spreads the ground (y, z) centers around a ring."""
+    f = scenario.formation
+    return formation_slots(
+        f.shape, f.n_slots, f.radial_amp_km * 1000.0, n, math.radians(f.phase_offset_deg)
+    )
 
 
 def run_scenario(
@@ -156,6 +153,9 @@ def run_scenario(
     with no partial output. It is never set by any CLI/canonical caller, so the
     check is a pure read that leaves every log byte-identical (AGENTS.md
     invariant 2); no wall clock enters the sim itself (section 9.2)."""
+    if scenario.engine == "v2":  # v2 seam (cubesat/sim_v2.py)
+        from cubesat.sim_v2 import run_scenario_v2
+        return run_scenario_v2(scenario, cancel_event)
     altitude_m = scenario.chief.altitude_km * 1000.0
     n = mean_motion(altitude_m)
     dt = scenario.dt_s
@@ -387,10 +387,6 @@ def run_scenario(
         if k == n_ticks - 1:
             break
 
-        # Between-step orchestration (MASTER_PROMPT 3.5): the replanner runs here,
-        # between sim steps, one control cycle per machine transition. The decision
-        # states FAILURE_DETECTED and REPLANNING therefore each last exactly one
-        # tick in the log; RECONFIGURING spans the physical transfers until every
         # Oracle value-of-warning hook (Phase 2): gated default-off; inert when disabled
         if (
             scenario.oracle.enabled
@@ -447,43 +443,24 @@ def run_scenario(
             assignable = [i for i in range(n_sats) if status[i] == STATUS_NOMINAL]
             obstacles = [states[i] for i in range(n_sats) if status[i] != STATUS_NOMINAL]
             current_slots = [formation[seat_of[i]] for i in assignable]
-            try:
-                plan, pairs, cost_total, method, max_transfer, _cost = replan(
-                    [states[i] for i in assignable],
-                    [roles[i] for i in assignable],
-                    [
-                        max(scenario.allocation.dv_budget_mps - controllers[i].dv_used, 1e-9)
-                        for i in assignable
-                    ],
-                    obstacles,
-                    scenario.roles,
-                    scenario.allocation,
-                    scenario.formation.radial_amp_km * 1000.0,
-                    r_f,
-                    grid,
-                    n,
-                    scenario.a_max_mps2,
-                    t,
-                    current_slots=current_slots,
-                )
-            except TypeError:
-                plan, pairs, cost_total, method, max_transfer, _cost = replan(
-                    [states[i] for i in assignable],
-                    [roles[i] for i in assignable],
-                    [
-                        max(scenario.allocation.dv_budget_mps - controllers[i].dv_used, 1e-9)
-                        for i in assignable
-                    ],
-                    obstacles,
-                    scenario.roles,
-                    scenario.allocation,
-                    scenario.formation.radial_amp_km * 1000.0,
-                    r_f,
-                    grid,
-                    n,
-                    scenario.a_max_mps2,
-                    t,
-                )
+            plan, pairs, cost_total, method, max_transfer, _cost = replan(
+                [states[i] for i in assignable],
+                [roles[i] for i in assignable],
+                [
+                    max(scenario.allocation.dv_budget_mps - controllers[i].dv_used, 1e-9)
+                    for i in assignable
+                ],
+                obstacles,
+                scenario.roles,
+                scenario.allocation,
+                scenario.formation.radial_amp_km * 1000.0,
+                r_f,
+                grid,
+                n,
+                scenario.a_max_mps2,
+                t,
+                current_slots=current_slots,
+            )
             if method == "do_no_harm_hold":
                 pairs = [(idx, idx) for idx in range(len(assignable))]
                 max_transfer = 0.0

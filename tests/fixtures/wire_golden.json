@@ -291,7 +291,14 @@
      "target_slot": "slot_3"
     }
    ],
-   "cost_total": 3.7726621102252276
+   "cost_total": 3.7726621102252276,
+   "method": "hungarian",
+   "formation": {
+    "phase_offset_rad": 0.0,
+    "radial_amp_m": 8000.0
+   },
+   "transfer_lower_bound_s": 983.977675971543,
+   "kept_formation": false
   }
  ]
 }

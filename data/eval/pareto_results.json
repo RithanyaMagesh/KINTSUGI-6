@@ -2,12 +2,12 @@
   "command": "uv run python -m cubesat.benchmark --mode pareto --base data/scenarios/two_failure.json --out data/eval/pareto --report data/eval/pareto_results.json",
   "degenerate_front": {
     "decision": "ship as-is",
-    "decision_text": "DEGENERATE FRONT (measured): coverage spans only 0.00e+00 across the all-pairs grid points (flat threshold 1e-5) while dv spans [463.0686, 481.6061] m/s -- dv is set by the formation, not the assignment. Shipped as-is per user pre-decision Q4. 4 of 12 grid points partially infeasible (means over a feasible subset, excluded from the front as not comparable; recorded, not dropped).",
+    "decision_text": "DEGENERATE FRONT (measured): coverage spans only 0.00e+00 across the all-pairs grid points (flat threshold 1e-5) while dv spans [425.7598, 469.3404] m/s -- dv is set by the formation, not the assignment. Shipped as-is per user pre-decision Q4. 4 of 12 grid points partially infeasible (means over a feasible subset, excluded from the front as not comparable; recorded, not dropped).",
     "degenerate": "coverage-flat",
-    "max_mean_coverage": 0.2697985066776528,
-    "max_mean_total_dv_mps": 481.6060830249519,
-    "min_mean_coverage": 0.2697985066776528,
-    "min_mean_total_dv_mps": 463.06860698039435,
+    "max_mean_coverage": 0.2697991664342247,
+    "max_mean_total_dv_mps": 469.34042152965594,
+    "min_mean_coverage": 0.2697991664342247,
+    "min_mean_total_dv_mps": 425.75977949718794,
     "n_infeasible_grid_points": 0,
     "n_partially_infeasible_grid_points": 4
   },
@@ -26,14 +26,14 @@
     [
       2.0,
       100.0,
-      463.06860698039435,
-      0.2697985066776528
+      425.75977949718794,
+      0.2697991664342247
     ],
     [
       2.0,
       200.0,
-      463.06860698039435,
-      0.2697985066776528
+      425.75977949718794,
+      0.2697991664342247
     ]
   ],
   "rows": [
@@ -41,7 +41,7 @@
       "command": "uv run python -m cubesat.benchmark --mode pareto --base data/scenarios/two_failure.json --out data/eval/pareto --report data/eval/pareto_results.json",
       "dv_budget_mps": 50.0,
       "mean_coverage": 0.26980048594736833,
-      "mean_total_dv_mps": 541.0823809841335,
+      "mean_total_dv_mps": 541.082380984133,
       "n_feasible_pairs": 3,
       "n_infeasible_pairs": 12,
       "per_pair": [
@@ -173,26 +173,30 @@
         },
         {
           "coverage_mean_last_orbit": 0.26980048594736833,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_1-4__hungarian__w2_0.1_dv_50.jsonl",
-          "log_sha256": "9ed65b62c91869719c3390ccc5925bb336f9629dd6bea2099e6a7e40d7c8f300",
-          "min_sep_survivor_dead_m": 3942.2016389362034,
+          "log_sha256": "5bdddedc4c41074b053620f23eaae001bdb2852c23741a1a09d12209e107d868",
+          "min_sep_survivor_dead_m": 3942.201638936207,
           "n_ticks": 8515,
           "pair": [
             1,
             4
           ],
           "per_sat_dv_mps": [
-            145.0672087530336,
-            8.839420505811725e-13,
-            230.99673824654195,
-            16.810272762623967,
-            29.400000000000823,
-            77.31524188999283
+            145.0672087530333,
+            8.377937623522883e-13,
+            230.9967382465419,
+            16.81027276262399,
+            29.400000000000784,
+            77.31524188999279
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 499.5894616521941
+          "total_dv_mps": 499.5894616521936
         },
         {
           "coverage_mean_last_orbit": null,
@@ -232,49 +236,57 @@
         },
         {
           "coverage_mean_last_orbit": 0.26980048594736833,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_2-4__hungarian__w2_0.1_dv_50.jsonl",
-          "log_sha256": "f3547289cb95a8d818e005ad7a77764d27415fb7e683bc10d0c32d0a1672ec1d",
-          "min_sep_survivor_dead_m": 3400.4224769365887,
+          "log_sha256": "2d5b48bf5a42071b6f7ccc038247b1452f75f1ffb03ce6c83d5c47b8120667a4",
+          "min_sep_survivor_dead_m": 3400.422476936596,
           "n_ticks": 8515,
           "pair": [
             2,
             4
           ],
           "per_sat_dv_mps": [
-            154.28782637643016,
-            175.71867805548376,
-            1.3012924868676564e-12,
-            114.77142051746736,
-            29.400000000000823,
-            93.76231027770685
+            154.28782637643002,
+            175.71867805548302,
+            1.2861135883907983e-12,
+            114.77142051746773,
+            29.400000000000784,
+            93.76231027770673
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 567.9402352270903
+          "total_dv_mps": 567.9402352270896
         },
         {
           "coverage_mean_last_orbit": 0.26980048594736833,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_2-5__hungarian__w2_0.1_dv_50.jsonl",
-          "log_sha256": "948f2c847e5cac2fc0b5d4be1a76ae889cdd4363759311b7ef2e1bf6ae3c0a56",
-          "min_sep_survivor_dead_m": 3868.032681286945,
+          "log_sha256": "b7bf5a1644f153cdde0a80d8bfa39e25f1b1c621a5353e50668e0437e806da3f",
+          "min_sep_survivor_dead_m": 3868.032681286947,
           "n_ticks": 8515,
           "pair": [
             2,
             5
           ],
           "per_sat_dv_mps": [
-            154.28782637643016,
-            175.71867805548376,
-            1.3012924868676564e-12,
-            114.77142051746736,
-            81.53952112373234,
-            29.400000000001235
+            154.28782637643002,
+            175.71867805548302,
+            1.2861135883907983e-12,
+            114.77142051746773,
+            81.53952112373231,
+            29.400000000001217
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 555.7174460731162
+          "total_dv_mps": 555.7174460731156
         },
         {
           "coverage_mean_last_orbit": null,
@@ -334,731 +346,851 @@
       "reused_p0_logs": false,
       "w2": 0.1,
       "worst_coverage": 0.26980048594736833,
-      "worst_per_sat_dv_mps": 230.99673824654195
+      "worst_per_sat_dv_mps": 230.9967382465419
     },
     {
       "command": "uv run python -m cubesat.benchmark --mode pareto --base data/scenarios/two_failure.json --out data/eval/pareto --report data/eval/pareto_results.json",
       "dv_budget_mps": 100.0,
-      "mean_coverage": 0.2697985066776528,
-      "mean_total_dv_mps": 481.6060830249519,
+      "mean_coverage": 0.2697991664342247,
+      "mean_total_dv_mps": 469.34042152965594,
       "n_feasible_pairs": 15,
       "n_infeasible_pairs": 0,
       "per_pair": [
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-1__hungarian__w2_0.1_dv_100.jsonl",
-          "log_sha256": "e067cdd9443f0403a5d8313f060f7ed9bf424a3228c8db8730046cfc4ad1060a",
-          "min_sep_survivor_dead_m": 1322.6031098669134,
+          "log_sha256": "51ba06e7a19e63e535ce02a2b70198d7d6f57abd5bd259fce2ffdd69435d6069",
+          "min_sep_survivor_dead_m": 4913.311100820126,
           "n_ticks": 8515,
           "pair": [
             0,
             1
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            16.73805619031792,
-            172.75180675712673,
-            87.04429548354396,
-            125.08870139532307,
-            91.75798726739784
+            1.324845007004202e-12,
+            1.0545218712862473e-12,
+            4.457685652940815e-11,
+            45.03666603943282,
+            104.33784961794923,
+            85.64234770465279
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 493.3808470937109
+          "total_dv_mps": 235.0168633620818
         },
         {
           "coverage_mean_last_orbit": 0.26980708351308647,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.998989260897031,
+          "critical_vacancy_s": 16.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-2__hungarian__w2_0.1_dv_100.jsonl",
-          "log_sha256": "386ba287a271ea71a69c8414791abb5a273bc1021d584ed8871e68a356fa0703",
-          "min_sep_survivor_dead_m": 5333.1325145755945,
+          "log_sha256": "8048c9e480b64cb4a7268aafff780202e7d89dc1ce8b3044d5877df9768e2f33",
+          "min_sep_survivor_dead_m": 5723.113748216915,
           "n_ticks": 8515,
           "pair": [
             0,
             2
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            43.77642195038997,
-            1.5565358266533646e-12,
-            66.60682979344182,
-            81.89474962857273,
-            56.343592302997095
+            1.324845007004202e-12,
+            4.433797269899681e-11,
+            1.5700136380949072e-12,
+            38.513456822633486,
+            140.61483539705569,
+            104.33784961795152
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 248.6215936754045
+          "total_dv_mps": 283.4661418376879
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-3__hungarian__w2_0.1_dv_100.jsonl",
-          "log_sha256": "7ecd3ee28a6ffa5ff95acfe12507297cbfc8be0bc06a09583f58c9eb303e176f",
-          "min_sep_survivor_dead_m": 2888.535684388777,
+          "log_sha256": "a11a02a1537a6d80ffccd5ae93ddacae1c7e43347d29d234109dadd67e9469b6",
+          "min_sep_survivor_dead_m": 5799.512406708856,
           "n_ticks": 8515,
           "pair": [
             0,
             3
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            50.36454732988793,
-            4.730516047032083e-11,
-            13.262575913715201,
-            125.08870139532307,
-            91.75798726739784
+            1.324845007004202e-12,
+            53.071414687468575,
+            4.457685652940815e-11,
+            1.5512623549697742e-12,
+            104.33784961794923,
+            172.75180675712087
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 280.4738119063727
+          "total_dv_mps": 330.16107106258613
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.998989260897031,
+          "critical_vacancy_s": 16.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-4__hungarian__w2_0.1_dv_100.jsonl",
-          "log_sha256": "af4fa0b9adb02373753636d3aca67d0ebfce3527c90383026079462b2fd7132d",
-          "min_sep_survivor_dead_m": 5376.931218402233,
+          "log_sha256": "fc67541766487c4372c8f6aabeffed66a843fe1767d857ac92ca2502cc65a841",
+          "min_sep_survivor_dead_m": 4913.311100820126,
           "n_ticks": 8515,
           "pair": [
             0,
             4
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            50.36454732988793,
-            85.6423477046576,
-            87.04429548354396,
-            25.808176348716277,
-            91.75798726739784
+            1.324845007004202e-12,
+            104.33784961794895,
+            238.73870718361295,
+            45.03666603943282,
+            1.066758970894579e-12,
+            85.64234770465279
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 340.61735413420496
+          "total_dv_mps": 473.7555705456499
         },
         {
-          "coverage_mean_last_orbit": 0.26979718716450923,
+          "coverage_mean_last_orbit": 0.26980708351308647,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-5__hungarian__w2_0.1_dv_100.jsonl",
-          "log_sha256": "683f9f22f5b3d18c1063869e53206db560d6731e4754b005c51529dc9631e933",
-          "min_sep_survivor_dead_m": 5856.406565191165,
+          "log_sha256": "f9156468f603b7016c88918d607be76c92806520a52d164d8946d1936d350041",
+          "min_sep_survivor_dead_m": 5500.233802980266,
           "n_ticks": 8515,
           "pair": [
             0,
             5
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            50.36454732988793,
-            4.730516047032083e-11,
-            216.902610997075,
-            125.08870139532307,
-            26.688097584669062
+            1.324845007004202e-12,
+            4.433797269899681e-11,
+            42.220709990465046,
+            92.91744949179778,
+            140.61483539705569,
+            1.5523199003013134e-12
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 419.0439573070037
+          "total_dv_mps": 275.7529948793657
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_1-2__hungarian__w2_0.1_dv_100.jsonl",
-          "log_sha256": "9a8499e6fd1097efec3017446fb7c6a7c1912e334ccf50733c807448cd5fc5d5",
-          "min_sep_survivor_dead_m": 4587.361070081498,
+          "log_sha256": "be445a43ecf116cbeec516c0afa34030060527a7b11a29a77647a7dddc9c4573",
+          "min_sep_survivor_dead_m": 4587.361070081491,
           "n_ticks": 8515,
           "pair": [
             1,
             2
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            8.839420505811725e-13,
-            29.400000000001235,
-            123.45918458886939,
-            168.52268173535253,
-            109.6564269419732
+            193.67907947544643,
+            8.377937623522883e-13,
+            29.40000000000122,
+            123.45918458886413,
+            168.52268173534674,
+            109.65642694197007
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 624.717372741646
+          "total_dv_mps": 624.7173727416294
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_1-3__hungarian__w2_0.1_dv_100.jsonl",
-          "log_sha256": "a9f73443ae8e976701e3c276a4f62b212e8e543d0a564e5b320994dbbd5d0baa",
-          "min_sep_survivor_dead_m": 3887.863021802511,
+          "log_sha256": "ad813737cdc862af9733d61800a0e37529a17eff8f7906975a2d28e5d5b71b24",
+          "min_sep_survivor_dead_m": 3887.8630218025114,
           "n_ticks": 8515,
           "pair": [
             1,
             3
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            8.839420505811725e-13,
-            164.85191521980192,
-            25.049199358511416,
-            142.87832385395305,
-            109.6564269419732
+            193.67907947544643,
+            8.377937623522883e-13,
+            164.85191521979627,
+            25.049199358511384,
+            142.87832385394756,
+            109.65642694197007
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 636.1149448496893
+          "total_dv_mps": 636.1149448496725
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_1-4__hungarian__w2_0.1_dv_100.jsonl",
-          "log_sha256": "232dc9475da281c03d83a11ce13c0fbd6b1b95a737368eb4017461984e458a85",
-          "min_sep_survivor_dead_m": 3096.990136243699,
+          "log_sha256": "6854ad3830042e0ec61e240eb7d6a8af6f3aea4dbf833859bc35ea1460968a8f",
+          "min_sep_survivor_dead_m": 3096.9901362436885,
           "n_ticks": 8515,
           "pair": [
             1,
             4
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            8.839420505811725e-13,
-            164.85191521980192,
-            123.45918458886939,
-            29.400000000000823,
-            109.6564269419732
+            193.67907947544643,
+            8.377937623522883e-13,
+            164.85191521979627,
+            123.45918458886413,
+            29.400000000000784,
+            109.65642694197007
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 621.046606226095
+          "total_dv_mps": 621.0466062260786
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_1-5__hungarian__w2_0.1_dv_100.jsonl",
-          "log_sha256": "44874c54f387688407a61bfd4099a5918725b9e2fe920e65fb8f083d0b5b4304",
-          "min_sep_survivor_dead_m": 2700.9890308463896,
+          "log_sha256": "10e620767457d96f940d5e2b4b42a0aa11e0588bf95319d39af4a07604faca45",
+          "min_sep_survivor_dead_m": 2700.9890308463887,
           "n_ticks": 8515,
           "pair": [
             1,
             5
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            8.839420505811725e-13,
-            164.85191521980192,
-            123.45918458886939,
-            107.34433860828774,
-            29.400000000001235
+            193.67907947544643,
+            8.377937623522883e-13,
+            164.85191521979627,
+            123.45918458886413,
+            107.3443386082843,
+            29.400000000001217
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 618.7345178924099
+          "total_dv_mps": 618.7345178923932
         },
         {
           "coverage_mean_last_orbit": 0.26980048594736833,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_2-3__hungarian__w2_0.1_dv_100.jsonl",
-          "log_sha256": "9d08d472d3c1a3c957e712b7929baf6bf26ace8b31321dbc141bad310fe1fcfb",
-          "min_sep_survivor_dead_m": 5021.740504264574,
+          "log_sha256": "597195d0274faec6d4beb92bddbf49b23870bd81e7961b48005be70f6598f729",
+          "min_sep_survivor_dead_m": 5021.740504264554,
           "n_ticks": 8515,
           "pair": [
             2,
             3
           ],
           "per_sat_dv_mps": [
-            135.78448944815932,
-            76.14444995233987,
-            1.3012924868676564e-12,
-            25.049199358511416,
-            181.66375095084112,
-            81.6832782694374
+            135.78448944815923,
+            76.14444995233968,
+            1.2861135883907983e-12,
+            25.049199358511384,
+            181.6637509508409,
+            81.68327826943747
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 500.3251679792904
+          "total_dv_mps": 500.32516797929
         },
         {
           "coverage_mean_last_orbit": 0.26980048594736833,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_2-4__hungarian__w2_0.1_dv_100.jsonl",
-          "log_sha256": "57cdfde72c4c936be9a7d2a83e68e3be42da3985dcea7e64faaf0ddb22b7d3f5",
-          "min_sep_survivor_dead_m": 2944.786344372538,
+          "log_sha256": "ffa77bf9d01ea31a81bb583e0bf54c9ad5e57885be3d9ecd0c3b77e594dc20de",
+          "min_sep_survivor_dead_m": 2944.7863443725328,
           "n_ticks": 8515,
           "pair": [
             2,
             4
           ],
           "per_sat_dv_mps": [
-            135.78448944815932,
-            76.14444995233987,
-            1.3012924868676564e-12,
-            85.88010829098899,
-            29.400000000000823,
-            81.6832782694374
+            135.78448944815923,
+            76.14444995233968,
+            1.2861135883907983e-12,
+            85.88010829098945,
+            29.400000000000784,
+            81.68327826943747
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 408.8923259609277
+          "total_dv_mps": 408.8923259609279
         },
         {
           "coverage_mean_last_orbit": 0.26980048594736833,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_2-5__hungarian__w2_0.1_dv_100.jsonl",
-          "log_sha256": "fbb9d571c80212f66aa7edf200420265ab5f792bdea2bed4ebd34c993d825a2e",
-          "min_sep_survivor_dead_m": 2780.935639927307,
+          "log_sha256": "10851f078087efc0898407e0ba4bc9142f890d9b5854d51e6704545995e0a40e",
+          "min_sep_survivor_dead_m": 2780.9356399273047,
           "n_ticks": 8515,
           "pair": [
             2,
             5
           ],
           "per_sat_dv_mps": [
-            135.78448944815932,
-            76.14444995233987,
-            1.3012924868676564e-12,
-            85.88010829098899,
-            75.20467576139427,
-            29.400000000001235
+            135.78448944815923,
+            76.14444995233968,
+            1.2861135883907983e-12,
+            85.88010829098945,
+            75.20467576139444,
+            29.400000000001217
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 402.413723452885
+          "total_dv_mps": 402.41372345288534
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_3-4__hungarian__w2_0.1_dv_100.jsonl",
-          "log_sha256": "3447539bdae808a2ce0be766f70617987fa1010e081a3e974ae6abffce1470a6",
-          "min_sep_survivor_dead_m": 1852.5321340900236,
+          "log_sha256": "39327076958c7b9527ebf00bcb3df1c5ce5237fb8f34770247adc0d494ce0c31",
+          "min_sep_survivor_dead_m": 1852.5321340900618,
           "n_ticks": 8515,
           "pair": [
             3,
             4
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            69.57229519151097,
-            96.02701728566318,
-            1.3475785499582314e-12,
-            29.400000000000823,
-            109.6564269419732
+            193.67907947544643,
+            69.57229519150658,
+            96.02701728565752,
+            1.3246298845524985e-12,
+            29.400000000000784,
+            109.65642694197007
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 498.33481889459836
+          "total_dv_mps": 498.3348188945827
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_3-5__hungarian__w2_0.1_dv_100.jsonl",
-          "log_sha256": "cf58f36673ec5c88f129b15e655cbc89ba37b3916f503bf0492fd63456d02946",
-          "min_sep_survivor_dead_m": 1852.5321340900236,
+          "log_sha256": "1ae4ef092663113a29c73d394020a68dce691cd0e9f7a4289cbc86d827ea80e9",
+          "min_sep_survivor_dead_m": 1852.5321340900618,
           "n_ticks": 8515,
           "pair": [
             3,
             5
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            69.57229519151097,
-            96.02701728566318,
-            1.3475785499582314e-12,
-            107.34433860828774,
-            29.400000000001235
+            193.67907947544643,
+            69.57229519150658,
+            96.02701728565752,
+            1.3246298845524985e-12,
+            107.3443386082843,
+            29.400000000001217
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 496.0227305609133
+          "total_dv_mps": 496.0227305608974
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_4-5__hungarian__w2_0.1_dv_100.jsonl",
-          "log_sha256": "531cb02d7221bf5404dd5fc70c3577b0945ba40df4898c39e5dfe6472372c222",
-          "min_sep_survivor_dead_m": 5805.318313903328,
+          "log_sha256": "e7f46469f4a2aa95144933457ca2e1454e707fda179241f464dc23fcbd9a5e94",
+          "min_sep_survivor_dead_m": 5805.318313903343,
           "n_ticks": 8515,
           "pair": [
             4,
             5
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            69.57229519151097,
-            251.2409923098402,
-            91.45910572232418,
-            8.896296216928492e-13,
-            29.400000000001235
+            193.67907947544643,
+            69.57229519150658,
+            251.24099230983734,
+            91.45910572231807,
+            8.509468817782454e-13,
+            29.400000000001217
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 635.3514726991264
+          "total_dv_mps": 635.3514726991104
         }
       ],
       "reused_p0_logs": false,
       "w2": 0.1,
       "worst_coverage": 0.26979718716450923,
-      "worst_per_sat_dv_mps": 251.2409923098402
+      "worst_per_sat_dv_mps": 251.24099230983734
     },
     {
       "command": "uv run python -m cubesat.benchmark --mode pareto --base data/scenarios/two_failure.json --out data/eval/pareto --report data/eval/pareto_results.json",
       "dv_budget_mps": 200.0,
-      "mean_coverage": 0.2697985066776528,
-      "mean_total_dv_mps": 481.6060830249519,
+      "mean_coverage": 0.2697991664342247,
+      "mean_total_dv_mps": 469.34042152965594,
       "n_feasible_pairs": 15,
       "n_infeasible_pairs": 0,
       "per_pair": [
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-1__hungarian__w2_0.1_dv_200.jsonl",
-          "log_sha256": "8944ca71dec283dd171bf7b59ec326fffb1e35eae2447b6ee2caf072ae5865f2",
-          "min_sep_survivor_dead_m": 1322.6031098669134,
+          "log_sha256": "d6b25a2f3fa8ab3e6913a61817c2b899bafa8f5dcf7a168c44672cfe7d907545",
+          "min_sep_survivor_dead_m": 4913.311100820126,
           "n_ticks": 8515,
           "pair": [
             0,
             1
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            16.73805619031792,
-            172.75180675712673,
-            87.04429548354396,
-            125.08870139532307,
-            91.75798726739784
+            1.324845007004202e-12,
+            1.0545218712862473e-12,
+            4.457685652940815e-11,
+            45.03666603943282,
+            104.33784961794923,
+            85.64234770465279
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 493.3808470937109
+          "total_dv_mps": 235.0168633620818
         },
         {
           "coverage_mean_last_orbit": 0.26980708351308647,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.998989260897031,
+          "critical_vacancy_s": 16.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-2__hungarian__w2_0.1_dv_200.jsonl",
-          "log_sha256": "157b0c38e4a67bbe6a1ffc62c49800023c7e126a1a92b286e507730e60277b67",
-          "min_sep_survivor_dead_m": 5333.1325145755945,
+          "log_sha256": "5b811f8702b14f6b49c11aea2deebfe30bffebfe3661481c064d35bc40fd5b27",
+          "min_sep_survivor_dead_m": 5723.113748216915,
           "n_ticks": 8515,
           "pair": [
             0,
             2
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            43.77642195038997,
-            1.5565358266533646e-12,
-            66.60682979344182,
-            81.89474962857273,
-            56.343592302997095
+            1.324845007004202e-12,
+            4.433797269899681e-11,
+            1.5700136380949072e-12,
+            38.513456822633486,
+            140.61483539705569,
+            104.33784961795152
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 248.6215936754045
+          "total_dv_mps": 283.4661418376879
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-3__hungarian__w2_0.1_dv_200.jsonl",
-          "log_sha256": "4d17432dcc74050a98c722c7480a4941d4338b00057110e05c5370d4565c1945",
-          "min_sep_survivor_dead_m": 2888.535684388777,
+          "log_sha256": "f1fb852d63610634868a01591909dbff1d88cc638a92415df00ae72022537364",
+          "min_sep_survivor_dead_m": 5799.512406708856,
           "n_ticks": 8515,
           "pair": [
             0,
             3
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            50.36454732988793,
-            4.730516047032083e-11,
-            13.262575913715201,
-            125.08870139532307,
-            91.75798726739784
+            1.324845007004202e-12,
+            53.071414687468575,
+            4.457685652940815e-11,
+            1.5512623549697742e-12,
+            104.33784961794923,
+            172.75180675712087
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 280.4738119063727
+          "total_dv_mps": 330.16107106258613
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.998989260897031,
+          "critical_vacancy_s": 16.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-4__hungarian__w2_0.1_dv_200.jsonl",
-          "log_sha256": "585668bfa33d6f59e91d1374c667794493d653d72f1ee18fbc9c21dbd13d15ae",
-          "min_sep_survivor_dead_m": 5376.931218402233,
+          "log_sha256": "fc67541766487c4372c8f6aabeffed66a843fe1767d857ac92ca2502cc65a841",
+          "min_sep_survivor_dead_m": 4913.311100820126,
           "n_ticks": 8515,
           "pair": [
             0,
             4
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            50.36454732988793,
-            85.6423477046576,
-            87.04429548354396,
-            25.808176348716277,
-            91.75798726739784
+            1.324845007004202e-12,
+            104.33784961794895,
+            238.73870718361295,
+            45.03666603943282,
+            1.066758970894579e-12,
+            85.64234770465279
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 340.61735413420496
+          "total_dv_mps": 473.7555705456499
         },
         {
-          "coverage_mean_last_orbit": 0.26979718716450923,
+          "coverage_mean_last_orbit": 0.26980708351308647,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-5__hungarian__w2_0.1_dv_200.jsonl",
-          "log_sha256": "343bf5a444689d093eb270d4bd6a6d27f829ce50d951605c363e54d348dd1c56",
-          "min_sep_survivor_dead_m": 5856.406565191165,
+          "log_sha256": "ab63575f97a96b3e73043e0fed9bf1ac5152934012d695069fe01c660d671ae7",
+          "min_sep_survivor_dead_m": 5500.233802980266,
           "n_ticks": 8515,
           "pair": [
             0,
             5
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            50.36454732988793,
-            4.730516047032083e-11,
-            216.902610997075,
-            125.08870139532307,
-            26.688097584669062
+            1.324845007004202e-12,
+            4.433797269899681e-11,
+            42.220709990465046,
+            92.91744949179778,
+            140.61483539705569,
+            1.5523199003013134e-12
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 419.0439573070037
+          "total_dv_mps": 275.7529948793657
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_1-2__hungarian__w2_0.1_dv_200.jsonl",
-          "log_sha256": "044b9a1a6b35e3a5023027304d28ad43d20db2051968964c6437222bbf81bcb9",
-          "min_sep_survivor_dead_m": 4587.361070081498,
+          "log_sha256": "552f730de21faccb58362612dba808f540ae70f35c6167c2c5d18a2163c58600",
+          "min_sep_survivor_dead_m": 4587.361070081491,
           "n_ticks": 8515,
           "pair": [
             1,
             2
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            8.839420505811725e-13,
-            29.400000000001235,
-            123.45918458886939,
-            168.52268173535253,
-            109.6564269419732
+            193.67907947544643,
+            8.377937623522883e-13,
+            29.40000000000122,
+            123.45918458886413,
+            168.52268173534674,
+            109.65642694197007
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 624.717372741646
+          "total_dv_mps": 624.7173727416294
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_1-3__hungarian__w2_0.1_dv_200.jsonl",
-          "log_sha256": "9f629cbb0ed2ecb9e35ac3f0686da579dcb7080a60c6cef719d55df7c4dc68dd",
-          "min_sep_survivor_dead_m": 3887.863021802511,
+          "log_sha256": "fca681256b09009fb95f5c5587c0acee90b6210d6d76285cc8e0ee5562f255b6",
+          "min_sep_survivor_dead_m": 3887.8630218025114,
           "n_ticks": 8515,
           "pair": [
             1,
             3
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            8.839420505811725e-13,
-            164.85191521980192,
-            25.049199358511416,
-            142.87832385395305,
-            109.6564269419732
+            193.67907947544643,
+            8.377937623522883e-13,
+            164.85191521979627,
+            25.049199358511384,
+            142.87832385394756,
+            109.65642694197007
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 636.1149448496893
+          "total_dv_mps": 636.1149448496725
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_1-4__hungarian__w2_0.1_dv_200.jsonl",
-          "log_sha256": "d20f01248c9d00682344d279ce0256631421947617d738003d8160a9ad894aca",
-          "min_sep_survivor_dead_m": 3096.990136243699,
+          "log_sha256": "f4ed115cd6f8042a994cb1beb5d2ed236209d5a33ebc537f79737bb3c4622ff8",
+          "min_sep_survivor_dead_m": 3096.9901362436885,
           "n_ticks": 8515,
           "pair": [
             1,
             4
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            8.839420505811725e-13,
-            164.85191521980192,
-            123.45918458886939,
-            29.400000000000823,
-            109.6564269419732
+            193.67907947544643,
+            8.377937623522883e-13,
+            164.85191521979627,
+            123.45918458886413,
+            29.400000000000784,
+            109.65642694197007
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 621.046606226095
+          "total_dv_mps": 621.0466062260786
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_1-5__hungarian__w2_0.1_dv_200.jsonl",
-          "log_sha256": "1d19a018d5a582801ea68928b51e76d3bc656d82fa03039ae540c48f3fd364ff",
-          "min_sep_survivor_dead_m": 2700.9890308463896,
+          "log_sha256": "f47d04fcb12762b86f56c721cca75e31a4ce85696ab4836a258f4c17c38fc8d9",
+          "min_sep_survivor_dead_m": 2700.9890308463887,
           "n_ticks": 8515,
           "pair": [
             1,
             5
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            8.839420505811725e-13,
-            164.85191521980192,
-            123.45918458886939,
-            107.34433860828774,
-            29.400000000001235
+            193.67907947544643,
+            8.377937623522883e-13,
+            164.85191521979627,
+            123.45918458886413,
+            107.3443386082843,
+            29.400000000001217
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 618.7345178924099
+          "total_dv_mps": 618.7345178923932
         },
         {
           "coverage_mean_last_orbit": 0.26980048594736833,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_2-3__hungarian__w2_0.1_dv_200.jsonl",
-          "log_sha256": "6f8581d13fc64b0a207ad07a74f1ea60e822ee734f17873311a3f0276bc4a8a2",
-          "min_sep_survivor_dead_m": 5021.740504264574,
+          "log_sha256": "0006f2d99070769084227c6bfb75925cfffe2fc63ed44d520d02618b4663f405",
+          "min_sep_survivor_dead_m": 5021.740504264554,
           "n_ticks": 8515,
           "pair": [
             2,
             3
           ],
           "per_sat_dv_mps": [
-            135.78448944815932,
-            76.14444995233987,
-            1.3012924868676564e-12,
-            25.049199358511416,
-            181.66375095084112,
-            81.6832782694374
+            135.78448944815923,
+            76.14444995233968,
+            1.2861135883907983e-12,
+            25.049199358511384,
+            181.6637509508409,
+            81.68327826943747
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 500.3251679792904
+          "total_dv_mps": 500.32516797929
         },
         {
           "coverage_mean_last_orbit": 0.26980048594736833,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_2-4__hungarian__w2_0.1_dv_200.jsonl",
-          "log_sha256": "1c2b77d05544415c04711dd9e7e6276a6f9fdf42903c1934be30c9db084c0f8c",
-          "min_sep_survivor_dead_m": 2944.786344372538,
+          "log_sha256": "597b38f6aeb9f72046cef0adf5dd171d80612c8ca46fa1252c9ba46b89364bea",
+          "min_sep_survivor_dead_m": 2944.7863443725328,
           "n_ticks": 8515,
           "pair": [
             2,
             4
           ],
           "per_sat_dv_mps": [
-            135.78448944815932,
-            76.14444995233987,
-            1.3012924868676564e-12,
-            85.88010829098899,
-            29.400000000000823,
-            81.6832782694374
+            135.78448944815923,
+            76.14444995233968,
+            1.2861135883907983e-12,
+            85.88010829098945,
+            29.400000000000784,
+            81.68327826943747
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 408.8923259609277
+          "total_dv_mps": 408.8923259609279
         },
         {
           "coverage_mean_last_orbit": 0.26980048594736833,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_2-5__hungarian__w2_0.1_dv_200.jsonl",
-          "log_sha256": "da0a4acc11900809c975469f281198ff0a95c4991173d5d42aa49c02f447c6d2",
-          "min_sep_survivor_dead_m": 2780.935639927307,
+          "log_sha256": "60d199937ede69f622b7487b7406ed1ed87d12ccef9d7c1bb99013f6e9b29601",
+          "min_sep_survivor_dead_m": 2780.9356399273047,
           "n_ticks": 8515,
           "pair": [
             2,
             5
           ],
           "per_sat_dv_mps": [
-            135.78448944815932,
-            76.14444995233987,
-            1.3012924868676564e-12,
-            85.88010829098899,
-            75.20467576139427,
-            29.400000000001235
+            135.78448944815923,
+            76.14444995233968,
+            1.2861135883907983e-12,
+            85.88010829098945,
+            75.20467576139444,
+            29.400000000001217
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 402.413723452885
+          "total_dv_mps": 402.41372345288534
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_3-4__hungarian__w2_0.1_dv_200.jsonl",
-          "log_sha256": "5370ac9e86b936146d7987b9cdbeb529c64b7b8cc16e6b716fdd4a8f88092f1a",
-          "min_sep_survivor_dead_m": 1852.5321340900236,
+          "log_sha256": "6f53e5573390ec61eaca62d3e0149c2ba0da8b1d26f332e5b1bd0889cac1f06c",
+          "min_sep_survivor_dead_m": 1852.5321340900618,
           "n_ticks": 8515,
           "pair": [
             3,
             4
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            69.57229519151097,
-            96.02701728566318,
-            1.3475785499582314e-12,
-            29.400000000000823,
-            109.6564269419732
+            193.67907947544643,
+            69.57229519150658,
+            96.02701728565752,
+            1.3246298845524985e-12,
+            29.400000000000784,
+            109.65642694197007
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 498.33481889459836
+          "total_dv_mps": 498.3348188945827
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_3-5__hungarian__w2_0.1_dv_200.jsonl",
-          "log_sha256": "313b031e983b53b34ad063f669dd2a0d176817bdf07e4e76b620ff3ed7e56722",
-          "min_sep_survivor_dead_m": 1852.5321340900236,
+          "log_sha256": "58edebaddbeb60d881efbbe61683560ad9b4e5e116ef5a74e04bded96ff5e966",
+          "min_sep_survivor_dead_m": 1852.5321340900618,
           "n_ticks": 8515,
           "pair": [
             3,
             5
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            69.57229519151097,
-            96.02701728566318,
-            1.3475785499582314e-12,
-            107.34433860828774,
-            29.400000000001235
+            193.67907947544643,
+            69.57229519150658,
+            96.02701728565752,
+            1.3246298845524985e-12,
+            107.3443386082843,
+            29.400000000001217
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 496.0227305609133
+          "total_dv_mps": 496.0227305608974
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_4-5__hungarian__w2_0.1_dv_200.jsonl",
-          "log_sha256": "d3ac16aae90bb324d509391dda3964b2834eecd0b327afefe3945699aa4ddef2",
-          "min_sep_survivor_dead_m": 5805.318313903328,
+          "log_sha256": "00aa0207b5ff7aa40b46a5c712e2663984d4475f7b8c62255dd7d4fc8a0fff78",
+          "min_sep_survivor_dead_m": 5805.318313903343,
           "n_ticks": 8515,
           "pair": [
             4,
             5
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            69.57229519151097,
-            251.2409923098402,
-            91.45910572232418,
-            8.896296216928492e-13,
-            29.400000000001235
+            193.67907947544643,
+            69.57229519150658,
+            251.24099230983734,
+            91.45910572231807,
+            8.509468817782454e-13,
+            29.400000000001217
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 635.3514726991264
+          "total_dv_mps": 635.3514726991104
         }
       ],
       "reused_p0_logs": false,
       "w2": 0.1,
       "worst_coverage": 0.26979718716450923,
-      "worst_per_sat_dv_mps": 251.2409923098402
+      "worst_per_sat_dv_mps": 251.24099230983734
     },
     {
       "command": "uv run python -m cubesat.benchmark --mode pareto --base data/scenarios/two_failure.json --out data/eval/pareto --report data/eval/pareto_results.json",
       "dv_budget_mps": 50.0,
       "mean_coverage": 0.26980048594736833,
-      "mean_total_dv_mps": 541.0823809841335,
+      "mean_total_dv_mps": 541.082380984133,
       "n_feasible_pairs": 3,
       "n_infeasible_pairs": 12,
       "per_pair": [
@@ -1190,26 +1322,30 @@
         },
         {
           "coverage_mean_last_orbit": 0.26980048594736833,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_1-4__hungarian__w2_0.5_dv_50.jsonl",
-          "log_sha256": "9422ecd2587cbe001bb3072a23359e7ce2cf659db4c3bdd45376162de581eafb",
-          "min_sep_survivor_dead_m": 3942.2016389362034,
+          "log_sha256": "5838331fae6b114068076a93b4bae40f7f5930295216cbd6beecd6fc895cf1ac",
+          "min_sep_survivor_dead_m": 3942.201638936207,
           "n_ticks": 8515,
           "pair": [
             1,
             4
           ],
           "per_sat_dv_mps": [
-            145.0672087530336,
-            8.839420505811725e-13,
-            230.99673824654195,
-            16.810272762623967,
-            29.400000000000823,
-            77.31524188999283
+            145.0672087530333,
+            8.377937623522883e-13,
+            230.9967382465419,
+            16.81027276262399,
+            29.400000000000784,
+            77.31524188999279
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 499.5894616521941
+          "total_dv_mps": 499.5894616521936
         },
         {
           "coverage_mean_last_orbit": null,
@@ -1249,49 +1385,57 @@
         },
         {
           "coverage_mean_last_orbit": 0.26980048594736833,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_2-4__hungarian__w2_0.5_dv_50.jsonl",
-          "log_sha256": "e9ac24bb7fae2ef5ba51b2308d73f914b6ceccff3604091fc1b804d72fdaa606",
-          "min_sep_survivor_dead_m": 3400.4224769365887,
+          "log_sha256": "cec2093e554c338c3f194c6c142bfae6ba9cb41e311ed9148e854f4f37e69d70",
+          "min_sep_survivor_dead_m": 3400.422476936596,
           "n_ticks": 8515,
           "pair": [
             2,
             4
           ],
           "per_sat_dv_mps": [
-            154.28782637643016,
-            175.71867805548376,
-            1.3012924868676564e-12,
-            114.77142051746736,
-            29.400000000000823,
-            93.76231027770685
+            154.28782637643002,
+            175.71867805548302,
+            1.2861135883907983e-12,
+            114.77142051746773,
+            29.400000000000784,
+            93.76231027770673
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 567.9402352270903
+          "total_dv_mps": 567.9402352270896
         },
         {
           "coverage_mean_last_orbit": 0.26980048594736833,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_2-5__hungarian__w2_0.5_dv_50.jsonl",
-          "log_sha256": "30931470065eb9c4e019b7df23be384af3004fc78a2404e4d8888ba413a29571",
-          "min_sep_survivor_dead_m": 3868.032681286945,
+          "log_sha256": "a929fa342b8b39a1d38e02b19494fab9a90d5a5302937747b6628639e1b6f33d",
+          "min_sep_survivor_dead_m": 3868.032681286947,
           "n_ticks": 8515,
           "pair": [
             2,
             5
           ],
           "per_sat_dv_mps": [
-            154.28782637643016,
-            175.71867805548376,
-            1.3012924868676564e-12,
-            114.77142051746736,
-            81.53952112373234,
-            29.400000000001235
+            154.28782637643002,
+            175.71867805548302,
+            1.2861135883907983e-12,
+            114.77142051746773,
+            81.53952112373231,
+            29.400000000001217
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 555.7174460731162
+          "total_dv_mps": 555.7174460731156
         },
         {
           "coverage_mean_last_orbit": null,
@@ -1351,731 +1495,851 @@
       "reused_p0_logs": false,
       "w2": 0.5,
       "worst_coverage": 0.26980048594736833,
-      "worst_per_sat_dv_mps": 230.99673824654195
+      "worst_per_sat_dv_mps": 230.9967382465419
     },
     {
       "command": "uv run python -m cubesat.benchmark --mode pareto --base data/scenarios/two_failure.json --out data/eval/pareto --report data/eval/pareto_results.json",
       "dv_budget_mps": 100.0,
-      "mean_coverage": 0.2697985066776528,
-      "mean_total_dv_mps": 481.6060830249519,
+      "mean_coverage": 0.2697991664342247,
+      "mean_total_dv_mps": 444.29725554174547,
       "n_feasible_pairs": 15,
       "n_infeasible_pairs": 0,
       "per_pair": [
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-1__hungarian__w2_0.5_dv_100.jsonl",
-          "log_sha256": "89fc0a9dbdc6317edaa5878cc23cb9342c0fb5cbbd56f5a0e0c7fa6a17482c0c",
-          "min_sep_survivor_dead_m": 1322.6031098669134,
+          "log_sha256": "fb5129a74fdf73afff709c69038c74aeedf73988cd73c8ced02d3fd07b8c1a52",
+          "min_sep_survivor_dead_m": 4913.311100820126,
           "n_ticks": 8515,
           "pair": [
             0,
             1
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            16.73805619031792,
-            172.75180675712673,
-            87.04429548354396,
-            125.08870139532307,
-            91.75798726739784
+            1.324845007004202e-12,
+            1.0545218712862473e-12,
+            4.457685652940815e-11,
+            45.03666603943282,
+            104.33784961794923,
+            85.64234770465279
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 493.3808470937109
+          "total_dv_mps": 235.0168633620818
         },
         {
           "coverage_mean_last_orbit": 0.26980708351308647,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.998989260897031,
+          "critical_vacancy_s": 16.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-2__hungarian__w2_0.5_dv_100.jsonl",
-          "log_sha256": "d834dd02349c6853d82de725a78459d16b065b6d895925cfaacfae95c84cbc3e",
-          "min_sep_survivor_dead_m": 5333.1325145755945,
+          "log_sha256": "459135bf76c6af33916d717cf132dc09a7ce6f905e6cdd91572029f60fc5cb06",
+          "min_sep_survivor_dead_m": 5723.113748216915,
           "n_ticks": 8515,
           "pair": [
             0,
             2
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            43.77642195038997,
-            1.5565358266533646e-12,
-            66.60682979344182,
-            81.89474962857273,
-            56.343592302997095
+            1.324845007004202e-12,
+            4.433797269899681e-11,
+            1.5700136380949072e-12,
+            38.513456822633486,
+            140.61483539705569,
+            104.33784961795152
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 248.6215936754045
+          "total_dv_mps": 283.4661418376879
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-3__hungarian__w2_0.5_dv_100.jsonl",
-          "log_sha256": "472f09c00da28330c6c380067670d74dc9342e1e28b87163dc81d7bd59b316ef",
-          "min_sep_survivor_dead_m": 2888.535684388777,
+          "log_sha256": "f49eb0d532fc9f80f2c0a381e64d24fa4983e2d3fbce4a7f0dff834c983a36d6",
+          "min_sep_survivor_dead_m": 5799.512406708856,
           "n_ticks": 8515,
           "pair": [
             0,
             3
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            50.36454732988793,
-            4.730516047032083e-11,
-            13.262575913715201,
-            125.08870139532307,
-            91.75798726739784
+            1.324845007004202e-12,
+            53.071414687468575,
+            4.457685652940815e-11,
+            1.5512623549697742e-12,
+            104.33784961794923,
+            172.75180675712087
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 280.4738119063727
+          "total_dv_mps": 330.16107106258613
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.998989260897031,
+          "critical_vacancy_s": 16.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-4__hungarian__w2_0.5_dv_100.jsonl",
-          "log_sha256": "90a4710a5aea7ee2b715d111ff3652bfa2bfa99723747f004d5fae48e6d94529",
-          "min_sep_survivor_dead_m": 5376.931218402233,
+          "log_sha256": "db3877cf77a8de7dbd1979622bf3e9d51707d3264f54c51a54b7541e24619afc",
+          "min_sep_survivor_dead_m": 5856.406476807209,
           "n_ticks": 8515,
           "pair": [
             0,
             4
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            50.36454732988793,
-            85.6423477046576,
-            87.04429548354396,
-            25.808176348716277,
-            91.75798726739784
+            1.324845007004202e-12,
+            53.071414687468575,
+            4.457685652940815e-11,
+            45.03666603943282,
+            1.066758970894579e-12,
+            4.464838728578468e-11
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 340.61735413420496
+          "total_dv_mps": 98.10808072699301
         },
         {
-          "coverage_mean_last_orbit": 0.26979718716450923,
+          "coverage_mean_last_orbit": 0.26980708351308647,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-5__hungarian__w2_0.5_dv_100.jsonl",
-          "log_sha256": "d551507e5ec37d09d054518872b2a1edbf8c0dc9a92835a1b11e72f991f718b3",
-          "min_sep_survivor_dead_m": 5856.406565191165,
+          "log_sha256": "061aabb5106f3b1cebdb566160d83490c51dc1c536bcbf1d7f179518cc64fd2d",
+          "min_sep_survivor_dead_m": 5500.233802980266,
           "n_ticks": 8515,
           "pair": [
             0,
             5
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            50.36454732988793,
-            4.730516047032083e-11,
-            216.902610997075,
-            125.08870139532307,
-            26.688097584669062
+            1.324845007004202e-12,
+            4.433797269899681e-11,
+            42.220709990465046,
+            92.91744949179778,
+            140.61483539705569,
+            1.5523199003013134e-12
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 419.0439573070037
+          "total_dv_mps": 275.7529948793657
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_1-2__hungarian__w2_0.5_dv_100.jsonl",
-          "log_sha256": "6477e1705792275df03d32141f745efb2f0f82005e4d330863443df37296b0a6",
-          "min_sep_survivor_dead_m": 4587.361070081498,
+          "log_sha256": "e40ece2fc34bf5853026188985122666c1584a8bcf9299221b2160e5e5a6f4ed",
+          "min_sep_survivor_dead_m": 4587.361070081491,
           "n_ticks": 8515,
           "pair": [
             1,
             2
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            8.839420505811725e-13,
-            29.400000000001235,
-            123.45918458886939,
-            168.52268173535253,
-            109.6564269419732
+            193.67907947544643,
+            8.377937623522883e-13,
+            29.40000000000122,
+            123.45918458886413,
+            168.52268173534674,
+            109.65642694197007
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 624.717372741646
+          "total_dv_mps": 624.7173727416294
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_1-3__hungarian__w2_0.5_dv_100.jsonl",
-          "log_sha256": "90e06fa43ea140e184572a75ec67f99211258382c0af7f33ffd600541829ac80",
-          "min_sep_survivor_dead_m": 3887.863021802511,
+          "log_sha256": "847557975216560ff0c3b39d7ee2d97ccbf8c69a598e938c9b587ae03fb3938d",
+          "min_sep_survivor_dead_m": 3887.8630218025114,
           "n_ticks": 8515,
           "pair": [
             1,
             3
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            8.839420505811725e-13,
-            164.85191521980192,
-            25.049199358511416,
-            142.87832385395305,
-            109.6564269419732
+            193.67907947544643,
+            8.377937623522883e-13,
+            164.85191521979627,
+            25.049199358511384,
+            142.87832385394756,
+            109.65642694197007
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 636.1149448496893
+          "total_dv_mps": 636.1149448496725
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_1-4__hungarian__w2_0.5_dv_100.jsonl",
-          "log_sha256": "92b91d5a1ae0f569b87fe55856f932bac0e68b48e34d373d29b508ce52ce819e",
-          "min_sep_survivor_dead_m": 3096.990136243699,
+          "log_sha256": "ff48b7e75f5ac87e5400b80eebf3713406dc2ed8dbb45eefe6a15200d02e2842",
+          "min_sep_survivor_dead_m": 3096.9901362436885,
           "n_ticks": 8515,
           "pair": [
             1,
             4
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            8.839420505811725e-13,
-            164.85191521980192,
-            123.45918458886939,
-            29.400000000000823,
-            109.6564269419732
+            193.67907947544643,
+            8.377937623522883e-13,
+            164.85191521979627,
+            123.45918458886413,
+            29.400000000000784,
+            109.65642694197007
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 621.046606226095
+          "total_dv_mps": 621.0466062260786
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_1-5__hungarian__w2_0.5_dv_100.jsonl",
-          "log_sha256": "e296dc14bbed5db881c14292fda8b2cc37c9a4c629449e4708741a00cfd2a8d3",
-          "min_sep_survivor_dead_m": 2700.9890308463896,
+          "log_sha256": "371d2d2adea92ec4cd5ebab0ab558c3388e6f07a12982e7f5454391deac6e5cb",
+          "min_sep_survivor_dead_m": 2700.9890308463887,
           "n_ticks": 8515,
           "pair": [
             1,
             5
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            8.839420505811725e-13,
-            164.85191521980192,
-            123.45918458886939,
-            107.34433860828774,
-            29.400000000001235
+            193.67907947544643,
+            8.377937623522883e-13,
+            164.85191521979627,
+            123.45918458886413,
+            107.3443386082843,
+            29.400000000001217
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 618.7345178924099
+          "total_dv_mps": 618.7345178923932
         },
         {
           "coverage_mean_last_orbit": 0.26980048594736833,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_2-3__hungarian__w2_0.5_dv_100.jsonl",
-          "log_sha256": "8b29a935a28fb4c7c201d1a20433b45464d987ee2bf4758cdf2e312edbe015f2",
-          "min_sep_survivor_dead_m": 5021.740504264574,
+          "log_sha256": "3394ae10094744c4b93ed0c6a5f48f749ec0f613b186414ca5aec75ca0ca6865",
+          "min_sep_survivor_dead_m": 5021.740504264554,
           "n_ticks": 8515,
           "pair": [
             2,
             3
           ],
           "per_sat_dv_mps": [
-            135.78448944815932,
-            76.14444995233987,
-            1.3012924868676564e-12,
-            25.049199358511416,
-            181.66375095084112,
-            81.6832782694374
+            135.78448944815923,
+            76.14444995233968,
+            1.2861135883907983e-12,
+            25.049199358511384,
+            181.6637509508409,
+            81.68327826943747
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 500.3251679792904
+          "total_dv_mps": 500.32516797929
         },
         {
           "coverage_mean_last_orbit": 0.26980048594736833,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_2-4__hungarian__w2_0.5_dv_100.jsonl",
-          "log_sha256": "14a44e4900c403743f29595fc34c7b1072e52ad61ae8b7e9a128e93967b4ca37",
-          "min_sep_survivor_dead_m": 2944.786344372538,
+          "log_sha256": "2f20f5b258abe314e0d64dcb8bc3ade94962a760c82c2dc174ff7a2674ec4b29",
+          "min_sep_survivor_dead_m": 2944.7863443725328,
           "n_ticks": 8515,
           "pair": [
             2,
             4
           ],
           "per_sat_dv_mps": [
-            135.78448944815932,
-            76.14444995233987,
-            1.3012924868676564e-12,
-            85.88010829098899,
-            29.400000000000823,
-            81.6832782694374
+            135.78448944815923,
+            76.14444995233968,
+            1.2861135883907983e-12,
+            85.88010829098945,
+            29.400000000000784,
+            81.68327826943747
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 408.8923259609277
+          "total_dv_mps": 408.8923259609279
         },
         {
           "coverage_mean_last_orbit": 0.26980048594736833,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_2-5__hungarian__w2_0.5_dv_100.jsonl",
-          "log_sha256": "1acfd524ba4ad0e76a826dc71943c644d63048cb74bd55458ce486d1ec808416",
-          "min_sep_survivor_dead_m": 2780.935639927307,
+          "log_sha256": "711c187107652426504a7ae46f53d288a3f7237572e2cfb1df52adef62a9e3f8",
+          "min_sep_survivor_dead_m": 2780.9356399273047,
           "n_ticks": 8515,
           "pair": [
             2,
             5
           ],
           "per_sat_dv_mps": [
-            135.78448944815932,
-            76.14444995233987,
-            1.3012924868676564e-12,
-            85.88010829098899,
-            75.20467576139427,
-            29.400000000001235
+            135.78448944815923,
+            76.14444995233968,
+            1.2861135883907983e-12,
+            85.88010829098945,
+            75.20467576139444,
+            29.400000000001217
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 402.413723452885
+          "total_dv_mps": 402.41372345288534
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_3-4__hungarian__w2_0.5_dv_100.jsonl",
-          "log_sha256": "10387c1d9f3965325cfbca4c2a7dac7329a4fa180ab8960cd0b2ceaf6797ec62",
-          "min_sep_survivor_dead_m": 1852.5321340900236,
+          "log_sha256": "138424b86003d7b9aa273a0dd8dbf9578ae5798985fe71ef68f5ff36afb79af6",
+          "min_sep_survivor_dead_m": 1852.5321340900618,
           "n_ticks": 8515,
           "pair": [
             3,
             4
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            69.57229519151097,
-            96.02701728566318,
-            1.3475785499582314e-12,
-            29.400000000000823,
-            109.6564269419732
+            193.67907947544643,
+            69.57229519150658,
+            96.02701728565752,
+            1.3246298845524985e-12,
+            29.400000000000784,
+            109.65642694197007
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 498.33481889459836
+          "total_dv_mps": 498.3348188945827
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_3-5__hungarian__w2_0.5_dv_100.jsonl",
-          "log_sha256": "0833c89311f7e88484305355e4d5a3e269afa56e4085bee971a8511ffc86406e",
-          "min_sep_survivor_dead_m": 1852.5321340900236,
+          "log_sha256": "66bc0e46fa6a31edba87ba2568f405a82c0302e21e6582944ed6eb75b75d985d",
+          "min_sep_survivor_dead_m": 1852.5321340900618,
           "n_ticks": 8515,
           "pair": [
             3,
             5
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            69.57229519151097,
-            96.02701728566318,
-            1.3475785499582314e-12,
-            107.34433860828774,
-            29.400000000001235
+            193.67907947544643,
+            69.57229519150658,
+            96.02701728565752,
+            1.3246298845524985e-12,
+            107.3443386082843,
+            29.400000000001217
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 496.0227305609133
+          "total_dv_mps": 496.0227305608974
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_4-5__hungarian__w2_0.5_dv_100.jsonl",
-          "log_sha256": "161245c93d13bdabcc7e20a97ac40bd6f5186348d257ade5ddac2615a6081542",
-          "min_sep_survivor_dead_m": 5805.318313903328,
+          "log_sha256": "7f9cfe3a02ae3f492d1244cc56dd130814cc8496d2db8526c89249c7be473dcf",
+          "min_sep_survivor_dead_m": 5805.318313903343,
           "n_ticks": 8515,
           "pair": [
             4,
             5
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            69.57229519151097,
-            251.2409923098402,
-            91.45910572232418,
-            8.896296216928492e-13,
-            29.400000000001235
+            193.67907947544643,
+            69.57229519150658,
+            251.24099230983734,
+            91.45910572231807,
+            8.509468817782454e-13,
+            29.400000000001217
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 635.3514726991264
+          "total_dv_mps": 635.3514726991104
         }
       ],
       "reused_p0_logs": false,
       "w2": 0.5,
       "worst_coverage": 0.26979718716450923,
-      "worst_per_sat_dv_mps": 251.2409923098402
+      "worst_per_sat_dv_mps": 251.24099230983734
     },
     {
       "command": "reused point: per-pair logs data/eval/benchmark/pair_*__hungarian.jsonl; command of record: data/eval/benchmark_manifest.json (sha256-pinned)",
       "dv_budget_mps": 200.0,
-      "mean_coverage": 0.2697985066776528,
-      "mean_total_dv_mps": 481.6060830249519,
+      "mean_coverage": 0.2697991664342247,
+      "mean_total_dv_mps": 444.29725554174547,
       "n_feasible_pairs": 15,
       "n_infeasible_pairs": 0,
       "per_pair": [
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-1__hungarian__w2_0.5_dv_200.jsonl",
-          "log_sha256": "e67ef7207ea7d112d4a051ac5e652ca57dc2d1f8160419768359caaf30f05262",
-          "min_sep_survivor_dead_m": 1322.6031098669134,
+          "log_sha256": "376745704646c6f29b90b7d0467bc7f1cbcadfe6f5bb1f4374db9bc9164ed460",
+          "min_sep_survivor_dead_m": 4913.311100820126,
           "n_ticks": 8515,
           "pair": [
             0,
             1
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            16.73805619031792,
-            172.75180675712673,
-            87.04429548354396,
-            125.08870139532307,
-            91.75798726739784
+            1.324845007004202e-12,
+            1.0545218712862473e-12,
+            4.457685652940815e-11,
+            45.03666603943282,
+            104.33784961794923,
+            85.64234770465279
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": "data/eval/benchmark/pair_0-1__hungarian.jsonl",
-          "total_dv_mps": 493.3808470937109
+          "total_dv_mps": 235.0168633620818
         },
         {
           "coverage_mean_last_orbit": 0.26980708351308647,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.998989260897031,
+          "critical_vacancy_s": 16.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-2__hungarian__w2_0.5_dv_200.jsonl",
-          "log_sha256": "b60786ea97e32893301266e343ae2571df0774dfb563620d88e4e1ac5f3e4d21",
-          "min_sep_survivor_dead_m": 5333.1325145755945,
+          "log_sha256": "5cb4884095c17300908252872e25813f87e82739b7c4f657b41b5a265b53759c",
+          "min_sep_survivor_dead_m": 5723.113748216915,
           "n_ticks": 8515,
           "pair": [
             0,
             2
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            43.77642195038997,
-            1.5565358266533646e-12,
-            66.60682979344182,
-            81.89474962857273,
-            56.343592302997095
+            1.324845007004202e-12,
+            4.433797269899681e-11,
+            1.5700136380949072e-12,
+            38.513456822633486,
+            140.61483539705569,
+            104.33784961795152
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": "data/eval/benchmark/pair_0-2__hungarian.jsonl",
-          "total_dv_mps": 248.6215936754045
+          "total_dv_mps": 283.4661418376879
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-3__hungarian__w2_0.5_dv_200.jsonl",
-          "log_sha256": "11742e1f6df4529c9fd1201b9a5594664649f28952a03526e06f4b535abda4d3",
-          "min_sep_survivor_dead_m": 2888.535684388777,
+          "log_sha256": "c107cce566403278e55b64f588aa8cc4a2be7b65fb3edb446dd39ec2ea532430",
+          "min_sep_survivor_dead_m": 5799.512406708856,
           "n_ticks": 8515,
           "pair": [
             0,
             3
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            50.36454732988793,
-            4.730516047032083e-11,
-            13.262575913715201,
-            125.08870139532307,
-            91.75798726739784
+            1.324845007004202e-12,
+            53.071414687468575,
+            4.457685652940815e-11,
+            1.5512623549697742e-12,
+            104.33784961794923,
+            172.75180675712087
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": "data/eval/benchmark/pair_0-3__hungarian.jsonl",
-          "total_dv_mps": 280.4738119063727
+          "total_dv_mps": 330.16107106258613
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.998989260897031,
+          "critical_vacancy_s": 16.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-4__hungarian__w2_0.5_dv_200.jsonl",
-          "log_sha256": "b03f378647168d5571d794fb7cac65ac3b6240e392c1cc364ea5bc329d450778",
-          "min_sep_survivor_dead_m": 5376.931218402233,
+          "log_sha256": "8bd568b5136b5f0bb0889b54c291433349d3e149cdcb6f2e486192ea07508c04",
+          "min_sep_survivor_dead_m": 5856.406476807209,
           "n_ticks": 8515,
           "pair": [
             0,
             4
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            50.36454732988793,
-            85.6423477046576,
-            87.04429548354396,
-            25.808176348716277,
-            91.75798726739784
+            1.324845007004202e-12,
+            53.071414687468575,
+            4.457685652940815e-11,
+            45.03666603943282,
+            1.066758970894579e-12,
+            4.464838728578468e-11
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": "data/eval/benchmark/pair_0-4__hungarian.jsonl",
-          "total_dv_mps": 340.61735413420496
+          "total_dv_mps": 98.10808072699301
         },
         {
-          "coverage_mean_last_orbit": 0.26979718716450923,
+          "coverage_mean_last_orbit": 0.26980708351308647,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-5__hungarian__w2_0.5_dv_200.jsonl",
-          "log_sha256": "e57f9dd00bca6f9ecd01580b462d7cb05fa712ddadf937084c4dc07d2bf660f9",
-          "min_sep_survivor_dead_m": 5856.406565191165,
+          "log_sha256": "d419eab67c4a79b354eeca9750dfffb79bc145e7e037812beb4127973a1e95bb",
+          "min_sep_survivor_dead_m": 5500.233802980266,
           "n_ticks": 8515,
           "pair": [
             0,
             5
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            50.36454732988793,
-            4.730516047032083e-11,
-            216.902610997075,
-            125.08870139532307,
-            26.688097584669062
+            1.324845007004202e-12,
+            4.433797269899681e-11,
+            42.220709990465046,
+            92.91744949179778,
+            140.61483539705569,
+            1.5523199003013134e-12
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": "data/eval/benchmark/pair_0-5__hungarian.jsonl",
-          "total_dv_mps": 419.0439573070037
+          "total_dv_mps": 275.7529948793657
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_1-2__hungarian__w2_0.5_dv_200.jsonl",
-          "log_sha256": "978367398c087d80f1cd98168ff58e105eaf8013943bddff0be707ed47d05092",
-          "min_sep_survivor_dead_m": 4587.361070081498,
+          "log_sha256": "86a9a3ab15f17327f56ac94dac173d3fcc9e4a25c052bc86d860d33e2dcc0244",
+          "min_sep_survivor_dead_m": 4587.361070081491,
           "n_ticks": 8515,
           "pair": [
             1,
             2
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            8.839420505811725e-13,
-            29.400000000001235,
-            123.45918458886939,
-            168.52268173535253,
-            109.6564269419732
+            193.67907947544643,
+            8.377937623522883e-13,
+            29.40000000000122,
+            123.45918458886413,
+            168.52268173534674,
+            109.65642694197007
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": "data/eval/benchmark/pair_1-2__hungarian.jsonl",
-          "total_dv_mps": 624.717372741646
+          "total_dv_mps": 624.7173727416294
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_1-3__hungarian__w2_0.5_dv_200.jsonl",
-          "log_sha256": "d46e8154e84490bc7cf31b76743540af1b035100b487d3d1fd28d42cf0921cf3",
-          "min_sep_survivor_dead_m": 3887.863021802511,
+          "log_sha256": "510784f5818cbab23ab8ad844af9d2133ac0182739df62ddca0b6b09675d131f",
+          "min_sep_survivor_dead_m": 3887.8630218025114,
           "n_ticks": 8515,
           "pair": [
             1,
             3
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            8.839420505811725e-13,
-            164.85191521980192,
-            25.049199358511416,
-            142.87832385395305,
-            109.6564269419732
+            193.67907947544643,
+            8.377937623522883e-13,
+            164.85191521979627,
+            25.049199358511384,
+            142.87832385394756,
+            109.65642694197007
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": "data/eval/benchmark/pair_1-3__hungarian.jsonl",
-          "total_dv_mps": 636.1149448496893
+          "total_dv_mps": 636.1149448496725
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_1-4__hungarian__w2_0.5_dv_200.jsonl",
-          "log_sha256": "3d191acec28b8f8a3d8f04770825bd6c9910716a48f318b573e24a1b12b7f509",
-          "min_sep_survivor_dead_m": 3096.990136243699,
+          "log_sha256": "617ee7bad54d81de8a466109bdfaaf36fbd5cf60afefe3cff8f4584c4d26cbf9",
+          "min_sep_survivor_dead_m": 3096.9901362436885,
           "n_ticks": 8515,
           "pair": [
             1,
             4
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            8.839420505811725e-13,
-            164.85191521980192,
-            123.45918458886939,
-            29.400000000000823,
-            109.6564269419732
+            193.67907947544643,
+            8.377937623522883e-13,
+            164.85191521979627,
+            123.45918458886413,
+            29.400000000000784,
+            109.65642694197007
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": "data/eval/benchmark/pair_1-4__hungarian.jsonl",
-          "total_dv_mps": 621.046606226095
+          "total_dv_mps": 621.0466062260786
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_1-5__hungarian__w2_0.5_dv_200.jsonl",
-          "log_sha256": "5494b968629fd9b66be9eec46dd3ea2b0091e4a4f13f3c6e1dca4bb67e318301",
-          "min_sep_survivor_dead_m": 2700.9890308463896,
+          "log_sha256": "4db487ffa1b62256c5ab93fd458321ce985573466da967c6686f78ee820aeda5",
+          "min_sep_survivor_dead_m": 2700.9890308463887,
           "n_ticks": 8515,
           "pair": [
             1,
             5
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            8.839420505811725e-13,
-            164.85191521980192,
-            123.45918458886939,
-            107.34433860828774,
-            29.400000000001235
+            193.67907947544643,
+            8.377937623522883e-13,
+            164.85191521979627,
+            123.45918458886413,
+            107.3443386082843,
+            29.400000000001217
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": "data/eval/benchmark/pair_1-5__hungarian.jsonl",
-          "total_dv_mps": 618.7345178924099
+          "total_dv_mps": 618.7345178923932
         },
         {
           "coverage_mean_last_orbit": 0.26980048594736833,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_2-3__hungarian__w2_0.5_dv_200.jsonl",
-          "log_sha256": "a42ed0cc7346571e720b60c57216b83189b86f9875935c8443a670bf970edcb7",
-          "min_sep_survivor_dead_m": 5021.740504264574,
+          "log_sha256": "8f72013db68948f23776465bfd663dc726d97e5e9f90a64f2b0cb0b96a019136",
+          "min_sep_survivor_dead_m": 5021.740504264554,
           "n_ticks": 8515,
           "pair": [
             2,
             3
           ],
           "per_sat_dv_mps": [
-            135.78448944815932,
-            76.14444995233987,
-            1.3012924868676564e-12,
-            25.049199358511416,
-            181.66375095084112,
-            81.6832782694374
+            135.78448944815923,
+            76.14444995233968,
+            1.2861135883907983e-12,
+            25.049199358511384,
+            181.6637509508409,
+            81.68327826943747
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": "data/eval/benchmark/pair_2-3__hungarian.jsonl",
-          "total_dv_mps": 500.3251679792904
+          "total_dv_mps": 500.32516797929
         },
         {
           "coverage_mean_last_orbit": 0.26980048594736833,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_2-4__hungarian__w2_0.5_dv_200.jsonl",
-          "log_sha256": "17874adb1291d2bf0f80a9dfe0658f69ecc850860185b854d497c89c0214934e",
-          "min_sep_survivor_dead_m": 2944.786344372538,
+          "log_sha256": "889c08dfabc99b7544333f152e7ad3e268388f05d20350dea44b6d6b2c192216",
+          "min_sep_survivor_dead_m": 2944.7863443725328,
           "n_ticks": 8515,
           "pair": [
             2,
             4
           ],
           "per_sat_dv_mps": [
-            135.78448944815932,
-            76.14444995233987,
-            1.3012924868676564e-12,
-            85.88010829098899,
-            29.400000000000823,
-            81.6832782694374
+            135.78448944815923,
+            76.14444995233968,
+            1.2861135883907983e-12,
+            85.88010829098945,
+            29.400000000000784,
+            81.68327826943747
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": "data/eval/benchmark/pair_2-4__hungarian.jsonl",
-          "total_dv_mps": 408.8923259609277
+          "total_dv_mps": 408.8923259609279
         },
         {
           "coverage_mean_last_orbit": 0.26980048594736833,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_2-5__hungarian__w2_0.5_dv_200.jsonl",
-          "log_sha256": "40626c6a310940e9d4a597e4a54130d3896468eebe2d4dc1b2f7cd74dedb78b6",
-          "min_sep_survivor_dead_m": 2780.935639927307,
+          "log_sha256": "558fe9ac4d8ef68ddf96d25eda663a9c3f50030d9e5d91b8143b747f582ede63",
+          "min_sep_survivor_dead_m": 2780.9356399273047,
           "n_ticks": 8515,
           "pair": [
             2,
             5
           ],
           "per_sat_dv_mps": [
-            135.78448944815932,
-            76.14444995233987,
-            1.3012924868676564e-12,
-            85.88010829098899,
-            75.20467576139427,
-            29.400000000001235
+            135.78448944815923,
+            76.14444995233968,
+            1.2861135883907983e-12,
+            85.88010829098945,
+            75.20467576139444,
+            29.400000000001217
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": "data/eval/benchmark/pair_2-5__hungarian.jsonl",
-          "total_dv_mps": 402.413723452885
+          "total_dv_mps": 402.41372345288534
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_3-4__hungarian__w2_0.5_dv_200.jsonl",
-          "log_sha256": "4ecdc69e90c42cc833941e006aaec21f61a8f97047b889a637cd5789a3866bb5",
-          "min_sep_survivor_dead_m": 1852.5321340900236,
+          "log_sha256": "151b6f175e9862817e49fd4c1c8d2098a8331035070475fdf3d453dbdce50ce3",
+          "min_sep_survivor_dead_m": 1852.5321340900618,
           "n_ticks": 8515,
           "pair": [
             3,
             4
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            69.57229519151097,
-            96.02701728566318,
-            1.3475785499582314e-12,
-            29.400000000000823,
-            109.6564269419732
+            193.67907947544643,
+            69.57229519150658,
+            96.02701728565752,
+            1.3246298845524985e-12,
+            29.400000000000784,
+            109.65642694197007
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": "data/eval/benchmark/pair_3-4__hungarian.jsonl",
-          "total_dv_mps": 498.33481889459836
+          "total_dv_mps": 498.3348188945827
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_3-5__hungarian__w2_0.5_dv_200.jsonl",
-          "log_sha256": "0e46ae40e3dc83b621c8e449f213caf4e14bc0611c9ac4379156a3cf9913f135",
-          "min_sep_survivor_dead_m": 1852.5321340900236,
+          "log_sha256": "9c2512db252598f756bb9a176ff35bcd5f58e909e4cfe0aa0266d617bbf23b67",
+          "min_sep_survivor_dead_m": 1852.5321340900618,
           "n_ticks": 8515,
           "pair": [
             3,
             5
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            69.57229519151097,
-            96.02701728566318,
-            1.3475785499582314e-12,
-            107.34433860828774,
-            29.400000000001235
+            193.67907947544643,
+            69.57229519150658,
+            96.02701728565752,
+            1.3246298845524985e-12,
+            107.3443386082843,
+            29.400000000001217
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": "data/eval/benchmark/pair_3-5__hungarian.jsonl",
-          "total_dv_mps": 496.0227305609133
+          "total_dv_mps": 496.0227305608974
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_4-5__hungarian__w2_0.5_dv_200.jsonl",
-          "log_sha256": "9917c5e1d9d2782345a3b61952b68a34e3e66ccafbb933e400e0e3ac4e38cdc3",
-          "min_sep_survivor_dead_m": 5805.318313903328,
+          "log_sha256": "c983def02fae67b45e9e519ddf73d18e0042ed07f1a1075906056d7cb5b0f04b",
+          "min_sep_survivor_dead_m": 5805.318313903343,
           "n_ticks": 8515,
           "pair": [
             4,
             5
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            69.57229519151097,
-            251.2409923098402,
-            91.45910572232418,
-            8.896296216928492e-13,
-            29.400000000001235
+            193.67907947544643,
+            69.57229519150658,
+            251.24099230983734,
+            91.45910572231807,
+            8.509468817782454e-13,
+            29.400000000001217
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": "data/eval/benchmark/pair_4-5__hungarian.jsonl",
-          "total_dv_mps": 635.3514726991264
+          "total_dv_mps": 635.3514726991104
         }
       ],
       "reused_p0_logs": true,
       "w2": 0.5,
       "worst_coverage": 0.26979718716450923,
-      "worst_per_sat_dv_mps": 251.2409923098402
+      "worst_per_sat_dv_mps": 251.24099230983734
     },
     {
       "command": "uv run python -m cubesat.benchmark --mode pareto --base data/scenarios/two_failure.json --out data/eval/pareto --report data/eval/pareto_results.json",
       "dv_budget_mps": 50.0,
       "mean_coverage": 0.26980048594736833,
-      "mean_total_dv_mps": 541.0823809841335,
+      "mean_total_dv_mps": 541.082380984133,
       "n_feasible_pairs": 3,
       "n_infeasible_pairs": 12,
       "per_pair": [
@@ -2207,26 +2471,30 @@
         },
         {
           "coverage_mean_last_orbit": 0.26980048594736833,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_1-4__hungarian__w2_1.0_dv_50.jsonl",
-          "log_sha256": "47cba8529d1c5b1428c9eafde8d65db1c6b5eba5b7af1fbb72dc778f9af9dd51",
-          "min_sep_survivor_dead_m": 3942.2016389362034,
+          "log_sha256": "3c46981f622f53b0d2802494ef4d3075c5be28782d555f4c2eee8b06a86e529b",
+          "min_sep_survivor_dead_m": 3942.201638936207,
           "n_ticks": 8515,
           "pair": [
             1,
             4
           ],
           "per_sat_dv_mps": [
-            145.0672087530336,
-            8.839420505811725e-13,
-            230.99673824654195,
-            16.810272762623967,
-            29.400000000000823,
-            77.31524188999283
+            145.0672087530333,
+            8.377937623522883e-13,
+            230.9967382465419,
+            16.81027276262399,
+            29.400000000000784,
+            77.31524188999279
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 499.5894616521941
+          "total_dv_mps": 499.5894616521936
         },
         {
           "coverage_mean_last_orbit": null,
@@ -2266,49 +2534,57 @@
         },
         {
           "coverage_mean_last_orbit": 0.26980048594736833,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_2-4__hungarian__w2_1.0_dv_50.jsonl",
-          "log_sha256": "4dd9de779487fdeb7bd7c13ea6d8e73ac48ed846e2214a7c75695988d0e4ae1f",
-          "min_sep_survivor_dead_m": 3400.4224769365887,
+          "log_sha256": "b066db937c4740d397310cd4476beadc494f2ff2ca1e6bb9031a5329d10ab088",
+          "min_sep_survivor_dead_m": 3400.422476936596,
           "n_ticks": 8515,
           "pair": [
             2,
             4
           ],
           "per_sat_dv_mps": [
-            154.28782637643016,
-            175.71867805548376,
-            1.3012924868676564e-12,
-            114.77142051746736,
-            29.400000000000823,
-            93.76231027770685
+            154.28782637643002,
+            175.71867805548302,
+            1.2861135883907983e-12,
+            114.77142051746773,
+            29.400000000000784,
+            93.76231027770673
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 567.9402352270903
+          "total_dv_mps": 567.9402352270896
         },
         {
           "coverage_mean_last_orbit": 0.26980048594736833,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_2-5__hungarian__w2_1.0_dv_50.jsonl",
-          "log_sha256": "708458a47066cca28b2d261159f798d7a1e70950896b29e05a71387f359880af",
-          "min_sep_survivor_dead_m": 3868.032681286945,
+          "log_sha256": "c6a9cea0c446d5f2152dbcdcf0b4fdeeda053f0c7dcb5c38af646344ad6ef17b",
+          "min_sep_survivor_dead_m": 3868.032681286947,
           "n_ticks": 8515,
           "pair": [
             2,
             5
           ],
           "per_sat_dv_mps": [
-            154.28782637643016,
-            175.71867805548376,
-            1.3012924868676564e-12,
-            114.77142051746736,
-            81.53952112373234,
-            29.400000000001235
+            154.28782637643002,
+            175.71867805548302,
+            1.2861135883907983e-12,
+            114.77142051746773,
+            81.53952112373231,
+            29.400000000001217
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 555.7174460731162
+          "total_dv_mps": 555.7174460731156
         },
         {
           "coverage_mean_last_orbit": null,
@@ -2368,731 +2644,851 @@
       "reused_p0_logs": false,
       "w2": 1.0,
       "worst_coverage": 0.26980048594736833,
-      "worst_per_sat_dv_mps": 230.99673824654195
+      "worst_per_sat_dv_mps": 230.9967382465419
     },
     {
       "command": "uv run python -m cubesat.benchmark --mode pareto --base data/scenarios/two_failure.json --out data/eval/pareto --report data/eval/pareto_results.json",
       "dv_budget_mps": 100.0,
-      "mean_coverage": 0.2697985066776528,
-      "mean_total_dv_mps": 465.979079660345,
+      "mean_coverage": 0.2697991664342247,
+      "mean_total_dv_mps": 428.6702521771386,
       "n_feasible_pairs": 15,
       "n_infeasible_pairs": 0,
       "per_pair": [
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-1__hungarian__w2_1.0_dv_100.jsonl",
-          "log_sha256": "49506425d38c6711338989444b09a12ffbd1e3eb8f7c429ca2039c5a35d40ce0",
-          "min_sep_survivor_dead_m": 1322.6031098669134,
+          "log_sha256": "55de5621c6834ffedfdc430ff50c7cc6a62ba9b62a7bcca177bad755b7fa5bce",
+          "min_sep_survivor_dead_m": 4913.311100820126,
           "n_ticks": 8515,
           "pair": [
             0,
             1
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            16.73805619031792,
-            172.75180675712673,
-            87.04429548354396,
-            125.08870139532307,
-            91.75798726739784
+            1.324845007004202e-12,
+            1.0545218712862473e-12,
+            4.457685652940815e-11,
+            45.03666603943282,
+            104.33784961794923,
+            85.64234770465279
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 493.3808470937109
+          "total_dv_mps": 235.0168633620818
         },
         {
           "coverage_mean_last_orbit": 0.26980708351308647,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.998989260897031,
+          "critical_vacancy_s": 16.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-2__hungarian__w2_1.0_dv_100.jsonl",
-          "log_sha256": "358fbcc1b9b4ba3ff23358816d38505f4d4a480fa024d58d697550ef634b7609",
-          "min_sep_survivor_dead_m": 5333.1325145755945,
+          "log_sha256": "544385fd9fc1f905a5efc9585b8b7acfe567a01aeaf5f6587bfe74dee487dc63",
+          "min_sep_survivor_dead_m": 5723.113748216915,
           "n_ticks": 8515,
           "pair": [
             0,
             2
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            43.77642195038997,
-            1.5565358266533646e-12,
-            66.60682979344182,
-            81.89474962857273,
-            56.343592302997095
+            1.324845007004202e-12,
+            4.433797269899681e-11,
+            1.5700136380949072e-12,
+            38.513456822633486,
+            140.61483539705569,
+            104.33784961795152
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 248.6215936754045
+          "total_dv_mps": 283.4661418376879
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-3__hungarian__w2_1.0_dv_100.jsonl",
-          "log_sha256": "d06cd79a15a19eddf6230966c4d122f95c59b942e59e22b9b79cb44e5b2f8b2e",
-          "min_sep_survivor_dead_m": 2888.535684388777,
+          "log_sha256": "ef9ad19ea5ad3fb5b7f5ae29cd4271aea07560d7e380c75878c381bc5aba1d68",
+          "min_sep_survivor_dead_m": 5799.512406708856,
           "n_ticks": 8515,
           "pair": [
             0,
             3
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            50.36454732988793,
-            4.730516047032083e-11,
-            13.262575913715201,
-            125.08870139532307,
-            91.75798726739784
+            1.324845007004202e-12,
+            53.071414687468575,
+            4.457685652940815e-11,
+            1.5512623549697742e-12,
+            104.33784961794923,
+            172.75180675712087
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 280.4738119063727
+          "total_dv_mps": 330.16107106258613
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.998989260897031,
+          "critical_vacancy_s": 16.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-4__hungarian__w2_1.0_dv_100.jsonl",
-          "log_sha256": "1701032ba7297257307174085c4480c459f02f966d07521b44436afcfcd632a1",
-          "min_sep_survivor_dead_m": 5376.931218402233,
+          "log_sha256": "9a73b14913f76d2507dc7be6cdc53dfc7bdae7f040e8fe1545a886ca49c694c1",
+          "min_sep_survivor_dead_m": 5856.406476807209,
           "n_ticks": 8515,
           "pair": [
             0,
             4
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            50.36454732988793,
-            85.6423477046576,
-            87.04429548354396,
-            25.808176348716277,
-            91.75798726739784
+            1.324845007004202e-12,
+            53.071414687468575,
+            4.457685652940815e-11,
+            45.03666603943282,
+            1.066758970894579e-12,
+            4.464838728578468e-11
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 340.61735413420496
+          "total_dv_mps": 98.10808072699301
         },
         {
-          "coverage_mean_last_orbit": 0.26979718716450923,
+          "coverage_mean_last_orbit": 0.26980708351308647,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-5__hungarian__w2_1.0_dv_100.jsonl",
-          "log_sha256": "32bc49fa0dde0a8c2233995aa2e775111547db39cedfd95ffa14af4cee44f0cf",
-          "min_sep_survivor_dead_m": 5856.406565191165,
+          "log_sha256": "2b7d2ae41e2e7507a1f2f3566970877310e9112302fc7ad550dea346f76fae78",
+          "min_sep_survivor_dead_m": 5500.233802980266,
           "n_ticks": 8515,
           "pair": [
             0,
             5
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            50.36454732988793,
-            4.730516047032083e-11,
-            216.902610997075,
-            125.08870139532307,
-            26.688097584669062
+            1.324845007004202e-12,
+            4.433797269899681e-11,
+            42.220709990465046,
+            92.91744949179778,
+            140.61483539705569,
+            1.5523199003013134e-12
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 419.0439573070037
+          "total_dv_mps": 275.7529948793657
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_1-2__hungarian__w2_1.0_dv_100.jsonl",
-          "log_sha256": "ce8a7ce619a586b7b1add9a8b775134f7b9d1d479440a7e21a1873e25cbd6790",
-          "min_sep_survivor_dead_m": 4587.361070081498,
+          "log_sha256": "353889fdb6dc60c9af65bc2549130adcb566a432b129920f144146c2d3bdec7b",
+          "min_sep_survivor_dead_m": 4587.361070081491,
           "n_ticks": 8515,
           "pair": [
             1,
             2
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            8.839420505811725e-13,
-            29.400000000001235,
-            123.45918458886939,
-            168.52268173535253,
-            109.6564269419732
+            193.67907947544643,
+            8.377937623522883e-13,
+            29.40000000000122,
+            123.45918458886413,
+            168.52268173534674,
+            109.65642694197007
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 624.717372741646
+          "total_dv_mps": 624.7173727416294
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_1-3__hungarian__w2_1.0_dv_100.jsonl",
-          "log_sha256": "fca013a9ff3aa7b2849cd61720e6afddaaf325834de6df23c68c59bb49219311",
-          "min_sep_survivor_dead_m": 3887.863021802511,
+          "log_sha256": "fe097e52840ffdcd4dcbf524572162f8df4c16b4b2f74066e4b76ce310d68d42",
+          "min_sep_survivor_dead_m": 3887.8630218025114,
           "n_ticks": 8515,
           "pair": [
             1,
             3
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            8.839420505811725e-13,
-            164.85191521980192,
-            25.049199358511416,
-            142.87832385395305,
-            109.6564269419732
+            193.67907947544643,
+            8.377937623522883e-13,
+            164.85191521979627,
+            25.049199358511384,
+            142.87832385394756,
+            109.65642694197007
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 636.1149448496893
+          "total_dv_mps": 636.1149448496725
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_1-4__hungarian__w2_1.0_dv_100.jsonl",
-          "log_sha256": "6fed2af8565ef8fccb7d4682ce73c85647dc8f05331b55e282d630ad9ce10c1b",
-          "min_sep_survivor_dead_m": 3096.990136243699,
+          "log_sha256": "1fb4139e562b64e731ae035e2720b818ff85a6a42f204ccc547c38bdedc4509e",
+          "min_sep_survivor_dead_m": 3096.9901362436885,
           "n_ticks": 8515,
           "pair": [
             1,
             4
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            8.839420505811725e-13,
-            164.85191521980192,
-            123.45918458886939,
-            29.400000000000823,
-            109.6564269419732
+            193.67907947544643,
+            8.377937623522883e-13,
+            164.85191521979627,
+            123.45918458886413,
+            29.400000000000784,
+            109.65642694197007
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 621.046606226095
+          "total_dv_mps": 621.0466062260786
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_1-5__hungarian__w2_1.0_dv_100.jsonl",
-          "log_sha256": "94ce786dac8a5e9b1a825ed96653e4321132386fd747169d683fc45db6861969",
-          "min_sep_survivor_dead_m": 2700.9890308463896,
+          "log_sha256": "acff3567567b6f7aeb9f13968a32567ddd531200c3ae19c5c58eb1064d70362f",
+          "min_sep_survivor_dead_m": 2700.9890308463887,
           "n_ticks": 8515,
           "pair": [
             1,
             5
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            8.839420505811725e-13,
-            164.85191521980192,
-            123.45918458886939,
-            107.34433860828774,
-            29.400000000001235
+            193.67907947544643,
+            8.377937623522883e-13,
+            164.85191521979627,
+            123.45918458886413,
+            107.3443386082843,
+            29.400000000001217
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 618.7345178924099
+          "total_dv_mps": 618.7345178923932
         },
         {
           "coverage_mean_last_orbit": 0.26980048594736833,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_2-3__hungarian__w2_1.0_dv_100.jsonl",
-          "log_sha256": "39af70bc3e102c6f9358d5b7b8f28e68ae2a441c66c89a26923891a7ddd5c3de",
-          "min_sep_survivor_dead_m": 5021.740504264574,
+          "log_sha256": "69dd75ae5218c10817d109755b5bc78bb3d430d6bbcf576f4f854020cd826255",
+          "min_sep_survivor_dead_m": 5021.740504264554,
           "n_ticks": 8515,
           "pair": [
             2,
             3
           ],
           "per_sat_dv_mps": [
-            135.78448944815932,
-            76.14444995233987,
-            1.3012924868676564e-12,
-            25.049199358511416,
-            181.66375095084112,
-            81.6832782694374
+            135.78448944815923,
+            76.14444995233968,
+            1.2861135883907983e-12,
+            25.049199358511384,
+            181.6637509508409,
+            81.68327826943747
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 500.3251679792904
+          "total_dv_mps": 500.32516797929
         },
         {
           "coverage_mean_last_orbit": 0.26980048594736833,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_2-4__hungarian__w2_1.0_dv_100.jsonl",
-          "log_sha256": "b1b35ea3c61a8791b91ff6f877abca1f2cac6a510ad3faa8085e5b62c70d9b6e",
-          "min_sep_survivor_dead_m": 2944.786344372538,
+          "log_sha256": "bedcc49265dd6cc32c03c9fbbe490d6119385074224d01b2c8dfae30cff79cd8",
+          "min_sep_survivor_dead_m": 2944.7863443725328,
           "n_ticks": 8515,
           "pair": [
             2,
             4
           ],
           "per_sat_dv_mps": [
-            135.78448944815932,
-            76.14444995233987,
-            1.3012924868676564e-12,
-            85.88010829098899,
-            29.400000000000823,
-            81.6832782694374
+            135.78448944815923,
+            76.14444995233968,
+            1.2861135883907983e-12,
+            85.88010829098945,
+            29.400000000000784,
+            81.68327826943747
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 408.8923259609277
+          "total_dv_mps": 408.8923259609279
         },
         {
           "coverage_mean_last_orbit": 0.26980048594736833,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_2-5__hungarian__w2_1.0_dv_100.jsonl",
-          "log_sha256": "63be7dcb29105af24ff102584a4477a2e739a44b17a6e929c146940a78f0e4ab",
-          "min_sep_survivor_dead_m": 2780.935639927307,
+          "log_sha256": "3f37611d090710ac6918b1550989f869944998717bb3094bf189df7fe855d50c",
+          "min_sep_survivor_dead_m": 2780.9356399273047,
           "n_ticks": 8515,
           "pair": [
             2,
             5
           ],
           "per_sat_dv_mps": [
-            135.78448944815932,
-            76.14444995233987,
-            1.3012924868676564e-12,
-            85.88010829098899,
-            75.20467576139427,
-            29.400000000001235
+            135.78448944815923,
+            76.14444995233968,
+            1.2861135883907983e-12,
+            85.88010829098945,
+            75.20467576139444,
+            29.400000000001217
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 402.413723452885
+          "total_dv_mps": 402.41372345288534
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_3-4__hungarian__w2_1.0_dv_100.jsonl",
-          "log_sha256": "9a5a61903f81db4309f43be5e9e232cb12b6ec4810bbd09698a5e48a418970c4",
-          "min_sep_survivor_dead_m": 1852.5321340900236,
+          "log_sha256": "71b7a24be6507d8946119e2c87f8c99083c1b48a0133510f005fb88de064791c",
+          "min_sep_survivor_dead_m": 1852.5321340900618,
           "n_ticks": 8515,
           "pair": [
             3,
             4
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            69.57229519151097,
-            96.02701728566318,
-            1.3475785499582314e-12,
-            29.400000000000823,
-            109.6564269419732
+            193.67907947544643,
+            69.57229519150658,
+            96.02701728565752,
+            1.3246298845524985e-12,
+            29.400000000000784,
+            109.65642694197007
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 498.33481889459836
+          "total_dv_mps": 498.3348188945827
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_3-5__hungarian__w2_1.0_dv_100.jsonl",
-          "log_sha256": "70993762bf43eb31f8ee11c174fdcfd177d59040a96399320f494a5afd6c7f54",
-          "min_sep_survivor_dead_m": 1852.5321340900236,
+          "log_sha256": "e15a9e0bf806898e8547913e455699c143c8b627ac390ce7a5975c2badfc2d98",
+          "min_sep_survivor_dead_m": 1852.5321340900618,
           "n_ticks": 8515,
           "pair": [
             3,
             5
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            69.57229519151097,
-            96.02701728566318,
-            1.3475785499582314e-12,
-            107.34433860828774,
-            29.400000000001235
+            193.67907947544643,
+            69.57229519150658,
+            96.02701728565752,
+            1.3246298845524985e-12,
+            107.3443386082843,
+            29.400000000001217
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 496.0227305609133
+          "total_dv_mps": 496.0227305608974
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_4-5__hungarian__w2_1.0_dv_100.jsonl",
-          "log_sha256": "2dc2cdb186dff8c5d1a1aaf6fea64c91d7d517a60938379ceb6fb508b4dd57ee",
-          "min_sep_survivor_dead_m": 5805.318313903328,
+          "log_sha256": "615b0195ff937ed5b34e5611d9856de993fd89ac959fcb058ae7fc7b7763ea15",
+          "min_sep_survivor_dead_m": 5805.318313903343,
           "n_ticks": 8515,
           "pair": [
             4,
             5
           ],
           "per_sat_dv_mps": [
-            142.3762408991473,
-            69.57229519151097,
-            68.13878041703903,
-            91.45910572232418,
-            8.896296216928492e-13,
-            29.400000000001235
+            142.37624089914456,
+            69.57229519150658,
+            68.13878041703612,
+            91.45910572231807,
+            8.509468817782454e-13,
+            29.400000000001217
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 400.9464222300236
+          "total_dv_mps": 400.9464222300074
         }
       ],
       "reused_p0_logs": false,
       "w2": 1.0,
       "worst_coverage": 0.26979718716450923,
-      "worst_per_sat_dv_mps": 216.902610997075
+      "worst_per_sat_dv_mps": 193.67907947544643
     },
     {
       "command": "uv run python -m cubesat.benchmark --mode pareto --base data/scenarios/two_failure.json --out data/eval/pareto --report data/eval/pareto_results.json",
       "dv_budget_mps": 200.0,
-      "mean_coverage": 0.2697985066776528,
-      "mean_total_dv_mps": 465.979079660345,
+      "mean_coverage": 0.2697991664342247,
+      "mean_total_dv_mps": 428.6702521771386,
       "n_feasible_pairs": 15,
       "n_infeasible_pairs": 0,
       "per_pair": [
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-1__hungarian__w2_1.0_dv_200.jsonl",
-          "log_sha256": "34aeaa4fb3a396b60192c326328595be688870e11336c0675542ecbb7adce712",
-          "min_sep_survivor_dead_m": 1322.6031098669134,
+          "log_sha256": "214d900bd048f1dc54ab5a8c1ed86bf7681c559625524e459ebdc0c2fe177b21",
+          "min_sep_survivor_dead_m": 4913.311100820126,
           "n_ticks": 8515,
           "pair": [
             0,
             1
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            16.73805619031792,
-            172.75180675712673,
-            87.04429548354396,
-            125.08870139532307,
-            91.75798726739784
+            1.324845007004202e-12,
+            1.0545218712862473e-12,
+            4.457685652940815e-11,
+            45.03666603943282,
+            104.33784961794923,
+            85.64234770465279
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 493.3808470937109
+          "total_dv_mps": 235.0168633620818
         },
         {
           "coverage_mean_last_orbit": 0.26980708351308647,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.998989260897031,
+          "critical_vacancy_s": 16.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-2__hungarian__w2_1.0_dv_200.jsonl",
-          "log_sha256": "a48b7a5c4a902853eeaa5d58d32f5bf7f201428c82eb3ca024feb7f35a6273a5",
-          "min_sep_survivor_dead_m": 5333.1325145755945,
+          "log_sha256": "03cc992becfaf617a3a3dfeef3ec06cd34f8790b5b2063f00fac231a71f02fa2",
+          "min_sep_survivor_dead_m": 5723.113748216915,
           "n_ticks": 8515,
           "pair": [
             0,
             2
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            43.77642195038997,
-            1.5565358266533646e-12,
-            66.60682979344182,
-            81.89474962857273,
-            56.343592302997095
+            1.324845007004202e-12,
+            4.433797269899681e-11,
+            1.5700136380949072e-12,
+            38.513456822633486,
+            140.61483539705569,
+            104.33784961795152
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 248.6215936754045
+          "total_dv_mps": 283.4661418376879
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-3__hungarian__w2_1.0_dv_200.jsonl",
-          "log_sha256": "24a0ee1fb7de3c7855e4d5b00022a687dd32c250d715d74a54fbf5de61d914ad",
-          "min_sep_survivor_dead_m": 2888.535684388777,
+          "log_sha256": "b3118204e9e6da172fce0801d0b1a3acceb92ab25b1046c9257de0f0d9b5aab4",
+          "min_sep_survivor_dead_m": 5799.512406708856,
           "n_ticks": 8515,
           "pair": [
             0,
             3
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            50.36454732988793,
-            4.730516047032083e-11,
-            13.262575913715201,
-            125.08870139532307,
-            91.75798726739784
+            1.324845007004202e-12,
+            53.071414687468575,
+            4.457685652940815e-11,
+            1.5512623549697742e-12,
+            104.33784961794923,
+            172.75180675712087
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 280.4738119063727
+          "total_dv_mps": 330.16107106258613
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.998989260897031,
+          "critical_vacancy_s": 16.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-4__hungarian__w2_1.0_dv_200.jsonl",
-          "log_sha256": "feb935bbbbdfb463e3369bf6ea2a17fd3ee8b8e4dd9cc0a25cb3d7b34868a3d2",
-          "min_sep_survivor_dead_m": 5376.931218402233,
+          "log_sha256": "232a0db01dd6efd28d4bdd0f1bf9965d544fb9893626e0d916962df22dd6b8de",
+          "min_sep_survivor_dead_m": 5856.406476807209,
           "n_ticks": 8515,
           "pair": [
             0,
             4
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            50.36454732988793,
-            85.6423477046576,
-            87.04429548354396,
-            25.808176348716277,
-            91.75798726739784
+            1.324845007004202e-12,
+            53.071414687468575,
+            4.457685652940815e-11,
+            45.03666603943282,
+            1.066758970894579e-12,
+            4.464838728578468e-11
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 340.61735413420496
+          "total_dv_mps": 98.10808072699301
         },
         {
-          "coverage_mean_last_orbit": 0.26979718716450923,
+          "coverage_mean_last_orbit": 0.26980708351308647,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-5__hungarian__w2_1.0_dv_200.jsonl",
-          "log_sha256": "9c9593ce1ac85d1d007aba77225f1c2e47efa61f405cdf625b02c7581e861778",
-          "min_sep_survivor_dead_m": 5856.406565191165,
+          "log_sha256": "d46313966eeff0c7c758cbf4d42833017833125f818fc58d12a6d83e91385330",
+          "min_sep_survivor_dead_m": 5500.233802980266,
           "n_ticks": 8515,
           "pair": [
             0,
             5
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            50.36454732988793,
-            4.730516047032083e-11,
-            216.902610997075,
-            125.08870139532307,
-            26.688097584669062
+            1.324845007004202e-12,
+            4.433797269899681e-11,
+            42.220709990465046,
+            92.91744949179778,
+            140.61483539705569,
+            1.5523199003013134e-12
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 419.0439573070037
+          "total_dv_mps": 275.7529948793657
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_1-2__hungarian__w2_1.0_dv_200.jsonl",
-          "log_sha256": "e25a94cb9d38405fe6defe94001d377b08f8e3d274f8bcd1a35234f02e42e70c",
-          "min_sep_survivor_dead_m": 4587.361070081498,
+          "log_sha256": "3c38841196278128647a5dd14def92937b1617eace316bd25a791ebd7e901aa4",
+          "min_sep_survivor_dead_m": 4587.361070081491,
           "n_ticks": 8515,
           "pair": [
             1,
             2
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            8.839420505811725e-13,
-            29.400000000001235,
-            123.45918458886939,
-            168.52268173535253,
-            109.6564269419732
+            193.67907947544643,
+            8.377937623522883e-13,
+            29.40000000000122,
+            123.45918458886413,
+            168.52268173534674,
+            109.65642694197007
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 624.717372741646
+          "total_dv_mps": 624.7173727416294
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_1-3__hungarian__w2_1.0_dv_200.jsonl",
-          "log_sha256": "79d9fd04fb09e57f8e22d15852535f8d0f84241c7eaac47bbbd55d655ae03821",
-          "min_sep_survivor_dead_m": 3887.863021802511,
+          "log_sha256": "48f7b823a6808b24c13a958a389416ba96181a7b2e6a0fbb66bb51c99144631f",
+          "min_sep_survivor_dead_m": 3887.8630218025114,
           "n_ticks": 8515,
           "pair": [
             1,
             3
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            8.839420505811725e-13,
-            164.85191521980192,
-            25.049199358511416,
-            142.87832385395305,
-            109.6564269419732
+            193.67907947544643,
+            8.377937623522883e-13,
+            164.85191521979627,
+            25.049199358511384,
+            142.87832385394756,
+            109.65642694197007
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 636.1149448496893
+          "total_dv_mps": 636.1149448496725
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_1-4__hungarian__w2_1.0_dv_200.jsonl",
-          "log_sha256": "c3b7a4820008a1e59f0063be7d9fd85e74874456ff6f1030e2bcc91ed9fa5ee9",
-          "min_sep_survivor_dead_m": 3096.990136243699,
+          "log_sha256": "cdd6082f4e916b6c27afde7a9cefe184d13ea0029a2c80dd4599f16e51bcecf9",
+          "min_sep_survivor_dead_m": 3096.9901362436885,
           "n_ticks": 8515,
           "pair": [
             1,
             4
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            8.839420505811725e-13,
-            164.85191521980192,
-            123.45918458886939,
-            29.400000000000823,
-            109.6564269419732
+            193.67907947544643,
+            8.377937623522883e-13,
+            164.85191521979627,
+            123.45918458886413,
+            29.400000000000784,
+            109.65642694197007
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 621.046606226095
+          "total_dv_mps": 621.0466062260786
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_1-5__hungarian__w2_1.0_dv_200.jsonl",
-          "log_sha256": "ede21975c7237cc22373e1fd28763db27a238af5719ebf1a3e9d819cb834203b",
-          "min_sep_survivor_dead_m": 2700.9890308463896,
+          "log_sha256": "2a0c7267852946fff647e0264be5cb42424fadd9d6fec49a52953835329afc27",
+          "min_sep_survivor_dead_m": 2700.9890308463887,
           "n_ticks": 8515,
           "pair": [
             1,
             5
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            8.839420505811725e-13,
-            164.85191521980192,
-            123.45918458886939,
-            107.34433860828774,
-            29.400000000001235
+            193.67907947544643,
+            8.377937623522883e-13,
+            164.85191521979627,
+            123.45918458886413,
+            107.3443386082843,
+            29.400000000001217
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 618.7345178924099
+          "total_dv_mps": 618.7345178923932
         },
         {
           "coverage_mean_last_orbit": 0.26980048594736833,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_2-3__hungarian__w2_1.0_dv_200.jsonl",
-          "log_sha256": "41605c294c43ab3055b5885f8fa27ac3991416501b0fc7c61396bfa8190a544d",
-          "min_sep_survivor_dead_m": 5021.740504264574,
+          "log_sha256": "d809266db947d8f48e1eb01b168cbd0f6c3d9285fb4c9f47dcfe20d3acaf5c12",
+          "min_sep_survivor_dead_m": 5021.740504264554,
           "n_ticks": 8515,
           "pair": [
             2,
             3
           ],
           "per_sat_dv_mps": [
-            135.78448944815932,
-            76.14444995233987,
-            1.3012924868676564e-12,
-            25.049199358511416,
-            181.66375095084112,
-            81.6832782694374
+            135.78448944815923,
+            76.14444995233968,
+            1.2861135883907983e-12,
+            25.049199358511384,
+            181.6637509508409,
+            81.68327826943747
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 500.3251679792904
+          "total_dv_mps": 500.32516797929
         },
         {
           "coverage_mean_last_orbit": 0.26980048594736833,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_2-4__hungarian__w2_1.0_dv_200.jsonl",
-          "log_sha256": "051e23405f34489083a53bcf4b11c10fc76c694c41f39dfca079d58520f211b7",
-          "min_sep_survivor_dead_m": 2944.786344372538,
+          "log_sha256": "5e4fe4763f6c0379b95ba9d6eddfb6dc97b6ba229d127bcd4294e94133d41cf1",
+          "min_sep_survivor_dead_m": 2944.7863443725328,
           "n_ticks": 8515,
           "pair": [
             2,
             4
           ],
           "per_sat_dv_mps": [
-            135.78448944815932,
-            76.14444995233987,
-            1.3012924868676564e-12,
-            85.88010829098899,
-            29.400000000000823,
-            81.6832782694374
+            135.78448944815923,
+            76.14444995233968,
+            1.2861135883907983e-12,
+            85.88010829098945,
+            29.400000000000784,
+            81.68327826943747
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 408.8923259609277
+          "total_dv_mps": 408.8923259609279
         },
         {
           "coverage_mean_last_orbit": 0.26980048594736833,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_2-5__hungarian__w2_1.0_dv_200.jsonl",
-          "log_sha256": "73a1437a367b320dd3c4edebfd32fa46a76808e7a4386ccb49154c4de0e9bf80",
-          "min_sep_survivor_dead_m": 2780.935639927307,
+          "log_sha256": "f1b1e33aa195876e93281f403261a729468ce8acd422d286bbbc48786022f0e1",
+          "min_sep_survivor_dead_m": 2780.9356399273047,
           "n_ticks": 8515,
           "pair": [
             2,
             5
           ],
           "per_sat_dv_mps": [
-            135.78448944815932,
-            76.14444995233987,
-            1.3012924868676564e-12,
-            85.88010829098899,
-            75.20467576139427,
-            29.400000000001235
+            135.78448944815923,
+            76.14444995233968,
+            1.2861135883907983e-12,
+            85.88010829098945,
+            75.20467576139444,
+            29.400000000001217
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 402.413723452885
+          "total_dv_mps": 402.41372345288534
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_3-4__hungarian__w2_1.0_dv_200.jsonl",
-          "log_sha256": "a5093531c915b96d5a5a450061d2f9cd17d304a41a7c725ed24482528446647c",
-          "min_sep_survivor_dead_m": 1852.5321340900236,
+          "log_sha256": "23e2bb28c8f4e2aa6c5cada3aa6c6b747543ab93bce0c81d75edb02d66d7b3cf",
+          "min_sep_survivor_dead_m": 1852.5321340900618,
           "n_ticks": 8515,
           "pair": [
             3,
             4
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            69.57229519151097,
-            96.02701728566318,
-            1.3475785499582314e-12,
-            29.400000000000823,
-            109.6564269419732
+            193.67907947544643,
+            69.57229519150658,
+            96.02701728565752,
+            1.3246298845524985e-12,
+            29.400000000000784,
+            109.65642694197007
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 498.33481889459836
+          "total_dv_mps": 498.3348188945827
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_3-5__hungarian__w2_1.0_dv_200.jsonl",
-          "log_sha256": "2e563d2cf00685c55f030bc2c8f7b638cf04d0795d65f0a97603664acde7855e",
-          "min_sep_survivor_dead_m": 1852.5321340900236,
+          "log_sha256": "8cf040c4190dd97e6cbe7aacaa477043aa011df404275d2c07f83d7d085f8391",
+          "min_sep_survivor_dead_m": 1852.5321340900618,
           "n_ticks": 8515,
           "pair": [
             3,
             5
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            69.57229519151097,
-            96.02701728566318,
-            1.3475785499582314e-12,
-            107.34433860828774,
-            29.400000000001235
+            193.67907947544643,
+            69.57229519150658,
+            96.02701728565752,
+            1.3246298845524985e-12,
+            107.3443386082843,
+            29.400000000001217
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 496.0227305609133
+          "total_dv_mps": 496.0227305608974
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_4-5__hungarian__w2_1.0_dv_200.jsonl",
-          "log_sha256": "22f6cc8dfc149228484f147689e9a21924ab44582fa912c99f62463a3721d7a0",
-          "min_sep_survivor_dead_m": 5805.318313903328,
+          "log_sha256": "48ccf9a232c4382cd7d65cfe00f66aa3baf825fa918fcdbfe7f57e93a5b97f6b",
+          "min_sep_survivor_dead_m": 5805.318313903343,
           "n_ticks": 8515,
           "pair": [
             4,
             5
           ],
           "per_sat_dv_mps": [
-            142.3762408991473,
-            69.57229519151097,
-            68.13878041703903,
-            91.45910572232418,
-            8.896296216928492e-13,
-            29.400000000001235
+            142.37624089914456,
+            69.57229519150658,
+            68.13878041703612,
+            91.45910572231807,
+            8.509468817782454e-13,
+            29.400000000001217
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 400.9464222300236
+          "total_dv_mps": 400.9464222300074
         }
       ],
       "reused_p0_logs": false,
       "w2": 1.0,
       "worst_coverage": 0.26979718716450923,
-      "worst_per_sat_dv_mps": 216.902610997075
+      "worst_per_sat_dv_mps": 193.67907947544643
     },
     {
       "command": "uv run python -m cubesat.benchmark --mode pareto --base data/scenarios/two_failure.json --out data/eval/pareto --report data/eval/pareto_results.json",
       "dv_budget_mps": 50.0,
       "mean_coverage": 0.26980048594736833,
-      "mean_total_dv_mps": 541.0823809841335,
+      "mean_total_dv_mps": 541.082380984133,
       "n_feasible_pairs": 3,
       "n_infeasible_pairs": 12,
       "per_pair": [
@@ -3224,26 +3620,30 @@
         },
         {
           "coverage_mean_last_orbit": 0.26980048594736833,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_1-4__hungarian__w2_2.0_dv_50.jsonl",
-          "log_sha256": "792ae68ceead2232743d879c2df6656c28cd7180ec7e382d75508a5eb7f15cee",
-          "min_sep_survivor_dead_m": 3942.2016389362034,
+          "log_sha256": "3d71e5dcee306fd36af6705a54d46fecd0674ded4344221e87d2c16c00078a4d",
+          "min_sep_survivor_dead_m": 3942.201638936207,
           "n_ticks": 8515,
           "pair": [
             1,
             4
           ],
           "per_sat_dv_mps": [
-            145.0672087530336,
-            8.839420505811725e-13,
-            230.99673824654195,
-            16.810272762623967,
-            29.400000000000823,
-            77.31524188999283
+            145.0672087530333,
+            8.377937623522883e-13,
+            230.9967382465419,
+            16.81027276262399,
+            29.400000000000784,
+            77.31524188999279
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 499.5894616521941
+          "total_dv_mps": 499.5894616521936
         },
         {
           "coverage_mean_last_orbit": null,
@@ -3283,49 +3683,57 @@
         },
         {
           "coverage_mean_last_orbit": 0.26980048594736833,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_2-4__hungarian__w2_2.0_dv_50.jsonl",
-          "log_sha256": "dbdf86108ef2e5e171094caf7ac0775b48cbdc9fe08cc28d376ab94432e10fb1",
-          "min_sep_survivor_dead_m": 3400.4224769365887,
+          "log_sha256": "8096f2a465bf378b80719977cfb6fce80ee06580bbd673a53c59162ad4ae09d1",
+          "min_sep_survivor_dead_m": 3400.422476936596,
           "n_ticks": 8515,
           "pair": [
             2,
             4
           ],
           "per_sat_dv_mps": [
-            154.28782637643016,
-            175.71867805548376,
-            1.3012924868676564e-12,
-            114.77142051746736,
-            29.400000000000823,
-            93.76231027770685
+            154.28782637643002,
+            175.71867805548302,
+            1.2861135883907983e-12,
+            114.77142051746773,
+            29.400000000000784,
+            93.76231027770673
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 567.9402352270903
+          "total_dv_mps": 567.9402352270896
         },
         {
           "coverage_mean_last_orbit": 0.26980048594736833,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_2-5__hungarian__w2_2.0_dv_50.jsonl",
-          "log_sha256": "9143af21604499d1181ea19dc75339fe564f30f2501ab31e5159137b3fb4e11e",
-          "min_sep_survivor_dead_m": 3868.032681286945,
+          "log_sha256": "050791ae3b7b8649aba53fcbecd1ca9b32bbc3dce1a84fe5237de4c80e69bd2c",
+          "min_sep_survivor_dead_m": 3868.032681286947,
           "n_ticks": 8515,
           "pair": [
             2,
             5
           ],
           "per_sat_dv_mps": [
-            154.28782637643016,
-            175.71867805548376,
-            1.3012924868676564e-12,
-            114.77142051746736,
-            81.53952112373234,
-            29.400000000001235
+            154.28782637643002,
+            175.71867805548302,
+            1.2861135883907983e-12,
+            114.77142051746773,
+            81.53952112373231,
+            29.400000000001217
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 555.7174460731162
+          "total_dv_mps": 555.7174460731156
         },
         {
           "coverage_mean_last_orbit": null,
@@ -3385,725 +3793,845 @@
       "reused_p0_logs": false,
       "w2": 2.0,
       "worst_coverage": 0.26980048594736833,
-      "worst_per_sat_dv_mps": 230.99673824654195
+      "worst_per_sat_dv_mps": 230.9967382465419
     },
     {
       "command": "uv run python -m cubesat.benchmark --mode pareto --base data/scenarios/two_failure.json --out data/eval/pareto --report data/eval/pareto_results.json",
       "dv_budget_mps": 100.0,
-      "mean_coverage": 0.2697985066776528,
-      "mean_total_dv_mps": 463.06860698039435,
+      "mean_coverage": 0.2697991664342247,
+      "mean_total_dv_mps": 425.75977949718794,
       "n_feasible_pairs": 15,
       "n_infeasible_pairs": 0,
       "per_pair": [
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-1__hungarian__w2_2.0_dv_100.jsonl",
-          "log_sha256": "8a6b2eb71bc66d8c2735dc4186c7d91f91b7b97f19d5e1c73d8046d499e306fe",
-          "min_sep_survivor_dead_m": 1322.6031098669134,
+          "log_sha256": "ad368a43004d84cd3d8f1cbad3bc1f045cada30410935426dd2d8d68b2926e05",
+          "min_sep_survivor_dead_m": 4913.311100820126,
           "n_ticks": 8515,
           "pair": [
             0,
             1
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            16.73805619031792,
-            172.75180675712673,
-            87.04429548354396,
-            125.08870139532307,
-            91.75798726739784
+            1.324845007004202e-12,
+            1.0545218712862473e-12,
+            4.457685652940815e-11,
+            45.03666603943282,
+            104.33784961794923,
+            85.64234770465279
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 493.3808470937109
+          "total_dv_mps": 235.0168633620818
         },
         {
           "coverage_mean_last_orbit": 0.26980708351308647,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.998989260897031,
+          "critical_vacancy_s": 16.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-2__hungarian__w2_2.0_dv_100.jsonl",
-          "log_sha256": "e2c2bd86ce772dd522152c71be125683dce965929a0970f303384354cfaba4dc",
-          "min_sep_survivor_dead_m": 5333.1325145755945,
+          "log_sha256": "ab2322c487aef45ba6b2dcded697dd6b987e71155e698b990421089f14fd8d0f",
+          "min_sep_survivor_dead_m": 5723.113748216915,
           "n_ticks": 8515,
           "pair": [
             0,
             2
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            43.77642195038997,
-            1.5565358266533646e-12,
-            66.60682979344182,
-            81.89474962857273,
-            56.343592302997095
+            1.324845007004202e-12,
+            4.433797269899681e-11,
+            1.5700136380949072e-12,
+            38.513456822633486,
+            140.61483539705569,
+            104.33784961795152
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 248.6215936754045
+          "total_dv_mps": 283.4661418376879
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-3__hungarian__w2_2.0_dv_100.jsonl",
-          "log_sha256": "4ec8258ff892c5a5a131e6e34e34bafaf62e33eec2ab352f114a649ae2fbcb6e",
-          "min_sep_survivor_dead_m": 2888.535684388777,
+          "log_sha256": "de846e875006b85610ff62da0fb500d24fc59c8c83d875ae0be46fb557e9c53e",
+          "min_sep_survivor_dead_m": 5799.512406708856,
           "n_ticks": 8515,
           "pair": [
             0,
             3
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            50.36454732988793,
-            4.730516047032083e-11,
-            13.262575913715201,
-            125.08870139532307,
-            91.75798726739784
+            1.324845007004202e-12,
+            53.071414687468575,
+            4.457685652940815e-11,
+            1.5512623549697742e-12,
+            104.33784961794923,
+            172.75180675712087
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 280.4738119063727
+          "total_dv_mps": 330.16107106258613
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.998989260897031,
+          "critical_vacancy_s": 16.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-4__hungarian__w2_2.0_dv_100.jsonl",
-          "log_sha256": "0d0835a2c2d42a4e8ce9bbac64a27e649c6687aac3dfb4726d820ce566198d1c",
-          "min_sep_survivor_dead_m": 5376.931218402233,
+          "log_sha256": "0dfdb39742e068abc6e5d81912e4a4544cd2991710b9cc5982ac6882f4c324bf",
+          "min_sep_survivor_dead_m": 5856.406476807209,
           "n_ticks": 8515,
           "pair": [
             0,
             4
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            50.36454732988793,
-            85.6423477046576,
-            87.04429548354396,
-            25.808176348716277,
-            91.75798726739784
+            1.324845007004202e-12,
+            53.071414687468575,
+            4.457685652940815e-11,
+            45.03666603943282,
+            1.066758970894579e-12,
+            4.464838728578468e-11
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 340.61735413420496
+          "total_dv_mps": 98.10808072699301
         },
         {
-          "coverage_mean_last_orbit": 0.26979718716450923,
+          "coverage_mean_last_orbit": 0.26980708351308647,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-5__hungarian__w2_2.0_dv_100.jsonl",
-          "log_sha256": "3da0c9329c4968dc9fe1266f0e29fa32d9ea5b189b4e5aab2b429cdb9655cdde",
-          "min_sep_survivor_dead_m": 5856.406565191165,
+          "log_sha256": "efe4e806e23562e0b4c12a8dd045000d11b302d6984deddcfa194081e68626ad",
+          "min_sep_survivor_dead_m": 5500.233802980266,
           "n_ticks": 8515,
           "pair": [
             0,
             5
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            50.36454732988793,
-            4.730516047032083e-11,
-            216.902610997075,
-            125.08870139532307,
-            26.688097584669062
+            1.324845007004202e-12,
+            4.433797269899681e-11,
+            42.220709990465046,
+            92.91744949179778,
+            140.61483539705569,
+            1.5523199003013134e-12
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 419.0439573070037
+          "total_dv_mps": 275.7529948793657
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_1-2__hungarian__w2_2.0_dv_100.jsonl",
-          "log_sha256": "c9bdb0f1a81cb44679a361efec697361a924f26225e9ed25ec80396a8707ce44",
-          "min_sep_survivor_dead_m": 4587.361070081498,
+          "log_sha256": "0d4014fd95b056bef35bcca8ae8ccda0911c802012a5396fac6b45e90eda5dd3",
+          "min_sep_survivor_dead_m": 4587.361070081491,
           "n_ticks": 8515,
           "pair": [
             1,
             2
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            8.839420505811725e-13,
-            29.400000000001235,
-            123.45918458886939,
-            168.52268173535253,
-            109.6564269419732
+            193.67907947544643,
+            8.377937623522883e-13,
+            29.40000000000122,
+            123.45918458886413,
+            168.52268173534674,
+            109.65642694197007
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 624.717372741646
+          "total_dv_mps": 624.7173727416294
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_1-3__hungarian__w2_2.0_dv_100.jsonl",
-          "log_sha256": "142e1bcce210fe0f3edf6e5f67691b8775779e9ace86ee0252cc60a9b95a85c9",
-          "min_sep_survivor_dead_m": 3887.863021802511,
+          "log_sha256": "a85fd849900dddc4ffd4f5f420ccc164290411a5e914faf53590353662b7582e",
+          "min_sep_survivor_dead_m": 3887.8630218025114,
           "n_ticks": 8515,
           "pair": [
             1,
             3
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            8.839420505811725e-13,
-            164.85191521980192,
-            25.049199358511416,
-            142.87832385395305,
-            109.6564269419732
+            193.67907947544643,
+            8.377937623522883e-13,
+            164.85191521979627,
+            25.049199358511384,
+            142.87832385394756,
+            109.65642694197007
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 636.1149448496893
+          "total_dv_mps": 636.1149448496725
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_1-4__hungarian__w2_2.0_dv_100.jsonl",
-          "log_sha256": "192111dc5a28aee74ca9ae93445323d51c54beca9375c909a074960af04d13af",
-          "min_sep_survivor_dead_m": 3096.990136243699,
+          "log_sha256": "fc8f7d36cab8dad0fe2561021c4864692791db5a2a050988ae61e3327a1c254d",
+          "min_sep_survivor_dead_m": 3096.9901362436885,
           "n_ticks": 8515,
           "pair": [
             1,
             4
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            8.839420505811725e-13,
-            164.85191521980192,
-            123.45918458886939,
-            29.400000000000823,
-            109.6564269419732
+            193.67907947544643,
+            8.377937623522883e-13,
+            164.85191521979627,
+            123.45918458886413,
+            29.400000000000784,
+            109.65642694197007
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 621.046606226095
+          "total_dv_mps": 621.0466062260786
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_1-5__hungarian__w2_2.0_dv_100.jsonl",
-          "log_sha256": "788ac6add214e72ce88b3732a57c8582574cde7c7f22d41ad538fe254dfcf44e",
-          "min_sep_survivor_dead_m": 2700.9890308463896,
+          "log_sha256": "6a4bd3f42c9d272b0608a740257dab8fa11e119be4cf15fc8f19db21ed66403d",
+          "min_sep_survivor_dead_m": 2700.9890308463887,
           "n_ticks": 8515,
           "pair": [
             1,
             5
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            8.839420505811725e-13,
-            164.85191521980192,
-            123.45918458886939,
-            107.34433860828774,
-            29.400000000001235
+            193.67907947544643,
+            8.377937623522883e-13,
+            164.85191521979627,
+            123.45918458886413,
+            107.3443386082843,
+            29.400000000001217
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 618.7345178924099
+          "total_dv_mps": 618.7345178923932
         },
         {
           "coverage_mean_last_orbit": 0.26980048594736833,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_2-3__hungarian__w2_2.0_dv_100.jsonl",
-          "log_sha256": "d9ed2a32bdd76a5c7ea406f29cebfb2fd49029b6272404156aa296e42e920e80",
-          "min_sep_survivor_dead_m": 5021.740504264574,
+          "log_sha256": "063e51e030d09a436e1228d11516fdb3a18436e8c40dd379a216d308a16b92b7",
+          "min_sep_survivor_dead_m": 5021.740504264554,
           "n_ticks": 8515,
           "pair": [
             2,
             3
           ],
           "per_sat_dv_mps": [
-            135.78448944815932,
-            76.14444995233987,
-            1.3012924868676564e-12,
-            25.049199358511416,
-            181.66375095084112,
-            81.6832782694374
+            135.78448944815923,
+            76.14444995233968,
+            1.2861135883907983e-12,
+            25.049199358511384,
+            181.6637509508409,
+            81.68327826943747
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 500.3251679792904
+          "total_dv_mps": 500.32516797929
         },
         {
           "coverage_mean_last_orbit": 0.26980048594736833,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_2-4__hungarian__w2_2.0_dv_100.jsonl",
-          "log_sha256": "d9ea899baeb8195da68d741b6f34178a29668a61444171d44c98af6336cf5fa3",
-          "min_sep_survivor_dead_m": 2944.786344372538,
+          "log_sha256": "462986fb28b9d80e898171cac872a856b5d07123f199b330592a5b2a354659f4",
+          "min_sep_survivor_dead_m": 2944.7863443725328,
           "n_ticks": 8515,
           "pair": [
             2,
             4
           ],
           "per_sat_dv_mps": [
-            135.78448944815932,
-            76.14444995233987,
-            1.3012924868676564e-12,
-            85.88010829098899,
-            29.400000000000823,
-            81.6832782694374
+            135.78448944815923,
+            76.14444995233968,
+            1.2861135883907983e-12,
+            85.88010829098945,
+            29.400000000000784,
+            81.68327826943747
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 408.8923259609277
+          "total_dv_mps": 408.8923259609279
         },
         {
           "coverage_mean_last_orbit": 0.26980048594736833,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_2-5__hungarian__w2_2.0_dv_100.jsonl",
-          "log_sha256": "87a5f32f0fbe08dcf10fc6e94d56d9a45508a16c7ea74eaaa02269b5553f2e1a",
-          "min_sep_survivor_dead_m": 2780.935639927307,
+          "log_sha256": "7a26d6c17518410332ab719539530b512bdea3bf3f2ea43bc57f4a2ef79dc3b1",
+          "min_sep_survivor_dead_m": 2780.9356399273047,
           "n_ticks": 8515,
           "pair": [
             2,
             5
           ],
           "per_sat_dv_mps": [
-            135.78448944815932,
-            76.14444995233987,
-            1.3012924868676564e-12,
-            85.88010829098899,
-            75.20467576139427,
-            29.400000000001235
+            135.78448944815923,
+            76.14444995233968,
+            1.2861135883907983e-12,
+            85.88010829098945,
+            75.20467576139444,
+            29.400000000001217
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 402.413723452885
+          "total_dv_mps": 402.41372345288534
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_3-4__hungarian__w2_2.0_dv_100.jsonl",
-          "log_sha256": "765a53c166102f21b07e68e8a05238e1d7931558ea8056356b8108c6c768a370",
-          "min_sep_survivor_dead_m": 1852.5321340900236,
+          "log_sha256": "d104685b6e13a789c4e988baa8708c6da885c1b07c4203bcd67a9a22f28f1a74",
+          "min_sep_survivor_dead_m": 1852.5321340900618,
           "n_ticks": 8515,
           "pair": [
             3,
             4
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            69.57229519151097,
-            96.02701728566318,
-            1.3475785499582314e-12,
-            29.400000000000823,
-            109.6564269419732
+            193.67907947544643,
+            69.57229519150658,
+            96.02701728565752,
+            1.3246298845524985e-12,
+            29.400000000000784,
+            109.65642694197007
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 498.33481889459836
+          "total_dv_mps": 498.3348188945827
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_3-5__hungarian__w2_2.0_dv_100.jsonl",
-          "log_sha256": "967575d5c8269c9210db7aa6484d61488eb291e371f6554d01a0d7c24f913af0",
-          "min_sep_survivor_dead_m": 3169.7015901601126,
+          "log_sha256": "20f9a467d54f0f7c31ef74fdfb92c08bf714861568b352062591705ed530dff1",
+          "min_sep_survivor_dead_m": 3169.7015901601076,
           "n_ticks": 8515,
           "pair": [
             3,
             5
           ],
           "per_sat_dv_mps": [
-            142.3762408991473,
-            69.57229519151097,
-            68.13878041703903,
-            1.3475785499582314e-12,
-            142.87832385395305,
-            29.400000000001235
+            142.37624089914456,
+            69.57229519150658,
+            68.13878041703612,
+            1.3246298845524985e-12,
+            142.87832385394756,
+            29.400000000001217
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 452.36564036165294
+          "total_dv_mps": 452.36564036163736
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_4-5__hungarian__w2_2.0_dv_100.jsonl",
-          "log_sha256": "690b82e285e2cfc0f1e0987abe1585662569d191e7f0920ddc46688fc4d7209e",
-          "min_sep_survivor_dead_m": 5805.318313903328,
+          "log_sha256": "2ef297b5f87db8938654f497293aafcf88815fecc8f8563d67c405f699b79117",
+          "min_sep_survivor_dead_m": 5805.318313903343,
           "n_ticks": 8515,
           "pair": [
             4,
             5
           ],
           "per_sat_dv_mps": [
-            142.3762408991473,
-            69.57229519151097,
-            68.13878041703903,
-            91.45910572232418,
-            8.896296216928492e-13,
-            29.400000000001235
+            142.37624089914456,
+            69.57229519150658,
+            68.13878041703612,
+            91.45910572231807,
+            8.509468817782454e-13,
+            29.400000000001217
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 400.9464222300236
+          "total_dv_mps": 400.9464222300074
         }
       ],
       "reused_p0_logs": false,
       "w2": 2.0,
       "worst_coverage": 0.26979718716450923,
-      "worst_per_sat_dv_mps": 216.902610997075
+      "worst_per_sat_dv_mps": 193.67907947544643
     },
     {
       "command": "uv run python -m cubesat.benchmark --mode pareto --base data/scenarios/two_failure.json --out data/eval/pareto --report data/eval/pareto_results.json",
       "dv_budget_mps": 200.0,
-      "mean_coverage": 0.2697985066776528,
-      "mean_total_dv_mps": 463.06860698039435,
+      "mean_coverage": 0.2697991664342247,
+      "mean_total_dv_mps": 425.75977949718794,
       "n_feasible_pairs": 15,
       "n_infeasible_pairs": 0,
       "per_pair": [
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-1__hungarian__w2_2.0_dv_200.jsonl",
-          "log_sha256": "c90f4a04b89e70c4f3b8187cfecf96fdce4b3de70d3427464cdc4eaa909aa620",
-          "min_sep_survivor_dead_m": 1322.6031098669134,
+          "log_sha256": "2c5f320cc70ca4842901a2b141e430f887b629cbb367fccb44e5899b95c62163",
+          "min_sep_survivor_dead_m": 4913.311100820126,
           "n_ticks": 8515,
           "pair": [
             0,
             1
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            16.73805619031792,
-            172.75180675712673,
-            87.04429548354396,
-            125.08870139532307,
-            91.75798726739784
+            1.324845007004202e-12,
+            1.0545218712862473e-12,
+            4.457685652940815e-11,
+            45.03666603943282,
+            104.33784961794923,
+            85.64234770465279
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 493.3808470937109
+          "total_dv_mps": 235.0168633620818
         },
         {
           "coverage_mean_last_orbit": 0.26980708351308647,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.998989260897031,
+          "critical_vacancy_s": 16.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-2__hungarian__w2_2.0_dv_200.jsonl",
-          "log_sha256": "3e87895f1cb3876c30a91d539c807eeade1dfb7eb823036db317e01ac90735b3",
-          "min_sep_survivor_dead_m": 5333.1325145755945,
+          "log_sha256": "c4891443db3a526ed46d7717860493641482531db2b7ef6416cae5bdddf6f0ad",
+          "min_sep_survivor_dead_m": 5723.113748216915,
           "n_ticks": 8515,
           "pair": [
             0,
             2
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            43.77642195038997,
-            1.5565358266533646e-12,
-            66.60682979344182,
-            81.89474962857273,
-            56.343592302997095
+            1.324845007004202e-12,
+            4.433797269899681e-11,
+            1.5700136380949072e-12,
+            38.513456822633486,
+            140.61483539705569,
+            104.33784961795152
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 248.6215936754045
+          "total_dv_mps": 283.4661418376879
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-3__hungarian__w2_2.0_dv_200.jsonl",
-          "log_sha256": "5f8d2b840ebbefb735daec04d056f268a50008be92bb16d174bba530d36aa1d5",
-          "min_sep_survivor_dead_m": 2888.535684388777,
+          "log_sha256": "34721144807ffb23249e8d574aa68c159351c2f033ac1d3852fd2b4666791472",
+          "min_sep_survivor_dead_m": 5799.512406708856,
           "n_ticks": 8515,
           "pair": [
             0,
             3
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            50.36454732988793,
-            4.730516047032083e-11,
-            13.262575913715201,
-            125.08870139532307,
-            91.75798726739784
+            1.324845007004202e-12,
+            53.071414687468575,
+            4.457685652940815e-11,
+            1.5512623549697742e-12,
+            104.33784961794923,
+            172.75180675712087
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 280.4738119063727
+          "total_dv_mps": 330.16107106258613
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.998989260897031,
+          "critical_vacancy_s": 16.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-4__hungarian__w2_2.0_dv_200.jsonl",
-          "log_sha256": "e3819e086a6ed18acd56aab04bc9bf8bcfafdb4ab533758f901cb7ad54054565",
-          "min_sep_survivor_dead_m": 5376.931218402233,
+          "log_sha256": "0dfdb39742e068abc6e5d81912e4a4544cd2991710b9cc5982ac6882f4c324bf",
+          "min_sep_survivor_dead_m": 5856.406476807209,
           "n_ticks": 8515,
           "pair": [
             0,
             4
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            50.36454732988793,
-            85.6423477046576,
-            87.04429548354396,
-            25.808176348716277,
-            91.75798726739784
+            1.324845007004202e-12,
+            53.071414687468575,
+            4.457685652940815e-11,
+            45.03666603943282,
+            1.066758970894579e-12,
+            4.464838728578468e-11
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 340.61735413420496
+          "total_dv_mps": 98.10808072699301
         },
         {
-          "coverage_mean_last_orbit": 0.26979718716450923,
+          "coverage_mean_last_orbit": 0.26980708351308647,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_0-5__hungarian__w2_2.0_dv_200.jsonl",
-          "log_sha256": "d3a159c332cf15205e4b7b09d6b293f90a9e5bca26783a3ebb66dd798c60f56d",
-          "min_sep_survivor_dead_m": 5856.406565191165,
+          "log_sha256": "368c077ec70d9819e3d2c94ce6cc76cf85bb5f7a6cdf2fc2f832ab173c65cba8",
+          "min_sep_survivor_dead_m": 5500.233802980266,
           "n_ticks": 8515,
           "pair": [
             0,
             5
           ],
           "per_sat_dv_mps": [
-            1.351607170133408e-12,
-            50.36454732988793,
-            4.730516047032083e-11,
-            216.902610997075,
-            125.08870139532307,
-            26.688097584669062
+            1.324845007004202e-12,
+            4.433797269899681e-11,
+            42.220709990465046,
+            92.91744949179778,
+            140.61483539705569,
+            1.5523199003013134e-12
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 419.0439573070037
+          "total_dv_mps": 275.7529948793657
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_1-2__hungarian__w2_2.0_dv_200.jsonl",
-          "log_sha256": "d36d11e2d5cf307b22601ade06de4eb8f26a240f696a8575e6b7814cea12ed8a",
-          "min_sep_survivor_dead_m": 4587.361070081498,
+          "log_sha256": "3d34385e751e12a267622817bb55727b6451b50ef037fe29ba39770d281c91d1",
+          "min_sep_survivor_dead_m": 4587.361070081491,
           "n_ticks": 8515,
           "pair": [
             1,
             2
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            8.839420505811725e-13,
-            29.400000000001235,
-            123.45918458886939,
-            168.52268173535253,
-            109.6564269419732
+            193.67907947544643,
+            8.377937623522883e-13,
+            29.40000000000122,
+            123.45918458886413,
+            168.52268173534674,
+            109.65642694197007
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 624.717372741646
+          "total_dv_mps": 624.7173727416294
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_1-3__hungarian__w2_2.0_dv_200.jsonl",
-          "log_sha256": "6a664cfc6738c9b1c66a1e50d068fab5665919050e053561e5c6a367b41d98f2",
-          "min_sep_survivor_dead_m": 3887.863021802511,
+          "log_sha256": "178646f53b86e525836ed2aecfbcf769f06c9c60b9629c0a61dc5be64617c1b7",
+          "min_sep_survivor_dead_m": 3887.8630218025114,
           "n_ticks": 8515,
           "pair": [
             1,
             3
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            8.839420505811725e-13,
-            164.85191521980192,
-            25.049199358511416,
-            142.87832385395305,
-            109.6564269419732
+            193.67907947544643,
+            8.377937623522883e-13,
+            164.85191521979627,
+            25.049199358511384,
+            142.87832385394756,
+            109.65642694197007
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 636.1149448496893
+          "total_dv_mps": 636.1149448496725
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_1-4__hungarian__w2_2.0_dv_200.jsonl",
-          "log_sha256": "b8a960ca524ecb9b7047229cd97e7f18a0ff2dbe4012d28e80469bb74e30f062",
-          "min_sep_survivor_dead_m": 3096.990136243699,
+          "log_sha256": "96c8237cd715f6d59d87c3bd91c7e43fef303d0b54c33e360f79c96f96ed340a",
+          "min_sep_survivor_dead_m": 3096.9901362436885,
           "n_ticks": 8515,
           "pair": [
             1,
             4
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            8.839420505811725e-13,
-            164.85191521980192,
-            123.45918458886939,
-            29.400000000000823,
-            109.6564269419732
+            193.67907947544643,
+            8.377937623522883e-13,
+            164.85191521979627,
+            123.45918458886413,
+            29.400000000000784,
+            109.65642694197007
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 621.046606226095
+          "total_dv_mps": 621.0466062260786
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_1-5__hungarian__w2_2.0_dv_200.jsonl",
-          "log_sha256": "70922cc0dc5628bc5046054b7be7d7821974ce8625e870361cb3c383e5f873e3",
-          "min_sep_survivor_dead_m": 2700.9890308463896,
+          "log_sha256": "e2f35a5887717a3e55450591d9044a3e150b6ad2cb1427e460a158c3aa650270",
+          "min_sep_survivor_dead_m": 2700.9890308463887,
           "n_ticks": 8515,
           "pair": [
             1,
             5
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            8.839420505811725e-13,
-            164.85191521980192,
-            123.45918458886939,
-            107.34433860828774,
-            29.400000000001235
+            193.67907947544643,
+            8.377937623522883e-13,
+            164.85191521979627,
+            123.45918458886413,
+            107.3443386082843,
+            29.400000000001217
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 618.7345178924099
+          "total_dv_mps": 618.7345178923932
         },
         {
           "coverage_mean_last_orbit": 0.26980048594736833,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_2-3__hungarian__w2_2.0_dv_200.jsonl",
-          "log_sha256": "a09a0627bda86b25257d8b410c05fe4d195a456e52afab712425df7116638e76",
-          "min_sep_survivor_dead_m": 5021.740504264574,
+          "log_sha256": "b4300ec3d4ab9940f0675c180ad84006441531feb2dfc452079c733da9755e9e",
+          "min_sep_survivor_dead_m": 5021.740504264554,
           "n_ticks": 8515,
           "pair": [
             2,
             3
           ],
           "per_sat_dv_mps": [
-            135.78448944815932,
-            76.14444995233987,
-            1.3012924868676564e-12,
-            25.049199358511416,
-            181.66375095084112,
-            81.6832782694374
+            135.78448944815923,
+            76.14444995233968,
+            1.2861135883907983e-12,
+            25.049199358511384,
+            181.6637509508409,
+            81.68327826943747
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 500.3251679792904
+          "total_dv_mps": 500.32516797929
         },
         {
           "coverage_mean_last_orbit": 0.26980048594736833,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_2-4__hungarian__w2_2.0_dv_200.jsonl",
-          "log_sha256": "6ec3c27bfc1089555357de903935db368f8e6622b384ff4dcae5c102f70193b0",
-          "min_sep_survivor_dead_m": 2944.786344372538,
+          "log_sha256": "d39a7816aa57de7a1e3afe24ad9b4b0f542558f30b3948b0f356e9c29caae151",
+          "min_sep_survivor_dead_m": 2944.7863443725328,
           "n_ticks": 8515,
           "pair": [
             2,
             4
           ],
           "per_sat_dv_mps": [
-            135.78448944815932,
-            76.14444995233987,
-            1.3012924868676564e-12,
-            85.88010829098899,
-            29.400000000000823,
-            81.6832782694374
+            135.78448944815923,
+            76.14444995233968,
+            1.2861135883907983e-12,
+            85.88010829098945,
+            29.400000000000784,
+            81.68327826943747
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 408.8923259609277
+          "total_dv_mps": 408.8923259609279
         },
         {
           "coverage_mean_last_orbit": 0.26980048594736833,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_2-5__hungarian__w2_2.0_dv_200.jsonl",
-          "log_sha256": "0af0e4ae0d3a778e863473f2d7403ad01143c9587e5d24074a70b433f807e73b",
-          "min_sep_survivor_dead_m": 2780.935639927307,
+          "log_sha256": "f395dd37fee047a03384b2adc2900d07dc36d7ce64c955e78e562f3223cd33ec",
+          "min_sep_survivor_dead_m": 2780.9356399273047,
           "n_ticks": 8515,
           "pair": [
             2,
             5
           ],
           "per_sat_dv_mps": [
-            135.78448944815932,
-            76.14444995233987,
-            1.3012924868676564e-12,
-            85.88010829098899,
-            75.20467576139427,
-            29.400000000001235
+            135.78448944815923,
+            76.14444995233968,
+            1.2861135883907983e-12,
+            85.88010829098945,
+            75.20467576139444,
+            29.400000000001217
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 402.413723452885
+          "total_dv_mps": 402.41372345288534
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 1.0,
+          "critical_vacancy_s": 0.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_3-4__hungarian__w2_2.0_dv_200.jsonl",
-          "log_sha256": "0a39537d284c8e2c9c4360877c51df9f588e0f9db452c93f2888c895e3bce363",
-          "min_sep_survivor_dead_m": 1852.5321340900236,
+          "log_sha256": "cfaaaf65a0cd6380d85675da8e74b8bcb447c472194cf0567299ab659b68e09e",
+          "min_sep_survivor_dead_m": 1852.5321340900618,
           "n_ticks": 8515,
           "pair": [
             3,
             4
           ],
           "per_sat_dv_mps": [
-            193.67907947544882,
-            69.57229519151097,
-            96.02701728566318,
-            1.3475785499582314e-12,
-            29.400000000000823,
-            109.6564269419732
+            193.67907947544643,
+            69.57229519150658,
+            96.02701728565752,
+            1.3246298845524985e-12,
+            29.400000000000784,
+            109.65642694197007
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 498.33481889459836
+          "total_dv_mps": 498.3348188945827
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_3-5__hungarian__w2_2.0_dv_200.jsonl",
-          "log_sha256": "fc40cc85e5fac30695f997e4916ca45b8f22d665b88b4859fa82f0e0be63f3cd",
-          "min_sep_survivor_dead_m": 3169.7015901601126,
+          "log_sha256": "63a8d0fbe1fe1939515010ed1ac390517ce320471923b9cf2f16ebc472c1c6d2",
+          "min_sep_survivor_dead_m": 3169.7015901601076,
           "n_ticks": 8515,
           "pair": [
             3,
             5
           ],
           "per_sat_dv_mps": [
-            142.3762408991473,
-            69.57229519151097,
-            68.13878041703903,
-            1.3475785499582314e-12,
-            142.87832385395305,
-            29.400000000001235
+            142.37624089914456,
+            69.57229519150658,
+            68.13878041703612,
+            1.3246298845524985e-12,
+            142.87832385394756,
+            29.400000000001217
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 452.36564036165294
+          "total_dv_mps": 452.36564036163736
         },
         {
           "coverage_mean_last_orbit": 0.26979718716450923,
+          "critical_roles_held_end": true,
+          "critical_seat_frac": 0.9994946304485155,
+          "critical_vacancy_s": 8.0,
           "duration_s": 17028.0,
+          "imagers_end": 2,
           "log": "pair_4-5__hungarian__w2_2.0_dv_200.jsonl",
-          "log_sha256": "7ee7d50ef95c7fc33022beba825d42f7b8ede6c898c64a949081a44f9c528212",
-          "min_sep_survivor_dead_m": 5805.318313903328,
+          "log_sha256": "8cda6a0f7f8a997c36e6164d3fcd5a9178181b1efb05c3f0f5dc41e7d98c3fe2",
+          "min_sep_survivor_dead_m": 5805.318313903343,
           "n_ticks": 8515,
           "pair": [
             4,
             5
           ],
           "per_sat_dv_mps": [
-            142.3762408991473,
-            69.57229519151097,
-            68.13878041703903,
-            91.45910572232418,
-            8.896296216928492e-13,
-            29.400000000001235
+            142.37624089914456,
+            69.57229519150658,
+            68.13878041703612,
+            91.45910572231807,
+            8.509468817782454e-13,
+            29.400000000001217
           ],
           "prefailure_mean_coverage": 0.37957162677766215,
           "reused_from": null,
-          "total_dv_mps": 400.9464222300236
+          "total_dv_mps": 400.9464222300074
         }
       ],
       "reused_p0_logs": false,
       "w2": 2.0,
       "worst_coverage": 0.26979718716450923,
-      "worst_per_sat_dv_mps": 216.902610997075
+      "worst_per_sat_dv_mps": 193.67907947544643
     }
   ],
   "w1_fixed": 1.0,

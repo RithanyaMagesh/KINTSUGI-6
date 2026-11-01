@@ -6,4 +6,4 @@ Launch a read-only reviewer subagent (Agent tool, general-purpose type) on the c
 
 `git diff $(git describe --tags --abbrev=0)`
 
-Give it the reviewer prompt from docs/physics-reviewer.md verbatim as its task, along with the diff output. Return its findings unedited, then list which you agree with and which you dispute, with evidence. Fix nothing until the user approves.
+Give it the reviewer prompt from docs/archive/physics-reviewer.md verbatim as its task, along with the diff output. Return its findings unedited, then list which you agree with and which you dispute, with evidence. Fix nothing until the user approves.

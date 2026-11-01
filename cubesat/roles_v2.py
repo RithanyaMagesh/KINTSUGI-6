@@ -1,0 +1,166 @@
+"""Capability roles for engine v2 (physics Phase 5a). Pure functions, no RNG, no state.
+
+POWER IS NOT MODELLED (no battery in cubesat/spacecraft.py, Task 2.2 is unbuilt): the
+"power" need of the master-map role table is treated as always satisfied here.
+
+Role table (ROLE_SPECS): critical = losing it is a mission-level event (ROLE_HANDOFF);
+stackable = may share a sat with another role without penalty; needs = hardware required.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Sequence
+
+import numpy as np
+from scipy.optimize import linear_sum_assignment
+
+ROLE_SPECS: dict[str, dict] = {
+    "leader": {"critical": True, "stackable": True, "needs": ("radio",)},  # software role
+    "downlink": {"critical": True, "stackable": False, "needs": ("radio",)},  # + power (unmodelled)
+    "imager": {"critical": False, "stackable": False, "needs": ("payload",)},  # counts to SLA
+    "spare": {"critical": False, "stackable": True, "needs": ()},
+}
+# A sat in one of these statuses is flying AND reporting. THRUSTER_OUT and FUEL_DEPLETED sats
+# cannot thrust but still image and talk (no role here needs thrust); RADIO_SILENT flies but
+# nothing it does reaches ground; DEAD and REENTERED have no working hardware.
+_REPORTING = ("NOMINAL", "DEGRADED", "FUEL_DEPLETED", "THRUSTER_OUT", "PAYLOAD_FAILED")
+_FLYING = _REPORTING + ("RADIO_SILENT",)
+
+
+def capability(status: str, payload_ok: bool, radio_ok: bool, role: str) -> bool:
+    """Can a sat in `status` with these flags hold `role`?
+
+    imager: payload_ok and a reporting sat (a dead payload takes no images; an image that
+    cannot be reported is not coverage). downlink: radio_ok and a reporting sat (it must
+    transmit to ground). leader: radio_ok and a reporting sat (software, but it must talk to
+    the swarm; stackable on any capable sat). relay: radio_ok and a reporting sat. spare:
+    any flying sat (RADIO_SILENT included). DEAD and REENTERED: nothing, whatever the flags
+    say (a re-entered sat keeps stale flags). Raises ValueError for an unknown role."""
+    if role not in ROLE_SPECS:
+        raise ValueError(f"unknown role {role!r}; known: {sorted(ROLE_SPECS)}")
+    if role == "spare":
+        return status in _FLYING
+    if status not in _REPORTING:
+        return False
+    have = {"payload": payload_ok, "radio": radio_ok}
+    return all(have[need] for need in ROLE_SPECS[role]["needs"])
+
+
+DEFAULT_PRIORITY = ("downlink", "imager", "leader")
+INCAPABLE = 1e6  # finite on purpose: linear_sum_assignment must never see inf
+_EPS = 1e-9  # row-major index tie-break (AGENTS.md invariant 6)
+_STACK_PENALTY = 2.0  # per non-stackable role the sat already holds (above the 0/1 incumbent gap)
+
+
+def assign_roles(
+    sats: list[dict], priority: Sequence[str] = DEFAULT_PRIORITY, imager_seats: int | None = None
+) -> list[list[str]]:
+    """Roles held by each sat (index = position in `sats`), a pure function of its input.
+
+    Each sat dict needs `status`, `payload_ok`, `radio_ok` and `roles` (the roles it holds NOW:
+    the incumbents; a dead sat's stale labels are ignored because it is incapable). Roles are
+    filled in `priority` order (any subset of downlink, imager, leader). Rows = sats, columns =
+    seats, scipy linear_sum_assignment. Seats: 1 for a critical role; for the imager
+    min(`imager_seats`, imager-eligible sats), `imager_seats` defaulting to the number of sats
+    whose incumbent roles include imager (at least 1). Imager-eligible = capable AND not
+    holding the downlink (it does not image) unless nobody else is capable (then the downlink
+    holder images: a lone survivor keeps every role it can). A lost imager seat is refilled
+    by a sat with a working payload (a leader-only or spare sat): a label change, zero fuel.
+    Cost: INCAPABLE (1e6, finite) if the sat cannot hold the role (or is not eligible), 0 for
+    an incumbent, else 1 + 2 per busy mark: a non-stackable role it already holds, a critical
+    role it already holds, or a critical incumbent role it holds now (so a role stacks on a
+    busy sat only when no free capable sat exists), plus a 1e-9 row-major index epsilon (ties
+    go to the lowest id). A seat that lands on an incapable sat stays VACANT. A capable sat
+    left with nothing holds ["spare"]; an incapable or dead one [].
+
+    The guards are greedy in priority order, so they are order dependent. Example: sats
+    [NOMINAL leader, NOMINAL empty, DEAD downlink]: with (imager, leader, downlink) the imager
+    takes the empty sat, the leader stays, and the downlink then finds both capable sats equally
+    busy and lands on sat 0 (leader + downlink on one sat); with the default order and with
+    (leader, downlink, imager) it does not. Pinned for all six orders in
+    tests/v2/test_roles_assign.py."""
+    priority = tuple(dict.fromkeys(priority))
+    for role in priority:
+        if role not in ROLE_SPECS or role == "spare":
+            raise ValueError(f"unknown role {role!r} in priority; known: {list(DEFAULT_PRIORITY)}")
+    n = len(sats)
+    held: list[list[str]] = [[] for _ in range(n)]
+    for role in priority if n else ():
+        ok = [capability(s["status"], s["payload_ok"], s["radio_ok"], role) for s in sats]
+        inc = [o and role in s.get("roles", ()) for o, s in zip(ok, sats, strict=True)]
+        elig, seats = ok, 1
+        if role == "imager":
+            elig = [o and "downlink" not in held[i] for i, o in enumerate(ok)]
+            elig = elig if any(elig) else ok
+            want = imager_seats
+            if want is None:
+                want = max(1, sum("imager" in s.get("roles", ()) for s in sats))
+            seats = min(want, sum(elig))
+        if seats == 0:
+            continue
+        cost = np.empty((n, seats))
+        for i in range(n):
+            busy = sum(  # bools count as 0/1: a held downlink weighs 2, leader 1, imager 1
+                (not ROLE_SPECS[r]["stackable"]) + ROLE_SPECS[r]["critical"] for r in held[i]
+            )
+            busy += sum(
+                ROLE_SPECS[r]["critical"] and r != role and r not in held[i]
+                for r in sats[i].get("roles", ())
+            )
+            cost[i] = INCAPABLE if not elig[i] else 0.0 if inc[i] else 1.0 + _STACK_PENALTY * busy
+        cost += _EPS * (np.arange(n)[:, None] * seats + np.arange(seats)[None, :])
+        for i, _ in zip(*linear_sum_assignment(cost), strict=True):
+            if elig[i]:  # a seat that landed on an ineligible sat stays vacant
+                held[i].append(role)
+    for i, s in enumerate(sats):
+        if not held[i] and capability(s["status"], s["payload_ok"], s["radio_ok"], "spare"):
+            held[i] = ["spare"]
+    return held
+
+
+def primary_role(roles: list[str]) -> str:
+    """The one role label a UI shows for a sat: fixed display order leader, downlink, imager,
+    then anything else ("spare"); "none" when it holds nothing. `roles` stays the truth."""
+    order = ("leader", "downlink", "imager")
+    return next((r for r in order if r in roles), roles[0] if roles else "none")
+
+
+def believe(believed: list[list], statuses: list[str], sats: list, declared: list[bool]) -> list:
+    """The swarm's belief about each sat as [status, payload_ok, radio_ok]: a silent failure
+    (DEAD, dead radio, REENTERED) is believed only once the heartbeat rule has declared it; a
+    sat that still talks self-reports at once, so its true state is believed. `sats` are
+    SatState-like (payload_ok, radio_ok)."""
+    return [
+        [st, s.payload_ok, s.radio_ok]
+        if declared[i] or (st != "REENTERED" and s.radio_ok)
+        else believed[i]
+        for i, (st, s) in enumerate(zip(statuses, sats, strict=True))
+    ]
+
+
+def imaging_sats(roles: list[list[str]], statuses: list[str], sats: list) -> list[int]:
+    """Ids that hold the imager role AND can physically image now (roles are believed, imaging
+    is not: a dead payload takes no images even before the death is declared)."""
+    return [
+        i
+        for i, (rs, st, s) in enumerate(zip(roles, statuses, sats, strict=True))
+        if "imager" in rs and capability(st, s.payload_ok, s.radio_ok, "imager")
+    ]
+
+
+def handoff_events(
+    old_roles: list[list[str]], new_roles: list[list[str]], statuses: list[str],
+    priority: Sequence[str] = DEFAULT_PRIORITY,
+) -> list[dict]:
+    """ROLE_HANDOFF payloads {role, from_sat, to_sat, reason}, one per critical role whose
+    holder (lowest sat id holding it) changed between `old_roles` and `new_roles`, in priority
+    order. to_sat None = vacant now, from_sat None = was vacant (reason "VACANT"); otherwise
+    reason = the old holder's status. Non-critical roles (imager) never hand off."""
+    out = []
+    for role in (r for r in priority if ROLE_SPECS[r]["critical"]):
+        old_i = next((i for i, rs in enumerate(old_roles) if role in rs), None)
+        new_i = next((i for i, rs in enumerate(new_roles) if role in rs), None)
+        if old_i != new_i:
+            reason = "VACANT" if old_i is None else statuses[old_i]
+            out.append({"role": role, "from_sat": old_i, "to_sat": new_i, "reason": reason})
+    return out

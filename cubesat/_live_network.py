@@ -18,7 +18,7 @@ import urllib.request
 from datetime import UTC, datetime
 from pathlib import Path
 
-ALLOWED_HOSTS = frozenset({"celestrak.org", "www.space-track.org", "api.n2yo.com"})
+ALLOWED_HOSTS = frozenset({"celestrak.org"})
 MAX_PAYLOAD_BYTES = 5 * 1024 * 1024  # 5 MB
 DEFAULT_TIMEOUT_S = 10.0
 CUMULATIVE_TIMEOUT_S = 30.0
@@ -162,15 +162,3 @@ class CacheManager:
 def build_celestrak_url(params: dict[str, str]) -> str:
     """Builds a sanitized CelesTrak GP query URL."""
     return f"https://celestrak.org/NORAD/elements/gp.php?{urllib.parse.urlencode(params)}"
-
-
-def build_spacetrack_login_data(user: str, password: str, query_url: str) -> bytes:
-    """Builds form-encoded login payload for Space-Track."""
-    return urllib.parse.urlencode(
-        {"identity": user, "password": password, "query": query_url}
-    ).encode("utf-8")
-
-
-def build_n2yo_url(norad_id: int, api_key: str) -> str:
-    """Builds N2YO REST query URL."""
-    return f"https://api.n2yo.com/rest/v1/satellite/tle/{norad_id}&apiKey={api_key}"

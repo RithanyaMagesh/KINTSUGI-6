@@ -1,21 +1,18 @@
-import hashlib
 import json
 import subprocess
 import sys
 from pathlib import Path
 
+from cubesat.canon import canonical_log_hash
+
 ROOT = Path(__file__).resolve().parents[1]
 
-# Golden SHA-256 of the short-run JSONL (nominal.json with duration_s = 600.0,
-# seed 42), pinned per docs/MASTER_PROMPT.md section 3.8 ("nominal.json short run
-# compares against a committed golden hash"). Any change to the sim, the log
-# schema, or nominal.json itself changes this hash and must be acknowledged here.
-GOLDEN_NOMINAL_SHORT_SHA256_MAP = {
-    "win32": "c95f31b872b9134db57c43763d3bc67bb1e42c056beb7378c5177172758696f6",
-    "linux": "5eb0614ddfdf2df252033bc87e7421cb8eb84988e404b9c9f0b1a03978a3c5d6",  # Linux glibc pin
-}
-GOLDEN_NOMINAL_SHORT_SHA256 = GOLDEN_NOMINAL_SHORT_SHA256_MAP.get(
-    sys.platform, GOLDEN_NOMINAL_SHORT_SHA256_MAP["win32"]
+# Canonical golden SHA-256 of the short-run JSONL (nominal.json with duration_s = 600.0,
+# seed 42), pinned per docs/MASTER_PROMPT.md section 3.8.
+# Cross-platform pin: cubesat.canon.canonical_log_hash (floats zeroed below 1e-6,
+# else 5 significant digits); pinned on macOS arm64, 2026-10-31.
+GOLDEN_NOMINAL_SHORT_CANONICAL_SHA256 = (
+    "64b88c46843f99cdeaff654c4eccef1bf9e94e500d5171b236c17ce9d8def3a8"
 )
 
 
@@ -79,9 +76,8 @@ def test_run_writes_valid_jsonl(tmp_path):
 
 
 def test_run_is_byte_deterministic(tmp_path):
-    """Two runs of a short nominal scenario produce byte-identical JSONL, matching the
-    committed golden SHA-256 (docs/MASTER_PROMPT.md sections 3.5 and 3.8: same scenario +
-    seed => byte-identical log; regression vs golden hash)."""
+    """Two runs of a short nominal scenario produce byte-identical JSONL on the same
+    machine (AGENTS.md invariant 2: same scenario + seed => byte-identical log)."""
     scenario = _short_nominal_scenario(tmp_path / "nominal_short.json")
     outs = []
     for name in ("run1.jsonl", "run2.jsonl"):
@@ -92,9 +88,19 @@ def test_run_is_byte_deterministic(tmp_path):
     first = outs[0].read_bytes()
     second = outs[1].read_bytes()
     assert first == second, "two runs of the same scenario + seed differ byte-wise"
-    digest = hashlib.sha256(first).hexdigest()
-    assert digest == GOLDEN_NOMINAL_SHORT_SHA256, (
-        f"golden hash mismatch: got {digest}"
+
+
+def test_run_matches_canonical_golden_hash(tmp_path):
+    """The short nominal scenario log matches the platform-independent canonical golden
+    hash (cubesat.canon.canonical_log_hash)."""
+    scenario = _short_nominal_scenario(tmp_path / "nominal_short.json")
+    out = tmp_path / "run.jsonl"
+    result = _run_cli(scenario, out)
+    assert result.returncode == 0, result.stderr
+    raw_bytes = out.read_bytes()
+    digest = canonical_log_hash(raw_bytes)
+    assert digest == GOLDEN_NOMINAL_SHORT_CANONICAL_SHA256, (
+        f"canonical golden hash mismatch: got {digest}"
     )
 
 

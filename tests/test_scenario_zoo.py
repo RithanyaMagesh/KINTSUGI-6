@@ -167,3 +167,69 @@ def test_cascading_n8_run_is_byte_deterministic(n8_scenario):
     first = run_scenario(n8_scenario)
     second = run_scenario(n8_scenario)
     assert first == second
+
+
+# --- Track C (engine v2, laser crosslinks): illustrative leader-kill pair ----------------------
+# Pins: cubesat.canon.canonical_log_hash (platform-tolerant), taken from the comms branch tree.
+DECENTRAL_KILL = ROOT / "data" / "scenarios" / "decentral_leader_kill_6sat.json"
+CENTRAL_STAR_KILL = ROOT / "data" / "scenarios" / "central_star_leader_kill_6sat.json"
+TRACK_C_PINS = {  # regression pins of this implementation (no external reference exists)
+    "decentral": "471d8e6ba8a714ba50fe6d9cccefd65e3f33348e69f8f814e4f54bc3cd807af5",
+    "central_star": "6d502203f2eb164e9d4e3f84fb28e4d1f3e7b984d657e7f649cd2eb9dca7f395",
+}
+
+
+def _v2_ticks(lines):
+    return [x for x in lines if "sats" in x]
+
+
+def _all_events(ticks, kind):
+    return [(x["t"], e["payload"]) for x in ticks for e in x.get("events", []) if e["type"] == kind]
+
+
+@pytest.fixture(scope="module")
+def decentral_lines():
+    from cubesat.sim_v2 import run_scenario_v2
+
+    return run_scenario_v2(load_scenario(DECENTRAL_KILL))
+
+
+@pytest.fixture(scope="module")
+def central_star_lines():
+    from cubesat.sim_v2 import run_scenario_v2
+
+    return run_scenario_v2(load_scenario(CENTRAL_STAR_KILL))
+
+
+def test_decentral_leader_kill_pin_and_recovery(decentral_lines):
+    """Sat 0 (the would-be leader) dies at 1200 s. Its function (failure_detection) is vacant
+    only until the consensus auction on the broken ring lands (18 rounds x 2 s: one hop per
+    tick, assumption), with no split-brain before the sun splits the ring at 1352 s."""
+    from cubesat.canon import canonical_log_hash
+
+    assert canonical_log_hash(decentral_lines) == TRACK_C_PINS["decentral"]
+    ticks = _v2_ticks(decentral_lines)
+    t_done = _all_events(ticks, "FUNCTION_HANDOFF")[0][0]
+    rounds = next(x for x in ticks if x["t"] == t_done)["consensus_rounds"]
+    assert (t_done, rounds) == (1236.0, 18)
+    vacant = [x["t"] for x in ticks if x["functions_vacant"]]
+    assert vacant == [1200.0 + 2.0 * k for k in range(18)]
+    assert not [x["t"] for x in ticks if x["split_brain"] and x["t"] < 1352.0]
+    assert all("leader" not in s["roles"] for x in ticks for s in x["sats"])
+    assert [p["sat_id"] for _, p in _all_events(ticks, "FAILURE_DETECTED")] == [0]
+
+
+def test_central_star_leader_kill_pin_and_partition(central_star_lines):
+    """The star hub (leader, sat 0) dies at 1200 s: the swarm partitions into singletons, every
+    healthy leaf is declared 'isolated' at 1204 s, the leader role moves to sat 1 and the star
+    re-forms at 1234 s (one acquisition later)."""
+    from cubesat.canon import canonical_log_hash
+
+    assert canonical_log_hash(central_star_lines) == TRACK_C_PINS["central_star"]
+    ticks = _v2_ticks(central_star_lines)
+    assert _all_events(ticks, "PARTITION")[0] == (1200.0, {"components": [[1], [2], [3], [4], [5]]})
+    det = [(t, p["sat_id"], p.get("cause")) for t, p in _all_events(ticks, "FAILURE_DETECTED")]
+    assert det[:6] == [(1204.0, 0, None)] + [(1204.0, i, "isolated") for i in range(1, 6)]
+    split = [x["t"] for x in ticks if 1200.0 <= x["t"] < 1352.0 and len(x["components"]) > 1]
+    assert split == [1200.0 + 2.0 * k for k in range(17)]
+    assert _all_events(ticks, "ROLE_HANDOFF")[0][1]["to_sat"] == 1
