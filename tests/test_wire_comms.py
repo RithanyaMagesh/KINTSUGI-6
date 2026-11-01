@@ -3,6 +3,8 @@
 import json
 import math
 
+import pytest
+
 from cubesat import geo_v2
 from cubesat.scenario import load_scenario
 from cubesat.wire import SessionEnrich, to_messages
@@ -199,3 +201,24 @@ def test_a_real_decentral_run_streams_functions_and_handoff_sentences():
     assert not any(m["message"] == "FUNCTION_HANDOFF" for m in events)
     assert any(m["message"].startswith("Consensus auction:") for m in events)
     assert not any("CBBA" in m["message"] for m in events)
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("name,expect", [
+    ("decentral_leader_kill_6sat", "Consensus auction:"),
+    ("central_star_leader_kill_6sat", "Swarm split into"),
+])
+def test_track_c_demo_scenarios_stream_cleanly_with_named_events(name, expect):
+    """The two T2 demo scenarios (leader kill, decentral mesh vs central star) through the wire."""
+    from cubesat.scenario import load_scenario
+    from cubesat.sim_v2 import run_scenario_v2
+
+    enrich, msgs = SessionEnrich(), []
+    for line in run_scenario_v2(load_scenario(f"data/scenarios/{name}.json")):
+        msgs += to_messages(line, enrich)
+    json.dumps(msgs, allow_nan=False)
+    events = [m["message"] for m in msgs if m["type"] == "event"]
+    raw = {"LINK_LOCKED", "LINK_LOST", "PARTITION", "FUNCTION_HANDOFF"}
+    assert not raw & set(events) and not any("CBBA" in e for e in events)
+    assert any(e.startswith(expect) for e in events)
+    assert any("cut off" in e for e in events) == name.startswith("central_star")
