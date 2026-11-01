@@ -22,7 +22,7 @@ from collections.abc import Iterator
 
 import numpy as np
 
-from cubesat import comms_v2, geo_v2, truth
+from cubesat import comms_v2, geo_v2, recovery_v2, step_v2, truth
 from cubesat.coverage import coverage_fraction, footprint_radius, target_grid
 from cubesat.faults_v2 import STATUS_REENTERED, Faults
 from cubesat.hcw import mean_motion, stm
@@ -34,13 +34,10 @@ from cubesat.sim import (
     LOG_SCHEMA_VERSION,
     STATE_INIT,
     STATE_SUMMARY,
-    STATUS_DEAD,
     RunCancelled,
     build_slots,
 )
-from cubesat.spacecraft import thrust_limited
-
-REENTRY_ALTITUDE_M = 100e3  # below this a sat is flagged REENTERED and frozen
+from cubesat.step_v2 import REENTRY_ALTITUDE_M
 
 
 class EngineV2:
@@ -68,9 +65,6 @@ class EngineV2:
         self.refs = slots.copy()  # seat references, advanced by the cached Phi(dt)
         self.phi_dt = stm(self.dt, self.n)  # cached once; G(dt) comes with the LP (Ph. 5)
         self.pd = PDController(scenario.gains.wn, scenario.gains.zeta, scenario.a_max_mps2)
-        tr = scenario.truth
-        self._b_active = tr.cd * tr.area_active_m2 / tr.mass_kg
-        self._b_dead = tr.cd * tr.area_dead_m2 / tr.mass_kg
         self.r_f = footprint_radius(alt, math.radians(scenario.sensor.fov_half_angle_deg))
         sensor = scenario.sensor
         self.grid = target_grid(sensor.grid_step_km * 1000.0, sensor.grid_extent_km * 1000.0)
@@ -82,8 +76,8 @@ class EngineV2:
         self.cov: list[tuple[float, float]] = []
         self.roles = [[r] for r in scenario.roles]  # holders now = incumbents (Phase 5a)
         self.believed = [["NOMINAL", True, True] for _ in scenario.roles]
-        laser = scenario.comms is not None and scenario.comms.model == "laser"
-        self.comms = comms_v2.CommsState(scenario) if laser else None  # track C2
+        self.comms, self.functions = comms_v2.attach(scenario)  # track C: (None, None) = off
+        self.rec, self._cancel = recovery_v2.attach(scenario), None  # ladder: None = off
         for f in injections:
             self.inject(f)
 
@@ -125,6 +119,7 @@ class EngineV2:
         ev, links = comms_v2.fault_tick(self, t, lvlh)  # = faults.tick() without laser comms
         events += ev
         events += self._update_roles()
+        events += self.rec.tick(self, t, events, self._cancel) if self.rec else []
         draw_tick(self.rng, self.n_sats)  # Phases 3-4 use these rows; ignored for now
         status = self.faults.status
         gone = np.array([s == STATUS_REENTERED for s in status])
@@ -157,17 +152,18 @@ class EngineV2:
             "coverage": cov,
             "min_sep": self._min_sep(lvlh[:, :3]),
             **geo_v2.tick_fields(c[:3], self.scenario.chief.epoch_utc, t),  # Earth view (v2 only)
-            **links,  # laser comms only: links, components
         }
+        comms_v2.annotate(line, links)  # laser comms only: links, components, functions
         if events:
             line["event"], line["events"] = events[0], events
         self.cov.append((t, cov))
-        self._advance(lvlh)
+        self._advance(lvlh, self.rec.commands(self.k) if self.rec else None)
         self.k += 1
         return line
 
     def run(self, cancel_event: threading.Event | None = None) -> Iterator[dict]:
         """Yield [header (k == 0 only), ticks..., SUMMARY]; RunCancelled between ticks."""
+        self._cancel = cancel_event  # the ladder checks it inside long certificates
         if self.k == 0:
             yield self.header()
         while self.k < self.n_ticks:
@@ -202,7 +198,8 @@ class EngineV2:
             "believed": self.believed,
             "faults": self.faults.state(),
             "rng": self.rng.bit_generator.state,
-            **({"comms": self.comms.state()} if self.comms else {}),
+            **comms_v2.snapshot(self),  # {} without laser comms
+            **recovery_v2.snapshot(self),  # {} without the ladder
         }
         doc = {"fingerprint": self._fingerprint(), "state": state}
         return json.dumps(doc, sort_keys=True).encode()
@@ -225,14 +222,14 @@ class EngineV2:
                 raise ValueError(f"roles/believed lists must hold {self.n_sats} entries")
             rng = make_rng(self.scenario)
             rng.bit_generator.state = state["rng"]
-            if comms := self.comms and comms_v2.CommsState(self.scenario):
-                comms.load(state["comms"], self.n_sats)
+            comms, functions = comms_v2.restore(self, state)  # parsed, not applied yet
+            rec = recovery_v2.restore(self, state)
             self.faults.load(state["faults"])  # atomic itself; raises ValueError first
         except (KeyError, TypeError, ValueError) as exc:
             raise ValueError(f"bad EngineV2 snapshot: {exc!r}") from exc
         self.k, self.X, self.refs, self.dv, self.hold, self.cov = k, X, refs, dv, hold, cov
         self.roles, self.believed = roles, believed
-        self.rng, self.comms = rng, comms
+        self.rng, self.comms, self.functions, self.rec = rng, comms, functions, rec
 
     # -- internals ---------------------------------------------------------------------------------
     def _reentries(self, t: float, lvlh: np.ndarray) -> list[dict]:
@@ -256,7 +253,8 @@ class EngineV2:
             {"status": b[0], "payload_ok": b[1], "radio_ok": b[2], "roles": rs}
             for b, rs in zip(self.believed, self.roles, strict=True)
         ]
-        priority = [r for r in self.scenario.role_priority if r in self.scenario.roles]
+        priority = [r for r in self.scenario.role_priority if r in self.scenario.roles
+                    and not (r == "leader" and self.functions)]  # decentral: no leader role
         new = assign_roles(view, priority, self.scenario.roles.count("imager"))
         payloads = handoff_events(self.roles, new, f.status, priority)
         self.roles = new
@@ -269,35 +267,15 @@ class EngineV2:
         d = pts[:, None, :] - pts[None, :, :]
         return float(np.sqrt(np.min((d**2).sum(-1)[np.triu_indices(len(pts), 1)])))
 
-    def _advance(self, lvlh: np.ndarray) -> None:
-        """PD command per sat that can still fly (LVLH, zero-order hold) through thrust_limited
-        (thrust cap k F_max / m, propellant use), then one batched RK4 step. A stuck-open
-        thruster ignores the PD and fires along its fixed ECI vector."""
-        status, dt = self.faults.status, self.dt
-        u = np.zeros((self.n_sats, 3))  # applied LVLH acceleration
-        a_stuck = np.zeros((self.n_sats, 3))  # applied ECI acceleration of stuck-open sats
-        for i, s in enumerate(status):
-            if s in (STATUS_DEAD, STATUS_REENTERED):
-                continue
-            sat = self.faults.sats[i]
-            if sat.stuck_vec is not None:
-                a_stuck[i], _ = thrust_limited(sat, u[i], dt)
-            else:
-                cmd = self.pd.command(lvlh[i, :3], lvlh[i, 3:], self.refs[i, :3], self.refs[i, 3:])
-                u[i], _ = thrust_limited(sat, cmd, dt)
-        self.dv += np.linalg.norm(u + a_stuck, axis=1) * dt
-        a_dep = truth.thrust_eci(u, self.X[0, :3], self.X[0, 3:]) + a_stuck
-        a_thrust = np.vstack([np.zeros(3), a_dep])
-        b = np.array([0.0] + [self._b_dead if s == STATUS_DEAD else self._b_active for s in status])
-        tr = self.scenario.truth
-
-        def accel(r, v):
-            a = truth.accel_gravity(r) + truth.accel_drag(r, v, b, tr.density_factor) + a_thrust
-            return a + truth.accel_j2(r) if tr.j2_enabled else a
-
-        new = truth.rk4_step(self.X, dt, accel)
-        frozen = np.array([False] + [s == STATUS_REENTERED for s in status])  # chief never frozen
-        self.X = np.where(frozen[:, None], self.X, new)
+    def _advance(self, lvlh: np.ndarray, cmd: dict | None = None) -> None:
+        """One shared truth step (cubesat/step_v2.py, also the certificate's), then the seats."""
+        f = self.faults
+        self.X, u, a_stuck = step_v2.advance(
+            self.X, lvlh, self.refs, f.status, f.sats, self.pd, self.dt, self.scenario.truth, cmd
+        )
+        self.dv += np.linalg.norm(u + a_stuck, axis=1) * self.dt
+        if self.rec:
+            self.rec.check_delivery(cmd, u, f)
         self.refs = self.refs @ self.phi_dt.T
 
 

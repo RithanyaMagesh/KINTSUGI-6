@@ -177,3 +177,51 @@ What the backend delivers, so the console can size its work: at most 30 `sim_sta
 
 ## Requests from the frontend owner (2026-11-01)
 1. **Keep-out floor on the wire.** The console reads `hello.min_sep_m` and the `POST /simulation/start` response `min_sep_m` (metres, the scenario's `allocation.min_sep_km` × 1000) to label "Closest approach" and draw the keep-out line on the separation chart (claims audit rows 19-20). Neither is sent on `backend`, so the UI shows no floor ("unmeasured") instead of a hard-coded 2 km. Please add `min_sep_m` to the live hello and the start response (absent for replays).
+7. **(C4 landed in the log, not yet on the wire.)** With `recovery.authority = "decentral"` no sat holds `leader`; per-sat `functions`, top-level `consensus_rounds` (a count), `split_brain`, `functions_vacant`, and `FUNCTION_HANDOFF{function, from: [ids], to: [ids]}` (lists: in a partition each component has its own holder). Show a vacant function as an empty chip slot, split-brain as one chip per holder with a warning.
+
+### Track C — C6 wire (2026-11-01, branch `evidence`; backend only, build later)
+Source: `cubesat/wire_comms.py` (hooks in `cubesat/wire.py`), `cubesat/geo_v2.py`. Everything is additive: v1 and non-laser v2 streams are byte-identical (wire sha256 of `data/logs/*.jsonl` and a v2 ideal-comms run unchanged).
+- **`sim_state.links`** (laser runs only): `[[from, to, state, range_m, rate_bps], ...]` with display ids (`"SAT-1"`), `state` `LOCKED | ACQUIRING | DOWN`, `range_m` / `rate_bps` numbers or `null` (a non-finite value is sent as null so the frame is never dropped). `rate_bps` is 0 unless LOCKED. Acquisition time (30 s) is an assumption: label it.
+- **`sim_state.components`** (laser runs only): `[["SAT-1", "SAT-2"], ["SAT-3"]]`, groups of talking sats that can hear each other over LOCKED links. More than one entry = the swarm is split. A cut-off sat that is heard again gets NO event; read the reconnect from `components`.
+- **Events** (all `type: "event"`; the structured fields are optional extras):
+  | source | level | message | extra |
+  |---|---|---|---|
+  | `LINK_LOCKED` | info | `Laser link SAT-1 to SAT-2 locked` | `link: ["SAT-1", "SAT-2"]` |
+  | `LINK_LOST` reason `sun` | warning | `Laser link SAT-1 to SAT-2 lost: the sun is in a receiver's view` | `link`, `reason` |
+  | `LINK_LOST` reason `partner_down` | warning | `... lost: a partner is down` | `link`, `reason` |
+  | `LINK_LOST` reason `budget` | warning | `... lost: out of link budget` | `link`, `reason` |
+  | `LINK_LOST` reason `replan` | info | `... dropped: the network re-routed` | `link`, `reason` |
+  | `PARTITION` | warning | `Swarm split into 2 groups: SAT-1, SAT-2 \| SAT-3` | `components` |
+  | `FAILURE_DETECTED{cause: "isolated"}` | warning | `SAT-3 cut off: no laser link reaches it, so the swarm cannot hear it` | `sat_id`, `cause: "isolated"` |
+  Show "cut off" as its own state, not as failed. It does NOT update `metrics.detection_latency_s` (that stays the failure-detection latency).
+- **`hello.formation_shape`** (`cartwheel | pco | gco | helix | string`): v2 LIVE hellos only (all v2 live runs, laser or not). v1 hellos never carry it (v1 is cartwheel-only). **Replay hellos do not carry it yet** (the key rides on the live source; replay needs a session-side hook, owned by the perf track): until then treat a missing key as unknown, and keep the ghost/deviation layer off when unknown on a v2 replay.
+- Size: mean `sim_state` on a 600 s 6-sat laser run (nominal, DEAD sat 0 at 100 s) grows 2694.6 → 3055.1 bytes/frame (mesh, +13.4 %) and 2694.6 → 2995.3 (star, +11.2 %).
+- C4 fields (`functions`, `consensus_rounds`, `split_brain`, `FUNCTION_HANDOFF`) are NOT on the wire yet; they come with C4.
+
+### Track C — C6 wire part 2: decentral authority (2026-11-01, branch `evidence`; backend only, build later)
+Only with `recovery.authority = "decentral"` (requires laser comms). Central and v1 streams are byte-identical.
+- **`sats[].functions`**: the leader functions this sat holds (`failure_detection`, `time_sync`, `formation_reference`, `collision_arbitration`, `task_scheduling`, `ground_relay`); `[]` for a sat holding none. No sat holds the `leader` role in this mode, so draw the six chips (item 3 above) instead of a leader baton.
+- **`sim_state.consensus_rounds`**: rounds of the most recent consensus auction. It is a count, not seconds: show it as "N rounds". Seconds = rounds × one 2 s tick is an engine assumption; label it if shown.
+- **`sim_state.split_brain`**: functions with more than one holder (one per disconnected group); warn when non-empty. **`sim_state.functions_vacant`**: functions nobody holds; show an empty chip slot.
+- **Event `FUNCTION_HANDOFF`** (extras `function`, `from`, `to`, display-id lists):
+  | case | level | message |
+  |---|---|---|
+  | one holder to another | info | `Consensus auction: time sync moved from SAT-1 to SAT-3` |
+  | no previous holder | info | `Consensus auction: SAT-2 took over failure detection` |
+  | nobody left | warning | `ground relay is vacant: no satellite holds it (was SAT-1)` |
+  | several new holders | warning | `Consensus auction: time sync moved from SAT-1 to SAT-2, SAT-4 (split-brain: one holder per group)` |
+  | split heals (several holders to one) | info | `Consensus auction: time sync moved from SAT-1, SAT-4 to SAT-1` |
+  | malformed payload | info | `Consensus auction: a leader function changed holder` |
+  UI text says "consensus auction", never "CBBA".
+- Expect bursts: one death reshuffles several functions (8 handoffs in C4's 300 s ring test). Animate them together, not one by one.
+- Size: mean `sim_state` on the 600 s 6-sat laser run with decentral authority grows 3047.2 → 3304.0 bytes/frame (mesh, +8.4 %) and 2989.6 → 3288.9 (star, +10.0 %).
+- Comparison numbers (vacancy, split-brain, rounds per cell) come only from `data/eval/comms_report.json` (C5). The decentral-vs-central vacancy depends on the one-round-per-tick assumption: show the round-time sensitivity rows with it, never a bare ranking.
+
+## Recovery ladder (2026-11-01, Phase 5d-2, branch `ladder`; engine v2 with `recovery.ladder: true` only)
+Wire pass-through needed in `cubesat/wire.py` (owned by T5; not edited by the ladder track). All are optional: logs without the ladder never carry them.
+- Tick `state` (existing key) takes the mission states `NOMINAL`, `FAILURE_DETECTED`, `PLANNING`, `RECONFIGURING`, `RECOVERED`, `DEGRADED_MISSION`, `MISSION_LOST` on ladder runs (`wire._STATE_LABELS` only knows the v1 pairs).
+- Event `MISSION_STATE` `{from, to, reason}` on every change (plain sentence: "Mission: RECONFIGURING → RECOVERED (every live sat within 50 m / 0.05 m/s for 60 s)").
+- Event `RECOVERY_LEVEL` `{level: "L1".."L4" | null, reason, trigger, rejected: [{level, why}], shed_roles: [..], dv_planned_mps, cripple?: {sat_id, dv_with_mps | null, dv_abandon_mps | null}}`; `level: null` = no certified plan, nothing executed (warning).
+- Event `CERTIFICATE` `{passed, level, min_sep_m, worst_fuel_margin_mps, roles_ok, coverage, hold_coverage, landing_error_m, reasons: [..]}` (= `certify.Certificate.event_payload()`), one per executed plan, same tick as its RECOVERY_LEVEL.
+- Event `EVASIVE_MANEUVER` (v2 ladder form) `{sat_id, other_id, closest_m, t_closest_s, t}`; the v1 form carries `range_m` instead of `closest_m`.
+Display: "unmeasured" for any missing number; never show a level without its certificate.

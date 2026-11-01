@@ -100,6 +100,9 @@ def _switch(sc_from: Scenario, sc_to: Scenario, n: float) -> dict:
     ]
     cost = np.array([[math.inf if p is None else p.total_dv_mps for p in row] for row in free])
     big = np.where(np.isfinite(cost), cost, 1e9)  # no free plan: only taken if nothing else fits
+    # round first: equal-cost seats (string, mirror slots) differ by LP solver noise across OSes,
+    # which must not outrank the index tie-break
+    big = np.round(big, 6)
     rows, cols = linear_sum_assignment(big + TIE_EPS * np.arange(k * k).reshape(k, k))
     obs_t = np.append(np.arange(0.0, T, OBSTACLE_STEP_S), T)
     grid = np.arange(0.0, T, 1.0)
