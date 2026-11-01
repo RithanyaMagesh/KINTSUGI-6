@@ -78,7 +78,9 @@ function CellCard({ id, title }: { id: string; title: string }) {
           <dd>{rounds.length === 0 ? UNMEASURED : `${fmt(Math.max(...rounds))} rounds (a count)`}</dd>
         </div>
       </dl>
-      <p className={styles.foot}>{n} kill sets</p>
+      <p className={styles.foot}>
+        {n} kill sets{rounds.length === 0 ? ". No auction runs under a central leader, so its metrics were not recorded." : ""}
+      </p>
     </section>
   );
 }
@@ -121,7 +123,7 @@ const VERDICT_TEXT: Record<string, string> = {
   "C5-H9": "Decentral fills leader work at least as fast as central",
 };
 
-const plain = (t: string) => t.replace(/>=/g, "at least").replace(/<=/g, "at most").replace(/\|/g, "");
+const plain = (t: string) => t.replace(/>=/g, "at least").replace(/<=/g, "at most").replace(/>/g, "more than").replace(/\|/g, "");
 /** "4 of 16" when the threshold counts kill sets ("15/16"), else the bare value. */
 function measured(threshold: string, value: number): string {
   const m = /\/(\d+)/.exec(threshold);
