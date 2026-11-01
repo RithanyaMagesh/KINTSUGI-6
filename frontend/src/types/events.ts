@@ -11,6 +11,12 @@ export interface SimEvent {
   from?: string; // STATE events: raw mission states
   to?: string;
   label?: string; // STATE events: plain sentence, e.g. "Planning recovery"
+  fn?: string; // FUNCTION_HANDOFF: the leader function that moved
+  fromSats?: string[]; // FUNCTION_HANDOFF holders before / after (lists: one per group)
+  toSats?: string[];
+  link?: string[]; // LINK_LOCKED / LINK_LOST pair
+  reason?: string; // LINK_LOST: partner_down | budget | sun | replan
+  cause?: string; // FAILURE_DETECTED{cause: "isolated"} = cut off, not failed
 }
 
 export interface RoleHandoff {

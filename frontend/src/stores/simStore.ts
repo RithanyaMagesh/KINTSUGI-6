@@ -5,7 +5,7 @@
 // the UI renders the string "unmeasured" for null values (repo invariant 1)
 // until real frames arrive.
 import { create } from "zustand";
-import type { ConnectionState, Metrics, SimMode } from "../types/telemetry";
+import type { ConnectionState, Link, Metrics, SimMode } from "../types/telemetry";
 import type { MissionState, Satellite } from "../types/satellite";
 import type { RunSummary, SimEvent } from "../types/events";
 import { deserializeMessage } from "../api/deserializer";
@@ -53,6 +53,14 @@ interface SimStore {
   roleHolders: Record<string, string>;
   /** End-of-run card (run_summary message); null until the run ends. */
   runSummary: RunSummary | null;
+  /** Laser runs (Track C), latest frame; [] / null when the run has no laser comms. */
+  links: Link[];
+  components: string[][];
+  splitBrain: string[];
+  functionsVacant: string[];
+  consensusRounds: number | null;
+  /** From the v2 live hello; null = unknown (v1, replay, or joined before the run). */
+  formationShape: string | null;
   /** Roles from the LAST frame, keyed by sat id — lets the next role_reassignment
    * message show what each satellite did before the replan. */
   priorRoles: Record<string, string>;
@@ -86,6 +94,12 @@ const initial = {
   handoffs: [] as Handoff[],
   roleHolders: {} as Record<string, string>,
   runSummary: null as RunSummary | null,
+  links: [] as Link[],
+  components: [] as string[][],
+  splitBrain: [] as string[],
+  functionsVacant: [] as string[],
+  consensusRounds: null as number | null,
+  formationShape: null as string | null,
 };
 
 const CRITICAL_ROLES = ["leader", "downlink"] as const;
@@ -136,6 +150,7 @@ export const useSimStore = create<SimStore>((set, get) => ({
             seed: msg.seed ?? state.seed,
             policy: msg.policy ?? state.policy,
             minSepM: msg.minSepM ?? state.minSepM,
+            formationShape: msg.formationShape ?? state.formationShape,
           };
         case "frame": {
           // INIT-derived empty state (cubesat/wire.py to_sim_state): resets the
@@ -159,6 +174,11 @@ export const useSimStore = create<SimStore>((set, get) => ({
               roleHolders: {},
               runSummary: null,
               missionState: null,
+              links: [],
+              components: [],
+              splitBrain: [],
+              functionsVacant: [],
+              consensusRounds: null,
             };
           }
           // priorRoles keeps the PRE-tick role for any satellite whose role
@@ -197,15 +217,33 @@ export const useSimStore = create<SimStore>((set, get) => ({
             satellites: msg.frame.satellites,
             metrics: msg.frame.metrics,
             priorRoles,
+            links: msg.frame.links ?? [],
+            components: msg.frame.components ?? [],
+            splitBrain: msg.frame.splitBrain ?? [],
+            functionsVacant: msg.frame.functionsVacant ?? [],
+            consensusRounds: msg.frame.consensusRounds ?? null,
             mode: state.mode === "stopped" ? "live" : state.mode,
           };
         }
         case "summary":
           return { runSummary: msg.summary };
-        case "event":
+        case "event": {
+          // FUNCTION_HANDOFF (consensus auction): one baton per new holder,
+          // from the first old holder; a holder that keeps it gets none.
+          const e = msg.event;
+          let handoffs = state.handoffs;
+          if (e.fn !== undefined && e.fromSats !== undefined && e.toSats !== undefined && e.fromSats.length > 0) {
+            const from = e.fromSats[0];
+            const moves = e.toSats
+              .filter((to) => !e.fromSats!.includes(to))
+              .map((to) => ({ t: e.simTime, role: e.fn!, from, to }));
+            if (moves.length > 0) handoffs = [...handoffs, ...moves].slice(-MAX_HANDOFFS);
+          }
           return {
-            events: [...state.events, msg.event].slice(-MAX_EVENTS),
+            events: [...state.events, e].slice(-MAX_EVENTS),
+            handoffs,
           };
+        }
         case "reassignment":
           return {
             lastReassignment: {

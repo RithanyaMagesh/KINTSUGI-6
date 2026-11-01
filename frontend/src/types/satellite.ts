@@ -36,7 +36,11 @@ export interface Satellite {
   thrust?: number; // thrust health k: 1 full, 0.5 half, 0 none
   payloadOk?: boolean; // camera works
   radioOk?: boolean; // heartbeat works
-  stuck?: boolean; // thruster stuck open
+  stuck?: boolean;
+  /** Laser runs: leader functions this sat holds (decentral authority). */
+  functions?: string[];
+  /** Laser runs: alive but outside the main talking group (derived from `components`). */
+  cutOff?: boolean; // thruster stuck open
 }
 
 /** The three mission states in the timeline-spine order (§13.5). */

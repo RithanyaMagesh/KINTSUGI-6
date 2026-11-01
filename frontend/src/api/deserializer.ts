@@ -14,7 +14,7 @@ import type {
 } from "../types/events";
 import type { Satellite } from "../types/satellite";
 import type { SimEvent, EventLevel, RunSummary } from "../types/events";
-import type { SimFrame, SimMode } from "../types/telemetry";
+import type { Link, SimFrame, SimMode } from "../types/telemetry";
 
 export type Deserialized =
   | { kind: "frame"; frame: SimFrame }
@@ -31,6 +31,8 @@ export type Deserialized =
       policy: string | null;
       /** Scenario keep-out floor [m]; null = unknown (replay / stopped). */
       minSepM: number | null;
+      /** v2 live hellos: cartwheel | pco | gco | helix | string; null = unknown. */
+      formationShape: string | null;
     };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -85,7 +87,30 @@ export function toSatellite(raw: unknown): Satellite | null {
     payloadOk: bool(raw.payload_ok),
     radioOk: bool(raw.radio_ok),
     stuck: bool(raw.stuck),
+    functions: strs(raw.functions),
   };
+}
+
+function strs(x: unknown): string[] | undefined {
+  return Array.isArray(x) ? x.filter((v): v is string => typeof v === "string") : undefined;
+}
+
+const LINK_STATES = ["LOCKED", "ACQUIRING", "DOWN"] as const;
+function toLink(x: unknown): Link | null {
+  if (!Array.isArray(x) || typeof x[0] !== "string" || typeof x[1] !== "string") return null;
+  const state = LINK_STATES.find((s) => s === x[2]);
+  if (state === undefined) return null;
+  return { a: x[0], b: x[1], state, rangeM: num(x[3]) ?? null, rateBps: num(x[4]) ?? null };
+}
+
+/** Alive sats outside the biggest talking group are "cut off" (the swarm can't
+ * hear them); when every group is a single sat, all of them are. A sat that is
+ * heard again gets no event, so this is read from `components` each frame. */
+function markCutOff(sats: Satellite[], comps: string[][] | undefined): Satellite[] {
+  if (comps === undefined || comps.length < 2) return sats;
+  const biggest = Math.max(...comps.map((c) => c.length));
+  const lonely = new Set(comps.filter((c) => c.length < biggest || biggest === 1).flat());
+  return sats.map((s) => (s.status !== "failed" && lonely.has(s.id) ? { ...s, cutOff: true } : s));
 }
 
 function num(x: unknown): number | undefined {
@@ -116,14 +141,22 @@ export function toSimFrame(msg: SimStateMessage): SimFrame {
   if (typeof m.replanning_latency_ms === "number") {
     metrics.replanningLatencyMs = m.replanning_latency_ms;
   }
+  const raw = msg as unknown as Record<string, unknown>;
+  const components = Array.isArray(raw.components)
+    ? raw.components.map(strs).filter((c): c is string[] => c !== undefined)
+    : undefined;
+  const sats = (msg.sats ?? []).map((s) => toSatellite(s)).filter((s): s is Satellite => s !== null);
   return {
+    links: Array.isArray(raw.links) ? raw.links.map(toLink).filter((l): l is Link => l !== null) : undefined,
+    components,
+    splitBrain: strs(raw.split_brain),
+    functionsVacant: strs(raw.functions_vacant),
+    consensusRounds: num(raw.consensus_rounds),
     simTime: typeof msg.sim_time === "number" ? msg.sim_time : 0,
     missionState: typeof msg.state === "string" ? msg.state : "NOMINAL",
     scenario: typeof msg.scenario === "string" ? msg.scenario : null,
     seed: typeof msg.seed === "number" ? msg.seed : null,
-    satellites: (msg.sats ?? [])
-      .map((s) => toSatellite(s))
-      .filter((s): s is Satellite => s !== null),
+    satellites: markCutOff(sats, components),
     coverage: metrics.coverage ?? null,
     minSep: metrics.minSep ?? null,
     metrics,
@@ -145,6 +178,19 @@ function toEvent(msg: EventMessage): SimEvent | null {
     const v = str(raw[w]);
     if (v !== undefined) ev[k] = v;
   }
+  // Track C extras: FUNCTION_HANDOFF carries holder LISTS in from/to.
+  const fn = str(raw.function);
+  if (fn !== undefined) {
+    ev.fn = fn;
+    ev.fromSats = strs(raw.from) ?? [];
+    ev.toSats = strs(raw.to) ?? [];
+  }
+  const link = strs(raw.link);
+  if (link !== undefined) ev.link = link;
+  const reason = str(raw.reason);
+  if (reason !== undefined) ev.reason = reason;
+  const cause = str(raw.cause);
+  if (cause !== undefined) ev.cause = cause;
   return ev;
 }
 
@@ -193,6 +239,7 @@ export function deserializeMessage(raw: unknown): Deserialized | null {
         seed: typeof raw.seed === "number" ? raw.seed : null,
         policy: readPolicy(raw),
         minSepM: typeof raw.min_sep_m === "number" ? raw.min_sep_m : null,
+        formationShape: str(raw.formation_shape) ?? null,
       };
     }
     default:

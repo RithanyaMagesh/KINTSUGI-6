@@ -24,6 +24,21 @@ export interface SimFrame {
    * additive wire field). null/absent until the wire carries it — never
    * guessed (repo invariant 1); the UI renders "unmeasured" meanwhile. */
   policy?: string | null;
+  /** Laser runs only (Track C): crosslinks, talking groups, consensus auction. */
+  links?: Link[];
+  components?: string[][];
+  splitBrain?: string[];
+  functionsVacant?: string[];
+  consensusRounds?: number;
+}
+
+/** One laser crosslink. range/rate null = not finite on the wire ("unmeasured"). */
+export interface Link {
+  a: string;
+  b: string;
+  state: "LOCKED" | "ACQUIRING" | "DOWN";
+  rangeM: number | null;
+  rateBps: number | null;
 }
 
 export type SimMode = "live" | "replay" | "stopped";
