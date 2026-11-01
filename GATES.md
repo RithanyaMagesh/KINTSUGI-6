@@ -619,3 +619,40 @@ C4 is now on `backend` (f0a393e). `evidence` was rebased onto it, so the pre-reg
 Smaller correctness notes from the same review: the decentral leader rule counts any talking holder, central needs NOMINAL; the two agree for DEAD-only kills. `_round_time_model` credits only the auction that closes a window; every window in the data equals r × dt. Both are ledgered, not changed.
 
 **C5 commit hashes across rebases** (`evidence` is rebased onto `backend` before each gate, which rewrites the hashes; the content does not change). Pre-registration: **c26de11** (original, kept reachable by the local tag `c5-preregistration-c26de11`) → 62e70b3 → **ca1e304** on `backend` 43a6954 + d6879f3. The sha256 of the pre-registration section (from its heading to the end of GATES.md at that commit) is `f9dd1127…7fec` at c26de11, 62e70b3 and ca1e304. Part 1 results: d03f53b → 416d659. Amendment: 7e5171b → 67f66dd.
+
+## 2026-11-01 — C5 results, part 2: full matrix incl. decentral authority (branch `evidence` on `backend` 984d398, incl. T2's per-sat ground_relay bid b679d5f)
+
+Pre-registration **ca1e304** on `backend` (= c26de11, tag `c5-preregistration-c26de11`; section sha256 `f9dd1127…7fec` unchanged), amendment **67f66dd**; thresholds unchanged. Same command: `uv run python -m cubesat.benchmark --mode comms --base data/scenarios/two_failure.json --report data/eval/comms_report.json`. 5 cells × 16 kill sets = 80 runs. `data/eval/comms_report.json` now holds the full matrix, with input sha256s inside, now incl. decentral.py `b074c50c…` and the scenario modules. The three central cells are identical, row by row on every metric, to part 1 and to an intermediate run on C4 f0a393e (before T2's bid change). Every verdict is also the same in that intermediate run. Only decentral values moved; e.g. the mesh leader kill went from 40-44 s to 36-40 s. The engine's auction is a consensus auction (CBBA family). Laser parameters are assumptions. One consensus round = one 2 s tick is an engine assumption.
+
+| hypothesis | threshold | measured | verdict |
+|---|---|---|---|
+| C5-H1 | 16/16 within 2 s | 16/16 | **PASS** |
+| C5-H2 | ≥ 15/16 with 0 false isolations | 10/16 | **FAIL** |
+| C5-H3 | 6/6 | 6/6 | **PASS** |
+| C5-H4 | mean ≤ 400 s/orbit | 94.76 | **PASS** |
+| C5-H5 | 16/16 | 16/16 | **PASS** |
+| C5-H6 | mean ≥ 0.95 | 0.9849 | **PASS** |
+| C5-H7 decentral mesh has no split-brain | ≥ 15/16 with 0 s | **4/16** ((1,4), (1,5), (2,4), (2,5)) | **FAIL** |
+| C5-H8 decentral star split-brains on hub loss | 6/6 leader kills > 0 s | 6/6 (176-1014 s) | **PASS** |
+| C5-H9 decentral leader work filled at least as fast | ≥ 5/6 leader kills decentral ≤ central | **0/6** (36-40 s vs 4-8 s) | **FAIL** |
+
+Decentral cells, mean / min / max over the 16 kill sets (central reference from part 1):
+| cell | critical vacancy s | function vacancy s | split-brain s | consensus rounds (max) | function handoffs | coverage, last orbit |
+|---|---|---|---|---|---|---|
+| laser-mesh-central (reference) | 3.0 / 0 / 8 | n/a | n/a | n/a | n/a | 0.3352 / 0.2982 / 0.3712 |
+| laser-mesh-decentral | 48.5 / 36 / 68 | 48.0 / 36 / 68 | 309.5 / 0 / 1046 | 18.56 / 18 / 19 | 54.5 / 12 / 93 | 0.3261 / 0.2982 / 0.3712 |
+| laser-star-decentral | 11.38 / 0 / 22 | 10.12 / 0 / 18 | 657.2 / 0 / 1014 | 9 / 9 / 9 | 54.94 / 0 / 87 | 0.3261 / 0.2982 / 0.3712 |
+
+Detection and isolation in the decentral cells equal their central topology: mesh 0.4375 false isolations, star 5.562; the star has 3 undetected deaths, (0,2), (1,3) and (2,3), the same as star-central (part 1 correction).
+
+Round-time sensitivity for laser-mesh-decentral `function_vacancy_s`. **This is a model, not a simulation** (amendment 67f66dd: each window re-stated as window − r × 2 s + r × τ). Mean over the 16 kill sets: τ = 2.0 s → 48.0 s (the simulated value), τ = 0.5 s → 12.0 s, τ = 0.1 s → 2.4 s. On the 6 leader kills: 36 / 9 / 1.8 s. Central's 4-8 s has no such term. **No ranking follows from this.** The model is optimistic for decentral: the engine starts the auction from TRUE state at the death tick (C4 assumption "bids use TRUE state"), while the central leader vacancy includes the K-tick heartbeat wait. A real decentral swarm would first have to detect the death, which this model leaves out.
+
+Honest notes:
+1. **On these runs the pitch's claim fails (H9, 0/6).** Under the one-round-per-tick assumption, decentral authority leaves leader work vacant 36-40 s after a leader kill, against 4-8 s for the central re-election.
+2. **Decentral pays on every kill, not only on leader kills.** On the 6-sat ring each sat holds one leader function, so killing any sat vacates one. Mesh decentral critical vacancy is 36-68 s on all 16 kill sets. Central mesh is 0 s on 6 of them ((1,2), (1,3), (1,4), (2,3), (2,4), (3,4)) and at most 8 s on the rest.
+3. **H7 fails because the sun splits the ring.** The C2 sun-cone partition (part 1, note 4) gives each half its own holder of every function, so 12/16 mesh kill sets show split-brain, up to 1046 s. Only the kill sets whose replan avoids the blinded pairs stay clean: (1,4), (1,5), (2,4), (2,5), the same 4 with 0 s/orbit partition in part 1. Split-brain is real behaviour of a partitioned swarm, not a bug. A decentral mesh is NOT split-brain-free under this sun model.
+4. **The star trades vacancy for split-brain (H8).** Leader kills show 0 s vacancy on 5 of 6, and 4 s on (0,5) from the downlink. This is not fast recovery. With no LOCKED link left, a leaf's auction converges in 0 rounds, so every isolated leaf names itself holder of every function on the death tick. That self-election IS the split-brain: 176-1014 s, 657.2 s mean over all 16 kill sets.
+5. **Coverage is 0.0306-0.0381 lower under decentral on 4 kill sets:** (0,5), (1,5), (3,5) and (4,5), in both mesh and star; the other 12 are identical. All four kill sat 5 (the downlink), but (2,5) also kills it and shows no change. The cause was not traced (unmeasured).
+6. **Load spreading costs churn:** 0-93 function handoffs per run (mean 54.5 mesh, 54.94 star) for 2 kills.
+7. Every central-vs-decentral number here comes from this one artifact and its command. The demo pair `data/scenarios/{decentral_leader_kill,central_star_leader_kill}_6sat.json` is pinned through the wire in `tests/test_wire_comms.py` (slow). It is a single-orbit illustration, not a C5 cell.
+- Gates for part 2 and the demo wire fixtures: `uv run ruff check .` → All checks passed!; `uv run python -m pytest -p no:cacheprovider` (fast + slow) → **1161 passed, 2 skipped**, exit 0 (15 min 57 s, shared machine).
