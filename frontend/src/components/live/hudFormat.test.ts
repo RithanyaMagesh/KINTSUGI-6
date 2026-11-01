@@ -19,3 +19,8 @@ it("names why each v2 satellite is degraded, and its roles", () => {
   expect(rolesLabel(sat("SAT-1"))).toBe("No role");
   expect(rolesLabel(sat("SAT-4"))).toBe("Spare");
 });
+
+it("calls a live sat outside the main laser group cut off", () => {
+  const s = { ...sat("SAT-6"), cutOff: true };
+  expect(satLabel(s)).toBe("Cut off");
+});

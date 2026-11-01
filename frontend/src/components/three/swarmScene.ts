@@ -25,6 +25,8 @@ import { SlotLayer } from "./sceneSlots";
 import { LabelLayer, labelPriority, type LabelItem } from "./sceneLabels";
 import { AutoFitController, earthFitRadius, FIT_FILL } from "./sceneCamera";
 import { FormationLines } from "./sceneLines";
+import { LinkBeams } from "./sceneLinks";
+import type { Link } from "../../types/telemetry";
 import { createEnvironment, EARTH_RADIUS_FACTOR, type Environment } from "./sceneEarth";
 import { SCENE_TOKENS, tokenColor } from "./sceneColors";
 import { SUN_DIR } from "./sceneGlobe";
@@ -40,6 +42,10 @@ const EARTH_SPIN_RATIO = 15.2;
 const LABEL_ALL_MAX = 10;
 
 export type CameraPreset = "reset" | "top" | "formation" | "focus";
+
+/** Formation shapes the ghost target-slot fit (utils/geometry fitFormation,
+ * a cartwheel fit) does not describe: their ghost slots are hidden. */
+const NON_CARTWHEEL_SHAPES: ReadonlySet<string> = new Set(["pco", "gco", "helix", "string"]);
 
 const FAILURE_STATES: ReadonlySet<string> = new Set([
   "FAILURE_DETECTED",
@@ -81,6 +87,9 @@ export class SwarmSceneController {
   private fit = new AutoFitController();
   private environment: Environment;
   private lines = new FormationLines();
+  private beams = new LinkBeams();
+  private hasLinks = false;
+  private formationShape: string | null = null;
   private bg = tokenColor(SCENE_TOKENS.void).clone();
 
   private toggles = { labels: true, trails: true, lines: true, slots: true };
@@ -136,7 +145,7 @@ export class SwarmSceneController {
     this.scene.add(this.environment.group);
     this.environment.trackExtent(0);
 
-    this.scene.add(this.lines.healthy, this.lines.failed);
+    this.scene.add(this.lines.healthy, this.lines.failed, ...this.beams.objects);
 
     this.ro = new ResizeObserver(() => this.resize());
     this.ro.observe(container);
@@ -190,6 +199,37 @@ export class SwarmSceneController {
     this.syncAllObjects(satellites, fit);
   }
 
+  /** Laser crosslinks from the stream. Beams follow the satellites every
+   * frame; while a run reports links they replace the plain formation lines. */
+  setLinks(links: readonly Link[]): void {
+    this.beams.setLinks(links);
+    this.hasLinks = links.length > 0;
+    this.applyLineVisibility();
+    this.beams.updatePositions(this.records);
+  }
+
+  /** Scenario formation shape from the hello. The ghost slots assume a
+   * cartwheel, so any other known shape hides them; null (unknown) keeps them. */
+  setFormationShape(shape: string | null): void {
+    const next = shape === null ? null : shape.toLowerCase();
+    if (next === this.formationShape) return;
+    this.formationShape = next;
+    if (!this.slotsWanted()) this.slots.visible = false; // the next sync redraws them otherwise
+  }
+
+  private slotsWanted(): boolean {
+    return (
+      this.toggles.slots &&
+      (this.formationShape === null || !NON_CARTWHEEL_SHAPES.has(this.formationShape))
+    );
+  }
+
+  private applyLineVisibility(): void {
+    this.lines.setVisibility(this.toggles.lines);
+    if (this.hasLinks) this.lines.healthy.visible = false;
+    this.beams.setVisibility(this.toggles.lines);
+  }
+
   setOrbitViewMode(mode: OrbitViewMode): void {
     if (this.orbitMode === mode) return;
     this.orbitMode = mode;
@@ -218,6 +258,7 @@ export class SwarmSceneController {
     this.environment.refreshTheme();
     this.slots.refreshTheme();
     this.lines.refreshTheme();
+    this.beams.refreshTheme();
     const nSeats = Math.max(this.lastSats.length, 1);
     const fit = fitFormation(this.lastSats, nSeats);
     this.syncAllObjects(this.lastSats, fit);
@@ -228,8 +269,8 @@ export class SwarmSceneController {
       for (const rec of this.records.values()) clearSatelliteTrail(rec);
     }
     this.toggles = { ...t };
-    this.slots.visible = t.slots;
-    this.lines.setVisibility(t.lines);
+    this.slots.visible = this.slotsWanted();
+    this.applyLineVisibility();
   }
 
   applyPreset(preset: CameraPreset, focusSat: Satellite | null): void {
@@ -367,7 +408,9 @@ export class SwarmSceneController {
       }
     }
     this.lines.update(satellites, this.failureActive());
-    if (this.toggles.slots) {
+    if (this.hasLinks) this.lines.healthy.visible = false;
+    this.beams.updatePositions(this.records);
+    if (this.slotsWanted()) {
       this.slots.update(satellites, fit, this.extent || 1000, this.selectedId);
     } else {
       this.slots.visible = false;
@@ -445,6 +488,8 @@ export class SwarmSceneController {
     this.scene.remove(this.slots.group);
     this.lines.dispose();
     this.scene.remove(this.lines.healthy, this.lines.failed);
+    this.beams.dispose();
+    this.scene.remove(...this.beams.objects);
     this.scene.remove(this.environment.group);
     this.environment.dispose();
     this.renderer.dispose();
@@ -498,7 +543,7 @@ export class SwarmSceneController {
         show: this.toggles.labels && this.labelWanted(rec),
       });
     }
-    if (this.toggles.slots && this.records.size <= LABEL_ALL_MAX) {
+    if (this.slotsWanted() && this.records.size <= LABEL_ALL_MAX) {
       for (const slot of this.slots.labelItems()) {
         if (!slot.show) continue;
         const p = project(slot.pos);

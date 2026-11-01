@@ -1,0 +1,201 @@
+{
+  "source": "data/eval/formations_report.json",
+  "command": "uv run python -m cubesat.benchmark --mode formations --base data/scenarios/formation_cartwheel_6sat.json --report data/eval/formations_report.json",
+  "inputs_sha256": {
+    "data/scenarios/formation_cartwheel_6sat.json": "eaf22f951c9b4e3fedcd31de820b60710fe38d4333c979c39c50bf99c8fea736",
+    "data/scenarios/formation_gco_6sat.json": "54af6ebdaf6fd167fc270ffccb88edd5079c413778da71f189c915dbe5291505",
+    "data/scenarios/formation_helix_6sat.json": "10d9691921063cda876bc57a2b73e54a17af15df8804890180df41ba3b0f6105",
+    "data/scenarios/formation_pco_6sat.json": "0e9b1e4ed380b1ef9065f72a33cf157dbe2a06569966189a676b804fd950cebb",
+    "data/scenarios/formation_string_6sat.json": "fa4c7bd9396ea46b91fbf7e69a1007970f715d401071ae25912ab4a70351f985"
+  },
+  "notes": [
+    "illustrative scenarios (8 km amplitude; string: 8 km along-track spacing)",
+    "CW = linear Hill-Clohessy-Wiltshire; truth = EngineV2 (J2 + drag, PD hold)",
+    "switch delta-v is the L1 (per-axis) LP objective, an upper bound on vector fuel; CW planning model, not flown in truth",
+    "recovery is not shape-aware (allocate_v2.candidate_slots = cartwheel + psi family)"
+  ],
+  "tank_dv_mps": 20.12,
+  "tank_source": "cubesat/scenario_models.py Spacecraft docstring (default 3U cold-gas tank, illustrative)",
+  "shapes": {
+    "cartwheel": {
+      "scenario": "data/scenarios/formation_cartwheel_6sat.json",
+      "cw_min_sep_m": 11313.70849898476,
+      "cw_worst_sep_any_along_track_drift_m": 0.0,
+      "cw_coverage": 0.3711955725046414,
+      "hold_dv_per_orbit_max_sat_mps": 0.5611536629707318,
+      "switch_from_cartwheel": {
+        "feasible": true,
+        "per_sat": [
+          {
+            "sat": 0,
+            "dv_l1_mps": 0.0
+          },
+          {
+            "sat": 1,
+            "dv_l1_mps": 0.0
+          },
+          {
+            "sat": 2,
+            "dv_l1_mps": 0.0
+          },
+          {
+            "sat": 3,
+            "dv_l1_mps": 0.0
+          },
+          {
+            "sat": 4,
+            "dv_l1_mps": 0.0
+          },
+          {
+            "sat": 5,
+            "dv_l1_mps": 0.0
+          }
+        ]
+      }
+    },
+    "gco": {
+      "scenario": "data/scenarios/formation_gco_6sat.json",
+      "cw_min_sep_m": 15999.999999999989,
+      "cw_worst_sep_any_along_track_drift_m": 0.0,
+      "cw_coverage": 0.4277069412861487,
+      "hold_dv_per_orbit_max_sat_mps": 0.6324012907252838,
+      "switch_from_cartwheel": {
+        "feasible": true,
+        "per_sat": [
+          {
+            "sat": 0,
+            "dv_l1_mps": 6.596528257165716
+          },
+          {
+            "sat": 1,
+            "dv_l1_mps": 6.597504748636452
+          },
+          {
+            "sat": 2,
+            "dv_l1_mps": 6.597504748636451
+          },
+          {
+            "sat": 3,
+            "dv_l1_mps": 6.596528257165716
+          },
+          {
+            "sat": 4,
+            "dv_l1_mps": 6.597504748636451
+          },
+          {
+            "sat": 5,
+            "dv_l1_mps": 6.597504748636452
+          }
+        ]
+      }
+    },
+    "helix": {
+      "scenario": "data/scenarios/formation_helix_6sat.json",
+      "cw_min_sep_m": 8000.0,
+      "cw_worst_sep_any_along_track_drift_m": 7999.999999999982,
+      "cw_coverage": 0.32591830884004275,
+      "hold_dv_per_orbit_max_sat_mps": 0.5807907799010578,
+      "switch_from_cartwheel": {
+        "feasible": true,
+        "per_sat": [
+          {
+            "sat": 0,
+            "dv_l1_mps": 10.550731676315902
+          },
+          {
+            "sat": 1,
+            "dv_l1_mps": 10.552287520826612
+          },
+          {
+            "sat": 2,
+            "dv_l1_mps": 9.078802549711735
+          },
+          {
+            "sat": 3,
+            "dv_l1_mps": 10.550731676315905
+          },
+          {
+            "sat": 4,
+            "dv_l1_mps": 10.55228752082661
+          },
+          {
+            "sat": 5,
+            "dv_l1_mps": 9.078802549711739
+          }
+        ]
+      }
+    },
+    "pco": {
+      "scenario": "data/scenarios/formation_pco_6sat.json",
+      "cw_min_sep_m": 16000.00026405795,
+      "cw_worst_sep_any_along_track_drift_m": 0.0,
+      "cw_coverage": 0.44542934327748174,
+      "hold_dv_per_orbit_max_sat_mps": 0.6766131809546669,
+      "switch_from_cartwheel": {
+        "feasible": true,
+        "per_sat": [
+          {
+            "sat": 0,
+            "dv_l1_mps": 9.16047650059427
+          },
+          {
+            "sat": 1,
+            "dv_l1_mps": 9.159109682211458
+          },
+          {
+            "sat": 2,
+            "dv_l1_mps": 9.159109682211458
+          },
+          {
+            "sat": 3,
+            "dv_l1_mps": 9.160476500594271
+          },
+          {
+            "sat": 4,
+            "dv_l1_mps": 9.15910968221146
+          },
+          {
+            "sat": 5,
+            "dv_l1_mps": 9.15910968221146
+          }
+        ]
+      }
+    },
+    "string": {
+      "scenario": "data/scenarios/formation_string_6sat.json",
+      "cw_min_sep_m": 8000.0,
+      "cw_worst_sep_any_along_track_drift_m": 0.0,
+      "cw_coverage": 0.30489073881373574,
+      "hold_dv_per_orbit_max_sat_mps": 0.8267518820343728,
+      "switch_from_cartwheel": {
+        "feasible": true,
+        "per_sat": [
+          {
+            "sat": 0,
+            "dv_l1_mps": 13.615760455432842
+          },
+          {
+            "sat": 1,
+            "dv_l1_mps": 13.637535380126465
+          },
+          {
+            "sat": 2,
+            "dv_l1_mps": 13.922382347145845
+          },
+          {
+            "sat": 3,
+            "dv_l1_mps": 13.615760455432842
+          },
+          {
+            "sat": 4,
+            "dv_l1_mps": 13.922382347145842
+          },
+          {
+            "sat": 5,
+            "dv_l1_mps": 13.637535380126465
+          }
+        ]
+      }
+    }
+  }
+}
