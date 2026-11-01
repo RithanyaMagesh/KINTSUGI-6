@@ -8,7 +8,7 @@ import { historyFor } from "../../stores/roleHistoryStore";
 import type { RoleHistoryEntry } from "../../stores/roleHistoryStore";
 import { distanceToSeat, fitFormation } from "../../utils/geometry";
 import { formatMsPerS } from "../../utils/format";
-import { clock, faultLabel, roleLabel, rolesLabel, satLabel } from "../live/hudFormat";
+import { clock, faultLabel, functionLabel, roleLabel, rolesLabel, satLabel } from "../live/hudFormat";
 import { FuelBar, SatFlags } from "../live/SatBits";
 import { slotLabel } from "../recovery/RecoveryLog";
 import chrome from "../../styles/chrome.module.css";
@@ -124,6 +124,13 @@ export default function SelectedSatellitePanel() {
     timeline.length > 0 ? entryText(timeline[timeline.length - 1]) : "";
 
   const distText = dist === null ? "unmeasured" : dist.toFixed(1) + " m";
+  // Decentral laser runs: the leader functions this sat won in the consensus auction.
+  const functionsRow =
+    sat.functions !== undefined ? (
+      <Row label="Leader functions">
+        {sat.functions.length === 0 ? "None" : sat.functions.map(functionLabel).join(", ")}
+      </Row>
+    ) : null;
 
   if (viewMode === "simplified") {
     return (
@@ -136,6 +143,7 @@ export default function SelectedSatellitePanel() {
           {rolesLabel(sat)}
           {sat.originalRole !== undefined && sat.originalRole !== sat.role && <> (was {roleLabel(sat.originalRole).toLowerCase()})</>}
         </Row>
+        {functionsRow}
         <Row label="Slot">{slotLabel(postSlot)}</Row>
         <Row label="Distance to slot">{distText}</Row>
         <Row label="Fuel">{sat.fuelMpsLeft !== undefined ? <FuelBar sat={sat} /> : formatMsPerS(sat.dv_used) + " spent"}</Row>
@@ -199,6 +207,7 @@ export default function SelectedSatellitePanel() {
           {rolesLabel(sat)}
           {sat.originalRole !== undefined && sat.originalRole !== sat.role && <> (was {roleLabel(sat.originalRole).toLowerCase()})</>}
         </Row>
+        {functionsRow}
         <div className={styles.row}>
           <span className={styles.label}>Job</span>
           <span className={styles.explain}>{semantics ?? "unmeasured"}</span>

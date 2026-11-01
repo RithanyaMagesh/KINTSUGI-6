@@ -36,6 +36,8 @@ export default function HudMetrics() {
   const total = sats.length;
   const lost = sats.filter((s) => s.status === "failed").length;
   const leader = sats.find((s) => s.role === "leader" && s.status !== "failed") ?? null;
+  // Decentral runs have no leader by design: the swarm holds its functions.
+  const decentral = useSimStore((s) => s.consensusRounds !== null);
   const dv = sats.reduce((sum, s) => sum + s.dv_used, 0);
 
   const cov = metrics.coverage ?? null;
@@ -74,8 +76,8 @@ export default function HudMetrics() {
       />
       <Readout
         label="Leader"
-        value={total === 0 ? "–" : leader !== null ? leader.id : "Vacant"}
-        tone={total > 0 && leader === null ? "var(--status-failed)" : undefined}
+        value={total === 0 ? "–" : leader !== null ? leader.id : decentral ? "None, shared" : "Vacant"}
+        tone={total > 0 && leader === null && !decentral ? "var(--status-failed)" : undefined}
       />
       <Readout label="Fuel spent" value={total === 0 ? "–" : dv.toFixed(2)} unit="m/s Δv" />
     </section>

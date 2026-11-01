@@ -1,0 +1,102 @@
+/* Central vs decentral comparison card. Tokens only; colour = state only. */
+.details {
+  border: 1px solid var(--glass-line);
+  border-radius: var(--radius-panel);
+  padding: var(--space-2) var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.summary {
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.note,
+.foot,
+.source,
+.caption {
+  color: var(--ink-muted);
+  font-size: 13px;
+  text-align: left;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-2);
+}
+
+.card {
+  border: 1px solid var(--glass-line);
+  border-radius: var(--radius-control);
+  padding: var(--space-2);
+}
+
+.cardTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: var(--space-1);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.list dt {
+  color: var(--ink-muted);
+}
+
+.list dd {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 5px 6px;
+  border-bottom: 1px solid var(--glass-line);
+  font-weight: 400;
+  vertical-align: top;
+}
+
+.table thead th {
+  color: var(--ink-muted);
+}
+
+.verdicts {
+  margin: 0;
+  padding-left: var(--space-4);
+  font-size: 13px;
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cmd {
+  overflow-wrap: anywhere;
+}

@@ -4,7 +4,7 @@
 import { useSimStore } from "../../stores/simStore";
 import { useUiStore } from "../../stores/uiStore";
 import { satelliteStatusColor } from "../../utils/colors";
-import { km, rolesLabel, satLabel, slotLabel } from "./hudFormat";
+import { functionLabel, km, rolesLabel, satLabel, slotLabel } from "./hudFormat";
 import { FuelBar, SatFlags } from "./SatBits";
 import styles from "./ImmersiveLive.module.css";
 
@@ -50,6 +50,11 @@ export default function FleetTable() {
                 <th scope="row">
                   <span className={styles.satId}>{s.id}</span>
                   <span className={styles.satRole}>{rolesLabel(s)}</span>
+                  {s.functions !== undefined && s.functions.length > 0 && (
+                    <span className={styles.satRole} style={{ display: "block", fontSize: 11, whiteSpace: "normal", maxWidth: 180 }}>
+                      {s.functions.map(functionLabel).join(", ")}
+                    </span>
+                  )}
                 </th>
                 <td>
                   <span className={styles.statusPip} style={{ background: satelliteStatusColor(s.status) }} aria-hidden="true" />

@@ -1,0 +1,103 @@
+/* Auction board: a glass card for one reassignment burst. Unpositioned; the
+   mount point places it. Colour = state only. */
+.card {
+  background: var(--glass-strong);
+  border: 1px solid var(--glass-line-strong);
+  border-radius: var(--radius-panel);
+  padding: var(--space-2) var(--space-3);
+  width: min(360px, calc(100vw - 2 * var(--space-3)));
+  backdrop-filter: blur(10px);
+  color: var(--ink);
+  transition: opacity 600ms var(--motion-ease, ease-out);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.card[data-phase="out"] {
+  opacity: 0;
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.rounds {
+  color: var(--ink-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.close {
+  margin-left: auto;
+  background: none;
+  border: 1px solid var(--glass-line);
+  border-radius: var(--radius-control);
+  color: var(--ink-muted);
+  font-size: 12px;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
+.close:hover {
+  color: var(--ink);
+}
+
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.row {
+  animation: rowIn 300ms var(--motion-ease, ease-out) both;
+  border-left: 2px solid var(--status-repaired);
+  padding-left: var(--space-2);
+}
+
+.row[data-tone="split"] {
+  color: var(--status-caution);
+  border-left-color: var(--status-caution);
+}
+
+.row[data-tone="vacant"] {
+  color: var(--status-failed);
+  border-left-color: var(--status-failed);
+}
+
+.foot {
+  margin-top: var(--space-2);
+  color: var(--ink-muted);
+  font-size: 12px;
+}
+
+@keyframes rowIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row {
+    animation: none;
+  }
+  .card {
+    transition: none;
+  }
+}
